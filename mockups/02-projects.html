@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projekty — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --background: #09090b;
+            --foreground: #fafafa;
+            --card: #09090b;
+            --card-foreground: #fafafa;
+            --popover: #09090b;
+            --primary: #fafafa;
+            --primary-foreground: #18181b;
+            --secondary: #27272a;
+            --secondary-foreground: #fafafa;
+            --muted: #27272a;
+            --muted-foreground: #a1a1aa;
+            --accent: #27272a;
+            --accent-foreground: #fafafa;
+            --destructive: #7f1d1d;
+            --border: #27272a;
+            --input: #27272a;
+            --ring: #d4d4d8;
+            --radius: 8px;
+            --sidebar-width: 240px;
+            --success: #22c55e;
+            --warning: #eab308;
+            --info: #3b82f6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; background: var(--background); z-index: 50; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .sidebar-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+        .sidebar-brand-icon { width: 28px; height: 28px; background: var(--foreground); color: var(--background); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+        .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
+        .nav-section { margin-bottom: 16px; }
+        .nav-section-title { font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 12px; margin-bottom: 4px; }
+        .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); color: var(--muted-foreground); text-decoration: none; font-size: 13px; font-weight: 450; transition: all 0.1s; }
+        .nav-item:hover { background: var(--secondary); color: var(--foreground); }
+        .nav-item.active { background: var(--secondary); color: var(--foreground); font-weight: 500; }
+        .nav-item svg { width: 16px; height: 16px; opacity: 0.7; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+        .user-info { display: flex; align-items: center; gap: 8px; }
+        .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .user-name { font-size: 12px; font-weight: 500; }
+        .user-role { font-size: 11px; color: var(--muted-foreground); }
+
+        /* Main */
+        .main { margin-left: var(--sidebar-width); flex: 1; }
+        .topbar { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .topbar-title { font-size: 15px; font-weight: 600; }
+        .topbar-right { display: flex; align-items: center; gap: 8px; }
+        .btn { padding: 6px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: transparent; color: var(--foreground); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { background: var(--secondary); }
+        .btn-primary { background: var(--foreground); color: var(--primary-foreground); border-color: var(--foreground); }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; }
+
+        /* Content */
+        .content { padding: 24px; }
+        .page-header { margin-bottom: 24px; }
+        .page-header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+        .page-header p { color: var(--muted-foreground); font-size: 13px; margin-top: 4px; }
+
+        /* Filter bar */
+        .filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .filter-bar select,
+        .filter-bar input {
+            padding: 7px 12px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            font-family: inherit;
+            border: 1px solid var(--border);
+            background: var(--background);
+            color: var(--foreground);
+            outline: none;
+        }
+        .filter-bar select { min-width: 140px; }
+        .filter-bar input { min-width: 220px; }
+        .filter-bar input::placeholder { color: var(--muted-foreground); }
+        .filter-bar .spacer { flex: 1; }
+
+        /* Table */
+        .card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-title { font-size: 14px; font-weight: 600; }
+        .card-desc { font-size: 12px; color: var(--muted-foreground); }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 10px 20px; text-align: left; font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 20px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        td strong { color: var(--foreground); font-weight: 500; }
+
+        /* Badge */
+        .badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
+        .badge-success { background: rgba(34,197,94,0.1); color: var(--success); }
+        .badge-warning { background: rgba(234,179,8,0.1); color: var(--warning); }
+        .badge-info { background: rgba(59,130,246,0.1); color: var(--info); }
+        .badge-muted { background: var(--secondary); color: var(--muted-foreground); }
+
+        td .btn { margin: 0; }
+
+        @media (max-width: 768px) { .sidebar { display: none; } .main { margin-left: 0; } }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">F</div>
+                <span>Foremen</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <a href="01-dashboard.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Projekty
+                </a>
+                <a href="03-rooms.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    Pomieszczenia
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Kosztorys
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Magazyn</div>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Materiały
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/></svg>
+                    Finanse
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="23 7 16 12 23 17 23 7"/></svg>
+                    Dostawy
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Użytkownicy
+                </a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">OB</div>
+                <div>
+                    <div class="user-name">Oleg Borysov</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <span class="topbar-title">Projekty</span>
+            </div>
+            <div class="topbar-right">
+                <button class="btn btn-sm">PL</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="page-header">
+                <h1>Projekty</h1>
+                <p>Zarządzanie obiektami remontowymi</p>
+            </div>
+
+            <!-- Filter bar -->
+            <div class="filter-bar">
+                <select>
+                    <option>Wszystkie</option>
+                    <option>Aktywne</option>
+                    <option>Zakończone</option>
+                    <option>Archiwalne</option>
+                </select>
+                <input type="text" placeholder="Szukaj projektu...">
+                <div class="spacer"></div>
+                <button class="btn btn-primary">+ Nowy projekt</button>
+            </div>
+
+            <!-- Projects Table -->
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Nazwa projektu</th>
+                            <th>Adres</th>
+                            <th>Klient</th>
+                            <th>Kierownik</th>
+                            <th>Powierzchnia</th>
+                            <th>Status</th>
+                            <th>Wartość kosztorysu</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><strong>Kowalski — Marszałkowska 12</strong></td>
+                            <td>ul. Marszałkowska 12/4, Warszawa</td>
+                            <td>Anna Kowalska</td>
+                            <td>A. Nowak</td>
+                            <td>72 m²</td>
+                            <td><span class="badge badge-success">Aktywny</span></td>
+                            <td><strong>71 500 zł</strong></td>
+                            <td><button class="btn btn-sm">Otwórz</button></td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><strong>Wiśniewski — Puławska 45</strong></td>
+                            <td>ul. Puławska 45/12, Warszawa</td>
+                            <td>Tomasz Wiśniewski</td>
+                            <td>M. Zielińska</td>
+                            <td>95 m²</td>
+                            <td><span class="badge badge-success">Aktywny</span></td>
+                            <td><strong>124 800 zł</strong></td>
+                            <td><button class="btn btn-sm">Otwórz</button></td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><strong>Nowicki — Żoliborska 8</strong></td>
+                            <td>ul. Żoliborska 8/2, Warszawa</td>
+                            <td>Piotr Nowicki</td>
+                            <td>A. Nowak</td>
+                            <td>54 m²</td>
+                            <td><span class="badge badge-info">Planowanie</span></td>
+                            <td><strong>87 200 zł</strong></td>
+                            <td><button class="btn btn-sm">Otwórz</button></td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><strong>Jabłońska — Mokotowska 22</strong></td>
+                            <td>ul. Mokotowska 22/8, Warszawa</td>
+                            <td>Katarzyna Jabłońska</td>
+                            <td>P. Kowalczyk</td>
+                            <td>110 m²</td>
+                            <td><span class="badge badge-warning">Opóźniony</span></td>
+                            <td><strong>156 400 zł</strong></td>
+                            <td><button class="btn btn-sm">Otwórz</button></td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><strong>Dąbrowski — Nowy Świat 33</strong></td>
+                            <td>ul. Nowy Świat 33/15, Warszawa</td>
+                            <td>Marek Dąbrowski</td>
+                            <td>M. Zielińska</td>
+                            <td>68 m²</td>
+                            <td><span class="badge badge-muted">Zakończony</span></td>
+                            <td><strong>92 100 zł</strong></td>
+                            <td><button class="btn btn-sm">Otwórz</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

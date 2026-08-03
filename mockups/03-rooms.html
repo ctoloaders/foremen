@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pomieszczenia — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --background: #09090b;
+            --foreground: #fafafa;
+            --card: #09090b;
+            --card-foreground: #fafafa;
+            --popover: #09090b;
+            --primary: #fafafa;
+            --primary-foreground: #18181b;
+            --secondary: #27272a;
+            --secondary-foreground: #fafafa;
+            --muted: #27272a;
+            --muted-foreground: #a1a1aa;
+            --accent: #27272a;
+            --accent-foreground: #fafafa;
+            --destructive: #7f1d1d;
+            --border: #27272a;
+            --input: #27272a;
+            --ring: #d4d4d8;
+            --radius: 8px;
+            --sidebar-width: 240px;
+            --success: #22c55e;
+            --warning: #eab308;
+            --info: #3b82f6;
+            --calc-bg: #1c1c1f;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; background: var(--background); z-index: 50; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .sidebar-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+        .sidebar-brand-icon { width: 28px; height: 28px; background: var(--foreground); color: var(--background); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+        .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
+        .nav-section { margin-bottom: 16px; }
+        .nav-section-title { font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 12px; margin-bottom: 4px; }
+        .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); color: var(--muted-foreground); text-decoration: none; font-size: 13px; font-weight: 450; transition: all 0.1s; }
+        .nav-item:hover { background: var(--secondary); color: var(--foreground); }
+        .nav-item.active { background: var(--secondary); color: var(--foreground); font-weight: 500; }
+        .nav-item svg { width: 16px; height: 16px; opacity: 0.7; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+        .user-info { display: flex; align-items: center; gap: 8px; }
+        .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .user-name { font-size: 12px; font-weight: 500; }
+        .user-role { font-size: 11px; color: var(--muted-foreground); }
+
+        /* Main */
+        .main { margin-left: var(--sidebar-width); flex: 1; }
+        .topbar { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .topbar-title { font-size: 15px; font-weight: 600; }
+        .topbar-right { display: flex; align-items: center; gap: 8px; }
+        .btn { padding: 6px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: transparent; color: var(--foreground); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { background: var(--secondary); }
+        .btn-primary { background: var(--foreground); color: var(--primary-foreground); border-color: var(--foreground); }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; }
+
+        /* Content */
+        .content { padding: 24px; }
+        .page-header { margin-bottom: 24px; }
+        .page-header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+        .page-header p { color: var(--muted-foreground); font-size: 13px; margin-top: 4px; }
+
+        /* Breadcrumb */
+        .breadcrumb { display: flex; align-items: center; gap: 6px; margin-bottom: 16px; font-size: 12px; color: var(--muted-foreground); }
+        .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--foreground); }
+        .breadcrumb .sep { opacity: 0.4; }
+        .breadcrumb .current { color: var(--foreground); }
+
+        /* Table */
+        .card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-title { font-size: 14px; font-weight: 600; }
+        .card-desc { font-size: 12px; color: var(--muted-foreground); }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+        td { padding: 10px 16px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        td strong { color: var(--foreground); font-weight: 500; }
+
+        /* Dimensions table specific */
+        .dim-table th:first-child,
+        .dim-table td:first-child { font-weight: 500; color: var(--foreground); white-space: nowrap; min-width: 160px; }
+        .dim-table td { text-align: center; font-variant-numeric: tabular-nums; }
+        .dim-table td:first-child { text-align: left; }
+        .dim-table th { text-align: center; }
+        .dim-table th:first-child { text-align: left; }
+        .dim-table td.calc { background: var(--calc-bg); }
+        .dim-table tr.sum-row td { font-weight: 600; color: var(--foreground); border-top: 2px solid var(--border); background: rgba(255,255,255,0.02); }
+
+        /* Summary card */
+        .summary-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; }
+        .summary-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+        .summary-item { display: flex; justify-content: space-between; padding: 8px 12px; background: var(--secondary); border-radius: 6px; font-size: 12px; }
+        .summary-item-label { color: var(--muted-foreground); }
+        .summary-item-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .summary-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--secondary); border-radius: var(--radius); border: 1px solid var(--border); }
+        .summary-total-label { font-size: 13px; font-weight: 600; }
+        .summary-total-value { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+
+        .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+        .header-row .page-header { margin-bottom: 0; }
+
+        @media (max-width: 768px) { .sidebar { display: none; } .main { margin-left: 0; } .summary-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">F</div>
+                <span>Foremen</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <a href="01-dashboard.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <a href="02-projects.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Projekty
+                </a>
+                <a href="#" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    Pomieszczenia
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Kosztorys
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Magazyn</div>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Materiały
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/></svg>
+                    Finanse
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13"/><polygon points="23 7 16 12 23 17 23 7"/></svg>
+                    Dostawy
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Użytkownicy
+                </a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">OB</div>
+                <div>
+                    <div class="user-name">Oleg Borysov</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <span class="topbar-title">Pomieszczenia</span>
+            </div>
+            <div class="topbar-right">
+                <button class="btn btn-sm">PL</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+                <a href="02-projects.html">Projekty</a>
+                <span class="sep">›</span>
+                <a href="#">Kowalski — Marszałkowska 12</a>
+                <span class="sep">›</span>
+                <span class="current">Pomieszczenia</span>
+            </div>
+
+            <div class="header-row">
+                <div class="page-header">
+                    <h1>Wymiary pomieszczeń</h1>
+                    <p>Kowalski — ul. Marszałkowska 12, 72 m²</p>
+                </div>
+                <button class="btn btn-primary">+ Dodaj pomieszczenie</button>
+            </div>
+
+            <!-- Dimensions Table -->
+            <div class="card">
+                <table class="dim-table">
+                    <thead>
+                        <tr>
+                            <th>Parametr</th>
+                            <th>Przedpokój</th>
+                            <th>Kuchnia</th>
+                            <th>Salon</th>
+                            <th>Łazienka 1</th>
+                            <th>Pokój 1</th>
+                            <th>Pokój 2</th>
+                            <th>SUMA</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Pow. podłogi (m²)</td>
+                            <td>6,2</td>
+                            <td>9,8</td>
+                            <td>20,5</td>
+                            <td>5,4</td>
+                            <td>14,8</td>
+                            <td>12,3</td>
+                            <td><strong>69,0</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Pow. ścian (m²)</td>
+                            <td>22,4</td>
+                            <td>28,6</td>
+                            <td>42,8</td>
+                            <td>18,2</td>
+                            <td>35,6</td>
+                            <td>31,2</td>
+                            <td><strong>178,8</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Obwód (mb)</td>
+                            <td>10,4</td>
+                            <td>12,8</td>
+                            <td>18,4</td>
+                            <td>9,6</td>
+                            <td>15,6</td>
+                            <td>14,2</td>
+                            <td><strong>81,0</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Drzwi (szt)</td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td>2</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td><strong>8</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Wys. drzwi (mb)</td>
+                            <td>2,05</td>
+                            <td>2,05</td>
+                            <td>2,05</td>
+                            <td>2,05</td>
+                            <td>2,05</td>
+                            <td>2,05</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>Szer. drzwi (mb)</td>
+                            <td>0,80</td>
+                            <td>0,80</td>
+                            <td>0,90</td>
+                            <td>0,70</td>
+                            <td>0,80</td>
+                            <td>0,80</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>Pow. drzwi (m²)</td>
+                            <td class="calc">3,28</td>
+                            <td class="calc">1,64</td>
+                            <td class="calc">3,69</td>
+                            <td class="calc">1,44</td>
+                            <td class="calc">1,64</td>
+                            <td class="calc">1,64</td>
+                            <td class="calc"><strong>13,33</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Wys. okna (mb)</td>
+                            <td>—</td>
+                            <td>1,40</td>
+                            <td>1,50</td>
+                            <td>0,60</td>
+                            <td>1,40</td>
+                            <td>1,40</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>Szer. okna (mb)</td>
+                            <td>—</td>
+                            <td>1,20</td>
+                            <td>2,00</td>
+                            <td>0,60</td>
+                            <td>1,50</td>
+                            <td>1,20</td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>Pow. okna (m²)</td>
+                            <td class="calc">—</td>
+                            <td class="calc">1,68</td>
+                            <td class="calc">3,00</td>
+                            <td class="calc">0,36</td>
+                            <td class="calc">2,10</td>
+                            <td class="calc">1,68</td>
+                            <td class="calc"><strong>8,82</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Narożniki wew. (szt)</td>
+                            <td>4</td>
+                            <td>4</td>
+                            <td>5</td>
+                            <td>4</td>
+                            <td>4</td>
+                            <td>4</td>
+                            <td><strong>25</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Wys. pomieszczenia (mb)</td>
+                            <td>2,60</td>
+                            <td>2,60</td>
+                            <td>2,60</td>
+                            <td>2,60</td>
+                            <td>2,60</td>
+                            <td>2,60</td>
+                            <td>—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary Card -->
+            <div class="summary-card">
+                <h3>Podsumowanie kosztów</h3>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-item-label">Prace przygotowawcze</span>
+                        <span class="summary-item-value">4 200 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Konstrukcje i GK</span>
+                        <span class="summary-item-value">12 800 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Hydraulika</span>
+                        <span class="summary-item-value">8 500 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Elektryka</span>
+                        <span class="summary-item-value">7 200 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Płytki</span>
+                        <span class="summary-item-value">15 400 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Szpachle</span>
+                        <span class="summary-item-value">6 100 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Malarskie</span>
+                        <span class="summary-item-value">4 800 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Podłogi</span>
+                        <span class="summary-item-value">9 300 zł</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-item-label">Stolarka</span>
+                        <span class="summary-item-value">3 200 zł</span>
+                    </div>
+                </div>
+                <div class="summary-total">
+                    <span class="summary-total-label">RAZEM</span>
+                    <span class="summary-total-value">71 500 zł</span>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

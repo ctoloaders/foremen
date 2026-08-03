@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Коммерческое предложение v3.0 — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        :root { --bg-primary: #0a0a0a; --bg-secondary: #141414; --bg-card: #1a1a1a; --bg-card-hover: #222222; --border: #2a2a2a; --border-light: #333333; --text-primary: #ffffff; --text-secondary: #a0a0a0; --text-muted: #666666; --accent: #00ff88; --accent-dim: #00cc6a; --accent-bg: rgba(0, 255, 136, 0.08); --accent-border: rgba(0, 255, 136, 0.2); --purple: #a855f7; --blue: #3b82f6; --orange: #f97316; --red: #ef4444; --yellow: #eab308; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; font-size: 15px; }
+        .header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
+        .header-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .header-logo img { height: 32px; }
+        .header-logo-text { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .header-meta { font-size: 0.8rem; color: var(--text-muted); }
+        .hero { padding: 80px 40px 60px; text-align: center; background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-bottom: 1px solid var(--border); }
+        .hero-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; margin-bottom: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-subtitle { font-size: 1.15rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.7; }
+        .hero-client { margin-top: 30px; padding-top: 30px; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .hero-client-item { text-align: center; }
+        .hero-client-item .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .hero-client-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
+        h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; margin: 50px 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+        h3 { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 28px 0 12px; }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin: 16px 0 8px; }
+        p { margin-bottom: 12px; color: var(--text-secondary); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 16px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-secondary); color: var(--accent); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg-card-hover); }
+        td { color: var(--text-secondary); font-size: 0.9rem; }
+        .highlight { background: var(--accent-bg); border: 1px solid var(--accent-border); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight strong { color: var(--accent); }
+        .highlight-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-orange strong { color: var(--orange); }
+        .highlight-blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-left: 3px solid var(--blue); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-blue strong { color: var(--blue); }
+        .highlight-purple { background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-left: 3px solid var(--purple); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-purple strong { color: var(--purple); }
+        .tech-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin: 3px 4px 3px 0; font-weight: 500; }
+        .badge-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); color: var(--orange); }
+        .badge-blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); color: var(--blue); }
+        ul { margin: 10px 0 15px 20px; color: var(--text-secondary); }
+        li { margin-bottom: 8px; }
+        li strong { color: var(--text-primary); }
+        .total-row td { background: var(--accent-bg) !important; font-weight: 700; color: var(--text-primary) !important; }
+        .footer { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 40px; text-align: center; }
+        .footer-info { color: var(--text-muted); font-size: 0.85rem; line-height: 1.8; }
+        .footer-info a { color: var(--accent); text-decoration: none; }
+        .footer-divider { width: 60px; height: 1px; background: var(--border); margin: 20px auto; }
+        .footer-logo { margin-bottom: 16px; }
+        .footer-logo img { height: 28px; opacity: 0.7; }
+        /* Mockups */
+        .mockups-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin: 24px 0; }
+        .mockup-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 12px; overflow: hidden; }
+        .mockup-card-header { padding: 10px 14px; background: var(--bg-secondary); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; }
+        .mockup-card-header .dot { width: 8px; height: 8px; border-radius: 50%; }
+        .mockup-card-header .title { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+        .mockup-card-body { padding: 16px; min-height: 180px; }
+        .mockup-caption { text-align: center; font-size: 0.8rem; color: var(--text-muted); padding: 8px; }
+        .mini-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; }
+        .mini-stat { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 4px; padding: 8px 6px; text-align: center; }
+        .mini-stat-val { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+        .mini-stat-lbl { font-size: 8px; color: var(--text-muted); margin-top: 2px; }
+        .mini-table { width: 100%; border-collapse: collapse; }
+        .mini-table th, .mini-table td { padding: 5px 8px; font-size: 9px; border-bottom: 1px solid var(--border); text-align: left; }
+        .mini-table th { color: var(--text-muted); font-weight: 500; background: var(--bg-secondary); }
+        .mini-table td { color: var(--text-secondary); }
+        .mini-badge { display: inline-block; padding: 1px 6px; border-radius: 8px; font-size: 8px; font-weight: 500; }
+        .mini-badge-green { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .mini-badge-blue { background: rgba(59,130,246,0.15); color: #3b82f6; }
+        .mini-badge-yellow { background: rgba(234,179,8,0.15); color: #eab308; }
+        .mini-badge-muted { background: rgba(82,82,91,0.3); color: #a1a1aa; }
+        .mini-gantt-bar { height: 12px; border-radius: 3px; }
+        .mini-offer-row { display: flex; justify-content: space-between; padding: 4px 8px; font-size: 9px; color: var(--text-secondary); border-bottom: 1px solid var(--border); }
+        .mini-offer-total { display: flex; justify-content: space-between; padding: 6px 8px; font-size: 10px; font-weight: 600; color: var(--text-primary); background: var(--bg-secondary); border-radius: 4px; margin-top: 8px; }
+        .mockups-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 24px 0; }
+        @media (max-width: 768px) { .header { padding: 12px 20px; } .hero { padding: 50px 20px 40px; } .hero h1 { font-size: 2rem; } .container { padding: 20px 20px 60px; } h2 { font-size: 1.3rem; } .mockups-grid, .mockups-grid-3 { grid-template-columns: 1fr; } }
+        @media print { body { background: #fff; color: #000; } .header { position: static; background: #fff; border-bottom: 2px solid #000; } .hero { background: #fff; } .card { border: 1px solid #ccc; } table { border: 1px solid #ccc; } th { background: #f0f0f0; color: #000; } .highlight, .highlight-orange, .highlight-blue, .highlight-purple { border-left: 3px solid #000; background: #f9f9f9; } .tech-badge, .badge-orange, .badge-blue { background: #f0f0f0; border: 1px solid #ccc; color: #000; } .mockup-card { border: 1px solid #ccc; } .mockup-card-body { background: #fafafa; } }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+    <a href="https://loaders.dev" class="header-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+        <span class="header-logo-text">Loaders</span>
+    </a>
+    <div class="header-meta">Коммерческое предложение</div>
+</div>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+    <div class="hero-badge">Коммерческое предложение</div>
+    <h1>Foremen</h1>
+    <p class="hero-subtitle">Платформа управления ремонтными проектами. Единая система с AI-агентом, порталами для каждой роли и гибкой моделью доступа.</p>
+    <div class="hero-client">
+        <div class="hero-client-item">
+            <div class="label">Клиент</div>
+            <div class="value">Foremen Sp. z o.o.</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Проект</div>
+            <div class="value">Foremen Platform</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Дата</div>
+            <div class="value">Июль 2026</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Версия</div>
+            <div class="value">3.0</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+    <!-- ===== 1. КЛЮЧЕВЫЕ ВОЗМОЖНОСТИ ===== -->
+    <h2>1. Ключевые возможности платформы</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>Прейскурант работ для клиента</strong> — каталог работ с ценами для клиента + возможность индивидуальных скидок под проект</li>
+            <li><strong>Внутренний прейскурант себестоимости</strong> — справочник себестоимости работ (для расчёта маржи и нарядов работникам)</li>
+            <li><strong>Менеджмент помещений</strong> — управление помещениями с размерами, авто-расчёт площадей, привязка к проекту</li>
+            <li><strong>Менеджмент проектов</strong> — создание и ведение проектов, назначение команды, метаданные</li>
+            <li><strong>Клиентский портал</strong> — смета, оферта, согласование допработ, график работ и доставок, контроль оплат, перечень строительных и отделочных материалов</li>
+            <li><strong>Создание сметы/оферты</strong> — ручной режим + AI-агент (загрузка PDF плана → авто-генерация сметы по каталогу)</li>
+            <li><strong>Портал прораба</strong> — профили работников, графики работ на проекте, отчётность по выполнению, расчёты с работниками (помесячные ведомости с группировкой факта и оплат), внесение первичной фин. документации (фактуры, чеки), перечень строительных и отделочных материалов</li>
+            <li><strong>Портал работника</strong> — read-only доступ к своим объектам, внесение факта выполненных работ, read-only доступ к зарплатной ведомости</li>
+            <li><strong>Портал менеджера</strong> — фин. документы, доступ к проектам, коммуникация через клиентский портал, контроль закупок, поиск поставщиков (ручной + AI-агент)</li>
+            <li><strong>Поддержка 2 языков</strong> — PL/RU (с возможностью добавления EN)</li>
+            <li><strong>Настраиваемая модель доступа</strong> — суперадмин создаёт роли с уровнями доступа (read/edit/admin) к разным модулям (клиентский портал, закупки, прейскуранты, списки работников, проекты, помещения и т.д.)</li>
+        </ul>
+    </div>
+
+    <!-- ===== 2. ДЕКОМПОЗИЦИЯ И ЭСТИМАЦИЯ ===== -->
+    <h2>2. Декомпозиция и эстимация</h2>
+
+    <div class="highlight">
+        <strong>Ставка: 45 €/час нетто. Общий бюджет: 450 часов = 20 250 €</strong>
+    </div>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Инфраструктура и авторизация</td>
+            <td>Проект, CI/CD, деплой, БД, JWT, seed, настраиваемая модель ролей/доступа</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Менеджмент проектов</td>
+            <td>CRUD проектов, назначение команды, метаданные, статусы</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr>
+            <td>Менеджмент помещений</td>
+            <td>Помещения с размерами, авто-расчёт площадей, привязка к проекту</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Прейскурант для клиента</td>
+            <td>Каталог работ с ценами, 13 категорий, скидки per проект, импорт из Excel</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Внутренний прейскурант (себестоимость)</td>
+            <td>Справочник себестоимости, маржа, ставки работников, ценовые уровни</td>
+            <td>16</td>
+            <td>720</td>
+        </tr>
+        <tr>
+            <td>AI-генерация смет</td>
+            <td>Загрузка PDF → распознавание метражей → генерация сметы по каталогу</td>
+            <td>44</td>
+            <td>1 980</td>
+        </tr>
+        <tr>
+            <td>Ручная смета / оферта</td>
+            <td>Выбор работ, количество, авто-расчёт итогов, формирование оферты</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Финансы и транзакции</td>
+            <td>Импорт выписок, авто-разноска (AI), сводка по проектам, фактуры, чеки</td>
+            <td>32</td>
+            <td>1 440</td>
+        </tr>
+        <tr>
+            <td>Склад материалов</td>
+            <td>Строительные и отделочные материалы, НДС-калькуляция, привязка к проекту</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr>
+            <td>Закупки и поставщики</td>
+            <td>Workflow закупок, поиск поставщиков (ручной + AI-агент), статусы</td>
+            <td>32</td>
+            <td>1 440</td>
+        </tr>
+        <tr>
+            <td>Доставки и уведомления</td>
+            <td>График доставок, статусы, SMS/уведомления бригадиру</td>
+            <td>16</td>
+            <td>720</td>
+        </tr>
+        <tr>
+            <td>Клиентский портал</td>
+            <td>Смета, оферта, согласование допработ, график, оплаты, материалы (RO)</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Портал прораба</td>
+            <td>Профили работников, графики, отчётность, ведомости, первичная документация</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>Портал работника</td>
+            <td>Read-only объекты, внесение факта, зарплатная ведомость (RO)</td>
+            <td>16</td>
+            <td>720</td>
+        </tr>
+        <tr>
+            <td>Портал менеджера</td>
+            <td>Фин. документы, проекты, коммуникация, закупки, поиск поставщиков</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr>
+            <td>Локализация (PL/RU)</td>
+            <td>Двуязычный интерфейс, переключение языка</td>
+            <td>10</td>
+            <td>450</td>
+        </tr>
+        <tr>
+            <td>UI/UX</td>
+            <td>Dashboard, навигация, таблицы, формы, адаптивность</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Тестирование и bugfix</td>
+            <td>Интеграционное тестирование, исправление критических багов, UAT</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr>
+            <td>Буфер (непредвиденное)</td>
+            <td>Резерв на доработки по результатам демо</td>
+            <td>16</td>
+            <td>720</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО</strong></td>
+            <td></td>
+            <td><strong>450 ч</strong></td>
+            <td><strong>20 250 €</strong></td>
+        </tr>
+    </table>
+
+    <!-- ===== 3. ПОРТАЛЫ ===== -->
+    <h2>3. Порталы — что видит каждая роль</h2>
+
+    <table>
+        <tr>
+            <th>Портал</th>
+            <th>Роль</th>
+            <th>Возможности</th>
+        </tr>
+        <tr>
+            <td>Клиентский</td>
+            <td>Заказчик</td>
+            <td>Просмотр сметы/оферты, согласование допработ, график работ и доставок, контроль оплат, перечень материалов (read-only)</td>
+        </tr>
+        <tr>
+            <td>Прораба</td>
+            <td>Прораб</td>
+            <td>Профили работников, графики работ, отчётность по выполнению, помесячные ведомости, первичная документация (фактуры, чеки), материалы</td>
+        </tr>
+        <tr>
+            <td>Работника</td>
+            <td>Работник</td>
+            <td>Read-only доступ к своим объектам, внесение факта выполненных работ, просмотр зарплатной ведомости</td>
+        </tr>
+        <tr>
+            <td>Менеджера</td>
+            <td>Менеджер</td>
+            <td>Фин. документы, управление проектами, коммуникация с клиентом, контроль закупок, поиск поставщиков (ручной + AI)</td>
+        </tr>
+        <tr>
+            <td>Админ</td>
+            <td>Суперадмин</td>
+            <td>Все модули + настройка ролей и уровней доступа (read/edit/admin) к каждому модулю</td>
+        </tr>
+    </table>
+
+    <!-- ===== 4. МОДЕЛЬ ДОСТУПА ===== -->
+    <h2>4. Модель доступа</h2>
+
+    <div class="highlight-purple">
+        <strong>Суперадмин создаёт роли с гранулярным доступом.</strong> Для каждого модуля (клиентский портал, закупки, прейскуранты, списки работников, проекты, помещения, финансы, доставки) устанавливается уровень: нет доступа / только чтение / редактирование / полный (админ). Предустановленные роли: Заказчик, Работник, Прораб, Менеджер, Суперадмин.
+    </div>
+
+    <!-- ===== 5. УСЛОВИЯ ===== -->
+    <h2>5. Условия</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>Ставка:</strong> 45 €/час нетто</li>
+            <li><strong>Оплата:</strong> помесячно по факту отработанных часов (timesheet)</li>
+            <li><strong>Отчётность:</strong> еженедельный отчёт + доступ к трекеру задач</li>
+            <li><strong>Демо:</strong> каждые 2 недели — показ промежуточных результатов</li>
+            <li><strong>Исходный код:</strong> передаётся клиенту</li>
+            <li><strong>Гарантия:</strong> 30 дней бесплатного bugfix после релиза</li>
+            <li><strong>Хостинг:</strong> ~30–50 €/мес (клиент)</li>
+            <li><strong>AI-сервисы:</strong> OpenAI API ~50–100 €/мес (клиент)</li>
+        </ul>
+    </div>
+
+    <!-- ===== 6. СЛЕДУЮЩИЕ ШАГИ ===== -->
+    <h2>6. Следующие шаги</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>1.</strong> Согласование скоупа и подписание договора</li>
+            <li><strong>2.</strong> Получение от клиента: прайс-лист, PDF-планы, шаблон сметы, доступ к банковской выписке</li>
+            <li><strong>3.</strong> Старт — неделя 1: инфра + авторизация + модель доступа</li>
+            <li><strong>4.</strong> Демо через 4 недели: генерация сметы + портал менеджера</li>
+            <li><strong>5.</strong> Демо через 8 недель: портал прораба + клиентский портал</li>
+            <li><strong>6.</strong> Релиз — неделя 12–14</li>
+        </ul>
+    </div>
+
+</div><!-- /container -->
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+    <div class="footer-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info">
+        <strong>Loaders Development</strong><br>
+        Młynarska 12, 01-205 Warszawa, Polska<br>
+        <a href="tel:+48579545535">+48 579 545 535</a> • <a href="mailto:oleg@loaders.dev">oleg@loaders.dev</a><br>
+        <a href="https://loaders.dev">loaders.dev</a>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info" style="font-size: 0.75rem; color: var(--text-muted);">
+        © 2026 Loaders Development. Конфиденциальный документ — только для адресата.
+    </div>
+</div>
+
+</body>
+</html>

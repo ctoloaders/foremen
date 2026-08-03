@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zakupy materiałów — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --background: #09090b;
+            --foreground: #fafafa;
+            --card: #09090b;
+            --card-foreground: #fafafa;
+            --popover: #09090b;
+            --primary: #fafafa;
+            --primary-foreground: #18181b;
+            --secondary: #27272a;
+            --secondary-foreground: #fafafa;
+            --muted: #27272a;
+            --muted-foreground: #a1a1aa;
+            --accent: #27272a;
+            --accent-foreground: #fafafa;
+            --destructive: #7f1d1d;
+            --border: #27272a;
+            --input: #27272a;
+            --ring: #d4d4d8;
+            --radius: 8px;
+            --sidebar-width: 240px;
+            --success: #22c55e;
+            --warning: #eab308;
+            --info: #3b82f6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app { display: flex; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { width: var(--sidebar-width); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; background: var(--background); z-index: 50; }
+        .sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .sidebar-brand { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; }
+        .sidebar-brand-icon { width: 28px; height: 28px; background: var(--foreground); color: var(--background); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+        .sidebar-nav { flex: 1; padding: 8px; overflow-y: auto; }
+        .nav-section { margin-bottom: 16px; }
+        .nav-section-title { font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.05em; padding: 4px 12px; margin-bottom: 4px; }
+        .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: var(--radius); color: var(--muted-foreground); text-decoration: none; font-size: 13px; font-weight: 450; transition: all 0.1s; }
+        .nav-item:hover { background: var(--secondary); color: var(--foreground); }
+        .nav-item.active { background: var(--secondary); color: var(--foreground); font-weight: 500; }
+        .nav-item svg { width: 16px; height: 16px; opacity: 0.7; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--border); }
+        .user-info { display: flex; align-items: center; gap: 8px; }
+        .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .user-name { font-size: 12px; font-weight: 500; }
+        .user-role { font-size: 11px; color: var(--muted-foreground); }
+
+        /* Main */
+        .main { margin-left: var(--sidebar-width); flex: 1; }
+        .topbar { padding: 12px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .topbar-title { font-size: 15px; font-weight: 600; }
+        .topbar-right { display: flex; align-items: center; gap: 8px; }
+        .btn { padding: 6px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: transparent; color: var(--foreground); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { background: var(--secondary); }
+        .btn-primary { background: var(--foreground); color: var(--primary-foreground); border-color: var(--foreground); }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-sm { padding: 4px 8px; font-size: 11px; }
+        .btn-success { background: rgba(34,197,94,0.1); color: var(--success); border-color: rgba(34,197,94,0.3); }
+        .btn-success:hover { background: rgba(34,197,94,0.2); }
+        .btn-destructive { background: rgba(239,68,68,0.1); color: #ef4444; border-color: rgba(239,68,68,0.3); }
+        .btn-destructive:hover { background: rgba(239,68,68,0.2); }
+
+        /* Content */
+        .content { padding: 24px; }
+        .page-header { margin-bottom: 24px; }
+        .page-header h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+        .page-header p { color: var(--muted-foreground); font-size: 13px; margin-top: 4px; }
+
+        /* Breadcrumb */
+        .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-foreground); margin-bottom: 16px; }
+        .breadcrumb a { color: var(--muted-foreground); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--foreground); }
+        .breadcrumb-sep { opacity: 0.5; }
+
+        /* Card */
+        .card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-title { font-size: 14px; font-weight: 600; }
+        .card-desc { font-size: 12px; color: var(--muted-foreground); }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        td strong { color: var(--foreground); font-weight: 500; }
+
+        /* Badge */
+        .badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
+        .badge-success { background: rgba(34,197,94,0.1); color: var(--success); }
+        .badge-warning { background: rgba(234,179,8,0.1); color: var(--warning); }
+        .badge-info { background: rgba(59,130,246,0.1); color: var(--info); }
+        .badge-muted { background: var(--secondary); color: var(--muted-foreground); }
+
+        /* Filter bar */
+        .filter-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filter-select { padding: 6px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: var(--background); color: var(--foreground); cursor: pointer; appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+        .filter-input { padding: 6px 12px; border-radius: var(--radius); font-size: 12px; border: 1px solid var(--border); background: var(--background); color: var(--foreground); width: 200px; }
+        .filter-input::placeholder { color: var(--muted-foreground); }
+
+        /* Approval text */
+        .approved { color: var(--success); font-size: 12px; }
+        .pending { color: var(--warning); font-size: 12px; }
+
+        /* Summary grid */
+        .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-top: 24px; }
+        .summary-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+        .summary-item-label { font-size: 12px; font-weight: 500; color: var(--muted-foreground); margin-bottom: 8px; }
+        .summary-item-value { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+        .summary-item-sub { font-size: 11px; color: var(--muted-foreground); margin-top: 4px; }
+
+        /* Actions cell */
+        .actions-cell { display: flex; gap: 6px; }
+
+        @media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .sidebar { display: none; } .main { margin-left: 0; } .summary-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+<div class="app">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">F</div>
+                <span>Foremen</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <a href="01-dashboard.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <a href="02-projects.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Projekty
+                </a>
+                <a href="03-rooms.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+                    Pomieszczenia
+                </a>
+                <a href="05-schedule.html" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Harmonogram
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Kosztorys
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">Magazyn</div>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    Materiały
+                </a>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/></svg>
+                    Finanse
+                </a>
+                <a href="#" class="nav-item active">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    Zakupy
+                </a>
+            </div>
+            <div class="nav-section">
+                <div class="nav-section-title">System</div>
+                <a href="#" class="nav-item">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Użytkownicy
+                </a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="user-avatar">OB</div>
+                <div>
+                    <div class="user-name">Oleg Borysov</div>
+                    <div class="user-role">Administrator</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-left">
+                <span class="topbar-title">Zakupy materiałów</span>
+            </div>
+            <div class="topbar-right">
+                <button class="btn btn-sm">PL</button>
+                <button class="btn">Eksportuj CSV</button>
+                <button class="btn-primary btn">+ Dodaj pozycję</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="breadcrumb">
+                <a href="02-projects.html">Projekty</a>
+                <span class="breadcrumb-sep">/</span>
+                <a href="#">Kowalski — Marszałkowska 12</a>
+                <span class="breadcrumb-sep">/</span>
+                <span style="color:var(--foreground)">Zakupy materiałów</span>
+            </div>
+
+            <div class="page-header">
+                <h1>Zakupy materiałów</h1>
+                <p>Kowalski — ul. Marszałkowska 12 • 18 pozycji • 4 oczekujące na zatwierdzenie</p>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <select class="filter-select">
+                    <option>Status: Wszystkie</option>
+                    <option>Do zatwierdzenia</option>
+                    <option>Zamówione</option>
+                    <option>Dostarczone</option>
+                </select>
+                <select class="filter-select">
+                    <option>Kategoria: Wszystkie</option>
+                    <option>Budowlane</option>
+                    <option>Wykończeniowe</option>
+                    <option>Wyposażenie</option>
+                </select>
+                <input type="text" class="filter-input" placeholder="Szukaj materiału...">
+            </div>
+
+            <!-- Materials Table -->
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Materiał</th>
+                            <th>Kategoria</th>
+                            <th>Ilość</th>
+                            <th>Dostawca</th>
+                            <th>Cena brutto</th>
+                            <th>Status</th>
+                            <th>Termin dostawy</th>
+                            <th>Zatwierdzone</th>
+                            <th>Akcje</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td><strong>Klej do płytek Ceresit CM 17</strong></td>
+                            <td>Budowlane</td>
+                            <td>25 worków</td>
+                            <td>Castorama</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">1 250 zł</td>
+                            <td><span class="badge badge-info">Zamówione</span></td>
+                            <td>28.01.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td><strong>Gładź Knauf MP 75</strong></td>
+                            <td>Budowlane</td>
+                            <td>40 worków</td>
+                            <td>Leroy Merlin</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">2 400 zł</td>
+                            <td><span class="badge badge-info">Zamówione</span></td>
+                            <td>30.01.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td><strong>Profil UD 27</strong></td>
+                            <td>Budowlane</td>
+                            <td>120 szt</td>
+                            <td>Bricoman</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">480 zł</td>
+                            <td><span class="badge badge-success">Dostarczone</span></td>
+                            <td>20.01.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>4</td>
+                            <td><strong>Płytki Tubądzin 60×60 biały</strong></td>
+                            <td>Wykończeniowe</td>
+                            <td>28 m²</td>
+                            <td>Tubądzin Salon</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">4 200 zł</td>
+                            <td><span class="badge badge-info">Zamówione</span></td>
+                            <td>05.02.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>5</td>
+                            <td><strong>Panele LVT dąb</strong></td>
+                            <td>Wykończeniowe</td>
+                            <td>52 m²</td>
+                            <td>Floorpol</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">5 720 zł</td>
+                            <td><span class="badge badge-warning">Do zatwierdzenia</span></td>
+                            <td>10.02.2025</td>
+                            <td><span class="pending">⏳ oczekuje</span></td>
+                            <td class="actions-cell">
+                                <button class="btn btn-sm btn-success">Zatwierdź</button>
+                                <button class="btn btn-sm btn-destructive">Odrzuć</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>6</td>
+                            <td><strong>Farba Dulux białe ściany 10L</strong></td>
+                            <td>Wykończeniowe</td>
+                            <td>8 opakowań</td>
+                            <td>Castorama</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">960 zł</td>
+                            <td><span class="badge badge-warning">Do zatwierdzenia</span></td>
+                            <td>08.02.2025</td>
+                            <td><span class="pending">⏳ oczekuje</span></td>
+                            <td class="actions-cell">
+                                <button class="btn btn-sm btn-success">Zatwierdź</button>
+                                <button class="btn btn-sm btn-destructive">Odrzuć</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>7</td>
+                            <td><strong>Drzwi Porta CPL 80</strong></td>
+                            <td>Wykończeniowe</td>
+                            <td>6 szt</td>
+                            <td>Porta Salon</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">3 600 zł</td>
+                            <td><span class="badge badge-warning">Do zatwierdzenia</span></td>
+                            <td>15.02.2025</td>
+                            <td><span class="pending">⏳ oczekuje</span></td>
+                            <td class="actions-cell">
+                                <button class="btn btn-sm btn-success">Zatwierdź</button>
+                                <button class="btn btn-sm btn-destructive">Odrzuć</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>8</td>
+                            <td><strong>Rury PP 20mm</strong></td>
+                            <td>Budowlane</td>
+                            <td>50 mb</td>
+                            <td>Hurtownia BUD</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">350 zł</td>
+                            <td><span class="badge badge-success">Dostarczone</span></td>
+                            <td>18.01.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>9</td>
+                            <td><strong>Kable YDYp 3×2.5</strong></td>
+                            <td>Budowlane</td>
+                            <td>200 mb</td>
+                            <td>Elektro-Hurt</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">1 200 zł</td>
+                            <td><span class="badge badge-success">Dostarczone</span></td>
+                            <td>19.01.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>10</td>
+                            <td><strong>Wanna Cersanit 170×70</strong></td>
+                            <td>Wyposażenie</td>
+                            <td>1 szt</td>
+                            <td>Łazienki Outlet</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">1 890 zł</td>
+                            <td><span class="badge badge-warning">Do zatwierdzenia</span></td>
+                            <td>20.02.2025</td>
+                            <td><span class="pending">⏳ oczekuje</span></td>
+                            <td class="actions-cell">
+                                <button class="btn btn-sm btn-success">Zatwierdź</button>
+                                <button class="btn btn-sm btn-destructive">Odrzuć</button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>11</td>
+                            <td><strong>Umywalka Roca 60cm</strong></td>
+                            <td>Wyposażenie</td>
+                            <td>1 szt</td>
+                            <td>Łazienki Outlet</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">890 zł</td>
+                            <td><span class="badge badge-info">Zamówione</span></td>
+                            <td>12.02.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                        <tr>
+                            <td>12</td>
+                            <td><strong>Oświetlenie LED wpuszczane</strong></td>
+                            <td>Wykończeniowe</td>
+                            <td>12 szt</td>
+                            <td>LED-Świat</td>
+                            <td style="color:var(--foreground);font-variant-numeric:tabular-nums">1 440 zł</td>
+                            <td><span class="badge badge-info">Zamówione</span></td>
+                            <td>14.02.2025</td>
+                            <td><span class="approved">✅ A. Nowak</span></td>
+                            <td>—</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-item-label">Łączna wartość zamówień</div>
+                    <div class="summary-item-value">24 380 zł</div>
+                    <div class="summary-item-sub">12 pozycji na liście</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-label">Dostarczone</div>
+                    <div class="summary-item-value" style="color:var(--success)">2 030 zł</div>
+                    <div class="summary-item-sub">8% wartości</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-label">Zamówione</div>
+                    <div class="summary-item-value" style="color:var(--info)">16 060 zł</div>
+                    <div class="summary-item-sub">66% wartości</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-label">Do zatwierdzenia</div>
+                    <div class="summary-item-value" style="color:var(--warning)">12 170 zł</div>
+                    <div class="summary-item-sub">26% wartości</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-item-label">Najbliższa dostawa</div>
+                    <div class="summary-item-value" style="font-size:14px">Klej Ceresit</div>
+                    <div class="summary-item-sub">28.01.2025</div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+</body>
+</html>

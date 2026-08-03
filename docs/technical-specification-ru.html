@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Техническая спецификация — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1a1a1a;
+            --bg-card-hover: #222222;
+            --border: #2a2a2a;
+            --border-light: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+            --accent-bg: rgba(0, 255, 136, 0.08);
+            --accent-border: rgba(0, 255, 136, 0.2);
+            --purple: #a855f7;
+            --blue: #3b82f6;
+            --orange: #f97316;
+            --red: #ef4444;
+            --yellow: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
+        .header-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .header-logo img { height: 32px; }
+        .header-logo-text { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .header-meta { font-size: 0.8rem; color: var(--text-muted); }
+
+        .hero { padding: 80px 40px 60px; text-align: center; background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-bottom: 1px solid var(--border); }
+        .hero-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; margin-bottom: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-subtitle { font-size: 1.15rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.7; }
+        .hero-client { margin-top: 30px; padding-top: 30px; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .hero-client-item { text-align: center; }
+        .hero-client-item .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .hero-client-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
+
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
+        h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; margin: 50px 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+        h3 { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 28px 0 12px; }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin: 16px 0 8px; }
+        p { margin-bottom: 12px; color: var(--text-secondary); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 16px 0; transition: border-color 0.2s; }
+        .card:hover { border-color: var(--border-light); }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-secondary); color: var(--accent); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg-card-hover); }
+        td { color: var(--text-secondary); font-size: 0.9rem; }
+        .highlight { background: var(--accent-bg); border: 1px solid var(--accent-border); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight strong { color: var(--accent); }
+        .tech-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin: 3px 4px 3px 0; font-weight: 500; }
+        ul { margin: 10px 0 15px 20px; color: var(--text-secondary); }
+        li { margin-bottom: 8px; }
+        li strong { color: var(--text-primary); }
+        .diagram { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 30px; margin: 20px 0; overflow-x: auto; }
+        .diagram pre { color: var(--accent); font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.8; }
+        .footer { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 40px; text-align: center; }
+        .footer-logo { margin-bottom: 16px; }
+        .footer-logo img { height: 28px; opacity: 0.7; }
+        .footer-info { color: var(--text-muted); font-size: 0.85rem; line-height: 1.8; }
+        .footer-info a { color: var(--accent); text-decoration: none; }
+        .footer-divider { width: 60px; height: 1px; background: var(--border); margin: 20px auto; }
+        @media (max-width: 768px) { .header { padding: 12px 20px; } .hero { padding: 50px 20px 40px; } .hero h1 { font-size: 2rem; } .container { padding: 20px 20px 60px; } h2 { font-size: 1.3rem; } .hero-client { gap: 20px; } }
+        @media print { body { background: #fff; color: #000; } .header { position: static; background: #fff; border-bottom: 2px solid #000; } .hero { background: #fff; } .card { border: 1px solid #ccc; } table { border: 1px solid #ccc; } th { background: #f0f0f0; color: #000; } .highlight { border-left: 3px solid #000; background: #f9f9f9; } .tech-badge { background: #f0f0f0; border: 1px solid #ccc; color: #000; } }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+    <a href="https://loaders.dev" class="header-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+        <span class="header-logo-text">Loaders</span>
+    </a>
+    <div class="header-meta">Техническая спецификация • Конфиденциальный документ</div>
+</div>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+    <div class="hero-badge">Техническая спецификация</div>
+    <h1>Foremen</h1>
+    <p class="hero-subtitle">Система управления комплексными ремонтами квартир. Веб-приложение, заменяющее текущий процесс ведения проектов в Excel.</p>
+    <div class="hero-client">
+        <div class="hero-client-item">
+            <div class="label">Клиент</div>
+            <div class="value">Foremen Sp. z o.o.</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Проект</div>
+            <div class="value">Foremen App</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Дата</div>
+            <div class="value">Июль 2026</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Версия</div>
+            <div class="value">1.0</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+    <!-- ===== 1. СТЕК ===== -->
+    <h2><span class="section-icon">⚙️</span> 1. Технологический стек</h2>
+
+    <div>
+        <span class="tech-badge">Java 25</span>
+        <span class="tech-badge">Spring Boot 6</span>
+        <span class="tech-badge">Spring Security</span>
+        <span class="tech-badge">Spring Data JPA</span>
+        <span class="tech-badge">PostgreSQL 16</span>
+        <span class="tech-badge">Flyway</span>
+        <span class="tech-badge">React 19</span>
+        <span class="tech-badge">TypeScript 5</span>
+        <span class="tech-badge">Vite</span>
+        <span class="tech-badge">TanStack Query</span>
+        <span class="tech-badge">Zustand</span>
+        <span class="tech-badge">Tailwind CSS</span>
+        <span class="tech-badge">i18next</span>
+        <span class="tech-badge">Docker</span>
+        <span class="tech-badge">Nginx</span>
+    </div>
+
+    <div class="card">
+        <h4>Архитектура</h4>
+        <ul>
+            <li><strong>Backend</strong> — монолитный REST API (Java 25 + Spring Boot 6), Stateless (JWT), модульная структура пакетов</li>
+            <li><strong>Frontend</strong> — SPA (React 19 + TypeScript), взаимодействие с бэкендом через REST/JSON</li>
+            <li><strong>База данных</strong> — PostgreSQL 16, миграции через Flyway</li>
+            <li><strong>Хостинг</strong> — VPS / cloud (Docker Compose: backend + frontend + DB + Nginx reverse proxy)</li>
+            <li><strong>Будущее расширение</strong> — мобильное приложение (React Native / Capacitor), использующее тот же API</li>
+        </ul>
+    </div>
+
+    <div class="diagram">
+<pre>
+┌───────────────────────────────────────────────────────────────┐
+│                         ИНТЕРНЕТ                              │
+└───────────────────────┬───────────────────────────────────────┘
+                        │ HTTPS
+                        ▼
+┌───────────────────────────────────────────────────────────────┐
+│                    Nginx Reverse Proxy                         │
+│              (SSL termination, статика)                        │
+├───────────────────────┬───────────────────────────────────────┤
+│   /api/*  ──────────▶ │  Backend (Spring Boot 6, порт 8080)   │
+│                       │  ├── Auth Module (JWT + OTP)           │
+│   /*      ──────────▶ │  ├── Project Module                   │
+│   (статика SPA)       │  ├── Estimate Module                  │
+│                       │  ├── Warehouse Module                 │
+│                       │  ├── Finance Module                   │
+│                       │  ├── Delivery Module                  │
+│                       │  ├── WorkOrder Module                 │
+│                       │  └── Admin Module                     │
+│                       │         │                             │
+│                       │         ▼                             │
+│                       │  ┌─────────────┐                     │
+│                       │  │ PostgreSQL   │                     │
+│                       │  │ (порт 5432)  │                     │
+│                       │  └─────────────┘                     │
+└───────────────────────┴───────────────────────────────────────┘
+</pre>
+    </div>
+
+    <!-- ===== 2. МОДУЛИ ===== -->
+    <h2><span class="section-icon">📦</span> 2. Модули системы</h2>
+
+    <p>Система состоит из 10 функциональных модулей. Каждый модуль — отдельный пакет в бэкенде и отдельная секция в панели фронтенда.</p>
+
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Модуль</th>
+            <th>Описание</th>
+            <th>Ключевые сущности</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td><strong>Auth & Users</strong></td>
+            <td>Регистрация (OTP email), авторизация (JWT), управление пользователями, роли и разрешения</td>
+            <td>User, Role, Permission, OtpToken</td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td><strong>Проекты</strong></td>
+            <td>CRUD проектов ремонта, назначение клиента/менеджера/работников, метаданные</td>
+            <td>Project, ProjectMember</td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td><strong>Помещения</strong></td>
+            <td>Управление помещениями с размерами, авто-расчёт производных полей</td>
+            <td>Room, RoomDimensions</td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td><strong>Каталог работ</strong></td>
+            <td>Справочник ~230 позиций работ в 13 категориях, многоуровневые цены, двуязычные названия</td>
+            <td>WorkCategory, WorkItem, PriceTier</td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td><strong>Смета (Kosztorys)</strong></td>
+            <td>Создание сметы: выбор позиций × количество × цена, подытоги, утверждение, версионирование, изменения</td>
+            <td>Estimate, EstimateItem, EstimateVersion, ChangeOrder</td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td><strong>Склад (Magazyn)</strong></td>
+            <td>Регистрация закупок строительных/отделочных материалов, калькуляция НДС, суммы по проекту</td>
+            <td>MaterialPurchase, MaterialCategory</td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td><strong>Финансы</strong></td>
+            <td>Расчёт по проекту: стоимость контракта, изменения, материалы, фактуры, сальдо</td>
+            <td>FinancialSummary, Invoice</td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td><strong>Доставки</strong></td>
+            <td>График доставок: позиции по помещениям, статусы, история изменений</td>
+            <td>DeliveryItem, DeliveryStatusHistory</td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td><strong>Наряд-заказы (Zlecenia)</strong></td>
+            <td>Генерация наряд-заказов для бригад, расчёт выполненных работ</td>
+            <td>WorkOrder, WorkOrderItem, WorkerSettlement</td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td><strong>Gantt / График работ</strong></td>
+            <td>Диаграмма Ганта: категории работ vs недели, статусы фаз, вид только для чтения у клиента</td>
+            <td>GanttPhase</td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>Пакетные предложения (Budget/Norm/Lux)</strong> — подмодуль сметы. Генерирует предварительно заполненную смету на основе шаблона пакета и размеров помещений.
+    </div>
+
+    <!-- ===== 3. СПРАВОЧНИКИ ===== -->
+    <h2><span class="section-icon">📚</span> 3. Справочники системы</h2>
+
+    <p>Все поля выбора в системе основаны на управляемых справочниках. Администратор может добавлять, редактировать и деактивировать записи.</p>
+
+    <table>
+        <tr>
+            <th>Справочник</th>
+            <th>Значения по умолчанию</th>
+            <th>Где используется</th>
+        </tr>
+        <tr>
+            <td><strong>Типы помещений</strong></td>
+            <td>Przedpokój, Hol, Kuchnia, Salon, Biuro, Master, Pokój 1-N, Łazienka 1-N</td>
+            <td>Модуль Помещения</td>
+        </tr>
+        <tr>
+            <td><strong>Категории работ (13)</strong></td>
+            <td>Подготовительные работы, Конструкции и ГК, Сантехника черновая, Сантехника чистовая, Электрика черновая, Электрика чистовая, Плитка, Шпаклёвка, Малярные, Полы, Столярка, Дополнительные, Прочие</td>
+            <td>Каталог работ, Смета, Наряд-заказы, Gantt</td>
+        </tr>
+        <tr>
+            <td><strong>Единицы измерения</strong></td>
+            <td>m², mb, szt, kpl, godz, %</td>
+            <td>Каталог работ, Смета</td>
+        </tr>
+        <tr>
+            <td><strong>Статусы доставок</strong></td>
+            <td>Nowe (Новое), Zamówione (Заказано), Dostarczone (Доставлено), Anulowane (Отменено)</td>
+            <td>График доставок</td>
+        </tr>
+        <tr>
+            <td><strong>Категории доставок</strong></td>
+            <td>Оборудование ванной, Аксессуары ванной, Декор, Плитка, Краски, Освещение, Полы, Двери, Окна</td>
+            <td>График доставок</td>
+        </tr>
+        <tr>
+            <td><strong>Категории материалов</strong></td>
+            <td>Строительные, Отделочные</td>
+            <td>Склад</td>
+        </tr>
+        <tr>
+            <td><strong>Пакеты предложений</strong></td>
+            <td>Budget, Norm, Lux</td>
+            <td>Смета / Оферта</td>
+        </tr>
+        <tr>
+            <td><strong>Типы работников</strong></td>
+            <td>Работник (базовая ставка), Работник + оборудование (+10%), Подрядчик all-inclusive (+26.5%)</td>
+            <td>Прайс работников, Наряд-заказы</td>
+        </tr>
+        <tr>
+            <td><strong>Ставки НДС</strong></td>
+            <td>23%, 8%, 0%</td>
+            <td>Склад, Смета, Финансы</td>
+        </tr>
+        <tr>
+            <td><strong>Статусы проекта</strong></td>
+            <td>Черновик, Активный, Завершён, Архивный</td>
+            <td>Проекты</td>
+        </tr>
+        <tr>
+            <td><strong>Статусы фаз Gantt</strong></td>
+            <td>Не начато, В процессе, Завершено, Задержка</td>
+            <td>Gantt</td>
+        </tr>
+    </table>
+
+    <!-- ===== 4. РОЛИ И ДОСТУП ===== -->
+    <h2><span class="section-icon">🔐</span> 4. Роли и контроль доступа</h2>
+
+    <h3>4.1 Определение ролей</h3>
+    <table>
+        <tr>
+            <th>Роль</th>
+            <th>Описание</th>
+            <th>Регистрация</th>
+        </tr>
+        <tr>
+            <td><strong>Администратор</strong></td>
+            <td>Полный доступ на чтение/запись ко всем модулям + управление пользователями</td>
+            <td>Создаётся при деплое (seed) или другим Администратором</td>
+        </tr>
+        <tr>
+            <td><strong>Работник</strong></td>
+            <td>Настраиваемый доступ к выбранным модулям (чтение/запись). Администратор назначает модули.</td>
+            <td>Создаётся только Администратором</td>
+        </tr>
+        <tr>
+            <td><strong>Клиент (Заказчик)</strong></td>
+            <td>Доступ только на чтение: оферта, смета, график Ганта, финансовые документы</td>
+            <td>Приглашение по email + одноразовый пароль (OTP, действует 15 мин)</td>
+        </tr>
+    </table>
+
+    <h3>4.2 Матрица доступа к модулям</h3>
+    <table>
+        <tr>
+            <th>Модуль</th>
+            <th>Администратор</th>
+            <th>Работник</th>
+            <th>Клиент</th>
+        </tr>
+        <tr>
+            <td>Dashboard</td>
+            <td>✅ Чтение/Запись</td>
+            <td>✅ Чтение (назначенные)</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Проекты</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Помещения</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Каталог работ</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Смета</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>👁️ Только чтение</td>
+        </tr>
+        <tr>
+            <td>Склад (строительные)</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Склад (отделочные)</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Финансы / Расчёт</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>👁️ Только чтение</td>
+        </tr>
+        <tr>
+            <td>График доставок</td>
+            <td>✅ Чтение/Запись</td>
+            <td>⚙️ Настраиваемый</td>
+            <td>👁️ Только чтение</td>
+        </tr>
+        <tr>
+            <td>Наряд-заказы</td>
+            <td>✅ Чтение/Запись</td>
+            <td>❌</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Gantt</td>
+            <td>✅ Чтение/Запись</td>
+            <td>👁️ Только чтение</td>
+            <td>👁️ Только чтение</td>
+        </tr>
+        <tr>
+            <td>Пользователи (Админ)</td>
+            <td>✅ Чтение/Запись</td>
+            <td>❌</td>
+            <td>❌</td>
+        </tr>
+        <tr>
+            <td>Портал клиента</td>
+            <td>❌</td>
+            <td>❌</td>
+            <td>👁️ Только чтение</td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>⚙️ Настраиваемый</strong> = Администратор выдаёт или отзывает доступ к модулю per работник. Изменения вступают в силу немедленно в текущей сессии.
+    </div>
+
+    <!-- ===== 5. АРХИТЕКТУРА ===== -->
+    <h2><span class="section-icon">🏗️</span> 5. Архитектура</h2>
+
+    <h3>5.1 Структура пакетов бэкенда</h3>
+    <div class="diagram">
+<pre>
+pl.foremen.app/
+├── auth/           # JWT, OTP, Spring Security config
+├── user/           # User CRUD, roles, permissions
+├── project/        # Project entity, assignments
+├── room/           # Room dimensions, auto-calculations
+├── catalog/        # WorkCategory, WorkItem, PriceTier
+├── estimate/       # Estimate, items, versions, change orders
+├── warehouse/      # MaterialPurchase (construction + finishing)
+├── finance/        # FinancialSummary, Invoice
+├── delivery/       # DeliveryItem, status history
+├── workorder/      # WorkOrder, WorkOrderItem, settlement
+├── gantt/          # GanttPhase (schedule)
+├── reference/      # Все справочники (generic CRUD)
+├── i18n/           # Поддержка локализации
+└── common/         # Базовые сущности, исключения, DTO, утилиты
+</pre>
+    </div>
+
+    <h3>5.2 Ключевые технические решения</h3>
+    <div class="card">
+        <ul>
+            <li><strong>Аутентификация</strong> — JWT (access token 30 мин + refresh token 7 дней). OTP для клиентов — 6-значный код, TTL 15 мин, отправка через SMTP.</li>
+            <li><strong>Авторизация</strong> — RBAC на уровне Spring Security + custom PermissionEvaluator для проверки модульного доступа.</li>
+            <li><strong>Версионирование API</strong> — /api/v1/* prefix. Документация: OpenAPI 3.1 + Swagger UI.</li>
+            <li><strong>Валидация</strong> — Bean Validation (Jakarta) + кастомные валидаторы для бизнес-правил.</li>
+            <li><strong>Аудит</strong> — Spring Data Envers для версионирования смет; event log для активности.</li>
+            <li><strong>Email</strong> — Spring Mail + шаблоны Thymeleaf для OTP и уведомлений.</li>
+            <li><strong>Экспорт</strong> — Apache POI (Excel) + OpenPDF (PDF) для выгрузки наряд-заказов, смет.</li>
+        </ul>
+    </div>
+
+    <h3>5.3 Архитектура фронтенда</h3>
+    <div class="card">
+        <ul>
+            <li><strong>Роутинг</strong> — React Router v7, layout-based routes с guard'ами для ролей.</li>
+            <li><strong>Управление состоянием</strong> — Zustand (глобальный: user, выбор проекта), TanStack Query (серверное состояние).</li>
+            <li><strong>i18n</strong> — i18next + react-i18next, JSON-файлы для PL/RU/EN, dynamic import для ленивой загрузки.</li>
+            <li><strong>UI Kit</strong> — Tailwind CSS + собственная дизайн-система (dark theme, зелёный акцент), компоненты: DataTable, StatusBadge, SummaryCard, Modal, FilterBar.</li>
+            <li><strong>Формы</strong> — React Hook Form + Zod для валидации.</li>
+            <li><strong>Gantt chart</strong> — кастомный SVG-компонент (без тяжёлых библиотек).</li>
+        </ul>
+    </div>
+
+    <!-- ===== 6. КОМАНДА ===== -->
+    <h2><span class="section-icon">👥</span> 6. Планируемая команда</h2>
+
+    <table>
+        <tr>
+            <th>Роль</th>
+            <th>Кол-во</th>
+            <th>Занятость</th>
+            <th>Зона ответственности</th>
+        </tr>
+        <tr>
+            <td><strong>Tech Lead / Архитектор</strong></td>
+            <td>1</td>
+            <td>100%</td>
+            <td>Архитектура, code review, интеграция, CI/CD, деплой</td>
+        </tr>
+        <tr>
+            <td><strong>Backend-разработчик (Java/Spring)</strong></td>
+            <td>1</td>
+            <td>100%</td>
+            <td>API, бизнес-логика, БД, тесты</td>
+        </tr>
+        <tr>
+            <td><strong>Frontend-разработчик (React/TS)</strong></td>
+            <td>1</td>
+            <td>100%</td>
+            <td>UI-компоненты, страницы, интеграция с API, i18n</td>
+        </tr>
+        <tr>
+            <td><strong>QA / Тестировщик</strong></td>
+            <td>1</td>
+            <td>50%</td>
+            <td>Ручное тестирование, написание тест-кейсов, приёмка</td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>Итого:</strong> 3.5 FTE (3 разработчика full-time + тестировщик part-time)
+    </div>
+
+    <!-- ===== 7. ЭСТИМАЦИИ ===== -->
+    <h2><span class="section-icon">📊</span> 7. Эстимации и план-график</h2>
+
+    <h3>7.1 Декомпозиция по модулям (человеко-дни)</h3>
+    <table>
+        <tr>
+            <th>Модуль</th>
+            <th>Backend (дни)</th>
+            <th>Frontend (дни)</th>
+            <th>Итого (дни)</th>
+        </tr>
+        <tr>
+            <td>Инфраструктура (CI/CD, Docker, DB, skeleton)</td>
+            <td>3</td>
+            <td>2</td>
+            <td>5</td>
+        </tr>
+        <tr>
+            <td>Auth & Users (JWT, OTP, RBAC)</td>
+            <td>5</td>
+            <td>4</td>
+            <td>9</td>
+        </tr>
+        <tr>
+            <td>Проекты (CRUD, assignments)</td>
+            <td>3</td>
+            <td>3</td>
+            <td>6</td>
+        </tr>
+        <tr>
+            <td>Помещения (размеры, авто-расчёт)</td>
+            <td>3</td>
+            <td>4</td>
+            <td>7</td>
+        </tr>
+        <tr>
+            <td>Каталог работ (230+ позиций, категории, ценовые уровни)</td>
+            <td>4</td>
+            <td>4</td>
+            <td>8</td>
+        </tr>
+        <tr>
+            <td>Смета (estimate, версии, change orders, пакеты)</td>
+            <td>7</td>
+            <td>6</td>
+            <td>13</td>
+        </tr>
+        <tr>
+            <td>Склад (строительные + отделочные материалы)</td>
+            <td>3</td>
+            <td>3</td>
+            <td>6</td>
+        </tr>
+        <tr>
+            <td>Финансы (расчёт, фактуры)</td>
+            <td>4</td>
+            <td>3</td>
+            <td>7</td>
+        </tr>
+        <tr>
+            <td>График доставок</td>
+            <td>3</td>
+            <td>3</td>
+            <td>6</td>
+        </tr>
+        <tr>
+            <td>Наряд-заказы (work orders, отчёты по выполнению)</td>
+            <td>5</td>
+            <td>4</td>
+            <td>9</td>
+        </tr>
+        <tr>
+            <td>Gantt Chart (таймлайн, статусы)</td>
+            <td>2</td>
+            <td>5</td>
+            <td>7</td>
+        </tr>
+        <tr>
+            <td>Портал клиента (read-only виды)</td>
+            <td>1</td>
+            <td>3</td>
+            <td>4</td>
+        </tr>
+        <tr>
+            <td>i18n (PL/RU/EN)</td>
+            <td>1</td>
+            <td>3</td>
+            <td>4</td>
+        </tr>
+        <tr>
+            <td>Экспорт (PDF/Excel)</td>
+            <td>3</td>
+            <td>1</td>
+            <td>4</td>
+        </tr>
+        <tr>
+            <td>Интеграционное тестирование и bugfix</td>
+            <td>4</td>
+            <td>4</td>
+            <td>8</td>
+        </tr>
+        <tr style="background: var(--accent-bg);">
+            <td><strong>ИТОГО</strong></td>
+            <td><strong>51 день</strong></td>
+            <td><strong>52 дня</strong></td>
+            <td><strong>103 дня</strong></td>
+        </tr>
+    </table>
+
+    <h3>7.2 Календарный план (при команде 3.5 FTE)</h3>
+    <table>
+        <tr>
+            <th>Фаза</th>
+            <th>Недели</th>
+            <th>Содержание</th>
+        </tr>
+        <tr>
+            <td><strong>Фаза 1: Фундамент</strong></td>
+            <td>1–2 (2 нед.)</td>
+            <td>Инфраструктура, Auth, Проекты, базовый layout фронтенда</td>
+        </tr>
+        <tr>
+            <td><strong>Фаза 2: Ядро</strong></td>
+            <td>3–6 (4 нед.)</td>
+            <td>Помещения, Каталог работ, Смета (основная бизнес-логика)</td>
+        </tr>
+        <tr>
+            <td><strong>Фаза 3: Расширение</strong></td>
+            <td>7–10 (4 нед.)</td>
+            <td>Склад, Финансы, Доставки, Наряд-заказы</td>
+        </tr>
+        <tr>
+            <td><strong>Фаза 4: Финализация</strong></td>
+            <td>11–13 (3 нед.)</td>
+            <td>Gantt, Портал клиента, i18n, Экспорт, интеграционные тесты</td>
+        </tr>
+        <tr>
+            <td><strong>Фаза 5: UAT и деплой</strong></td>
+            <td>14–15 (2 нед.)</td>
+            <td>Пользовательское тестирование, исправление багов, деплой на production</td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>Общий срок: ~15 рабочих недель (3.5 месяца)</strong> при параллельной работе backend + frontend. Включает буфер на непредвиденные задачи и UAT.
+    </div>
+
+    <h3>7.3 Milestone'ы</h3>
+    <div class="card">
+        <ul>
+            <li><strong>M1 (конец нед. 2)</strong> — Логин работает, проекты создаются, базовая навигация, деплой на dev-среду</li>
+            <li><strong>M2 (конец нед. 6)</strong> — Полный цикл: создание проекта → добавление помещений → генерация сметы. Демо клиенту.</li>
+            <li><strong>M3 (конец нед. 10)</strong> — Все модули работают. Полнофункциональная система на staging.</li>
+            <li><strong>M4 (конец нед. 13)</strong> — i18n, экспорт, портал клиента. Feature freeze.</li>
+            <li><strong>M5 (конец нед. 15)</strong> — Production deploy. Передача проекта.</li>
+        </ul>
+    </div>
+
+    <!-- ===== 8. НЕФУНКЦИОНАЛЬНЫЕ ТРЕБОВАНИЯ ===== -->
+    <h2><span class="section-icon">🛡️</span> 8. Требования к качеству</h2>
+
+    <table>
+        <tr>
+            <th>Параметр</th>
+            <th>Требование</th>
+        </tr>
+        <tr>
+            <td><strong>Время отклика</strong></td>
+            <td>API: &lt; 200ms (p95). Перерасчёт сметы при изменении размеров: &lt; 2 сек.</td>
+        </tr>
+        <tr>
+            <td><strong>Доступность</strong></td>
+            <td>99.5% uptime (допустимо ~3.5 часа простоя в месяц для обслуживания)</td>
+        </tr>
+        <tr>
+            <td><strong>Безопасность</strong></td>
+            <td>HTTPS повсеместно, JWT с ротацией, bcrypt для паролей, rate limiting, CORS, защита от SQL injection (JPA parameterized queries)</td>
+        </tr>
+        <tr>
+            <td><strong>Резервное копирование</strong></td>
+            <td>Ежедневный бэкап PostgreSQL, хранение 30 дней</td>
+        </tr>
+        <tr>
+            <td><strong>Масштабируемость</strong></td>
+            <td>До 50 одновременных пользователей, до 100 проектов. Монолит достаточен для этого масштаба.</td>
+        </tr>
+        <tr>
+            <td><strong>Браузеры</strong></td>
+            <td>Chrome 120+, Firefox 120+, Safari 17+, Edge 120+</td>
+        </tr>
+        <tr>
+            <td><strong>Мобильная адаптивность</strong></td>
+            <td>Responsive layout (планшет 768px+). Полноценное мобильное приложение — следующий этап.</td>
+        </tr>
+    </table>
+
+</div><!-- /container -->
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+    <div class="footer-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info">
+        <strong>Loaders Development</strong><br>
+        Młynarska 12, 01-205 Warszawa, Polska<br>
+        <a href="tel:+48579545535">+48 579 545 535</a> • <a href="mailto:oleg@loaders.dev">oleg@loaders.dev</a><br>
+        <a href="https://loaders.dev">loaders.dev</a>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info" style="font-size: 0.75rem; color: var(--text-muted);">
+        © 2026 Loaders Development. Конфиденциальный документ — только для адресата.
+    </div>
+</div>
+
+</body>
+</html>

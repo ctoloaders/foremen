@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Коммерческое предложение (Accelerated) — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        :root { --bg-primary: #0a0a0a; --bg-secondary: #141414; --bg-card: #1a1a1a; --bg-card-hover: #222222; --border: #2a2a2a; --border-light: #333333; --text-primary: #ffffff; --text-secondary: #a0a0a0; --text-muted: #666666; --accent: #00ff88; --accent-dim: #00cc6a; --accent-bg: rgba(0, 255, 136, 0.08); --accent-border: rgba(0, 255, 136, 0.2); --purple: #a855f7; --blue: #3b82f6; --orange: #f97316; --red: #ef4444; --yellow: #eab308; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg-primary); color: var(--text-primary); line-height: 1.6; font-size: 15px; }
+        .header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
+        .header-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .header-logo img { height: 32px; }
+        .header-logo-text { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .header-meta { font-size: 0.8rem; color: var(--text-muted); }
+        .hero { padding: 80px 40px 60px; text-align: center; background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-bottom: 1px solid var(--border); }
+        .hero-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; margin-bottom: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-subtitle { font-size: 1.15rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.7; }
+        .hero-client { margin-top: 30px; padding-top: 30px; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .hero-client-item { text-align: center; }
+        .hero-client-item .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .hero-client-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
+        h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; margin: 50px 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+        h3 { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 28px 0 12px; }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin: 16px 0 8px; }
+        p { margin-bottom: 12px; color: var(--text-secondary); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 16px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-secondary); color: var(--accent); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg-card-hover); }
+        td { color: var(--text-secondary); font-size: 0.9rem; }
+        .highlight { background: var(--accent-bg); border: 1px solid var(--accent-border); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight strong { color: var(--accent); }
+        .highlight-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-orange strong { color: var(--orange); }
+        .highlight-blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-left: 3px solid var(--blue); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-blue strong { color: var(--blue); }
+        .highlight-purple { background: rgba(168,85,247,0.08); border: 1px solid rgba(168,85,247,0.2); border-left: 3px solid var(--purple); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-purple strong { color: var(--purple); }
+        .tech-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin: 3px 4px 3px 0; font-weight: 500; }
+        .badge-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); color: var(--orange); }
+        .badge-blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); color: var(--blue); }
+        ul { margin: 10px 0 15px 20px; color: var(--text-secondary); }
+        li { margin-bottom: 8px; }
+        li strong { color: var(--text-primary); }
+        .total-row td { background: var(--accent-bg) !important; font-weight: 700; color: var(--text-primary) !important; }
+        .footer { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 40px; text-align: center; }
+        .footer-info { color: var(--text-muted); font-size: 0.85rem; line-height: 1.8; }
+        .footer-info a { color: var(--accent); text-decoration: none; }
+        .footer-divider { width: 60px; height: 1px; background: var(--border); margin: 20px auto; }
+        .footer-logo { margin-bottom: 16px; }
+        .footer-logo img { height: 28px; opacity: 0.7; }
+        @media (max-width: 768px) { .header { padding: 12px 20px; } .hero { padding: 50px 20px 40px; } .hero h1 { font-size: 2rem; } .container { padding: 20px 20px 60px; } h2 { font-size: 1.3rem; } }
+        @media print { body { background: #fff; color: #000; } .header { position: static; background: #fff; border-bottom: 2px solid #000; } .hero { background: #fff; } .card { border: 1px solid #ccc; } table { border: 1px solid #ccc; } th { background: #f0f0f0; color: #000; } .highlight, .highlight-orange, .highlight-blue, .highlight-purple { border-left: 3px solid #000; background: #f9f9f9; } .tech-badge, .badge-orange, .badge-blue { background: #f0f0f0; border: 1px solid #ccc; color: #000; } }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+    <a href="https://loaders.dev" class="header-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+        <span class="header-logo-text">Loaders</span>
+    </a>
+    <div class="header-meta">Коммерческое предложение • Вариант Accelerated</div>
+</div>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+    <div class="hero-badge">Accelerated Plan</div>
+    <h1>Foremen</h1>
+    <p class="hero-subtitle">Максимум ценности в рамках бюджета EBRR. Сметы + Финансы + Закупки + Доставки — всё в одном релизе за 15 000 €.</p>
+    <div class="hero-client">
+        <div class="hero-client-item">
+            <div class="label">Клиент</div>
+            <div class="value">Foremen Sp. z o.o.</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Проект</div>
+            <div class="value">Foremen Platform</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Дата</div>
+            <div class="value">Июль 2026</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Версия</div>
+            <div class="value">2.0 Accelerated</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+    <!-- ===== ИДЕЯ ===== -->
+    <h2><span class="section-icon">⚡</span> 1. Концепция Accelerated</h2>
+
+    <p>Вместо последовательных релизов P1 → P2, мы объединяем критические боли (P1) и операционные процессы (P2) в единый релиз в рамках бюджета EBRR (~15 000 €).</p>
+
+    <div class="highlight-purple">
+        <strong>Как это возможно?</strong> Оптимизация за счёт: (1) упрощённый UI — функциональность без лишнего полиша, (2) AI-assisted development — ускорение кодогенерации, (3) MVP-подход к каждому модулю — минимальная рабочая версия, доработка после обратной связи, (4) общие компоненты переиспользуются между модулями, (5) поиск поставщиков (AI) перенесён в P3.
+    </div>
+
+    <div class="card">
+        <h4>Что входит в P1 (Accelerated)</h4>
+        <ul>
+            <li>✅ AI-генерация смет по PDF</li>
+            <li>✅ Ручное составление сметы</li>
+            <li>✅ Финансы + импорт транзакций</li>
+            <li>✅ Склад и учёт материалов</li>
+            <li>✅ Workflow закупок (упрощённый)</li>
+            <li>✅ Доставки + SMS-уведомления бригадиру</li>
+            <li>✅ Ролевой доступ (все 6 ролей)</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4>Упрощения (Tradeoffs)</h4>
+        <ul>
+            <li>⚠️ UI функциональный, но без анимаций и расширенных фильтров — доработка в P2</li>
+            <li>⚠️ Интеграция Finmap: импорт CSV-выписок вместо полного API (API — в P2)</li>
+            <li>⚠️ Workflow закупок: 3 статуса (Заявка → Согласована → Закуплено), без сложной маршрутизации</li>
+            <li>⚠️ Уведомления: только SMS через простой gateway, без push</li>
+            <li>⚠️ AI-поиск поставщиков перенесён в P3</li>
+        </ul>
+    </div>
+
+    <!-- ===== P1 ACCELERATED ===== -->
+    <h2><span class="section-icon">🚀</span> 2. Release 1 (Accelerated) — Сметы + Финансы + Закупки + Доставки</h2>
+
+    <div class="highlight">
+        <strong>Ставка:</strong> 45 €/час нетто. Бюджет: ≤ 15 000 €. Цель — покрыть все критические и операционные боли в одном релизе.
+    </div>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Инфраструктура</td>
+            <td>Проект, деплой, CI/CD, БД, авторизация (JWT), seed данных</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Проекты и помещения</td>
+            <td>CRUD проектов, помещения с размерами, авто-расчёт площадей</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Каталог работ</td>
+            <td>Справочник работ, 13 категорий, импорт из текущего Excel-прайса</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>AI-генерация смет</td>
+            <td>Загрузка PDF → распознавание метражей → генерация сметы по каталогу</td>
+            <td>48</td>
+            <td>2 160</td>
+        </tr>
+        <tr>
+            <td>Ручная смета</td>
+            <td>Выбор работ, ввод количества, авто-расчёт итогов по категориям</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Финансы и транзакции</td>
+            <td>Импорт CSV-выписок, авто-разноска (AI по истории), сводка по проектам</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>Склад материалов</td>
+            <td>Регистрация закупок, НДС-калькуляция, привязка к проекту, итоги</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Workflow закупок (MVP)</td>
+            <td>Заявка → Согласована → Закуплено. Статусы, базовые уведомления</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Доставки + SMS</td>
+            <td>График доставок, статусы, SMS-уведомление бригадиру при смене статуса</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Ролевой доступ (полный)</td>
+            <td>6 ролей: директор, менеджер, финансист, закупщик, прораб, клиент</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>UI/UX</td>
+            <td>Dashboard, навигация, таблицы, формы — функциональный MVP</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Тестирование и bugfix</td>
+            <td>Интеграционное тестирование, исправление критических багов</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО P1 (Accelerated)</strong></td>
+            <td></td>
+            <td><strong>332 ч</strong></td>
+            <td><strong>14 940 €</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>14 940 € — вписывается в бюджет EBRR (15 000 €).</strong> Срок: 10–12 недель. Покрывает ВСЕ критические (P1) и операционные (P2) боли кроме AI-поиска поставщиков.
+    </div>
+
+    <!-- ===== P2 ===== -->
+    <h3>🟡 Release 2 — Полировка + Finmap API + Поставщики</h3>
+    <p>Доведение MVP до полноценного продукта: полная интеграция Finmap, AI-поиск поставщиков, расширенный UI.</p>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Интеграция Finmap API</td>
+            <td>Полная синхронизация через API вместо CSV-импорта, двусторонний обмен</td>
+            <td>32</td>
+            <td>1 440</td>
+        </tr>
+        <tr>
+            <td>AI-поиск поставщиков</td>
+            <td>Рассылка запросов по email, сбор ответов, сравнительная таблица</td>
+            <td>40</td>
+            <td>1 800</td>
+        </tr>
+        <tr>
+            <td>Workflow закупок (полный)</td>
+            <td>Полная цепочка с маршрутизацией, уведомлениями на каждом этапе, история</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>UI/UX доработка</td>
+            <td>Расширенные фильтры, анимации, мобильная адаптация, dark/light тема</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Push-уведомления</td>
+            <td>Push вместо только SMS, настройка каналов нотификаций per роль</td>
+            <td>16</td>
+            <td>720</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО P2</strong></td>
+            <td></td>
+            <td><strong>140 ч</strong></td>
+            <td><strong>6 300 €</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight-orange">
+        <strong>Срок P2:</strong> 4–5 недель после P1. Это «полировка» — система уже полностью рабочая после P1.
+    </div>
+
+    <!-- ===== P3 ===== -->
+    <h3>🟢 Release 3 — Gantt, Портал клиента, Допработы</h3>
+    <p>Улучшение клиентского опыта и внутреннего планирования.</p>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Gantt с зависимостями</td>
+            <td>Диаграмма работ, предупреждения «заказать за X дней»</td>
+            <td>44</td>
+            <td>1 980</td>
+        </tr>
+        <tr>
+            <td>Клиентский портал</td>
+            <td>Ссылка на проект, просмотр сметы/финансов, кнопка «Согласовать»</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>Допработы и аннексы</td>
+            <td>Учёт изменений, генерация аннекса, отправка на подпись</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>Экспорт PDF/Excel</td>
+            <td>Выгрузка смет, финансов, нарядов в форматах для печати</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr>
+            <td>Мультиязычность</td>
+            <td>Локализация PL/RU/EN</td>
+            <td>16</td>
+            <td>720</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО P3</strong></td>
+            <td></td>
+            <td><strong>144 ч</strong></td>
+            <td><strong>6 480 €</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight-blue">
+        <strong>Срок P3:</strong> 4–5 недель после P2.
+    </div>
+
+    <!-- ===== СВОДКА ===== -->
+    <h2><span class="section-icon">💶</span> 3. Итоговая сводка</h2>
+
+    <table>
+        <tr>
+            <th>Релиз</th>
+            <th>Содержание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+            <th>Срок</th>
+        </tr>
+        <tr>
+            <td><span class="tech-badge">P1 Accelerated</span></td>
+            <td>Сметы (AI), Финансы, Склад, Закупки, Доставки+SMS, 6 ролей</td>
+            <td>332</td>
+            <td>14 940</td>
+            <td>10–12 нед.</td>
+        </tr>
+        <tr>
+            <td><span class="tech-badge badge-orange">P2</span></td>
+            <td>Finmap API, AI-поставщики, расширенный workflow, UI-полировка, push</td>
+            <td>140</td>
+            <td>6 300</td>
+            <td>4–5 нед.</td>
+        </tr>
+        <tr>
+            <td><span class="tech-badge badge-blue">P3</span></td>
+            <td>Gantt, Клиентский портал, Допработы, Экспорт, i18n</td>
+            <td>144</td>
+            <td>6 480</td>
+            <td>4–5 нед.</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ВСЁ</strong></td>
+            <td><strong>Полная платформа Foremen</strong></td>
+            <td><strong>616 ч</strong></td>
+            <td><strong>27 720 €</strong></td>
+            <td><strong>~5 мес.</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>Экономия vs стандартный план:</strong> 31 320 € → 27 720 € (−3 600 €, −12%). При этом P1 покрывает 8 из 9 болей вместо 3-х. Грант EBRR покрывает P1 полностью.
+    </div>
+
+    <!-- ===== СРАВНЕНИЕ ===== -->
+    <h2><span class="section-icon">⚖️</span> 4. Сравнение планов</h2>
+
+    <table>
+        <tr>
+            <th>Критерий</th>
+            <th>Стандартный план</th>
+            <th>Accelerated план</th>
+        </tr>
+        <tr>
+            <td>Бюджет P1</td>
+            <td>14 400 € (3 боли)</td>
+            <td><strong>14 940 € (8 болей)</strong></td>
+        </tr>
+        <tr>
+            <td>Покрытие болей в P1</td>
+            <td>Только критические (сметы, финансы, единая БД)</td>
+            <td><strong>Критические + операционные (+ закупки, доставки, SMS)</strong></td>
+        </tr>
+        <tr>
+            <td>Общий бюджет</td>
+            <td>31 320 €</td>
+            <td><strong>27 720 € (−12%)</strong></td>
+        </tr>
+        <tr>
+            <td>Общий срок</td>
+            <td>~6 месяцев</td>
+            <td><strong>~5 месяцев</strong></td>
+        </tr>
+        <tr>
+            <td>Риск P1</td>
+            <td>Низкий (меньше скоуп)</td>
+            <td>Средний (больше скоуп, компенсируется MVP-подходом)</td>
+        </tr>
+        <tr>
+            <td>Tradeoff</td>
+            <td>Идеальный UI с первого дня</td>
+            <td>Функциональный UI, полировка в P2</td>
+        </tr>
+    </table>
+
+    <!-- ===== УСЛОВИЯ ===== -->
+    <h2><span class="section-icon">📋</span> 5. Условия</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>Ставка:</strong> 45 €/час нетто</li>
+            <li><strong>Оплата:</strong> помесячно по факту отработанных часов (timesheet)</li>
+            <li><strong>Отчётность:</strong> еженедельный отчёт + доступ к трекеру задач</li>
+            <li><strong>Демо:</strong> каждые 2 недели — показ промежуточных результатов</li>
+            <li><strong>Исходный код:</strong> передаётся клиенту по завершении каждого релиза</li>
+            <li><strong>Гарантия:</strong> 30 дней бесплатного bugfix после релиза</li>
+            <li><strong>Хостинг:</strong> ~30–50 €/мес (клиент)</li>
+            <li><strong>AI-сервисы:</strong> OpenAI API ~50–100 €/мес (клиент)</li>
+        </ul>
+    </div>
+
+    <!-- ===== СЛЕДУЮЩИЕ ШАГИ ===== -->
+    <h2><span class="section-icon">➡️</span> 6. Следующие шаги</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>1.</strong> Выбор плана (Стандартный или Accelerated) и подписание договора</li>
+            <li><strong>2.</strong> Получение от клиента: прайс-лист, 2–3 PDF-плана, шаблон сметы, доступ к банковской выписке (CSV)</li>
+            <li><strong>3.</strong> Старт — неделя 1: инфра + авторизация + каталог работ</li>
+            <li><strong>4.</strong> Демо через 4 недели: генерация сметы по PDF + базовый финансовый модуль</li>
+            <li><strong>5.</strong> Демо через 8 недель: закупки + доставки + SMS</li>
+            <li><strong>6.</strong> Релиз P1 — неделя 10–12</li>
+        </ul>
+    </div>
+
+</div><!-- /container -->
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+    <div class="footer-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info">
+        <strong>Loaders Development</strong><br>
+        Młynarska 12, 01-205 Warszawa, Polska<br>
+        <a href="tel:+48579545535">+48 579 545 535</a> • <a href="mailto:oleg@loaders.dev">oleg@loaders.dev</a><br>
+        <a href="https://loaders.dev">loaders.dev</a>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info" style="font-size: 0.75rem; color: var(--text-muted);">
+        © 2026 Loaders Development. Конфиденциальный документ — только для адресата.
+    </div>
+</div>
+
+</body>
+</html>

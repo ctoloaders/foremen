@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+
+# Node
+node_modules/
+dist/
+
+# Secrets - NEVER commit these
+.env
+телеграм-бот/forementest-2064c9f53f45.json
+телеграм-бот/telegram-bot/bun.lock
+
+# Compiled artifacts in scripts
+телеграм-бот/telegram-bot/scripts/*.js
+телеграм-бот/telegram-bot/scripts/*.d.ts
+телеграм-бот/telegram-bot/scripts/test-auth.ts
+
+# IDE
+.vscode/
+
+# Temp
+/tmp/
+
+# Excel
+*.xlsx

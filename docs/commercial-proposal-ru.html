@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Коммерческое предложение — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1a1a1a;
+            --bg-card-hover: #222222;
+            --border: #2a2a2a;
+            --border-light: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+            --accent-bg: rgba(0, 255, 136, 0.08);
+            --accent-border: rgba(0, 255, 136, 0.2);
+            --purple: #a855f7;
+            --blue: #3b82f6;
+            --orange: #f97316;
+            --red: #ef4444;
+            --yellow: #eab308;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .header { background: var(--bg-secondary); border-bottom: 1px solid var(--border); padding: 16px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; backdrop-filter: blur(10px); }
+        .header-logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+        .header-logo img { height: 32px; }
+        .header-logo-text { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); letter-spacing: -0.5px; }
+        .header-meta { font-size: 0.8rem; color: var(--text-muted); }
+        .hero { padding: 80px 40px 60px; text-align: center; background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%); border-bottom: 1px solid var(--border); }
+        .hero-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 6px 16px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; margin-bottom: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .hero h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 16px; background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .hero-subtitle { font-size: 1.15rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto; line-height: 1.7; }
+        .hero-client { margin-top: 30px; padding-top: 30px; border-top: 1px solid var(--border); display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; }
+        .hero-client-item { text-align: center; }
+        .hero-client-item .label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .hero-client-item .value { font-size: 0.95rem; color: var(--text-primary); font-weight: 500; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 40px 40px 80px; }
+        h2 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.5px; margin: 50px 0 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border); color: var(--text-primary); }
+        h3 { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 28px 0 12px; }
+        h4 { font-size: 0.95rem; font-weight: 600; color: var(--accent); margin: 16px 0 8px; }
+        p { margin-bottom: 12px; color: var(--text-secondary); }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin: 16px 0; transition: border-color 0.2s; }
+        .card:hover { border-color: var(--border-light); }
+        table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; background: var(--bg-card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-secondary); color: var(--accent); font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: var(--bg-card-hover); }
+        td { color: var(--text-secondary); font-size: 0.9rem; }
+        .highlight { background: var(--accent-bg); border: 1px solid var(--accent-border); border-left: 3px solid var(--accent); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight strong { color: var(--accent); }
+        .highlight-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); border-left: 3px solid var(--orange); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-orange strong { color: var(--orange); }
+        .highlight-blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-left: 3px solid var(--blue); padding: 16px 20px; margin: 16px 0; border-radius: 0 8px 8px 0; color: var(--text-secondary); }
+        .highlight-blue strong { color: var(--blue); }
+        .tech-badge { display: inline-block; background: var(--accent-bg); border: 1px solid var(--accent-border); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; margin: 3px 4px 3px 0; font-weight: 500; }
+        .badge-orange { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.2); color: var(--orange); }
+        .badge-blue { background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); color: var(--blue); }
+        ul { margin: 10px 0 15px 20px; color: var(--text-secondary); }
+        li { margin-bottom: 8px; }
+        li strong { color: var(--text-primary); }
+        .diagram { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 30px; margin: 20px 0; overflow-x: auto; }
+        .diagram pre { color: var(--accent); font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.8rem; line-height: 1.8; }
+        .footer { background: var(--bg-secondary); border-top: 1px solid var(--border); padding: 40px; text-align: center; }
+        .footer-logo { margin-bottom: 16px; }
+        .footer-logo img { height: 28px; opacity: 0.7; }
+        .footer-info { color: var(--text-muted); font-size: 0.85rem; line-height: 1.8; }
+        .footer-info a { color: var(--accent); text-decoration: none; }
+        .footer-divider { width: 60px; height: 1px; background: var(--border); margin: 20px auto; }
+        .total-row td { background: var(--accent-bg) !important; font-weight: 700; color: var(--text-primary) !important; }
+        @media (max-width: 768px) { .header { padding: 12px 20px; } .hero { padding: 50px 20px 40px; } .hero h1 { font-size: 2rem; } .container { padding: 20px 20px 60px; } h2 { font-size: 1.3rem; } .hero-client { gap: 20px; } }
+        @media print { body { background: #fff; color: #000; } .header { position: static; background: #fff; border-bottom: 2px solid #000; } .hero { background: #fff; } .card { border: 1px solid #ccc; } table { border: 1px solid #ccc; } th { background: #f0f0f0; color: #000; } .highlight, .highlight-orange, .highlight-blue { border-left: 3px solid #000; background: #f9f9f9; } .tech-badge, .badge-orange, .badge-blue { background: #f0f0f0; border: 1px solid #ccc; color: #000; } }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+    <a href="https://loaders.dev" class="header-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+        <span class="header-logo-text">Loaders</span>
+    </a>
+    <div class="header-meta">Коммерческое предложение • Конфиденциальный документ</div>
+</div>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+    <div class="hero-badge">Коммерческое предложение</div>
+    <h1>Foremen</h1>
+    <p class="hero-subtitle">Платформа управления ремонтными проектами. Единая система вместо Excel + Битрикс + Finmap. Автоматизация смет, финансов и закупок.</p>
+    <div class="hero-client">
+        <div class="hero-client-item">
+            <div class="label">Клиент</div>
+            <div class="value">Foremen Sp. z o.o.</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Проект</div>
+            <div class="value">Foremen Platform</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Дата</div>
+            <div class="value">Июль 2026</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Версия</div>
+            <div class="value">2.0</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+    <!-- ===== ПРОБЛЕМЫ ===== -->
+    <h2><span class="section-icon">🎯</span> 1. Проблемы, которые решаем</h2>
+
+    <p>На основе встречи с Алексеем (июль 2026) выявлены ключевые боли в текущих процессах компании:</p>
+
+    <div class="card">
+        <h4>🔴 Критические (P1)</h4>
+        <ul>
+            <li><strong>Составление смет вручную</strong> — ~2.5 часа на одну смету. Снятие метражей по плану, умножение на расценки из справочника. Хотят: загрузил PDF → получил готовую смету.</li>
+            <li><strong>Разноска банковских транзакций</strong> — 4–5 часов/день (~25 транзакций). Ручной перенос из выписки в Finmap по категориям/проектам.</li>
+            <li><strong>Дублирование данных между системами</strong> — одни данные вносятся в Finmap + Битрикс + Excel. Расхождения, ошибки, потеря времени.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4>🟡 Важные (P2)</h4>
+        <ul>
+            <li><strong>Длинная цепочка закупок</strong> — 7+ итераций согласования между клиентом, менеджером, закупщиком. Много ручной переписки.</li>
+            <li><strong>Поиск материалов у поставщиков</strong> — ручная рассылка запросов, сбор ответов, сравнение цен.</li>
+            <li><strong>Уведомления о доставках</strong> — ~20 доставок одновременно, бригадир не знает когда ждать. Данные уже есть в Битрикс, но нет нотификации.</li>
+        </ul>
+    </div>
+
+    <div class="card">
+        <h4>🟢 Желательные (P3)</h4>
+        <ul>
+            <li><strong>Планирование (Гант с зависимостями)</strong> — предупреждение: «плитку надо заказать за X дней до начала работ».</li>
+            <li><strong>Клиентский портал</strong> — ссылка на проект вместо двух Excel-файлов. Апрув сметы прямо в системе.</li>
+            <li><strong>Учёт допработ и аннексы</strong> — автоматическое создание аннекса к договору при изменениях.</li>
+        </ul>
+    </div>
+
+    <!-- ===== РЕШЕНИЕ ===== -->
+    <h2><span class="section-icon">💡</span> 2. Предлагаемое решение</h2>
+
+    <p>Единая платформа <strong>Foremen</strong> — веб-приложение с AI-агентом, которое становится единственным источником данных для всех процессов компании.</p>
+
+    <div class="card">
+        <h4>Ключевые принципы</h4>
+        <ul>
+            <li><strong>Одна БД — единый источник правды</strong> — никакого дублирования между системами</li>
+            <li><strong>Ролевой доступ</strong> — директор / менеджер / финансист / закупщик / прораб / клиент — каждый видит только своё</li>
+            <li><strong>AI-агент для смет</strong> — загрузка PDF плана → распознавание помещений и размеров → генерация сметы по справочнику расценок</li>
+            <li><strong>Клиентский портал</strong> — заказчик видит свой проект по ссылке, может согласовать смету или допработы</li>
+            <li><strong>Интеграции</strong> — Finmap (синхронизация финансов), банковский API (транзакции), Битрикс24 (доставки, уведомления)</li>
+        </ul>
+    </div>
+
+    <!-- ===== МОДУЛИ ===== -->
+    <h2><span class="section-icon">📦</span> 3. Модули системы</h2>
+
+    <table>
+        <tr>
+            <th>#</th>
+            <th>Модуль</th>
+            <th>Описание</th>
+            <th>Релиз</th>
+        </tr>
+        <tr>
+            <td>1</td>
+            <td><strong>Проекты и помещения</strong></td>
+            <td>Создание проектов, управление помещениями с размерами, привязка клиента</td>
+            <td><span class="tech-badge">P1</span></td>
+        </tr>
+        <tr>
+            <td>2</td>
+            <td><strong>Каталог работ и расценки</strong></td>
+            <td>Справочник ~230 работ в 13 категориях, многоуровневые цены, двуязычные названия</td>
+            <td><span class="tech-badge">P1</span></td>
+        </tr>
+        <tr>
+            <td>3</td>
+            <td><strong>Генерация смет (AI)</strong></td>
+            <td>Загрузка PDF плана → распознавание метражей → авто-генерация сметы по каталогу</td>
+            <td><span class="tech-badge">P1</span></td>
+        </tr>
+        <tr>
+            <td>4</td>
+            <td><strong>Финансы и транзакции</strong></td>
+            <td>Единый финансовый учёт, импорт банковских выписок, авто-разноска по проектам/категориям</td>
+            <td><span class="tech-badge">P1</span></td>
+        </tr>
+        <tr>
+            <td>5</td>
+            <td><strong>Склад и закупки</strong></td>
+            <td>Учёт материалов, заявки на закупку, статусы, НДС-калькуляция</td>
+            <td><span class="tech-badge badge-orange">P2</span></td>
+        </tr>
+        <tr>
+            <td>6</td>
+            <td><strong>Workflow закупок</strong></td>
+            <td>Автоматизация цепочки согласования: клиент → менеджер → закупщик → поставщик</td>
+            <td><span class="tech-badge badge-orange">P2</span></td>
+        </tr>
+        <tr>
+            <td>7</td>
+            <td><strong>Доставки и уведомления</strong></td>
+            <td>График доставок, автоматические SMS/push бригадиру, интеграция с Битрикс24</td>
+            <td><span class="tech-badge badge-orange">P2</span></td>
+        </tr>
+        <tr>
+            <td>8</td>
+            <td><strong>Поиск поставщиков (AI)</strong></td>
+            <td>Автоматическая рассылка запросов дистрибьюторам, сбор и сравнение предложений</td>
+            <td><span class="tech-badge badge-orange">P2</span></td>
+        </tr>
+        <tr>
+            <td>9</td>
+            <td><strong>Gantt-планирование</strong></td>
+            <td>Диаграмма работ с зависимостями, предупреждения о сроках заказа материалов</td>
+            <td><span class="tech-badge badge-blue">P3</span></td>
+        </tr>
+        <tr>
+            <td>10</td>
+            <td><strong>Клиентский портал</strong></td>
+            <td>Ссылка на проект для заказчика, согласование сметы и допработ, история изменений</td>
+            <td><span class="tech-badge badge-blue">P3</span></td>
+        </tr>
+        <tr>
+            <td>11</td>
+            <td><strong>Допработы и аннексы</strong></td>
+            <td>Управление изменениями по ходу проекта, генерация аннексов, подпись клиентом</td>
+            <td><span class="tech-badge badge-blue">P3</span></td>
+        </tr>
+    </table>
+
+    <!-- ===== РОЛИ ===== -->
+    <h2><span class="section-icon">🔐</span> 4. Роли и доступ</h2>
+
+    <table>
+        <tr>
+            <th>Роль</th>
+            <th>Описание</th>
+            <th>Доступные модули</th>
+        </tr>
+        <tr>
+            <td><strong>Директор</strong></td>
+            <td>Полный доступ ко всем модулям, управление пользователями</td>
+            <td>Все</td>
+        </tr>
+        <tr>
+            <td><strong>Менеджер проекта</strong></td>
+            <td>Ведение проектов, сметы, закупки, коммуникация с клиентом</td>
+            <td>Проекты, Сметы, Закупки, Доставки, Портал</td>
+        </tr>
+        <tr>
+            <td><strong>Финансист</strong></td>
+            <td>Финансовый учёт, разноска транзакций, контроль оплат</td>
+            <td>Финансы, Склад (чтение)</td>
+        </tr>
+        <tr>
+            <td><strong>Закупщик</strong></td>
+            <td>Обработка заявок, поиск поставщиков, оформление заказов</td>
+            <td>Склад, Закупки, Доставки, Поставщики</td>
+        </tr>
+        <tr>
+            <td><strong>Прораб / Бригадир</strong></td>
+            <td>Просмотр задач на объекте, получение уведомлений о доставках</td>
+            <td>Проекты (чтение), Доставки (чтение), Gantt (чтение)</td>
+        </tr>
+        <tr>
+            <td><strong>Клиент (Заказчик)</strong></td>
+            <td>Просмотр своего проекта, согласование сметы и допработ</td>
+            <td>Портал (только чтение + апрув)</td>
+        </tr>
+    </table>
+
+    <!-- ===== СПРАВОЧНИКИ ===== -->
+    <h2><span class="section-icon">📚</span> 5. Справочники системы</h2>
+
+    <table>
+        <tr>
+            <th>Справочник</th>
+            <th>Назначение</th>
+        </tr>
+        <tr>
+            <td><strong>Типы помещений</strong></td>
+            <td>Прихожая, Холл, Кухня, Гостиная, Кабинет, Спальня, Детская, Ванная, Балкон</td>
+        </tr>
+        <tr>
+            <td><strong>Категории работ (13)</strong></td>
+            <td>Подготовительные, Конструкции/ГК, Сантехника (черн./чист.), Электрика (черн./чист.), Плитка, Шпаклёвка, Малярные, Полы, Столярка, Дополнительные, Прочие</td>
+        </tr>
+        <tr>
+            <td><strong>Единицы измерения</strong></td>
+            <td>m², mb, szt, kpl, godz, %</td>
+        </tr>
+        <tr>
+            <td><strong>Типы работников</strong></td>
+            <td>Базовая ставка, +оборудование (+10%), Подрядчик all-inclusive (+26.5%)</td>
+        </tr>
+        <tr>
+            <td><strong>Ставки НДС</strong></td>
+            <td>23%, 8%, 0%</td>
+        </tr>
+        <tr>
+            <td><strong>Статусы доставок</strong></td>
+            <td>Новое → Заказано → Доставлено / Отменено</td>
+        </tr>
+        <tr>
+            <td><strong>Категории доставок</strong></td>
+            <td>Ванная, Декор, Плитка, Краски, Освещение, Полы, Двери, Окна</td>
+        </tr>
+        <tr>
+            <td><strong>Категории транзакций</strong></td>
+            <td>Работы, Строит. материалы, Отделочные материалы, Оборудование, Накладные, Прочие</td>
+        </tr>
+        <tr>
+            <td><strong>Пакеты предложений</strong></td>
+            <td>Budget, Norm, Lux</td>
+        </tr>
+        <tr>
+            <td><strong>Статусы проекта</strong></td>
+            <td>Черновик → Активный → Завершён → Архивный</td>
+        </tr>
+    </table>
+
+    <!-- ===== РЕЛИЗЫ ===== -->
+    <h2><span class="section-icon">🚀</span> 6. План релизов и эстимации</h2>
+
+    <div class="highlight">
+        <strong>Ставка:</strong> 45 €/час нетто. Все эстимации указаны в часах разработки и соответствующей стоимости.
+    </div>
+
+    <!-- ===== P1 MVP ===== -->
+    <h3>🔴 Release 1 (MVP) — Сметы + Финансы + Единая БД</h3>
+    <p>Покрывает критические боли: автоматическая генерация смет, финансовый учёт без дублирования, одна база данных.</p>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Инфраструктура и skeleton</td>
+            <td>Проект, деплой, CI/CD, БД, авторизация (JWT)</td>
+            <td>32</td>
+            <td>1 440</td>
+        </tr>
+        <tr>
+            <td>Проекты и помещения</td>
+            <td>CRUD проектов, помещения с размерами, авто-расчёт площадей</td>
+            <td>40</td>
+            <td>1 800</td>
+        </tr>
+        <tr>
+            <td>Каталог работ и расценки</td>
+            <td>Справочник 230+ позиций, 13 категорий, ценовые уровни, импорт из Excel</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>AI-генерация смет</td>
+            <td>Загрузка PDF плана → OCR/AI распознавание → привязка метражей к каталогу → готовая смета</td>
+            <td>56</td>
+            <td>2 520</td>
+        </tr>
+        <tr>
+            <td>Ручная смета (fallback)</td>
+            <td>Интерфейс ручного составления сметы: выбор работ, кол-во, итоги по категориям</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>Финансы и транзакции</td>
+            <td>Импорт выписок, авто-разноска по проектам (AI), ручная коррекция, сводка</td>
+            <td>52</td>
+            <td>2 340</td>
+        </tr>
+        <tr>
+            <td>Ролевой доступ (базовый)</td>
+            <td>Директор, Менеджер, Финансист — регистрация, логин, разделение прав</td>
+            <td>28</td>
+            <td>1 260</td>
+        </tr>
+        <tr>
+            <td>UI/UX базовый</td>
+            <td>Dashboard, навигация, таблицы, формы — dark theme</td>
+            <td>40</td>
+            <td>1 800</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО P1</strong></td>
+            <td></td>
+            <td><strong>320 ч</strong></td>
+            <td><strong>14 400 €</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>P1 вписывается в бюджет EBRR (~15 000 €).</strong> Срок реализации: 8–10 недель при одном разработчике full-time.
+    </div>
+
+    <!-- ===== P2 ===== -->
+    <h3>🟡 Release 2 — Закупки, доставки, интеграции</h3>
+    <p>Автоматизация операционных процессов: закупки, поставщики, уведомления бригадирам.</p>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Склад и учёт материалов</td>
+            <td>Регистрация закупок, строительные/отделочные, НДС-калькуляция, привязка к проекту</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>Workflow закупок</td>
+            <td>Заявка → согласование → заказ → доставка. Статусы, уведомления, автоматизация переходов</td>
+            <td>48</td>
+            <td>2 160</td>
+        </tr>
+        <tr>
+            <td>Поиск поставщиков (AI)</td>
+            <td>Рассылка запросов по email, сбор ответов, сравнительная таблица предложений</td>
+            <td>40</td>
+            <td>1 800</td>
+        </tr>
+        <tr>
+            <td>Доставки и уведомления</td>
+            <td>График доставок, SMS/push бригадиру, интеграция с Битрикс24 (воронка доставок)</td>
+            <td>36</td>
+            <td>1 620</td>
+        </tr>
+        <tr>
+            <td>Интеграция Finmap</td>
+            <td>Синхронизация данных с Finmap через API, устранение ручного дублирования</td>
+            <td>32</td>
+            <td>1 440</td>
+        </tr>
+        <tr>
+            <td>Роли: закупщик, прораб</td>
+            <td>Дополнительные роли, настройка прав, мобильный вид для прораба</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО P2</strong></td>
+            <td></td>
+            <td><strong>212 ч</strong></td>
+            <td><strong>9 540 €</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight-orange">
+        <strong>Срок P2:</strong> 6–8 недель после завершения P1. Может стартовать параллельно с финальным тестированием P1.
+    </div>
+
+    <!-- ===== P3 ===== -->
+    <h3>🟢 Release 3 — Планирование, портал клиента, допработы</h3>
+    <p>Улучшение клиентского опыта и внутреннего планирования.</p>
+
+    <table>
+        <tr>
+            <th>Компонент</th>
+            <th>Описание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+        </tr>
+        <tr>
+            <td>Gantt с зависимостями</td>
+            <td>Диаграмма работ, зависимости материалов, предупреждения «заказать за X дней»</td>
+            <td>48</td>
+            <td>2 160</td>
+        </tr>
+        <tr>
+            <td>Клиентский портал</td>
+            <td>Ссылка на проект, просмотр сметы/графика/финансов, кнопка «Согласовать»</td>
+            <td>40</td>
+            <td>1 800</td>
+        </tr>
+        <tr>
+            <td>Допработы и аннексы</td>
+            <td>Учёт изменений, генерация аннекса к договору, отправка на подпись клиенту</td>
+            <td>32</td>
+            <td>1 440</td>
+        </tr>
+        <tr>
+            <td>Экспорт PDF/Excel</td>
+            <td>Выгрузка смет, нарядов, финансовых отчётов в формате для печати</td>
+            <td>24</td>
+            <td>1 080</td>
+        </tr>
+        <tr>
+            <td>Мультиязычность (PL/RU/EN)</td>
+            <td>Локализация интерфейса, двуязычные названия работ в каталоге</td>
+            <td>20</td>
+            <td>900</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ИТОГО P3</strong></td>
+            <td></td>
+            <td><strong>164 ч</strong></td>
+            <td><strong>7 380 €</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight-blue">
+        <strong>Срок P3:</strong> 5–6 недель после завершения P2.
+    </div>
+
+    <!-- ===== СВОДКА ===== -->
+    <h2><span class="section-icon">💶</span> 7. Итоговая сводка</h2>
+
+    <table>
+        <tr>
+            <th>Релиз</th>
+            <th>Содержание</th>
+            <th>Часы</th>
+            <th>Стоимость (€)</th>
+            <th>Срок</th>
+        </tr>
+        <tr>
+            <td><span class="tech-badge">P1 MVP</span></td>
+            <td>Сметы (AI + ручные), Финансы, Единая БД, Базовые роли</td>
+            <td>320</td>
+            <td>14 400</td>
+            <td>8–10 нед.</td>
+        </tr>
+        <tr>
+            <td><span class="tech-badge badge-orange">P2</span></td>
+            <td>Закупки, Поставщики, Доставки, Уведомления, Finmap</td>
+            <td>212</td>
+            <td>9 540</td>
+            <td>6–8 нед.</td>
+        </tr>
+        <tr>
+            <td><span class="tech-badge badge-blue">P3</span></td>
+            <td>Gantt, Клиентский портал, Допработы, Экспорт, i18n</td>
+            <td>164</td>
+            <td>7 380</td>
+            <td>5–6 нед.</td>
+        </tr>
+        <tr class="total-row">
+            <td><strong>ВСЁ</strong></td>
+            <td><strong>Полная платформа Foremen</strong></td>
+            <td><strong>696 ч</strong></td>
+            <td><strong>31 320 €</strong></td>
+            <td><strong>~6 мес.</strong></td>
+        </tr>
+    </table>
+
+    <div class="highlight">
+        <strong>Рекомендация:</strong> начать с P1 (14 400 €), который полностью покрывается грантом EBRR (~15 000 €). После успешного запуска P1 — принять решение по P2 и P3 на основе реальных результатов и обратной связи команды.
+    </div>
+
+    <!-- ===== УСЛОВИЯ ===== -->
+    <h2><span class="section-icon">📋</span> 8. Условия</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>Ставка:</strong> 45 €/час нетто</li>
+            <li><strong>Оплата:</strong> помесячно по факту отработанных часов (timesheet)</li>
+            <li><strong>Отчётность:</strong> еженедельный отчёт о прогрессе + доступ к задачам в трекере</li>
+            <li><strong>Демо:</strong> каждые 2 недели — показ промежуточных результатов</li>
+            <li><strong>Исходный код:</strong> передаётся клиенту по завершении каждого релиза</li>
+            <li><strong>Гарантия:</strong> 30 дней бесплатного bugfix после каждого релиза</li>
+            <li><strong>Хостинг:</strong> клиент оплачивает отдельно (~30–50 €/мес за VPS)</li>
+            <li><strong>AI-сервисы:</strong> OpenAI API оплачивается клиентом по потреблению (~50–100 €/мес при активном использовании)</li>
+        </ul>
+    </div>
+
+    <!-- ===== СЛЕДУЮЩИЕ ШАГИ ===== -->
+    <h2><span class="section-icon">➡️</span> 9. Следующие шаги</h2>
+
+    <div class="card">
+        <ul>
+            <li><strong>1.</strong> Согласование скоупа P1 и подписание договора</li>
+            <li><strong>2.</strong> Получение от клиента: текущий прайс-лист, 2–3 примера PDF-планов, шаблон сметы, доступ к Finmap API (если есть)</li>
+            <li><strong>3.</strong> Старт разработки — неделя 1: инфраструктура + авторизация + каталог работ</li>
+            <li><strong>4.</strong> Демо через 4 недели: рабочий прототип генерации сметы по PDF</li>
+            <li><strong>5.</strong> Итеративная разработка с демо каждые 2 недели</li>
+        </ul>
+    </div>
+
+</div><!-- /container -->
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+    <div class="footer-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info">
+        <strong>Loaders Development</strong><br>
+        Młynarska 12, 01-205 Warszawa, Polska<br>
+        <a href="tel:+48579545535">+48 579 545 535</a> • <a href="mailto:oleg@loaders.dev">oleg@loaders.dev</a><br>
+        <a href="https://loaders.dev">loaders.dev</a>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info" style="font-size: 0.75rem; color: var(--text-muted);">
+        © 2026 Loaders Development. Конфиденциальный документ — только для адресата.
+    </div>
+</div>
+
+</body>
+</html>

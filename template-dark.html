@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}} — Loaders Development</title>
+    <style>
+        /* ============================================
+           LOADERS.DEV OFERTA TEMPLATE
+           Styl oparty na branding loaders.dev:
+           - Ciemne tło (dark theme)
+           - Akcent: zielony/limonkowy (#00ff88 / #4cff9f)
+           - Typografia: nowoczesna, czysta
+           - Minimalistyczny, profesjonalny design
+           ============================================ */
+
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #141414;
+            --bg-card: #1a1a1a;
+            --bg-card-hover: #222222;
+            --border: #2a2a2a;
+            --border-light: #333333;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #666666;
+            --accent: #00ff88;
+            --accent-dim: #00cc6a;
+            --accent-bg: rgba(0, 255, 136, 0.08);
+            --accent-border: rgba(0, 255, 136, 0.2);
+            --purple: #a855f7;
+            --blue: #3b82f6;
+            --orange: #f97316;
+            --red: #ef4444;
+            --yellow: #eab308;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .header-logo img {
+            height: 32px;
+        }
+
+        .header-logo-text {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.5px;
+        }
+
+        .header-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /* ===== HERO / COVER ===== */
+        .hero {
+            padding: 80px 40px 60px;
+            text-align: center;
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background: var(--accent-bg);
+            border: 1px solid var(--accent-border);
+            color: var(--accent);
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            margin-bottom: 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: -1.5px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.7;
+        }
+
+        .hero-client {
+            margin-top: 30px;
+            padding-top: 30px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            flex-wrap: wrap;
+        }
+
+        .hero-client-item {
+            text-align: center;
+        }
+
+        .hero-client-item .label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .hero-client-item .value {
+            font-size: 0.95rem;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* ===== CONTAINER ===== */
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 40px 80px;
+        }
+
+        /* ===== HEADINGS ===== */
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin: 50px 0 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-primary);
+        }
+
+        h2 .section-icon {
+            margin-right: 10px;
+        }
+
+        h3 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 28px 0 12px;
+        }
+
+        h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 16px 0 8px;
+        }
+
+        p {
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            margin: 16px 0;
+            transition: border-color 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--border-light);
+        }
+
+        /* ===== TABLES ===== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-secondary);
+            color: var(--accent);
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: var(--bg-card-hover);
+        }
+
+        td {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* ===== HIGHLIGHT / CALLOUT ===== */
+        .highlight {
+            background: var(--accent-bg);
+            border: 1px solid var(--accent-border);
+            border-left: 3px solid var(--accent);
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--text-secondary);
+        }
+
+        .highlight strong {
+            color: var(--accent);
+        }
+
+        /* ===== BADGES ===== */
+        .tech-badge {
+            display: inline-block;
+            background: var(--accent-bg);
+            border: 1px solid var(--accent-border);
+            color: var(--accent);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 3px 4px 3px 0;
+            font-weight: 500;
+        }
+
+        /* ===== LISTS ===== */
+        ul {
+            margin: 10px 0 15px 20px;
+            color: var(--text-secondary);
+        }
+
+        li {
+            margin-bottom: 8px;
+        }
+
+        li strong {
+            color: var(--text-primary);
+        }
+
+        /* ===== SUBTITLE ===== */
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+            margin-bottom: 30px;
+        }
+
+        /* ===== DIAGRAM ===== */
+        .diagram {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 30px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+
+        .diagram pre {
+            color: var(--accent);
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.8;
+        }
+
+        /* ===== FOOTER ===== */
+        .footer {
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 40px;
+            text-align: center;
+        }
+
+        .footer-logo {
+            margin-bottom: 16px;
+        }
+
+        .footer-logo img {
+            height: 28px;
+            opacity: 0.7;
+        }
+
+        .footer-info {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            line-height: 1.8;
+        }
+
+        .footer-info a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .footer-divider {
+            width: 60px;
+            height: 1px;
+            background: var(--border);
+            margin: 20px auto;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            .header { padding: 12px 20px; }
+            .hero { padding: 50px 20px 40px; }
+            .hero h1 { font-size: 2rem; }
+            .container { padding: 20px 20px 60px; }
+            h2 { font-size: 1.3rem; }
+            .hero-client { gap: 20px; }
+        }
+
+        /* ===== PRINT ===== */
+        @media print {
+            body { background: #fff; color: #000; }
+            .header { position: static; background: #fff; border-bottom: 2px solid #000; }
+            .hero { background: #fff; }
+            .card { border: 1px solid #ccc; }
+            table { border: 1px solid #ccc; }
+            th { background: #f0f0f0; color: #000; }
+            .highlight { border-left: 3px solid #000; background: #f9f9f9; }
+            .tech-badge { background: #f0f0f0; border: 1px solid #ccc; color: #000; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+    <a href="https://loaders.dev" class="header-logo">
+        <!-- Animated GIF logo from loaders.dev -->
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+        <span class="header-logo-text">Loaders</span>
+    </a>
+    <div class="header-meta">Oferta handlowa • Dokument poufny</div>
+</div>
+
+<!-- ===== HERO ===== -->
+<div class="hero">
+    <div class="hero-badge">{{BADGE_TEXT}}</div>
+    <h1>{{TITLE}}</h1>
+    <p class="hero-subtitle">{{SUBTITLE}}</p>
+    <div class="hero-client">
+        <div class="hero-client-item">
+            <div class="label">Klient</div>
+            <div class="value">{{CLIENT_NAME}}</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Projekt</div>
+            <div class="value">Student Hub</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Data</div>
+            <div class="value">Maj 2026</div>
+        </div>
+        <div class="hero-client-item">
+            <div class="label">Wersja</div>
+            <div class="value">1.0</div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="container">
+
+    <!-- 
+        =============================================
+        TUTAJ WSTAWIĆ TREŚĆ DOKUMENTU
+        =============================================
+    -->
+
+    <h2>Przykładowa sekcja</h2>
+    <p>To jest szablon dokumentu ofertowego Loaders Development. Treść poszczególnych dokumentów (architektura, mockupy, wycena) zostanie wstawiona w miejsce tego placeholder'a.</p>
+
+    <div class="card">
+        <h4>Przykładowa karta</h4>
+        <p>Karty służą do grupowania powiązanych informacji.</p>
+        <ul>
+            <li><strong>Element 1</strong> — opis elementu</li>
+            <li><strong>Element 2</strong> — opis elementu</li>
+        </ul>
+    </div>
+
+    <div class="highlight">
+        <strong>Uwaga:</strong> Bloki highlight służą do wyróżnienia ważnych informacji, rekomendacji lub ostrzeżeń.
+    </div>
+
+    <table>
+        <tr><th>Kolumna 1</th><th>Kolumna 2</th><th>Kolumna 3</th></tr>
+        <tr><td>Wartość</td><td>Wartość</td><td>Wartość</td></tr>
+        <tr><td>Wartość</td><td>Wartość</td><td>Wartość</td></tr>
+    </table>
+
+    <h3>Technologie</h3>
+    <div>
+        <span class="tech-badge">Java 21</span>
+        <span class="tech-badge">Spring Boot</span>
+        <span class="tech-badge">Next.js</span>
+        <span class="tech-badge">Capacitor</span>
+        <span class="tech-badge">PostgreSQL</span>
+    </div>
+
+    <div class="diagram">
+<pre>
+┌─────────────────────────────────────────┐
+│         Przykładowy diagram             │
+├─────────────────────────────────────────┤
+│  Komponent A  ──▶  Komponent B         │
+│       │                  │              │
+│       ▼                  ▼              │
+│  Komponent C  ◀──  Komponent D         │
+└─────────────────────────────────────────┘
+</pre>
+    </div>
+
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="footer">
+    <div class="footer-logo">
+        <img src="https://static.tildacdn.com/tild3832-3730-4636-b731-633236396434/logo_homepage.gif" alt="Loaders">
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info">
+        <strong>Loaders Development</strong><br>
+        Młynarska 12, 01-205 Warszawa, Polska<br>
+        <a href="tel:+48579545535">+48 579 545 535</a> • <a href="mailto:oleg@loaders.dev">oleg@loaders.dev</a><br>
+        <a href="https://loaders.dev">loaders.dev</a>
+    </div>
+    <div class="footer-divider"></div>
+    <div class="footer-info" style="font-size: 0.75rem; color: var(--text-muted);">
+        © 2026 Loaders Development. Dokument poufny — wyłącznie do użytku adresata.
+    </div>
+</div>
+
+</body>
+</html>

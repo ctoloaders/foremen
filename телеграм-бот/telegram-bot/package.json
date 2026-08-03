@@ -1,0 +1,26 @@
+{
+  "name": "foremen-receipt-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for collecting paper receipts on renovation projects",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "bun src/dev.ts",
+    "dev:webhook": "bun src/dev-webhook.ts",
+    "build": "bun build src/index.ts src/webhook.ts --outdir=dist --target=node --format=esm --external=googleapis --external=grammy --external=dotenv",
+    "deploy": "bash deploy.sh",
+    "setup-sheets": "bun scripts/setup-sheets.ts",
+    "setup-shared-drive": "bun scripts/setup-shared-drive.ts",
+    "set-webhook": "bun scripts/set-webhook.ts"
+  },
+  "dependencies": {
+    "grammy": "^1.21.1",
+    "googleapis": "^134.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.12.7",
+    "tsx": "^4.7.2"
+  }
+}

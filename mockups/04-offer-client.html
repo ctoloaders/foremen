@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oferta — Foremen</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --background: #09090b;
+            --foreground: #fafafa;
+            --card: #09090b;
+            --card-foreground: #fafafa;
+            --popover: #09090b;
+            --primary: #fafafa;
+            --primary-foreground: #18181b;
+            --secondary: #27272a;
+            --secondary-foreground: #fafafa;
+            --muted: #27272a;
+            --muted-foreground: #a1a1aa;
+            --accent: #27272a;
+            --accent-foreground: #fafafa;
+            --destructive: #7f1d1d;
+            --border: #27272a;
+            --input: #27272a;
+            --ring: #d4d4d8;
+            --radius: 8px;
+            --success: #22c55e;
+            --warning: #eab308;
+            --info: #3b82f6;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--background);
+            color: var(--foreground);
+            line-height: 1.5;
+            font-size: 14px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Header */
+        .portal-header {
+            padding: 16px 32px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .portal-header-left { display: flex; align-items: center; gap: 12px; }
+        .portal-brand-icon { width: 28px; height: 28px; background: var(--foreground); color: var(--background); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+        .portal-brand-text { font-weight: 600; font-size: 15px; }
+        .portal-label { font-size: 12px; color: var(--muted-foreground); margin-left: 12px; padding: 3px 10px; background: var(--secondary); border-radius: 9999px; }
+        .portal-header-right { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted-foreground); }
+        .portal-user { font-weight: 500; color: var(--foreground); }
+
+        /* Container */
+        .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+
+        /* Hero */
+        .hero { text-align: center; margin-bottom: 48px; padding: 40px; border: 1px solid var(--border); border-radius: var(--radius); background: linear-gradient(180deg, rgba(39,39,42,0.3) 0%, transparent 100%); }
+        .hero h1 { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+        .hero-meta { display: flex; align-items: center; justify-content: center; gap: 24px; color: var(--muted-foreground); font-size: 13px; }
+        .hero-meta-item { display: flex; align-items: center; gap: 6px; }
+        .hero-meta-item strong { color: var(--foreground); font-weight: 600; }
+
+        /* Sections */
+        .section { margin-bottom: 32px; }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; letter-spacing: -0.2px; }
+
+        /* Table */
+        .card { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { padding: 10px 16px; text-align: left; font-size: 11px; font-weight: 500; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+        td { padding: 11px 16px; font-size: 13px; border-bottom: 1px solid var(--border); color: var(--muted-foreground); }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        td strong { color: var(--foreground); font-weight: 500; }
+        th.right, td.right { text-align: right; }
+        th.center, td.center { text-align: center; }
+
+        .subtotal-row td { background: rgba(255,255,255,0.02); font-weight: 500; }
+        .subtotal-row td strong { font-weight: 600; }
+        .total-row td { background: var(--secondary); font-weight: 600; color: var(--foreground); border-top: 2px solid var(--border); }
+        .total-row td strong { font-weight: 700; }
+
+        /* Info card */
+        .info-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 24px; }
+        .info-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+        .info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .info-item { text-align: center; padding: 16px; background: var(--secondary); border-radius: var(--radius); }
+        .info-item-label { font-size: 11px; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+        .info-item-value { font-size: 16px; font-weight: 600; }
+
+        /* Materials list */
+        .materials-list { list-style: none; padding: 0; }
+        .materials-list li { padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--muted-foreground); display: flex; align-items: center; gap: 8px; }
+        .materials-list li:last-child { border-bottom: none; }
+        .materials-list li::before { content: "•"; color: var(--success); font-weight: bold; }
+        .materials-list li strong { color: var(--foreground); font-weight: 500; }
+
+        /* Buttons */
+        .btn { padding: 6px 12px; border-radius: var(--radius); font-size: 12px; font-weight: 500; border: 1px solid var(--border); background: transparent; color: var(--foreground); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+        .btn:hover { background: var(--secondary); }
+        .btn-primary { background: var(--foreground); color: var(--primary-foreground); border-color: var(--foreground); }
+        .btn-primary:hover { opacity: 0.9; }
+        .btn-success { background: var(--success); color: #fff; border-color: var(--success); padding: 10px 24px; font-size: 14px; font-weight: 600; }
+        .btn-success:hover { opacity: 0.9; }
+        .btn-secondary { padding: 10px 24px; font-size: 14px; }
+
+        .actions { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 40px 0; }
+
+        /* Footer */
+        .portal-footer {
+            border-top: 1px solid var(--border);
+            padding: 24px 32px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--muted-foreground);
+        }
+        .portal-footer strong { color: var(--foreground); font-weight: 500; }
+
+        /* Badge */
+        .badge { display: inline-flex; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 500; }
+        .badge-success { background: rgba(34,197,94,0.1); color: var(--success); }
+
+        @media (max-width: 768px) { .info-grid { grid-template-columns: 1fr; } .hero-meta { flex-direction: column; gap: 8px; } }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="portal-header">
+        <div class="portal-header-left">
+            <div class="portal-brand-icon">F</div>
+            <span class="portal-brand-text">Foremen</span>
+            <span class="portal-label">Portal klienta</span>
+        </div>
+        <div class="portal-header-right">
+            <span class="portal-user">Anna Kowalska</span>
+        </div>
+    </header>
+
+    <!-- Content -->
+    <div class="container">
+
+        <!-- Hero -->
+        <div class="hero">
+            <h1>Remont mieszkania — ul. Marszałkowska 12</h1>
+            <div class="hero-meta">
+                <div class="hero-meta-item">Powierzchnia: <strong>72 m²</strong></div>
+                <div class="hero-meta-item">Pakiet: <strong>Norm</strong></div>
+                <div class="hero-meta-item">Status: <span class="badge badge-success">Oferta</span></div>
+            </div>
+        </div>
+
+        <!-- Section 1: Zakres prac -->
+        <div class="section">
+            <h2 class="section-title">Zakres prac</h2>
+            <div class="card">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Kategoria</th>
+                            <th>Zakres prac</th>
+                            <th class="center">Jedn.</th>
+                            <th class="center">Ilość</th>
+                            <th class="right">Cena jedn.</th>
+                            <th class="right">Wartość</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Prace przygotowawcze</strong></td>
+                            <td>Demontaż starej zabudowy, wywóz gruzu</td>
+                            <td class="center">kpl.</td>
+                            <td class="center">1</td>
+                            <td class="right">4 200 zł</td>
+                            <td class="right"><strong>4 200 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Konstrukcje i GK</strong></td>
+                            <td>Zabudowa g-k sufitów, ścianki działowe</td>
+                            <td class="center">m²</td>
+                            <td class="center">38</td>
+                            <td class="right">337 zł</td>
+                            <td class="right"><strong>12 800 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hydraulika</strong></td>
+                            <td>Wymiana instalacji wod-kan, podejścia</td>
+                            <td class="center">pkt.</td>
+                            <td class="center">12</td>
+                            <td class="right">708 zł</td>
+                            <td class="right"><strong>8 500 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Elektryka</strong></td>
+                            <td>Nowa instalacja elektryczna, punkty</td>
+                            <td class="center">pkt.</td>
+                            <td class="center">36</td>
+                            <td class="right">200 zł</td>
+                            <td class="right"><strong>7 200 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Płytki</strong></td>
+                            <td>Układanie płytek ściennych i podłogowych</td>
+                            <td class="center">m²</td>
+                            <td class="center">28</td>
+                            <td class="right">550 zł</td>
+                            <td class="right"><strong>15 400 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Szpachle</strong></td>
+                            <td>Gładzie gipsowe, szlifowanie ścian</td>
+                            <td class="center">m²</td>
+                            <td class="center">122</td>
+                            <td class="right">50 zł</td>
+                            <td class="right"><strong>6 100 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Malarskie</strong></td>
+                            <td>Malowanie ścian i sufitów — 2 warstwy</td>
+                            <td class="center">m²</td>
+                            <td class="center">160</td>
+                            <td class="right">30 zł</td>
+                            <td class="right"><strong>4 800 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Podłogi</strong></td>
+                            <td>Montaż paneli LVT, listwy przypodłogowe</td>
+                            <td class="center">m²</td>
+                            <td class="center">52</td>
+                            <td class="right">179 zł</td>
+                            <td class="right"><strong>9 300 zł</strong></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Stolarka</strong></td>
+                            <td>Montaż drzwi wewnętrznych</td>
+                            <td class="center">szt.</td>
+                            <td class="center">6</td>
+                            <td class="right">533 zł</td>
+                            <td class="right"><strong>3 200 zł</strong></td>
+                        </tr>
+                        <!-- Totals -->
+                        <tr class="total-row">
+                            <td colspan="5"><strong>RAZEM NETTO</strong></td>
+                            <td class="right"><strong>71 500 zł</strong></td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="5"><strong>VAT 8%</strong></td>
+                            <td class="right"><strong>5 720 zł</strong></td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="5"><strong>RAZEM BRUTTO</strong></td>
+                            <td class="right"><strong>77 220 zł</strong></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 2: Warunki -->
+        <div class="section">
+            <h2 class="section-title">Warunki</h2>
+            <div class="info-card">
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-item-label">Termin realizacji</div>
+                        <div class="info-item-value">8 tygodni</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">Gwarancja</div>
+                        <div class="info-item-value">36 miesięcy</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-item-label">Płatność</div>
+                        <div class="info-item-value">3 transze</div>
+                    </div>
+                </div>
+                <p style="margin-top: 16px; font-size: 12px; color: var(--muted-foreground); text-align: center;">
+                    Harmonogram płatności: 30% przy podpisaniu umowy • 40% po zakończeniu prac mokrych • 30% po odbiorze końcowym
+                </p>
+            </div>
+        </div>
+
+        <!-- Section 3: Materiały -->
+        <div class="section">
+            <h2 class="section-title">Materiały wykończeniowe w cenie</h2>
+            <div class="card">
+                <ul class="materials-list">
+                    <li><strong>Farba Dulux</strong> — ściany i sufity, kolor do wyboru z palety</li>
+                    <li><strong>Panele LVT dąb naturalny</strong> — podłogi w pokojach i salonie</li>
+                    <li><strong>Płytki Cersanit 60×60</strong> — łazienka, podłoga i ściany</li>
+                    <li><strong>Drzwi Porta CPL</strong> — wewnętrzne, 6 sztuk z ościeżnicami</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="actions">
+            <button class="btn btn-success">Zatwierdzam ofertę</button>
+            <button class="btn btn-secondary">Mam pytania</button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="portal-footer">
+        <strong>Foremen Sp. z o.o.</strong><br>
+        ul. Koszykowa 61, 00-667 Warszawa • tel. +48 22 123 45 67 • biuro@foremen.pl
+    </footer>
+
+</body>
+</html>
