@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Миграция на продакшен — Foremen Telegram Bot</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 40px 20px; background: #f8f9fa; }
+h1 { font-size: 2em; margin-bottom: 10px; color: #111; }
+h2 { font-size: 1.5em; margin: 40px 0 15px; padding-top: 20px; border-top: 2px solid #e0e0e0; color: #222; }
+h3 { font-size: 1.2em; margin: 25px 0 10px; color: #333; }
+p { margin: 10px 0; }
+code { background: #e8e8e8; padding: 2px 6px; border-radius: 3px; font-size: 0.9em; }
+pre { background: #1e1e1e; color: #d4d4d4; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 15px 0; font-size: 0.85em; line-height: 1.5; }
+.step { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; margin: 20px 0; }
+.step-number { display: inline-block; width: 32px; height: 32px; background: #2563eb; color: white; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; margin-right: 10px; }
+.warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; margin: 15px 0; }
+.warning::before { content: "⚠️ "; }
+.info { background: #d1ecf1; border: 1px solid #0dcaf0; border-radius: 8px; padding: 16px; margin: 15px 0; }
+.info::before { content: "ℹ️ "; }
+.success { background: #d4edda; border: 1px solid #28a745; border-radius: 8px; padding: 16px; margin: 15px 0; }
+.success::before { content: "✅ "; }
+table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+th, td { border: 1px solid #ddd; padding: 10px 12px; text-align: left; }
+th { background: #f0f0f0; font-weight: 600; }
+.checklist { list-style: none; padding: 0; }
+.checklist li { padding: 8px 0; border-bottom: 1px solid #eee; }
+.checklist li::before { content: "☐ "; font-size: 1.2em; }
+.toc { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 24px; margin: 30px 0; }
+.toc ul { padding-left: 20px; }
+.toc li { margin: 6px 0; }
+.toc a { color: #2563eb; text-decoration: none; }
+</style>
+</head>
+<body>
+<h1>🚀 Миграция на продакшен</h1>
+<p>Foremen Telegram Bot — полная инструкция по переходу от тестового окружения к клиентскому.</p>
+
+<div class="toc">
+<h3>Содержание</h3>
+<ul>
+<li><a href="#overview">Обзор архитектуры</a></li>
+<li><a href="#telegram">Шаг 1: Telegram Bot</a></li>
+<li><a href="#google">Шаг 2: Google Cloud + Shared Drive</a></li>
+<li><a href="#deploy">Шаг 3: Деплой сервера</a></li>
+<li><a href="#bitrix">Шаг 4: Настройка Битрикс24 клиента</a></li>
+<li><a href="#env">Шаг 5: Конфигурация (.env)</a></li>
+<li><a href="#verify">Шаг 6: Проверка</a></li>
+<li><a href="#checklist">Финальный чеклист</a></li>
+</ul>
+</div>
+
+<h2 id="overview">Обзор: что нужно для продакшена</h2>
+
+<table>
+<tr><th>Компонент</th><th>Тест (сейчас)</th><th>Продакшен</th></tr>
+<tr><td>Telegram Bot</td><td>Тестовый бот (наш)</td><td>Новый бот для клиента</td></tr>
+<tr><td>Google Cloud Project</td><td>forementest</td><td>Новый проект (или тот же с billing)</td></tr>
+<tr><td>Service Account</td><td>forementest@forementest.iam.gserviceaccount.com</td><td>Новый SA в проекте клиента</td></tr>
+<tr><td>Shared Drive</td><td>"Foremen tets"</td><td>Новый Shared Drive клиента</td></tr>
+<tr><td>Hosting</td><td>localhost + ngrok</td><td>Google Cloud Function (или VPS)</td></tr>
+<tr><td>Битрикс24</td><td>Тестовый аккаунт</td><td>Аккаунт клиента</td></tr>
+<tr><td>Webhook URL</td><td>ngrok (временный)</td><td>Постоянный URL Cloud Function</td></tr>
+</table>
+
+<h2 id="telegram">Шаг 1: Создать Telegram Bot для клиента</h2>
+
+<div class="step">
+<p><span class="step-number">1</span><strong>Да, нужен новый бот.</strong> Каждый клиент должен иметь своего бота — это их бренд в Telegram.</p>
+
+<h3>Как создать:</h3>
+<ol>
+<li>Открыть Telegram → найти <code>@BotFather</code></li>
+<li>Отправить <code>/newbot</code></li>
+<li>Ввести имя бота (видно пользователям): например <code>Foremen Receipts</code></li>
+<li>Ввести username бота (уникальный): например <code>foremen_receipts_bot</code></li>
+<li>BotFather вернёт <strong>токен</strong> — скопировать</li>
+</ol>
+
+<h3>Дополнительные настройки (опционально):</h3>
+<ol>
+<li>Отправить <code>/setdescription</code> → выбрать бота → написать описание</li>
+<li>Отправить <code>/setuserpic</code> → загрузить логотип клиента</li>
+<li>Отправить <code>/setcommands</code> → вставить:
+<pre>start - Начать работу / выбрать проект
+myid - Показать мой Telegram ID
+cancel - Отменить текущее действие</pre></li>
+</ol>
+
+<div class="success">Результат: токен вида <code>1234567890:ABCdef...</code> — записать в <code>TELEGRAM_BOT_TOKEN</code></div>
+</div>
+
+<h2 id="google">Шаг 2: Google Cloud + Shared Drive</h2>
+
+<div class="step">
+<h3>2.1 Google Cloud Project</h3>
+<ol>
+<li>Перейти: <a href="https://console.cloud.google.com">console.cloud.google.com</a></li>
+<li>Создать новый проект (или использовать существующий)</li>
+<li><strong>Привязать Billing Account</strong> (обязательно для Cloud Functions):
+    <br>Billing → Link billing account → выбрать или создать</li>
+<li>Включить APIs:
+    <ul>
+    <li>Google Sheets API</li>
+    <li>Google Drive API</li>
+    <li>Cloud Functions API</li>
+    <li>Cloud Build API</li>
+    <li>Cloud Run API</li>
+    <li>Artifact Registry API</li>
+    </ul>
+</li>
+</ol>
+
+<h3>2.2 Service Account</h3>
+<ol>
+<li>IAM & Admin → Service Accounts → Create</li>
+<li>Имя: <code>foremen-bot</code></li>
+<li>Роль: <strong>Editor</strong></li>
+<li>Создать ключ: JSON → скачать файл</li>
+</ol>
+
+<div class="warning">JSON-ключ содержит private key. Никогда не коммитить в git. Хранить в секретном месте.</div>
+
+<h3>2.3 Shared Drive (Team Drive)</h3>
+<ol>
+<li>Открыть <a href="https://drive.google.com">Google Drive</a> (аккаунт клиента или наш)</li>
+<li>Слева: "Shared drives" → "+ New"</li>
+<li>Назвать: <code>Foremen — [Имя клиента]</code></li>
+<li><strong>Добавить Service Account как участника:</strong>
+    <br>Правый клик на Shared Drive → Manage members → добавить email SA → роль: Content Manager</li>
+<li>Создать внутри папку <code>Проекты</code> — запомнить её ID из URL</li>
+</ol>
+
+<div class="info">ID папки берётся из URL: <code>https://drive.google.com/drive/folders/<strong>ВОТ_ЭТОТ_ID</strong></code></div>
+
+<h3>2.4 Google Sheets (реестры)</h3>
+<p>Не нужно создавать вручную — setup-скрипт сделает это автоматически в Shared Drive.</p>
+<pre>cd telegram-bot
+# Обновить SHARED_DRIVE_ID и PROJECTS_PARENT_FOLDER_ID в scripts/setup-shared-drive.ts
+bun scripts/setup-shared-drive.ts</pre>
+
+<p>Скрипт создаст:</p>
+<ul>
+<li>Реестр работников (workers, project_access, bot_state)</li>
+<li>Реестр проектов (projects)</li>
+<li>Тестовый проект + смету</li>
+</ul>
+
+<div class="success">Результат: ID спредшитов → записать в <code>WORKERS_SPREADSHEET_ID</code> и <code>PROJECTS_SPREADSHEET_ID</code></div>
+</div>
+
+<h2 id="deploy">Шаг 3: Деплой сервера</h2>
+
+<div class="step">
+<h3>Вариант A: Google Cloud Functions (рекомендуется)</h3>
+
+<p>Требования: billing привязан, APIs включены, gcloud CLI установлен.</p>
+
+<pre># Авторизация
+gcloud auth login
+gcloud config set project YOUR_PROJECT_ID
+
+# Деплой (из папки telegram-bot/)
+bash deploy.sh</pre>
+
+<p>После деплоя получишь два URL:</p>
+<ul>
+<li><strong>Telegram webhook URL</strong>: <code>https://REGION-PROJECT.cloudfunctions.net/receipt-bot</code></li>
+<li><strong>Bitrix webhook URL</strong>: <code>https://REGION-PROJECT.cloudfunctions.net/bitrix-webhook</code></li>
+</ul>
+
+<h3>Настроить Telegram webhook:</h3>
+<pre>curl "https://api.telegram.org/bot&lt;TOKEN&gt;/setWebhook?url=&lt;TELEGRAM_WEBHOOK_URL&gt;&secret_token=&lt;WEBHOOK_SECRET&gt;"</pre>
+
+<h3>Вариант B: VPS (если нет billing)</h3>
+<ol>
+<li>Арендовать VPS (Hetzner, DigitalOcean, ~$5/мес)</li>
+<li>Установить Node.js 20 + bun</li>
+<li>Склонировать репо, <code>bun install</code>, создать <code>.env</code></li>
+<li>Запустить через PM2: <code>pm2 start "bun src/dev-webhook.ts" --name webhook</code></li>
+<li>Настроить nginx reverse proxy для HTTPS</li>
+<li>Для Telegram бота: запустить в webhook mode (не polling)</li>
+</ol>
+
+<h3>Вариант C: Railway / Render (быстро, без конфигурации)</h3>
+<ol>
+<li>Подключить GitHub репо</li>
+<li>Указать build command: <code>bun install</code></li>
+<li>Start command: <code>bun src/dev-webhook.ts</code> (обслуживает и бота и webhook)</li>
+<li>Добавить env variables из .env</li>
+</ol>
+
+<div class="success">Результат: постоянные URL для Telegram webhook и Bitrix webhook</div>
+</div>
+
+<h2 id="bitrix">Шаг 4: Настройка Битрикс24 клиента</h2>
+
+<div class="step">
+<h3>4.1 Поля в профиле сотрудника</h3>
+<p>Каждый сотрудник → Профиль → Создать поле:</p>
+<table>
+<tr><th>Поле</th><th>Тип</th><th>Запомнить код</th></tr>
+<tr><td>Telegram ID</td><td>Число (Number)</td><td><code>UF_USR_XXXXXXX</code></td></tr>
+<tr><td>Роль для бота</td><td>Список (foreman, pm, estimator, sales, admin, other)</td><td><code>UF_USR_YYYYYYY</code></td></tr>
+</table>
+<div class="warning">Коды полей будут другими на аккаунте клиента! Нужно обновить в коде webhook.ts строку с <code>UF_USR_1785937945029</code> на новый код.</div>
+
+<h3>4.2 Поля в сделке (CRM)</h3>
+<p>CRM → Сделки → карточка → Создать поле:</p>
+<table>
+<tr><th>Поле</th><th>Тип</th><th>Код (запомнить)</th></tr>
+<tr><td>Google Drive URL</td><td>Строка</td><td><code>UF_CRM_XXXXXXX</code></td></tr>
+<tr><td>Google Sheets URL</td><td>Строка</td><td><code>UF_CRM_YYYYYYY</code></td></tr>
+<tr><td>Прораб</td><td>Привязка к сотруднику</td><td><code>UF_CRM_AAAAAAA</code></td></tr>
+<tr><td>Менеджер</td><td>Привязка к сотруднику</td><td><code>UF_CRM_BBBBBBB</code></td></tr>
+<tr><td>Сметчик</td><td>Привязка к сотруднику</td><td><code>UF_CRM_CCCCCCC</code></td></tr>
+<tr><td>Продавец</td><td>Привязка к сотруднику</td><td><code>UF_CRM_DDDDDDD</code></td></tr>
+</table>
+
+<h3>4.3 Входящий webhook (для обратной записи)</h3>
+<ol>
+<li>Разработчикам → Другое → Входящий вебхук</li>
+<li>Права: ☑ CRM, ☑ Пользователи</li>
+<li>Скопировать URL (формат: <code>https://XXX.bitrix24.ru/rest/1/YYYYY/</code>)</li>
+</ol>
+
+<h3>4.4 Робот на сделке</h3>
+<ol>
+<li>CRM → Сделки → Роботы → на первой стадии добавить "Запрос по URL"</li>
+<li>URL: <strong>URL Cloud Function bitrix-webhook</strong> (из шага 3)</li>
+<li>Метод: POST, тип: JSON</li>
+<li>Тело (подставить коды полей клиента):</li>
+</ol>
+<pre>{
+  "secret": "СЕКРЕТ_КЛИЕНТА",
+  "action": "upsert_project",
+  "project_name": "{{Название}}",
+  "deal_id": "{{ID}}",
+  "bitrix_webhook_url": "https://XXX.bitrix24.ru/rest/1/YYYYY/",
+  "google_drive_url": "{{UF_CRM_DRIVE_CODE}}",
+  "google_sheets_url": "{{UF_CRM_SHEETS_CODE}}",
+  "workers": [
+    {"worker_id": "{{UF_CRM_FOREMAN_CODE}}", "worker_name": "", "role_in_project": "foreman"},
+    {"worker_id": "{{UF_CRM_PM_CODE}}", "worker_name": "", "role_in_project": "pm"},
+    {"worker_id": "{{UF_CRM_ESTIMATOR_CODE}}", "worker_name": "", "role_in_project": "estimator"},
+    {"worker_id": "{{UF_CRM_SALES_CODE}}", "worker_name": "", "role_in_project": "sales"}
+  ]
+}</pre>
+
+<div class="info">Коды полей можно получить вызвав API: <code>curl "INCOMING_WEBHOOK_URL/crm.deal.fields"</code> — покажет все поля и их коды.</div>
+</div>
+
+<h2 id="env">Шаг 5: Конфигурация (.env)</h2>
+
+<div class="step">
+<p>Создать <code>.env</code> файл для продакшена (все значения — от клиента):</p>
+
+<pre># === TELEGRAM ===
+TELEGRAM_BOT_TOKEN=&lt;токен нового бота клиента&gt;
+TELEGRAM_WEBHOOK_SECRET=&lt;случайная строка, например: uuid&gt;
+
+# === GOOGLE ===
+GOOGLE_SERVICE_ACCOUNT_JSON=./service-account.json
+WORKERS_SPREADSHEET_ID=&lt;ID из setup-скрипта&gt;
+PROJECTS_SPREADSHEET_ID=&lt;ID из setup-скрипта&gt;
+ESTIMATES_FOLDER_ID=&lt;ID папки "Проекты" в Shared Drive&gt;
+
+# === SHEET NAMES (не менять) ===
+WORKERS_SHEET_NAME=workers
+ACCESS_SHEET_NAME=project_access
+BOT_STATE_SHEET_NAME=bot_state
+PROJECTS_SHEET_NAME=projects
+
+# === BITRIX ===
+APPS_SCRIPT_WEBHOOK_SECRET=&lt;секрет для валидации webhook от Битрикс&gt;
+
+# === DEPLOY (Cloud Functions) ===
+GCP_PROJECT_ID=&lt;project id&gt;
+GCP_REGION=me-west1
+FUNCTION_NAME=receipt-bot</pre>
+
+<h3>Что обновить в коде:</h3>
+<table>
+<tr><th>Файл</th><th>Что менять</th><th>Зачем</th></tr>
+<tr><td><code>src/webhook.ts</code></td><td><code>SHARED_DRIVE_ID</code></td><td>ID нового Shared Drive клиента</td></tr>
+<tr><td><code>src/webhook.ts</code></td><td><code>PROJECTS_PARENT_FOLDER_ID</code></td><td>ID папки "Проекты" внутри Shared Drive</td></tr>
+<tr><td><code>src/webhook.ts</code></td><td><code>UF_CRM_1785938336262</code></td><td>Код поля Drive URL в Битрикс клиента</td></tr>
+<tr><td><code>src/webhook.ts</code></td><td><code>UF_CRM_1785938353178</code></td><td>Код поля Sheets URL в Битрикс клиента</td></tr>
+<tr><td><code>src/webhook.ts</code></td><td><code>UF_USR_1785937945029</code></td><td>Код поля Telegram ID в профиле сотрудника</td></tr>
+</table>
+
+<div class="warning">В будущем эти коды нужно вынести в .env чтобы не хардкодить. Пока — меняем руками в коде.</div>
+</div>
+
+<h2 id="verify">Шаг 6: Проверка</h2>
+
+<div class="step">
+<h3>6.1 Проверить webhook</h3>
+<pre># Тест создания проекта (должен создать папку + смету)
+curl -X POST &lt;BITRIX_WEBHOOK_URL&gt; \
+  -H "Content-Type: application/json" \
+  -d '{
+    "secret": "&lt;APPS_SCRIPT_WEBHOOK_SECRET&gt;",
+    "action": "upsert_project",
+    "project_name": "Тест продакшен",
+    "deal_id": "1",
+    "bitrix_webhook_url": "&lt;BITRIX_INCOMING_WEBHOOK_URL&gt;",
+    "workers": [{"worker_id": "1", "worker_name": "", "role_in_project": "pm"}]
+  }'</pre>
+<p>Ожидаемый ответ: <code>{"status":"ok","message":"project created with new resources","google_drive_url":"...","google_sheets_url":"..."}</code></p>
+
+<h3>6.2 Проверить Telegram бот</h3>
+<ol>
+<li>Открыть бота клиента в Telegram</li>
+<li>Отправить <code>/myid</code> → должен вернуть ID</li>
+<li>Убедиться что работник есть в реестре (workers sheet)</li>
+<li>Отправить <code>/start</code> → должен показать проекты</li>
+<li>Пройти полный флоу: фото → сумма → описание → магазин</li>
+<li>Проверить что фото загрузилось в Shared Drive и строка в смете</li>
+</ol>
+
+<h3>6.3 Проверить Битрикс24 робота</h3>
+<ol>
+<li>Создать новую сделку в CRM</li>
+<li>Назначить прораба и менеджера</li>
+<li>Перевести на стадию где стоит робот (или он на первой)</li>
+<li>Проверить что поля Drive URL и Sheets URL заполнились автоматически</li>
+<li>Проверить Google Sheets реестры — проект и работники появились</li>
+<li>В Telegram боте <code>/start</code> — новый проект должен быть виден</li>
+</ol>
+</div>
+
+<h2 id="checklist">Финальный чеклист</h2>
+
+<div class="step">
+<ul class="checklist">
+<li><strong>Telegram:</strong> Новый бот создан, токен получен</li>
+<li><strong>Google Cloud:</strong> Проект создан, billing привязан</li>
+<li><strong>Google Cloud:</strong> APIs включены (Sheets, Drive, Functions, Build, Run, Artifact Registry)</li>
+<li><strong>Google Cloud:</strong> Service Account создан, JSON-ключ скачан</li>
+<li><strong>Google Cloud:</strong> SA получил роль Editor</li>
+<li><strong>Shared Drive:</strong> Создан, SA добавлен как Content Manager</li>
+<li><strong>Shared Drive:</strong> Папка "Проекты" создана</li>
+<li><strong>Setup скрипт:</strong> Запущен, реестры созданы с заголовками</li>
+<li><strong>Код:</strong> SHARED_DRIVE_ID обновлён</li>
+<li><strong>Код:</strong> PROJECTS_PARENT_FOLDER_ID обновлён</li>
+<li><strong>Код:</strong> UF_CRM_* коды обновлены под Битрикс клиента</li>
+<li><strong>Код:</strong> UF_USR_* код Telegram ID обновлён</li>
+<li><strong>.env:</strong> Все переменные заполнены продакшен-значениями</li>
+<li><strong>Деплой:</strong> Cloud Functions задеплоены (или VPS настроен)</li>
+<li><strong>Telegram:</strong> Webhook установлен (setWebhook)</li>
+<li><strong>Битрикс24:</strong> Поля в профиле сотрудника созданы</li>
+<li><strong>Битрикс24:</strong> Поля в сделке созданы</li>
+<li><strong>Битрикс24:</strong> Входящий webhook создан</li>
+<li><strong>Битрикс24:</strong> Робот на сделке настроен с правильным телом запроса</li>
+<li><strong>Битрикс24:</strong> Первый админ-пользователь добавлен вручную в реестр workers</li>
+<li><strong>Тест:</strong> curl webhook → проект создался</li>
+<li><strong>Тест:</strong> Telegram /start → проект виден</li>
+<li><strong>Тест:</strong> Полный флоу чека → фото в Drive + строка в смете</li>
+<li><strong>Тест:</strong> Создание сделки в Битрикс → URL'ы заполнены автоматически</li>
+</ul>
+</div>
+
+<h2>Поддержка и обслуживание</h2>
+
+<div class="step">
+<h3>Мониторинг</h3>
+<ul>
+<li>Cloud Functions: логи в Google Cloud Console → Logging</li>
+<li>Telegram бот: ошибки логируются в stdout (видно в Cloud Logging)</li>
+<li>Битрикс24: лог роботов в карточке сделки</li>
+</ul>
+
+<h3>Типичные проблемы</h3>
+<table>
+<tr><th>Проблема</th><th>Причина</th><th>Решение</th></tr>
+<tr><td>Бот не отвечает</td><td>Webhook URL неверный или сервер упал</td><td>Проверить логи, перезапустить</td></tr>
+<tr><td>"Доступ запрещён"</td><td>Пользователь не в реестре workers</td><td>Добавить через Битрикс или curl upsert_worker</td></tr>
+<tr><td>Проект не виден</td><td>Нет записи в project_access</td><td>Проверить реестр, пересоздать сделку</td></tr>
+<tr><td>Drive upload failed</td><td>SA не имеет доступа к Shared Drive</td><td>Проверить sharing SA на Shared Drive</td></tr>
+<tr><td>Робот Битрикс не работает</td><td>URL webhook недоступен</td><td>Проверить URL, перезапустить ngrok/CF</td></tr>
+<tr><td>URL'ы не заполняются в сделке</td><td>deal_id или bitrix_webhook_url неверные</td><td>Проверить тело запроса робота</td></tr>
+</table>
+</div>
+
+</body>
+</html>
