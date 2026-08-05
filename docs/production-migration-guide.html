@@ -67,7 +67,7 @@ th { background: #f0f0f0; font-weight: 600; }
 <h2 id="telegram">Шаг 1: Создать Telegram Bot для клиента</h2>
 
 <div class="step">
-<p><span class="step-number">1</span><strong>Делаем мы</strong> (или клиент, если хочет свой аккаунт BotFather). Каждый клиент — отдельный бот.</p>
+<p><span class="step-number">1</span><strong>Делает клиент.</strong> Каждый клиент — отдельный бот.</p>
 
 <h3>Как создать:</h3>
 <ol>
@@ -94,7 +94,7 @@ cancel - Отменить текущее действие</pre></li>
 <h2 id="google">Шаг 2: Google Cloud + Shared Drive</h2>
 
 <div class="step">
-<h3>2.1 Google Cloud Project <small>(делаем мы)</small></h3>
+<h3>2.1 Google Cloud Project <small>(делает клиент)</small></h3>
 <ol>
 <li>Перейти: <a href="https://console.cloud.google.com">console.cloud.google.com</a></li>
 <li>Создать новый проект (или использовать существующий)</li>
@@ -112,7 +112,7 @@ cancel - Отменить текущее действие</pre></li>
 </li>
 </ol>
 
-<h3>2.2 Service Account <small>(делаем мы)</small></h3>
+<h3>2.2 Service Account <small>(делает клиент)</small></h3>
 <ol>
 <li>IAM & Admin → Service Accounts → Create</li>
 <li>Имя: <code>foremen-bot</code></li>
@@ -122,7 +122,7 @@ cancel - Отменить текущее действие</pre></li>
 
 <div class="warning">JSON-ключ содержит private key. Никогда не коммитить в git. Хранить в секретном месте.</div>
 
-<h3>2.3 Shared Drive (Team Drive) <small>(делает клиент или мы)</small></h3>
+<h3>2.3 Shared Drive (Team Drive) <small>(делает клиент)</small></h3>
 <ol>
 <li>Открыть <a href="https://drive.google.com">Google Drive</a> (аккаунт клиента или наш)</li>
 <li>Слева: "Shared drives" → "+ New"</li>
@@ -234,7 +234,7 @@ for k, v in data.get('result', {}).items():
         print(f'{k} = {v}')"</pre>
 <p>Записываем результат в <code>.env</code> клиента. Клиенту не нужно знать про коды.</p>
 
-<h3>4.5 Робот на сделке <small>(делаем мы или клиент по инструкции)</small></h3>
+<h3>4.5 Робот на сделке <small>(мы готовим тело запроса — клиент настраивает)</small></h3>
 <ol>
 <li>CRM → Сделки → Роботы → на первой стадии добавить "Запрос по URL"</li>
 <li>URL: <strong>URL Cloud Function bitrix-webhook</strong> (из шага 3)</li>
