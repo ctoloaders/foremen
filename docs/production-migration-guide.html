@@ -67,7 +67,7 @@ th { background: #f0f0f0; font-weight: 600; }
 <h2 id="telegram">Шаг 1: Создать Telegram Bot для клиента</h2>
 
 <div class="step">
-<p><span class="step-number">1</span><strong>Да, нужен новый бот.</strong> Каждый клиент должен иметь своего бота — это их бренд в Telegram.</p>
+<p><span class="step-number">1</span><strong>Делаем мы</strong> (или клиент, если хочет свой аккаунт BotFather). Каждый клиент — отдельный бот.</p>
 
 <h3>Как создать:</h3>
 <ol>
@@ -94,7 +94,7 @@ cancel - Отменить текущее действие</pre></li>
 <h2 id="google">Шаг 2: Google Cloud + Shared Drive</h2>
 
 <div class="step">
-<h3>2.1 Google Cloud Project</h3>
+<h3>2.1 Google Cloud Project <small>(делаем мы)</small></h3>
 <ol>
 <li>Перейти: <a href="https://console.cloud.google.com">console.cloud.google.com</a></li>
 <li>Создать новый проект (или использовать существующий)</li>
@@ -112,7 +112,7 @@ cancel - Отменить текущее действие</pre></li>
 </li>
 </ol>
 
-<h3>2.2 Service Account</h3>
+<h3>2.2 Service Account <small>(делаем мы)</small></h3>
 <ol>
 <li>IAM & Admin → Service Accounts → Create</li>
 <li>Имя: <code>foremen-bot</code></li>
@@ -122,7 +122,7 @@ cancel - Отменить текущее действие</pre></li>
 
 <div class="warning">JSON-ключ содержит private key. Никогда не коммитить в git. Хранить в секретном месте.</div>
 
-<h3>2.3 Shared Drive (Team Drive)</h3>
+<h3>2.3 Shared Drive (Team Drive) <small>(делает клиент или мы)</small></h3>
 <ol>
 <li>Открыть <a href="https://drive.google.com">Google Drive</a> (аккаунт клиента или наш)</li>
 <li>Слева: "Shared drives" → "+ New"</li>
@@ -134,7 +134,7 @@ cancel - Отменить текущее действие</pre></li>
 
 <div class="info">ID папки берётся из URL: <code>https://drive.google.com/drive/folders/<strong>ВОТ_ЭТОТ_ID</strong></code></div>
 
-<h3>2.4 Google Sheets (реестры)</h3>
+<h3>2.4 Google Sheets (реестры) <small>(делаем мы — скрипт)</small></h3>
 <p>Не нужно создавать вручную — setup-скрипт сделает это автоматически в Shared Drive.</p>
 <pre>cd telegram-bot
 # Обновить SHARED_DRIVE_ID и PROJECTS_PARENT_FOLDER_ID в scripts/setup-shared-drive.ts
@@ -150,7 +150,7 @@ bun scripts/setup-shared-drive.ts</pre>
 <div class="success">Результат: ID спредшитов → записать в <code>WORKERS_SPREADSHEET_ID</code> и <code>PROJECTS_SPREADSHEET_ID</code></div>
 </div>
 
-<h2 id="deploy">Шаг 3: Деплой сервера</h2>
+<h2 id="deploy">Шаг 3: Деплой сервера <small>(делаем мы)</small></h2>
 
 <div class="step">
 <h3>Вариант A: Google Cloud Functions (рекомендуется)</h3>
@@ -186,7 +186,7 @@ bash deploy.sh</pre>
 <h2 id="bitrix">Шаг 4: Настройка Битрикс24 клиента</h2>
 
 <div class="step">
-<h3>4.1 Входящий webhook (ПЕРВЫМ ДЕЛОМ)</h3>
+<h3>4.1 Входящий webhook (ПЕРВЫМ ДЕЛОМ) <small>(делает клиент)</small></h3>
 <p>Это нужно сделать первым — чтобы мы могли автоматически определить коды полей.</p>
 <ol>
 <li>Разработчикам → Готовые сценарии → Другое → <strong>Входящий вебхук</strong></li>
@@ -195,7 +195,7 @@ bash deploy.sh</pre>
 </ol>
 <div class="success">Результат: URL вида <code>https://XXX.bitrix24.ru/rest/1/YYYYY/</code> — дать нам этот URL.</div>
 
-<h3>4.2 Поля в профиле сотрудника</h3>
+<h3>4.2 Поля в профиле сотрудника <small>(делает клиент)</small></h3>
 <p>Аватарка → Имя → Профиль → Создать поле:</p>
 <table>
 <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
@@ -203,7 +203,7 @@ bash deploy.sh</pre>
 <tr><td>Роль для бота</td><td>Список</td><td>Значения: foreman, pm, estimator, sales, admin, other</td></tr>
 </table>
 
-<h3>4.3 Поля в сделке (CRM)</h3>
+<h3>4.3 Поля в сделке (CRM) <small>(делает клиент)</small></h3>
 <p>CRM → Сделки → открыть любую сделку → внизу "Создать поле":</p>
 <table>
 <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
@@ -215,7 +215,7 @@ bash deploy.sh</pre>
 <tr><td>Продавец</td><td>Привязка к сотруднику</td><td>(опционально)</td></tr>
 </table>
 
-<h3>4.4 Мы парсим коды полей (делаем мы, не клиент)</h3>
+<h3>4.4 Мы парсим коды полей <small></small>(делаем мы)</small></h3>
 <p>Получив URL входящего webhook от клиента, выполняем:</p>
 <pre># Коды полей сделки
 curl -s "WEBHOOK_URL/crm.deal.fields" | python3 -c "
@@ -234,7 +234,7 @@ for k, v in data.get('result', {}).items():
         print(f'{k} = {v}')"</pre>
 <p>Записываем результат в <code>.env</code> клиента. Клиенту не нужно знать про коды.</p>
 
-<h3>4.5 Робот на сделке</h3>
+<h3>4.5 Робот на сделке <small>(делаем мы или клиент по инструкции)</small></h3>
 <ol>
 <li>CRM → Сделки → Роботы → на первой стадии добавить "Запрос по URL"</li>
 <li>URL: <strong>URL Cloud Function bitrix-webhook</strong> (из шага 3)</li>
@@ -263,7 +263,7 @@ for k, v in data.get('result', {}).items():
 <h2 id="env">Шаг 5: Конфигурация (.env)</h2>
 
 <div class="step">
-<p>Создать <code>.env</code> файл для продакшена (все значения — от клиента):</p>
+<p>🔧 <strong>Делаем мы.</strong> Создать <code>.env</code> файл для продакшена:</p>
 
 <pre># === TELEGRAM ===
 TELEGRAM_BOT_TOKEN=&lt;токен нового бота клиента&gt;
@@ -274,6 +274,8 @@ GOOGLE_SERVICE_ACCOUNT_JSON=./service-account.json
 WORKERS_SPREADSHEET_ID=&lt;ID из setup-скрипта&gt;
 PROJECTS_SPREADSHEET_ID=&lt;ID из setup-скрипта&gt;
 ESTIMATES_FOLDER_ID=&lt;ID папки "Проекты" в Shared Drive&gt;
+SHARED_DRIVE_ID=&lt;ID Shared Drive&gt;
+PROJECTS_PARENT_FOLDER_ID=&lt;ID папки "Проекты" внутри Shared Drive&gt;
 
 # === SHEET NAMES (не менять) ===
 WORKERS_SHEET_NAME=workers
@@ -281,8 +283,12 @@ ACCESS_SHEET_NAME=project_access
 BOT_STATE_SHEET_NAME=bot_state
 PROJECTS_SHEET_NAME=projects
 
-# === BITRIX ===
+# === BITRIX (коды полей — парсим на шаге 4.4) ===
 APPS_SCRIPT_WEBHOOK_SECRET=&lt;секрет для валидации webhook от Битрикс&gt;
+BITRIX_DRIVE_URL_FIELD=&lt;UF_CRM_... из шага 4.4&gt;
+BITRIX_SHEETS_URL_FIELD=&lt;UF_CRM_... из шага 4.4&gt;
+BITRIX_TELEGRAM_ID_FIELD=&lt;UF_USR_... из шага 4.4&gt;
+BITRIX_ROLE_FIELD=&lt;UF_USR_... из шага 4.4&gt;
 
 # === DEPLOY (Cloud Functions) ===
 GCP_PROJECT_ID=&lt;project id&gt;
@@ -290,18 +296,8 @@ GCP_REGION=me-west1
 FUNCTION_NAME=receipt-bot</pre>
 
 <h3>Что обновить в коде:</h3>
-<table>
-<tr><th>Файл</th><th>Что менять</th><th>Зачем</th></tr>
-<tr><td><code>src/webhook.ts</code></td><td><code>SHARED_DRIVE_ID</code></td><td>ID нового Shared Drive клиента</td></tr>
-<tr><td><code>src/webhook.ts</code></td><td><code>PROJECTS_PARENT_FOLDER_ID</code></td><td>ID папки "Проекты" внутри Shared Drive</td></tr>
-<tr><td><code>src/webhook.ts</code></td><td><code>UF_CRM_1785938336262</code></td><td>Код поля Drive URL в Битрикс клиента</td></tr>
-<tr><td><code>src/webhook.ts</code></td><td><code>UF_CRM_1785938353178</code></td><td>Код поля Sheets URL в Битрикс клиента</td></tr>
-<tr><td><code>src/webhook.ts</code></td><td><code>UF_USR_1785937945029</code></td><td>Код поля Telegram ID в профиле сотрудника</td></tr>
-</table>
-
-<div class="warning">В будущем эти коды нужно вынести в .env чтобы не хардкодить. Пока — меняем руками в коде.</div>
-<h3>Что обновить в коде:</h3>
-<p><strong>Ничего!</strong> Все коды полей теперь в <code>.env</code>. Мы определяем их автоматически через Bitrix API (шаг 4.4).</p>
+<p><strong>Ничего!</strong> Все настройки в <code>.env</code>. Код один и тот же для всех клиентов.</p>
+</div>4.4).</p>
 
 <h3>Как получить коды полей клиента:</h3>
 <p>После того как клиент создал входящий webhook (шаг 4.3) — мы сами парсим коды:</p>
