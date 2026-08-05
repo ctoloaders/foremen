@@ -183,54 +183,63 @@ bash deploy.sh</pre>
 <li>Для Telegram бота: запустить в webhook mode (не polling)</li>
 </ol>
 
-<h3>Вариант C: Railway / Render (быстро, без конфигурации)</h3>
-<ol>
-<li>Подключить GitHub репо</li>
-<li>Указать build command: <code>bun install</code></li>
-<li>Start command: <code>bun src/dev-webhook.ts</code> (обслуживает и бота и webhook)</li>
-<li>Добавить env variables из .env</li>
-</ol>
-
-<div class="success">Результат: постоянные URL для Telegram webhook и Bitrix webhook</div>
-</div>
-
 <h2 id="bitrix">Шаг 4: Настройка Битрикс24 клиента</h2>
 
 <div class="step">
-<h3>4.1 Поля в профиле сотрудника</h3>
-<p>Каждый сотрудник → Профиль → Создать поле:</p>
-<table>
-<tr><th>Поле</th><th>Тип</th><th>Запомнить код</th></tr>
-<tr><td>Telegram ID</td><td>Число (Number)</td><td><code>UF_USR_XXXXXXX</code></td></tr>
-<tr><td>Роль для бота</td><td>Список (foreman, pm, estimator, sales, admin, other)</td><td><code>UF_USR_YYYYYYY</code></td></tr>
-</table>
-<div class="warning">Коды полей будут другими на аккаунте клиента! Нужно обновить в коде webhook.ts строку с <code>UF_USR_1785937945029</code> на новый код.</div>
-
-<h3>4.2 Поля в сделке (CRM)</h3>
-<p>CRM → Сделки → карточка → Создать поле:</p>
-<table>
-<tr><th>Поле</th><th>Тип</th><th>Код (запомнить)</th></tr>
-<tr><td>Google Drive URL</td><td>Строка</td><td><code>UF_CRM_XXXXXXX</code></td></tr>
-<tr><td>Google Sheets URL</td><td>Строка</td><td><code>UF_CRM_YYYYYYY</code></td></tr>
-<tr><td>Прораб</td><td>Привязка к сотруднику</td><td><code>UF_CRM_AAAAAAA</code></td></tr>
-<tr><td>Менеджер</td><td>Привязка к сотруднику</td><td><code>UF_CRM_BBBBBBB</code></td></tr>
-<tr><td>Сметчик</td><td>Привязка к сотруднику</td><td><code>UF_CRM_CCCCCCC</code></td></tr>
-<tr><td>Продавец</td><td>Привязка к сотруднику</td><td><code>UF_CRM_DDDDDDD</code></td></tr>
-</table>
-
-<h3>4.3 Входящий webhook (для обратной записи)</h3>
+<h3>4.1 Входящий webhook (ПЕРВЫМ ДЕЛОМ)</h3>
+<p>Это нужно сделать первым — чтобы мы могли автоматически определить коды полей.</p>
 <ol>
-<li>Разработчикам → Другое → Входящий вебхук</li>
-<li>Права: ☑ CRM, ☑ Пользователи</li>
-<li>Скопировать URL (формат: <code>https://XXX.bitrix24.ru/rest/1/YYYYY/</code>)</li>
+<li>Разработчикам → Готовые сценарии → Другое → <strong>Входящий вебхук</strong></li>
+<li>Права: ☑ <strong>CRM</strong>, ☑ <strong>Пользователи (user)</strong></li>
+<li>Сохранить → скопировать URL</li>
 </ol>
+<div class="success">Результат: URL вида <code>https://XXX.bitrix24.ru/rest/1/YYYYY/</code> — дать нам этот URL.</div>
 
-<h3>4.4 Робот на сделке</h3>
+<h3>4.2 Поля в профиле сотрудника</h3>
+<p>Аватарка → Имя → Профиль → Создать поле:</p>
+<table>
+<tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+<tr><td>Telegram ID</td><td>Число (Number)</td><td>ID пользователя в Telegram (получить через /myid в боте)</td></tr>
+<tr><td>Роль для бота</td><td>Список</td><td>Значения: foreman, pm, estimator, sales, admin, other</td></tr>
+</table>
+
+<h3>4.3 Поля в сделке (CRM)</h3>
+<p>CRM → Сделки → открыть любую сделку → внизу "Создать поле":</p>
+<table>
+<tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
+<tr><td>Google Drive URL</td><td>Строка</td><td>Заполняется автоматически ботом</td></tr>
+<tr><td>Google Sheets URL</td><td>Строка</td><td>Заполняется автоматически ботом</td></tr>
+<tr><td>Прораб</td><td>Привязка к сотруднику</td><td>Выбор из списка сотрудников</td></tr>
+<tr><td>Менеджер</td><td>Привязка к сотруднику</td><td>Выбор из списка сотрудников</td></tr>
+<tr><td>Сметчик</td><td>Привязка к сотруднику</td><td>(опционально)</td></tr>
+<tr><td>Продавец</td><td>Привязка к сотруднику</td><td>(опционально)</td></tr>
+</table>
+
+<h3>4.4 Мы парсим коды полей (делаем мы, не клиент)</h3>
+<p>Получив URL входящего webhook от клиента, выполняем:</p>
+<pre># Коды полей сделки
+curl -s "WEBHOOK_URL/crm.deal.fields" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for k, v in data.get('result', {}).items():
+    if k.startswith('UF_CRM'):
+        print(f'{k} = {v.get(\"formLabel\", v.get(\"title\", \"?\"))}')"
+
+# Коды полей пользователя
+curl -s "WEBHOOK_URL/user.fields" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for k, v in data.get('result', {}).items():
+    if k.startswith('UF_USR'):
+        print(f'{k} = {v}')"</pre>
+<p>Записываем результат в <code>.env</code> клиента. Клиенту не нужно знать про коды.</p>
+
+<h3>4.5 Робот на сделке</h3>
 <ol>
 <li>CRM → Сделки → Роботы → на первой стадии добавить "Запрос по URL"</li>
 <li>URL: <strong>URL Cloud Function bitrix-webhook</strong> (из шага 3)</li>
 <li>Метод: POST, тип: JSON</li>
-<li>Тело (подставить коды полей клиента):</li>
+<li>Тело (подставить спарсенные коды полей):</li>
 </ol>
 <pre>{
   "secret": "СЕКРЕТ_КЛИЕНТА",
@@ -248,7 +257,7 @@ bash deploy.sh</pre>
   ]
 }</pre>
 
-<div class="info">Коды полей можно получить вызвав API: <code>curl "INCOMING_WEBHOOK_URL/crm.deal.fields"</code> — покажет все поля и их коды.</div>
+<div class="info">Все коды UF_CRM_... мы определяем автоматически на шаге 4.4. Клиенту не нужно их искать — он просто создаёт поля с нужными названиями.</div>
 </div>
 
 <h2 id="env">Шаг 5: Конфигурация (.env)</h2>
@@ -291,17 +300,43 @@ FUNCTION_NAME=receipt-bot</pre>
 </table>
 
 <div class="warning">В будущем эти коды нужно вынести в .env чтобы не хардкодить. Пока — меняем руками в коде.</div>
-</div>
+<h3>Что обновить в коде:</h3>
+<p><strong>Ничего!</strong> Все коды полей теперь в <code>.env</code>. Мы определяем их автоматически через Bitrix API (шаг 4.4).</p>
 
-<h2 id="verify">Шаг 6: Проверка</h2>
+<h3>Как получить коды полей клиента:</h3>
+<p>После того как клиент создал входящий webhook (шаг 4.3) — мы сами парсим коды:</p>
 
-<div class="step">
-<h3>6.1 Проверить webhook</h3>
-<pre># Тест создания проекта (должен создать папку + смету)
-curl -X POST &lt;BITRIX_WEBHOOK_URL&gt; \
-  -H "Content-Type: application/json" \
-  -d '{
-    "secret": "&lt;APPS_SCRIPT_WEBHOOK_SECRET&gt;",
+<pre># Получить все поля сделки (найти UF_CRM_* поля)
+curl -s "https://XXX.bitrix24.ru/rest/1/YYYYY/crm.deal.fields" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for k, v in data.get('result', {}).items():
+    if k.startswith('UF_CRM'):
+        print(f'{k} → {v.get(\"formLabel\", v.get(\"title\", \"?\"))}')"
+
+# Получить все поля пользователя (найти UF_USR_* поля)
+curl -s "https://XXX.bitrix24.ru/rest/1/YYYYY/user.fields" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+for k, v in data.get('result', {}).items():
+    if k.startswith('UF_USR'):
+        print(f'{k} → {v}')"</pre>
+
+<p>Результат будет вида:</p>
+<pre>UF_CRM_1785938336262 → Drive URL
+UF_CRM_1785938353178 → Sheets URL
+UF_CRM_1785938403 → Прораб
+UF_CRM_1785938421 → Менеджер
+UF_USR_1785937945029 → Telegram ID
+UF_USR_1785938002037 → Роль для бота</pre>
+
+<p>Подставляешь эти коды в <code>.env</code>:</p>
+<pre>BITRIX_DRIVE_URL_FIELD=UF_CRM_...
+BITRIX_SHEETS_URL_FIELD=UF_CRM_...
+BITRIX_TELEGRAM_ID_FIELD=UF_USR_...
+BITRIX_ROLE_FIELD=UF_USR_...</pre>
+
+<div class="info">Клиенту не нужно знать про коды полей. Он создаёт поля в интерфейсе + входящий webhook. Мы сами получаем коды одной командой.</div>
     "action": "upsert_project",
     "project_name": "Тест продакшен",
     "deal_id": "1",
