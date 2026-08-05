@@ -57,9 +57,9 @@ th { background: #f0f0f0; font-weight: 600; }
 <h3>От клиента нужно только 3 вещи:</h3>
 <table>
 <tr><th>#</th><th>Что</th><th>Как получить</th><th>Время</th></tr>
-<tr><td>1</td><td><strong>Telegram Bot Token</strong></td><td>@BotFather → /newbot → скопировать токен</td><td>2 мин</td></tr>
-<tr><td>2</td><td><strong>Google Cloud SA JSON-ключ</strong></td><td>GCP Console → Service Account → Create Key (JSON)</td><td>3 мин</td></tr>
-<tr><td>3</td><td><strong>Bitrix24 Incoming Webhook URL</strong></td><td>Разработчикам → Входящий вебхук (права: CRM + Users)</td><td>1 мин</td></tr>
+<tr><td>1</td><td><a href="#telegram"><strong>Telegram Bot Token</strong></a></td><td>@BotFather → /newbot → скопировать токен</td><td>2 мин</td></tr>
+<tr><td>2</td><td><a href="#google"><strong>Google Cloud SA JSON-ключ</strong></a></td><td>GCP Console → Service Account → Create Key (JSON)</td><td>3 мин</td></tr>
+<tr><td>3</td><td><a href="#bitrix"><strong>Bitrix24 Incoming Webhook URL</strong></a></td><td>Разработчикам → Входящий вебхук (права: CRM + Users)</td><td>1 мин</td></tr>
 </table>
 
 <h3>Всё остальное делаем мы автоматически:</h3>
@@ -103,6 +103,7 @@ cancel - Отменить текущее действие</pre></li>
 </ol>
 
 <div class="success">Результат: токен вида <code>1234567890:ABCdef...</code> — записать в <code>TELEGRAM_BOT_TOKEN</code></div>
+<p><a href="#overview">↑ Вернуться к обзору</a></p>
 </div>
 
 <h2 id="google">Шаг 2: Google Cloud + Shared Drive</h2>
@@ -127,6 +128,7 @@ cancel - Отменить текущее действие</pre></li>
 </ol>
 
 <div class="success">Результат: клиент даёт нам JSON-ключ SA. Всё остальное (папки, реестры) создаёт наш setup-скрипт.</div>
+<p><a href="#overview">↑ Вернуться к обзору</a></p>
 
 <h3>2.3 Всё остальное — наш скрипт <small>(делаем мы)</small></h3>
 <p>Имея SA JSON-ключ, setup-скрипт автоматически:</p>
@@ -181,6 +183,7 @@ bash deploy.sh</pre>
 <li>Сохранить → скопировать URL</li>
 </ol>
 <div class="success">Результат: URL вида <code>https://XXX.bitrix24.ru/rest/1/YYYYY/</code> — дать нам этот URL.</div>
+<p><a href="#overview">↑ Вернуться к обзору</a></p>
 
 <h3>4.2 Поля в профиле сотрудника <small>(создаём мы через API, или клиент вручную)</small></h3>
 <p>Наш setup-скрипт проверит наличие полей и создаст недостающие через API. Если API не позволяет — клиент создаёт вручную:</p>
