@@ -11,10 +11,9 @@ import { google } from "googleapis";
 import { config } from "./config.js";
 import { logger } from "./utils/logger.js";
 
-// Shared Drive ID (Foremen tets)
-const SHARED_DRIVE_ID = "0AHkU6n74cG-CUk9PVA";
-// Parent folder for all project folders inside the Shared Drive
-const PROJECTS_PARENT_FOLDER_ID = "12Q66EYWWsgjRtT2-8inJ91JtVctfsvjt"; // "Проекты" folder
+// Shared Drive ID and parent folder from config
+const SHARED_DRIVE_ID = config.google.sharedDriveId;
+const PROJECTS_PARENT_FOLDER_ID = config.google.projectsParentFolderId;
 
 function getAuth() {
   return new google.auth.GoogleAuth({
@@ -39,9 +38,11 @@ interface WebhookRequest {
   action: string;
   // upsert_project
   project_name?: string;
+  deal_id?: string | number;
+  bitrix_webhook_url?: string;
   google_drive_url?: string;
   google_sheets_url?: string;
-  workers?: { worker_name: string; role_in_project: string }[];
+  workers?: { worker_name: string; worker_id?: string; role_in_project: string }[];
   // upsert_worker
   bitrix_user_id?: string;
   worker_name?: string;
@@ -228,36 +229,130 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   // Upsert project_access for each worker
   const workers = data.workers || [];
   if (workers.length > 0) {
+    // Resolve worker names from Bitrix API if we have worker_id but no name
+    const bitrixUrl = data.bitrix_webhook_url?.replace(/\/$/, "");
+    for (const worker of workers) {
+      // If worker_name looks like "user_X" or is empty but we have worker_id — resolve from Bitrix
+      if (bitrixUrl && worker.worker_id) {
+        const userId = String(worker.worker_id).replace("user_", "");
+        if (!worker.worker_name || worker.worker_name === worker.worker_id || worker.worker_name.startsWith("user_")) {
+          try {
+            const userRes = await fetch(`${bitrixUrl}/user.get`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ID: userId }),
+            });
+            const userData = await userRes.json() as any;
+            if (userData.result && userData.result[0]) {
+              worker.worker_name = `${userData.result[0].NAME} ${userData.result[0].LAST_NAME}`.trim();
+              logger.info("Resolved worker name", { userId, name: worker.worker_name });
+            }
+          } catch (err: any) {
+            logger.error("Failed to resolve worker name", { userId, error: err.message });
+          }
+        }
+      }
+    }
+
     const accessRes = await sheets.spreadsheets.values.get({
       spreadsheetId: config.google.workersSpreadsheetId,
-      range: `${config.google.accessSheetName}!A2:C`,
+      range: `${config.google.accessSheetName}!A2:D`,
     });
     const accessRows = accessRes.data.values || [];
 
     for (const worker of workers) {
       if (!worker.worker_name || worker.worker_name.trim() === "") continue;
 
+      const workerId = worker.worker_id ? String(worker.worker_id).replace("user_", "") : "";
+
+      // Match by project_name + worker_id (if available) or by project_name + worker_name
       const accessIndex = accessRows.findIndex(
-        r => r[0] === data.project_name && r[1] === worker.worker_name
+        r => r[0] === data.project_name && (workerId ? r[3] === workerId : r[1] === worker.worker_name)
       );
-      const accessRow = [data.project_name!, worker.worker_name, worker.role_in_project || "other"];
+      const accessRow = [data.project_name!, worker.worker_name, worker.role_in_project || "other", workerId];
 
       if (accessIndex >= 0) {
         const rowNum = accessIndex + 2;
         await sheets.spreadsheets.values.update({
           spreadsheetId: config.google.workersSpreadsheetId,
-          range: `${config.google.accessSheetName}!A${rowNum}:C${rowNum}`,
+          range: `${config.google.accessSheetName}!A${rowNum}:D${rowNum}`,
           valueInputOption: "RAW",
           requestBody: { values: [accessRow] },
         });
       } else {
         await sheets.spreadsheets.values.append({
           spreadsheetId: config.google.workersSpreadsheetId,
-          range: `${config.google.accessSheetName}!A:C`,
+          range: `${config.google.accessSheetName}!A:D`,
           valueInputOption: "RAW",
           requestBody: { values: [accessRow] },
         });
         accessRows.push(accessRow);
+      }
+    }
+
+    // Sync workers registry: for each worker_id, fetch user data from Bitrix and upsert into workers sheet
+    if (bitrixUrl) {
+      const workersRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: config.google.workersSpreadsheetId,
+        range: `${config.google.workersSheetName}!A2:D`,
+      });
+      const workersRows = workersRes.data.values || [];
+
+      for (const worker of workers) {
+        if (!worker.worker_id) continue;
+        const userId = String(worker.worker_id).replace("user_", "");
+        if (!userId || userId === "0") continue;
+
+        // Check if this worker already has telegram_id in our registry
+        const existingRow = workersRows.find(r => String(r[0]) === userId);
+        const hasTelegramId = existingRow && existingRow[1] && String(existingRow[1]) !== "" && String(existingRow[1]) !== "0";
+
+        if (!hasTelegramId) {
+          // Fetch from Bitrix
+          try {
+            const userRes = await fetch(`${bitrixUrl}/user.get`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ID: userId }),
+            });
+            const userData = await userRes.json() as any;
+            if (userData.result && userData.result[0]) {
+              const user = userData.result[0];
+              const name = `${user.NAME || ""} ${user.LAST_NAME || ""}`.trim();
+              const telegramId = user[config.bitrix.telegramIdField] || ""; // Telegram ID field
+              const role = worker.role_in_project || "other";
+
+              if (telegramId) {
+                const workerRow = [userId, telegramId, name, role];
+                const workerIndex = workersRows.findIndex(r => String(r[0]) === userId);
+
+                if (workerIndex >= 0) {
+                  // Update existing — keep admin role if already set
+                  const currentRole = workersRows[workerIndex][3];
+                  if (currentRole === "admin") workerRow[3] = "admin";
+                  const rowNum = workerIndex + 2;
+                  await sheets.spreadsheets.values.update({
+                    spreadsheetId: config.google.workersSpreadsheetId,
+                    range: `${config.google.workersSheetName}!A${rowNum}:D${rowNum}`,
+                    valueInputOption: "RAW",
+                    requestBody: { values: [workerRow] },
+                  });
+                } else {
+                  await sheets.spreadsheets.values.append({
+                    spreadsheetId: config.google.workersSpreadsheetId,
+                    range: `${config.google.workersSheetName}!A:D`,
+                    valueInputOption: "RAW",
+                    requestBody: { values: [workerRow] },
+                  });
+                  workersRows.push(workerRow);
+                }
+                logger.info("Worker synced from Bitrix", { userId, name, telegramId });
+              }
+            }
+          } catch (err: any) {
+            logger.error("Failed to sync worker from Bitrix", { userId, error: err.message });
+          }
+        }
       }
     }
   }
@@ -271,6 +366,32 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   if (resourcesCreated) {
     result.google_drive_url = driveUrl;
     result.google_sheets_url = sheetsUrl;
+
+    // If deal_id and bitrix_webhook_url provided — write URLs back to Bitrix24 automatically
+    if (data.deal_id && data.bitrix_webhook_url) {
+      try {
+        const bitrixUrl = data.bitrix_webhook_url.replace(/\/$/, "");
+        const updateResponse = await fetch(`${bitrixUrl}/crm.deal.update`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ID: data.deal_id,
+            FIELDS: {
+              [config.bitrix.driveUrlField]: driveUrl,
+              [config.bitrix.sheetsUrlField]: sheetsUrl,
+            },
+          }),
+        });
+        const updateResult = await updateResponse.json() as any;
+        if (updateResult.result) {
+          logger.info("Bitrix24 deal updated", { dealId: data.deal_id, driveUrl, sheetsUrl });
+        } else {
+          logger.error("Bitrix24 deal update failed", { dealId: data.deal_id, error: updateResult });
+        }
+      } catch (err: any) {
+        logger.error("Bitrix24 callback failed", { dealId: data.deal_id, error: err.message });
+      }
+    }
   }
 
   return result;
@@ -279,7 +400,6 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
 async function handleUpsertWorker(data: WebhookRequest): Promise<WebhookResponse> {
   const missing: string[] = [];
   if (!data.bitrix_user_id) missing.push("bitrix_user_id");
-  if (!data.worker_name) missing.push("worker_name");
   if (!data.role) missing.push("role");
   if (!data.telegram_id) missing.push("telegram_id");
   if (missing.length > 0) {
@@ -296,13 +416,38 @@ async function handleUpsertWorker(data: WebhookRequest): Promise<WebhookResponse
     return { status: "ok", message: "telegram_id empty or invalid, skipped" };
   }
 
+  // Resolve worker name from Bitrix API if not provided
+  let workerName = data.worker_name || "";
+  if ((!workerName || workerName.startsWith("user_")) && data.bitrix_webhook_url) {
+    try {
+      const bitrixUrl = data.bitrix_webhook_url.replace(/\/$/, "");
+      const userId = String(data.bitrix_user_id).replace("user_", "");
+      const userRes = await fetch(`${bitrixUrl}/user.get`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ID: userId }),
+      });
+      const userData = await userRes.json() as any;
+      if (userData.result && userData.result[0]) {
+        workerName = `${userData.result[0].NAME} ${userData.result[0].LAST_NAME}`.trim();
+      }
+    } catch (err: any) {
+      logger.error("Failed to resolve worker name", { error: err.message });
+    }
+  }
+
+  if (!workerName) {
+    return { status: "error", message: "missing field: worker_name (and could not resolve from Bitrix)" };
+  }
+
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.workersSpreadsheetId,
     range: `${config.google.workersSheetName}!A2:D`,
   });
   const rows = res.data.values || [];
-  const workerIndex = rows.findIndex(r => String(r[0]) === String(data.bitrix_user_id));
+  const bitrixId = String(data.bitrix_user_id).replace("user_", "");
+  const workerIndex = rows.findIndex(r => String(r[0]) === bitrixId);
 
   // Admin role is sticky
   let newRole = data.role!;
@@ -310,9 +455,10 @@ async function handleUpsertWorker(data: WebhookRequest): Promise<WebhookResponse
     newRole = "admin";
   }
 
-  const row = [data.bitrix_user_id!, tgId, data.worker_name!, newRole];
+  const row = [bitrixId, tgId, workerName, newRole];
 
   if (workerIndex >= 0) {
+    const oldName = rows[workerIndex][2] || "";
     const rowNum = workerIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId: config.google.workersSpreadsheetId,
@@ -320,6 +466,29 @@ async function handleUpsertWorker(data: WebhookRequest): Promise<WebhookResponse
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
+
+    // If name changed — update project_access rows too
+    if (oldName && oldName !== workerName) {
+      logger.info("Worker name changed, updating project_access", { bitrixId, oldName, newName: workerName });
+      const accessRes = await sheets.spreadsheets.values.get({
+        spreadsheetId: config.google.workersSpreadsheetId,
+        range: `${config.google.accessSheetName}!A2:D`,
+      });
+      const accessRows = accessRes.data.values || [];
+      for (let i = 0; i < accessRows.length; i++) {
+        // Match by worker_id (column D) or by old name (column B)
+        if (accessRows[i][3] === bitrixId || accessRows[i][1] === oldName) {
+          const rowNum = i + 2;
+          accessRows[i][1] = workerName; // update name
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: config.google.workersSpreadsheetId,
+            range: `${config.google.accessSheetName}!B${rowNum}`,
+            valueInputOption: "RAW",
+            requestBody: { values: [[workerName]] },
+          });
+        }
+      }
+    }
   } else {
     await sheets.spreadsheets.values.append({
       spreadsheetId: config.google.workersSpreadsheetId,
