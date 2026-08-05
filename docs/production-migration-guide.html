@@ -53,16 +53,30 @@ th { background: #f0f0f0; font-weight: 600; }
 
 <h2 id="overview">Обзор: что нужно для продакшена</h2>
 
+<div class="step">
+<h3>От клиента нужно только 3 вещи:</h3>
 <table>
-<tr><th>Компонент</th><th>Тест (сейчас)</th><th>Продакшен</th></tr>
-<tr><td>Telegram Bot</td><td>Тестовый бот (наш)</td><td>Новый бот для клиента</td></tr>
-<tr><td>Google Cloud Project</td><td>forementest</td><td>Новый проект (или тот же с billing)</td></tr>
-<tr><td>Service Account</td><td>forementest@forementest.iam.gserviceaccount.com</td><td>Новый SA в проекте клиента</td></tr>
-<tr><td>Shared Drive</td><td>"Foremen tets"</td><td>Новый Shared Drive клиента</td></tr>
-<tr><td>Hosting</td><td>localhost + ngrok</td><td>Google Cloud Function (или VPS)</td></tr>
-<tr><td>Битрикс24</td><td>Тестовый аккаунт</td><td>Аккаунт клиента</td></tr>
-<tr><td>Webhook URL</td><td>ngrok (временный)</td><td>Постоянный URL Cloud Function</td></tr>
+<tr><th>#</th><th>Что</th><th>Как получить</th><th>Время</th></tr>
+<tr><td>1</td><td><strong>Telegram Bot Token</strong></td><td>@BotFather → /newbot → скопировать токен</td><td>2 мин</td></tr>
+<tr><td>2</td><td><strong>Google Cloud SA JSON-ключ</strong></td><td>GCP Console → Service Account → Create Key (JSON)</td><td>3 мин</td></tr>
+<tr><td>3</td><td><strong>Bitrix24 Incoming Webhook URL</strong></td><td>Разработчикам → Входящий вебхук (права: CRM + Users)</td><td>1 мин</td></tr>
 </table>
+
+<h3>Всё остальное делаем мы автоматически:</h3>
+<table>
+<tr><th>Что</th><th>Как</th></tr>
+<tr><td>Shared Drive + папки</td><td>Setup-скрипт (через SA ключ)</td></tr>
+<tr><td>Google Sheets реестры</td><td>Setup-скрипт</td></tr>
+<tr><td>Проверить/создать поля в Битрикс</td><td>Через Bitrix REST API</td></tr>
+<tr><td>Спарсить коды полей</td><td>Через Bitrix REST API</td></tr>
+<tr><td>Сгенерировать .env</td><td>Setup-скрипт</td></tr>
+<tr><td>Сгенерировать тело запроса для робота</td><td>Setup-скрипт</td></tr>
+<tr><td>Деплой сервера</td><td>gcloud deploy / VPS</td></tr>
+<tr><td>Настроить Telegram webhook</td><td>curl setWebhook</td></tr>
+</table>
+
+<div class="info">Клиенту останется только: (1) вставить тело запроса в робота, (2) заполнить Telegram ID у сотрудников.</div>
+</div>
 
 <h2 id="telegram">Шаг 1: Создать Telegram Bot для клиента</h2>
 
@@ -94,62 +108,35 @@ cancel - Отменить текущее действие</pre></li>
 <h2 id="google">Шаг 2: Google Cloud + Shared Drive</h2>
 
 <div class="step">
-<h3>2.1 Google Cloud Project <small>(делает клиент)</small></h3>
+<h3>2.1 Google Cloud Project + Service Account <small>(делает клиент)</small></h3>
 <ol>
 <li>Перейти: <a href="https://console.cloud.google.com">console.cloud.google.com</a></li>
 <li>Создать новый проект (или использовать существующий)</li>
-<li><strong>Привязать Billing Account</strong> (обязательно для Cloud Functions):
-    <br>Billing → Link billing account → выбрать или создать</li>
-<li>Включить APIs:
-    <ul>
-    <li>Google Sheets API</li>
-    <li>Google Drive API</li>
-    <li>Cloud Functions API</li>
-    <li>Cloud Build API</li>
-    <li>Cloud Run API</li>
-    <li>Artifact Registry API</li>
-    </ul>
-</li>
+<li><strong>Привязать Billing Account</strong> (обязательно для Cloud Functions)</li>
+<li>Включить APIs: Google Sheets API, Google Drive API</li>
+<li>IAM & Admin → Service Accounts → Create → имя: <code>foremen-bot</code> → роль: Editor</li>
+<li>Создать ключ: JSON → скачать файл → <strong>передать нам</strong></li>
 </ol>
 
-<h3>2.2 Service Account <small>(делает клиент)</small></h3>
+<div class="warning">JSON-ключ содержит private key. Передавать только через защищённый канал.</div>
+
+<h3>2.2 Shared Drive <small>(делает клиент)</small></h3>
 <ol>
-<li>IAM & Admin → Service Accounts → Create</li>
-<li>Имя: <code>foremen-bot</code></li>
-<li>Роль: <strong>Editor</strong></li>
-<li>Создать ключ: JSON → скачать файл</li>
+<li>Google Drive → Shared drives → "+ New" → назвать: <code>Foremen — [Компания]</code></li>
+<li><strong>Добавить Service Account как участника</strong> (email из JSON-ключа) → роль: Content Manager</li>
 </ol>
 
-<div class="warning">JSON-ключ содержит private key. Никогда не коммитить в git. Хранить в секретном месте.</div>
+<div class="success">Результат: клиент даёт нам JSON-ключ SA. Всё остальное (папки, реестры) создаёт наш setup-скрипт.</div>
 
-<h3>2.3 Shared Drive (Team Drive) <small>(делает клиент)</small></h3>
-<ol>
-<li>Открыть <a href="https://drive.google.com">Google Drive</a> (аккаунт клиента или наш)</li>
-<li>Слева: "Shared drives" → "+ New"</li>
-<li>Назвать: <code>Foremen — [Имя клиента]</code></li>
-<li><strong>Добавить Service Account как участника:</strong>
-    <br>Правый клик на Shared Drive → Manage members → добавить email SA → роль: Content Manager</li>
-<li>Создать внутри папку <code>Проекты</code> — запомнить её ID из URL</li>
-</ol>
-
-<div class="info">ID папки берётся из URL: <code>https://drive.google.com/drive/folders/<strong>ВОТ_ЭТОТ_ID</strong></code></div>
-
-<h3>2.4 Google Sheets (реестры) <small>(делаем мы — скрипт)</small></h3>
-<p>Не нужно создавать вручную — setup-скрипт сделает это автоматически в Shared Drive.</p>
-<pre>cd telegram-bot
-# Обновить SHARED_DRIVE_ID и PROJECTS_PARENT_FOLDER_ID в scripts/setup-shared-drive.ts
-bun scripts/setup-shared-drive.ts</pre>
-
-<p>Скрипт создаст:</p>
+<h3>2.3 Всё остальное — наш скрипт <small>(делаем мы)</small></h3>
+<p>Имея SA JSON-ключ, setup-скрипт автоматически:</p>
 <ul>
-<li>Реестр работников (workers, project_access, bot_state)</li>
-<li>Реестр проектов (projects)</li>
-<li>Тестовый проект + смету</li>
+<li>Создаёт папку "Проекты" в Shared Drive</li>
+<li>Создаёт все спредшиты (реестр работников, реестр проектов)</li>
+<li>Настраивает заголовки и форматирование</li>
+<li>Добавляет первого админ-пользователя</li>
 </ul>
-
-<div class="success">Результат: ID спредшитов → записать в <code>WORKERS_SPREADSHEET_ID</code> и <code>PROJECTS_SPREADSHEET_ID</code></div>
 </div>
-
 <h2 id="deploy">Шаг 3: Деплой сервера <small>(делаем мы)</small></h2>
 
 <div class="step">
@@ -195,7 +182,8 @@ bash deploy.sh</pre>
 </ol>
 <div class="success">Результат: URL вида <code>https://XXX.bitrix24.ru/rest/1/YYYYY/</code> — дать нам этот URL.</div>
 
-<h3>4.2 Поля в профиле сотрудника <small>(делает клиент)</small></h3>
+<h3>4.2 Поля в профиле сотрудника <small>(создаём мы через API, или клиент вручную)</small></h3>
+<p>Наш setup-скрипт проверит наличие полей и создаст недостающие через API. Если API не позволяет — клиент создаёт вручную:</p>
 <p>Аватарка → Имя → Профиль → Создать поле:</p>
 <table>
 <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
@@ -203,7 +191,8 @@ bash deploy.sh</pre>
 <tr><td>Роль для бота</td><td>Список</td><td>Значения: foreman, pm, estimator, sales, admin, other</td></tr>
 </table>
 
-<h3>4.3 Поля в сделке (CRM) <small>(делает клиент)</small></h3>
+<h3>4.3 Поля в сделке (CRM) <small>(создаём мы через API, или клиент вручную)</small></h3>
+<p>Наш setup-скрипт проверит и создаст поля через <code>crm.deal.userfield.add</code>. Если нет прав — клиент создаёт:</p>
 <p>CRM → Сделки → открыть любую сделку → внизу "Создать поле":</p>
 <table>
 <tr><th>Поле</th><th>Тип</th><th>Описание</th></tr>
@@ -215,32 +204,32 @@ bash deploy.sh</pre>
 <tr><td>Продавец</td><td>Привязка к сотруднику</td><td>(опционально)</td></tr>
 </table>
 
-<h3>4.4 Мы парсим коды полей <small></small>(делаем мы)</small></h3>
-<p>Получив URL входящего webhook от клиента, выполняем:</p>
-<pre># Коды полей сделки
-curl -s "WEBHOOK_URL/crm.deal.fields" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for k, v in data.get('result', {}).items():
-    if k.startswith('UF_CRM'):
-        print(f'{k} = {v.get(\"formLabel\", v.get(\"title\", \"?\"))}')"
+<h3>4.4 Setup-скрипт: парсим коды + генерируем конфиги <small>(делаем мы)</small></h3>
+<p>Получив URL входящего webhook от клиента, запускаем setup-скрипт:</p>
+<pre># Запуск:
+bun scripts/setup-client.ts \
+  --telegram-token="TOKEN" \
+  --sa-key="./client-sa.json" \
+  --bitrix-url="https://XXX.bitrix24.ru/rest/1/YYYYY/"</pre>
+<p>Скрипт автоматически:</p>
+<ol>
+<li>Проверяет наличие нужных полей в Битрикс, создаёт недостающие через API</li>
+<li>Парсит коды всех полей</li>
+<li>Создаёт Shared Drive + папки + реестры (Google)</li>
+<li>Генерирует готовый <code>.env</code> файл</li>
+<li>Генерирует готовое тело запроса для робота (JSON) — отправить клиенту для вставки</li>
+</ol>
+<div class="success">Клиенту отдаём: готовый JSON для робота + инструкцию "вставь это в робот".</div>
 
-# Коды полей пользователя
-curl -s "WEBHOOK_URL/user.fields" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-for k, v in data.get('result', {}).items():
-    if k.startswith('UF_USR'):
-        print(f'{k} = {v}')"</pre>
-<p>Записываем результат в <code>.env</code> клиента. Клиенту не нужно знать про коды.</p>
-
-<h3>4.5 Робот на сделке <small>(мы готовим тело запроса — клиент настраивает)</small></h3>
+<h3>4.5 Робот на сделке <small>(мы даём готовый JSON — клиент вставляет)</small></h3>
+<p>Мы отправляем клиенту готовый JSON (сгенерирован на шаге 4.4). Клиент:</p>
 <ol>
 <li>CRM → Сделки → Роботы → на первой стадии добавить "Запрос по URL"</li>
-<li>URL: <strong>URL Cloud Function bitrix-webhook</strong> (из шага 3)</li>
+<li>URL: <strong>мы даём URL</strong> (Cloud Function bitrix-webhook)</li>
 <li>Метод: POST, тип: JSON</li>
-<li>Тело (подставить спарсенные коды полей):</li>
+<li>Тело: <strong>вставить JSON который мы дали</strong></li>
 </ol>
+<p>Пример сгенерированного тела (коды полей подставлены автоматически):</p>
 <pre>{
   "secret": "СЕКРЕТ_КЛИЕНТА",
   "action": "upsert_project",
