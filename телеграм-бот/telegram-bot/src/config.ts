@@ -47,6 +47,9 @@ export const config = {
     telegramIdField: process.env.BITRIX_TELEGRAM_ID_FIELD || "UF_USR_1785937945029",
     roleField: process.env.BITRIX_ROLE_FIELD || "UF_USR_1785938002037",
   },
+  admin: {
+    telegramId: process.env.ADMIN_TELEGRAM_ID ? Number(process.env.ADMIN_TELEGRAM_ID) : 0,
+  },
   appsScript: {
     webhookSecret: process.env.APPS_SCRIPT_WEBHOOK_SECRET || "",
   },

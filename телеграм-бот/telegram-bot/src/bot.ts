@@ -38,7 +38,18 @@ export function createBot(): Bot {
   // Error handler
   bot.catch((err) => {
     logger.error("Bot error", { error: err.message, stack: err.stack });
+    notifyAdmin(bot, `🚨 Bot error:\n${err.message}`);
   });
 
   return bot;
+}
+
+export async function notifyAdmin(bot: Bot, message: string) {
+  const adminId = config.admin.telegramId;
+  if (!adminId) return;
+  try {
+    await bot.api.sendMessage(adminId, message.slice(0, 4000));
+  } catch {
+    // silently fail — don't loop on errors
+  }
 }
