@@ -111,7 +111,22 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   let sheetsUrl = data.google_sheets_url || "";
   let resourcesCreated = false;
 
-  // If Drive URL or Sheets URL are missing — create resources automatically
+  // Check if project already has URLs in our registry (deduplication)
+  if (!driveUrl || !sheetsUrl) {
+    const existingRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: config.google.projectsSpreadsheetId,
+      range: `${config.google.projectsSheetName}!A2:C`,
+    });
+    const existingRows = existingRes.data.values || [];
+    const existing = existingRows.find(r => r[0] === data.project_name);
+    if (existing && existing[1] && existing[2]) {
+      driveUrl = existing[1];
+      sheetsUrl = existing[2];
+      logger.info("Project already has resources in registry, skipping creation", { project: data.project_name });
+    }
+  }
+
+  // If Drive URL or Sheets URL are STILL missing — create resources
   if (!driveUrl || !sheetsUrl) {
     logger.info("Creating project resources", { project: data.project_name });
 
