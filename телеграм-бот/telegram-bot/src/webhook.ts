@@ -194,7 +194,7 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
 
     await sheets.spreadsheets.values.update({
       spreadsheetId: estimateId,
-      range: "receipts!A1:E1",
+      range: "receipts!A1:F1",
       valueInputOption: "RAW",
       requestBody: {
         values: [["Дата", "Сумма", "Что куплено", "Магазин", "Ссылка на фото", "Кто добавил"]],
