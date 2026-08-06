@@ -127,6 +127,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
 
     // Write to Sheets
     const today = new Date().toISOString().split("T")[0];
+    const addedBy = [ctx.from!.first_name, ctx.from!.last_name].filter(Boolean).join(" ");
     try {
       await appendReceiptRow(state.projectSheetsUrl, {
         date: today,
@@ -134,6 +135,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
         description: state.description,
         storeName: state.storeName,
         photoLink,
+        addedBy,
       });
     } catch (err: any) {
       logger.error("Sheets write failed", { telegramId, error: err.message });
@@ -145,6 +147,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
           description: state.description,
           storeName: state.storeName,
           photoLink,
+          addedBy,
         });
       } catch (err2: any) {
         logger.error("Sheets write retry failed", { telegramId, error: err2.message });

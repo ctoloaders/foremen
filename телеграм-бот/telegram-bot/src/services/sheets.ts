@@ -20,6 +20,7 @@ export interface ProjectAccess {
   projectName: string;
   workerName: string;
   roleInProject: string;
+  workerId: string;
 }
 
 function getAuth() {
@@ -90,7 +91,7 @@ export async function getProjectAccessForWorker(workerName: string): Promise<Pro
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.workersSpreadsheetId,
-    range: `${config.google.accessSheetName}!A2:C`,
+    range: `${config.google.accessSheetName}!A2:D`,
   });
 
   return (res.data.values || [])
@@ -99,6 +100,7 @@ export async function getProjectAccessForWorker(workerName: string): Promise<Pro
       projectName: r[0] || "",
       workerName: r[1] || "",
       roleInProject: r[2] || "",
+      workerId: r[3] || "",
     }));
 }
 
@@ -116,17 +118,17 @@ export async function getProjectsForWorker(worker: Worker): Promise<Project[]> {
 
 export async function appendReceiptRow(
   sheetsUrl: string,
-  row: { date: string; sum: number; description: string; storeName: string; photoLink: string }
+  row: { date: string; sum: number; description: string; storeName: string; photoLink: string; addedBy: string }
 ): Promise<void> {
   const sheets = getSheets();
   const spreadsheetId = extractSpreadsheetId(sheetsUrl);
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: "receipts!A:E",
+    range: "receipts!A:F",
     valueInputOption: "RAW",
     requestBody: {
-      values: [[row.date, row.sum, row.description, row.storeName, row.photoLink]],
+      values: [[row.date, row.sum, row.description, row.storeName, row.photoLink, row.addedBy]],
     },
   });
 }
