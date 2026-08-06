@@ -170,6 +170,7 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
               fields: "title",
             },
           },
+          // Bold + gray header row
           {
             repeatCell: {
               range: { sheetId: defaultSheetId, startRowIndex: 0, endRowIndex: 1 },
@@ -182,9 +183,32 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
               fields: "userEnteredFormat(textFormat,backgroundColor)",
             },
           },
+          // Bold summary row (row 2)
+          {
+            repeatCell: {
+              range: { sheetId: defaultSheetId, startRowIndex: 1, endRowIndex: 2 },
+              cell: {
+                userEnteredFormat: { textFormat: { bold: true } },
+              },
+              fields: "userEnteredFormat.textFormat.bold",
+            },
+          },
+          // Currency PLN format for column B
+          {
+            repeatCell: {
+              range: { sheetId: defaultSheetId, startColumnIndex: 1, endColumnIndex: 2 },
+              cell: {
+                userEnteredFormat: {
+                  numberFormat: { type: "CURRENCY", pattern: "#,##0.00 \"PLN\"" },
+                },
+              },
+              fields: "userEnteredFormat.numberFormat",
+            },
+          },
+          // Freeze rows 1-2
           {
             updateSheetProperties: {
-              properties: { sheetId: defaultSheetId, gridProperties: { frozenRowCount: 1 } },
+              properties: { sheetId: defaultSheetId, gridProperties: { frozenRowCount: 2 } },
               fields: "gridProperties.frozenRowCount",
             },
           },
@@ -192,12 +216,16 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
       },
     });
 
+    // Write header + SUM formula
     await sheets.spreadsheets.values.update({
       spreadsheetId: estimateId,
-      range: "receipts!A1:F1",
-      valueInputOption: "RAW",
+      range: "receipts!A1:F2",
+      valueInputOption: "USER_ENTERED",
       requestBody: {
-        values: [["Дата", "Сумма", "Что куплено", "Магазин", "Ссылка на фото", "Кто добавил"]],
+        values: [
+          ["Дата", "Сумма", "Что куплено", "Магазин", "Ссылка на фото", "Кто добавил"],
+          ["ИТОГО:", "=SUM(B3:B)", "", "", "", ""],
+        ],
       },
     });
 

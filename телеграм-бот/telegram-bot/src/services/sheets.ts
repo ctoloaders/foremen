@@ -125,7 +125,7 @@ export async function appendReceiptRow(
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: "receipts!A:F",
+    range: "receipts!A3:F",
     valueInputOption: "RAW",
     requestBody: {
       values: [[row.date, row.sum, row.description, row.storeName, row.photoLink, row.addedBy]],
