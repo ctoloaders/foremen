@@ -13,6 +13,7 @@ export interface Project {
   name: string;
   googleDriveUrl: string;
   googleSheetsUrl: string;
+  receiptsUrl: string;
   status: string;
 }
 
@@ -78,16 +79,17 @@ export async function getAllActiveProjects(): Promise<Project[]> {
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.projectsSpreadsheetId,
-    range: `${config.google.projectsSheetName}!A2:E`,
+    range: `${config.google.projectsSheetName}!A2:F`,
   });
 
   return (res.data.values || [])
-    .filter(r => r[3] === "active")
+    .filter(r => r[4] === "active")
     .map(r => ({
       name: r[0] || "",
       googleDriveUrl: r[1] || "",
       googleSheetsUrl: r[2] || "",
-      status: r[3] || "",
+      receiptsUrl: r[3] || "",
+      status: r[4] || "",
     }));
 }
 
@@ -129,7 +131,7 @@ export async function appendReceiptRow(
 
   await sheets.spreadsheets.values.append({
     spreadsheetId,
-    range: "receipts!A3:F",
+    range: `${config.google.receiptsSheetName}!A3:F`,
     valueInputOption: "RAW",
     requestBody: {
       values: [[row.date, row.sum, row.description, row.storeName, row.photoLink, row.addedBy]],

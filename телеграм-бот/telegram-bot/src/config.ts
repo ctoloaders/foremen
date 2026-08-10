@@ -39,6 +39,8 @@ export const config = {
     accessSheetName: process.env.ACCESS_SHEET_NAME || "project_access",
     botStateSheetName: process.env.BOT_STATE_SHEET_NAME || "bot_state",
     projectsSheetName: process.env.PROJECTS_SHEET_NAME || "projects",
+    receiptsSheetName: process.env.RECEIPTS_SHEET_NAME || "Чеки",
+    templateSpreadsheetId: process.env.TEMPLATE_SPREADSHEET_ID || "",
   },
   bitrix: {
     // CRM Deal field codes

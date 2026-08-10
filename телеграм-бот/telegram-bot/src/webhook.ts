@@ -119,7 +119,7 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   if (!driveUrl || !sheetsUrl) {
     const existingRes = await sheets.spreadsheets.values.get({
       spreadsheetId: config.google.projectsSpreadsheetId,
-      range: `${config.google.projectsSheetName}!A2:C`,
+      range: `${config.google.projectsSheetName}!A2:D`,
     });
     const existingRows = existingRes.data.values || [];
     const existing = existingRows.find(r => r[0] === data.project_name);
@@ -134,96 +134,74 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   if (!driveUrl || !sheetsUrl) {
     logger.info("Creating project resources", { project: data.project_name });
 
-    // 1. Create project folder in Shared Drive under "Проекты"
+    // 1. Create project folder
     const folder = await drive.files.create({
       requestBody: {
-        name: `${data.project_name} — Чеки`,
+        name: `${data.project_name}`,
         mimeType: "application/vnd.google-apps.folder",
         parents: [PROJECTS_PARENT_FOLDER_ID],
       },
-      supportsAllDrives: false,
-      fields: "id,webViewLink",
+      fields: "id",
     });
-    driveUrl = `https://drive.google.com/drive/folders/${folder.data.id}`;
+    const folderId = folder.data.id!;
+    driveUrl = `https://drive.google.com/drive/folders/${folderId}`;
 
-    // 2. Create estimate spreadsheet inside that folder
-    const estimate = await drive.files.create({
+    // 2. Copy template spreadsheet into the folder (kosztorys/estimate)
+    const templateId = config.google.templateSpreadsheetId;
+    if (templateId) {
+      const copied = await drive.files.copy({
+        fileId: templateId,
+        requestBody: {
+          name: `${data.project_name} — Kosztorys`,
+          parents: [folderId],
+        },
+        fields: "id",
+      });
+      sheetsUrl = `https://docs.google.com/spreadsheets/d/${copied.data.id}/edit`;
+    } else {
+      // Fallback: create empty spreadsheet
+      const est = await drive.files.create({
+        requestBody: {
+          name: `${data.project_name} — Kosztorys`,
+          mimeType: "application/vnd.google-apps.spreadsheet",
+          parents: [folderId],
+        },
+        fields: "id",
+      });
+      sheetsUrl = `https://docs.google.com/spreadsheets/d/${est.data.id}/edit`;
+    }
+
+    // 3. Create separate receipts file ("Чеки")
+    const receiptsFile = await drive.files.create({
       requestBody: {
-        name: `${data.project_name} — Смета`,
+        name: `${data.project_name} — Чеки`,
         mimeType: "application/vnd.google-apps.spreadsheet",
-        parents: [folder.data.id!],
+        parents: [folderId],
       },
-      supportsAllDrives: false,
-      fields: "id,webViewLink",
+      fields: "id",
     });
-    const estimateId = estimate.data.id!;
-    sheetsUrl = `https://docs.google.com/spreadsheets/d/${estimateId}/edit`;
+    const receiptsId = receiptsFile.data.id!;
+    const receiptsUrl = `https://docs.google.com/spreadsheets/d/${receiptsId}/edit`;
 
-    // 3. Set up estimate sheet headers
-    // Rename default sheet to "receipts" and add headers
-    const estInfo = await sheets.spreadsheets.get({ spreadsheetId: estimateId });
-    const defaultSheetId = estInfo.data.sheets![0].properties!.sheetId!;
+    // Setup receipts file: rename sheet, headers, SUM, PLN format
+    const rInfo = await sheets.spreadsheets.get({ spreadsheetId: receiptsId });
+    const rSheetId = rInfo.data.sheets![0].properties!.sheetId!;
 
     await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: estimateId,
+      spreadsheetId: receiptsId,
       requestBody: {
         requests: [
-          {
-            updateSheetProperties: {
-              properties: { sheetId: defaultSheetId, title: "receipts" },
-              fields: "title",
-            },
-          },
-          // Bold + gray header row
-          {
-            repeatCell: {
-              range: { sheetId: defaultSheetId, startRowIndex: 0, endRowIndex: 1 },
-              cell: {
-                userEnteredFormat: {
-                  textFormat: { bold: true },
-                  backgroundColor: { red: 0.93, green: 0.93, blue: 0.93 },
-                },
-              },
-              fields: "userEnteredFormat(textFormat,backgroundColor)",
-            },
-          },
-          // Bold summary row (row 2)
-          {
-            repeatCell: {
-              range: { sheetId: defaultSheetId, startRowIndex: 1, endRowIndex: 2 },
-              cell: {
-                userEnteredFormat: { textFormat: { bold: true } },
-              },
-              fields: "userEnteredFormat.textFormat.bold",
-            },
-          },
-          // Currency PLN format for column B
-          {
-            repeatCell: {
-              range: { sheetId: defaultSheetId, startColumnIndex: 1, endColumnIndex: 2 },
-              cell: {
-                userEnteredFormat: {
-                  numberFormat: { type: "CURRENCY", pattern: "#,##0.00 \"PLN\"" },
-                },
-              },
-              fields: "userEnteredFormat.numberFormat",
-            },
-          },
-          // Freeze rows 1-2
-          {
-            updateSheetProperties: {
-              properties: { sheetId: defaultSheetId, gridProperties: { frozenRowCount: 2 } },
-              fields: "gridProperties.frozenRowCount",
-            },
-          },
+          { updateSheetProperties: { properties: { sheetId: rSheetId, title: config.google.receiptsSheetName }, fields: "title" } },
+          { repeatCell: { range: { sheetId: rSheetId, startRowIndex: 0, endRowIndex: 2 }, cell: { userEnteredFormat: { textFormat: { bold: true } } }, fields: "userEnteredFormat.textFormat.bold" } },
+          { repeatCell: { range: { sheetId: rSheetId, startColumnIndex: 1, endColumnIndex: 2 }, cell: { userEnteredFormat: { numberFormat: { type: "CURRENCY", pattern: "#,##0.00 \"PLN\"" } } }, fields: "userEnteredFormat.numberFormat" } },
+          { updateSheetProperties: { properties: { sheetId: rSheetId, gridProperties: { frozenRowCount: 2 } }, fields: "gridProperties.frozenRowCount" } },
         ],
       },
     });
 
-    // Write header + SUM formula
     await sheets.spreadsheets.values.update({
-      spreadsheetId: estimateId,
-      range: "receipts!A1:F2",
+      spreadsheetId: receiptsId,
+      range: `${config.google.receiptsSheetName}!A1:F2`,
       valueInputOption: "USER_ENTERED",
       requestBody: {
         values: [
@@ -233,11 +211,15 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
       },
     });
 
+    // Store receipts URL (this goes into the project registry, not into Bitrix)
+    (data as any)._receiptsUrl = receiptsUrl;
+
     resourcesCreated = true;
     logger.info("Project resources created", {
       project: data.project_name,
       driveUrl,
       sheetsUrl,
+      receiptsUrl,
     });
   }
 
@@ -254,20 +236,21 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   const projRows = projRes.data.values || [];
   const projIndex = projRows.findIndex(r => r[0] === data.project_name);
   const today = new Date().toISOString().split("T")[0];
-  const row = [data.project_name!, driveUrl, sheetsUrl, "active", today];
+  const receiptsUrl = (data as any)._receiptsUrl || "";
+  const row = [data.project_name!, driveUrl, sheetsUrl, receiptsUrl, "active", today];
 
   if (projIndex >= 0) {
     const rowNum = projIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId: config.google.projectsSpreadsheetId,
-      range: `${config.google.projectsSheetName}!A${rowNum}:E${rowNum}`,
+      range: `${config.google.projectsSheetName}!A${rowNum}:F${rowNum}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
   } else {
     await sheets.spreadsheets.values.append({
       spreadsheetId: config.google.projectsSpreadsheetId,
-      range: `${config.google.projectsSheetName}!A:E`,
+      range: `${config.google.projectsSheetName}!A:F`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
