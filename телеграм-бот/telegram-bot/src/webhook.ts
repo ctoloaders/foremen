@@ -16,13 +16,17 @@ const SHARED_DRIVE_ID = config.google.sharedDriveId;
 const PROJECTS_PARENT_FOLDER_ID = config.google.projectsParentFolderId;
 
 function getAuth() {
-  return new google.auth.GoogleAuth({
+  const opts: any = {
     credentials: config.google.serviceAccountKey as any,
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/drive",
     ],
-  });
+  };
+  if (config.google.impersonateEmail) {
+    opts.clientOptions = { subject: config.google.impersonateEmail };
+  }
+  return new google.auth.GoogleAuth(opts);
 }
 
 function getSheets() {
@@ -137,7 +141,7 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
         mimeType: "application/vnd.google-apps.folder",
         parents: [PROJECTS_PARENT_FOLDER_ID],
       },
-      supportsAllDrives: true,
+      supportsAllDrives: false,
       fields: "id,webViewLink",
     });
     driveUrl = `https://drive.google.com/drive/folders/${folder.data.id}`;
@@ -149,7 +153,7 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
         mimeType: "application/vnd.google-apps.spreadsheet",
         parents: [folder.data.id!],
       },
-      supportsAllDrives: true,
+      supportsAllDrives: false,
       fields: "id,webViewLink",
     });
     const estimateId = estimate.data.id!;

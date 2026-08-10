@@ -5,10 +5,14 @@ import { extractFolderId } from "../utils/validators.js";
 import { transliterate } from "../utils/transliterate.js";
 
 function getAuth() {
-  return new google.auth.GoogleAuth({
+  const opts: any = {
     credentials: config.google.serviceAccountKey as any,
     scopes: ["https://www.googleapis.com/auth/drive"],
-  });
+  };
+  if (config.google.impersonateEmail) {
+    opts.clientOptions = { subject: config.google.impersonateEmail };
+  }
+  return new google.auth.GoogleAuth(opts);
 }
 
 function getDrive() {
@@ -45,7 +49,6 @@ export async function uploadPhoto(
       mimeType,
       body: stream,
     },
-    supportsAllDrives: true,
     fields: "id,webViewLink",
   });
 
@@ -54,7 +57,6 @@ export async function uploadPhoto(
   // Make viewable by anyone with link
   await drive.permissions.create({
     fileId,
-    supportsAllDrives: true,
     requestBody: {
       type: "anyone",
       role: "reader",

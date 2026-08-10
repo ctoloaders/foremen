@@ -29,10 +29,11 @@ export const config = {
   },
   google: {
     serviceAccountKey: loadServiceAccountKey(),
+    impersonateEmail: process.env.GOOGLE_IMPERSONATE_EMAIL || "",
     workersSpreadsheetId: required("WORKERS_SPREADSHEET_ID"),
     projectsSpreadsheetId: required("PROJECTS_SPREADSHEET_ID"),
     estimatesFolderId: required("ESTIMATES_FOLDER_ID"),
-    sharedDriveId: required("SHARED_DRIVE_ID"),
+    sharedDriveId: process.env.SHARED_DRIVE_ID || "",
     projectsParentFolderId: required("PROJECTS_PARENT_FOLDER_ID"),
     workersSheetName: process.env.WORKERS_SHEET_NAME || "workers",
     accessSheetName: process.env.ACCESS_SHEET_NAME || "project_access",

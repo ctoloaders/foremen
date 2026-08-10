@@ -5,10 +5,14 @@ import { ConversationState, ConversationStep, emptyState } from "./machine.js";
 const STALE_HOURS = 24;
 
 function getAuth() {
-  return new google.auth.GoogleAuth({
+  const opts: any = {
     credentials: config.google.serviceAccountKey as any,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
+  };
+  if (config.google.impersonateEmail) {
+    opts.clientOptions = { subject: config.google.impersonateEmail };
+  }
+  return new google.auth.GoogleAuth(opts);
 }
 
 function getSheets() {
