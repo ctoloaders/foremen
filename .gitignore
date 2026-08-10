@@ -7,7 +7,9 @@ dist/
 
 # Secrets - NEVER commit these
 .env
+.env.production
 телеграм-бот/forementest-2064c9f53f45.json
+телеграм-бот/starry-tracker-505110-s3-326364be8f95.json
 телеграм-бот/telegram-bot/bun.lock
 
 # Compiled artifacts in scripts

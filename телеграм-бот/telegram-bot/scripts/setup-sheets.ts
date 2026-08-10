@@ -214,7 +214,7 @@ async function main() {
   console.log(`\nEstimates Folder: https://drive.google.com/drive/folders/${ESTIMATES_FOLDER_ID}`);
   console.log(`  Per-project estimate spreadsheets go here`);
   console.log("\n--- .env values ---");
-  console.log(`TELEGRAM_BOT_TOKEN=8999347431:AAG7Ic3PkJIY10KHA93xJkpKhKW1EW3Kg0k`);
+  console.log(`TELEGRAM_BOT_TOKEN=<SET_YOUR_BOT_TOKEN>`);
   console.log(`TELEGRAM_WEBHOOK_SECRET=foremen-bot-webhook-secret-2024`);
   console.log(`GOOGLE_SERVICE_ACCOUNT_JSON=../forementest-2064c9f53f45.json`);
   console.log(`WORKERS_SPREADSHEET_ID=${WORKERS_SPREADSHEET_ID}`);
