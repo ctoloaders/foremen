@@ -11,8 +11,7 @@ import { google } from "googleapis";
 import { config } from "./config.js";
 import { logger } from "./utils/logger.js";
 
-// Shared Drive ID and parent folder from config
-const SHARED_DRIVE_ID = config.google.sharedDriveId;
+// Project folder from config (for photo uploads)
 const PROJECTS_PARENT_FOLDER_ID = config.google.projectsParentFolderId;
 
 function getAuth() {
@@ -113,114 +112,11 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
 
   let driveUrl = data.google_drive_url || "";
   let sheetsUrl = data.google_sheets_url || "";
-  let resourcesCreated = false;
 
-  // Check if project already has URLs in our registry (deduplication)
+  // If URLs are missing, skip (project not ready yet)
   if (!driveUrl || !sheetsUrl) {
-    const existingRes = await sheets.spreadsheets.values.get({
-      spreadsheetId: config.google.projectsSpreadsheetId,
-      range: `${config.google.projectsSheetName}!A2:D`,
-    });
-    const existingRows = existingRes.data.values || [];
-    const existing = existingRows.find(r => r[0] === data.project_name);
-    if (existing && existing[1] && existing[2]) {
-      driveUrl = existing[1];
-      sheetsUrl = existing[2];
-      logger.info("Project already has resources in registry, skipping creation", { project: data.project_name });
-    }
-  }
-
-  // If Drive URL or Sheets URL are STILL missing — create resources
-  if (!driveUrl || !sheetsUrl) {
-    logger.info("Creating project resources", { project: data.project_name });
-
-    // 1. Create project folder
-    const folder = await drive.files.create({
-      requestBody: {
-        name: `${data.project_name}`,
-        mimeType: "application/vnd.google-apps.folder",
-        parents: [PROJECTS_PARENT_FOLDER_ID],
-      },
-      fields: "id",
-    });
-    const folderId = folder.data.id!;
-    driveUrl = `https://drive.google.com/drive/folders/${folderId}`;
-
-    // 2. Copy template spreadsheet into the folder (kosztorys/estimate)
-    const templateId = config.google.templateSpreadsheetId;
-    if (templateId) {
-      const copied = await drive.files.copy({
-        fileId: templateId,
-        requestBody: {
-          name: `${data.project_name} — Kosztorys`,
-          parents: [folderId],
-        },
-        fields: "id",
-      });
-      sheetsUrl = `https://docs.google.com/spreadsheets/d/${copied.data.id}/edit`;
-    } else {
-      // Fallback: create empty spreadsheet
-      const est = await drive.files.create({
-        requestBody: {
-          name: `${data.project_name} — Kosztorys`,
-          mimeType: "application/vnd.google-apps.spreadsheet",
-          parents: [folderId],
-        },
-        fields: "id",
-      });
-      sheetsUrl = `https://docs.google.com/spreadsheets/d/${est.data.id}/edit`;
-    }
-
-    // 3. Create separate receipts file ("Чеки")
-    const receiptsFile = await drive.files.create({
-      requestBody: {
-        name: `${data.project_name} — Чеки`,
-        mimeType: "application/vnd.google-apps.spreadsheet",
-        parents: [folderId],
-      },
-      fields: "id",
-    });
-    const receiptsId = receiptsFile.data.id!;
-    const receiptsUrl = `https://docs.google.com/spreadsheets/d/${receiptsId}/edit`;
-
-    // Setup receipts file: rename sheet, headers, SUM, PLN format
-    const rInfo = await sheets.spreadsheets.get({ spreadsheetId: receiptsId });
-    const rSheetId = rInfo.data.sheets![0].properties!.sheetId!;
-
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: receiptsId,
-      requestBody: {
-        requests: [
-          { updateSheetProperties: { properties: { sheetId: rSheetId, title: config.google.receiptsSheetName }, fields: "title" } },
-          { repeatCell: { range: { sheetId: rSheetId, startRowIndex: 0, endRowIndex: 2 }, cell: { userEnteredFormat: { textFormat: { bold: true } } }, fields: "userEnteredFormat.textFormat.bold" } },
-          { repeatCell: { range: { sheetId: rSheetId, startColumnIndex: 1, endColumnIndex: 2 }, cell: { userEnteredFormat: { numberFormat: { type: "CURRENCY", pattern: "#,##0.00 \"PLN\"" } } }, fields: "userEnteredFormat.numberFormat" } },
-          { updateSheetProperties: { properties: { sheetId: rSheetId, gridProperties: { frozenRowCount: 2 } }, fields: "gridProperties.frozenRowCount" } },
-        ],
-      },
-    });
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: receiptsId,
-      range: `${config.google.receiptsSheetName}!A1:F2`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: {
-        values: [
-          ["Дата", "Сумма", "Что куплено", "Магазин", "Ссылка на фото", "Кто добавил"],
-          ["ИТОГО:", "=SUM(B3:B)", "", "", "", ""],
-        ],
-      },
-    });
-
-    // Store receipts URL (this goes into the project registry, not into Bitrix)
-    (data as any)._receiptsUrl = receiptsUrl;
-
-    resourcesCreated = true;
-    logger.info("Project resources created", {
-      project: data.project_name,
-      driveUrl,
-      sheetsUrl,
-      receiptsUrl,
-    });
+    logger.info("Project missing Drive/Sheets URL, skipping", { project: data.project_name });
+    return { status: "ok", message: "project skipped (missing URLs)" };
   }
 
   // Validate URLs
@@ -236,21 +132,20 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
   const projRows = projRes.data.values || [];
   const projIndex = projRows.findIndex(r => r[0] === data.project_name);
   const today = new Date().toISOString().split("T")[0];
-  const receiptsUrl = (data as any)._receiptsUrl || "";
-  const row = [data.project_name!, driveUrl, sheetsUrl, receiptsUrl, "active", today];
+  const row = [data.project_name!, driveUrl, sheetsUrl, "active", today];
 
   if (projIndex >= 0) {
     const rowNum = projIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId: config.google.projectsSpreadsheetId,
-      range: `${config.google.projectsSheetName}!A${rowNum}:F${rowNum}`,
+      range: `${config.google.projectsSheetName}!A${rowNum}:E${rowNum}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
   } else {
     await sheets.spreadsheets.values.append({
       spreadsheetId: config.google.projectsSpreadsheetId,
-      range: `${config.google.projectsSheetName}!A:F`,
+      range: `${config.google.projectsSheetName}!A:E`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -387,44 +282,7 @@ async function handleUpsertProject(data: WebhookRequest): Promise<WebhookRespons
     }
   }
 
-  const result: WebhookResponse = {
-    status: "ok",
-    message: resourcesCreated ? "project created with new resources" : "project upserted",
-  };
-
-  // Return URLs so Bitrix24 can fill them into the project fields
-  if (resourcesCreated) {
-    result.google_drive_url = driveUrl;
-    result.google_sheets_url = sheetsUrl;
-
-    // If deal_id and bitrix_webhook_url provided — write URLs back to Bitrix24 automatically
-    if (data.deal_id && data.bitrix_webhook_url) {
-      try {
-        const bitrixUrl = data.bitrix_webhook_url.replace(/\/$/, "");
-        const updateResponse = await fetch(`${bitrixUrl}/crm.deal.update`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ID: data.deal_id,
-            FIELDS: {
-              [config.bitrix.driveUrlField]: driveUrl,
-              [config.bitrix.sheetsUrlField]: sheetsUrl,
-            },
-          }),
-        });
-        const updateResult = await updateResponse.json() as any;
-        if (updateResult.result) {
-          logger.info("Bitrix24 deal updated", { dealId: data.deal_id, driveUrl, sheetsUrl });
-        } else {
-          logger.error("Bitrix24 deal update failed", { dealId: data.deal_id, error: updateResult });
-        }
-      } catch (err: any) {
-        logger.error("Bitrix24 callback failed", { dealId: data.deal_id, error: err.message });
-      }
-    }
-  }
-
-  return result;
+  return { status: "ok", message: "project upserted" };
 }
 
 async function handleUpsertWorker(data: WebhookRequest): Promise<WebhookResponse> {

@@ -7,16 +7,18 @@
   "scripts": {
     "dev": "bun src/dev.ts",
     "dev:webhook": "bun src/dev-webhook.ts",
-    "build": "bun build src/index.ts src/webhook.ts --outdir=dist --target=node --format=esm --external=googleapis --external=grammy --external=dotenv",
+    "build": "tsc",
+    "gcp-build": "",
     "deploy": "bash deploy.sh",
     "setup-sheets": "bun scripts/setup-sheets.ts",
     "setup-shared-drive": "bun scripts/setup-shared-drive.ts",
     "set-webhook": "bun scripts/set-webhook.ts"
   },
   "dependencies": {
-    "grammy": "^1.21.1",
+    "@google-cloud/functions-framework": "^5.0.5",
+    "dotenv": "^16.4.5",
     "googleapis": "^134.0.0",
-    "dotenv": "^16.4.5"
+    "grammy": "^1.21.1"
   },
   "devDependencies": {
     "typescript": "^5.4.5",

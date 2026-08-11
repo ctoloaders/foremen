@@ -13,7 +13,6 @@ export interface Project {
   name: string;
   googleDriveUrl: string;
   googleSheetsUrl: string;
-  receiptsUrl: string;
   status: string;
 }
 
@@ -79,17 +78,16 @@ export async function getAllActiveProjects(): Promise<Project[]> {
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.projectsSpreadsheetId,
-    range: `${config.google.projectsSheetName}!A2:F`,
+    range: `${config.google.projectsSheetName}!A2:E`,
   });
 
   return (res.data.values || [])
-    .filter(r => r[4] === "active")
+    .filter(r => r[3] === "active")
     .map(r => ({
       name: r[0] || "",
       googleDriveUrl: r[1] || "",
       googleSheetsUrl: r[2] || "",
-      receiptsUrl: r[3] || "",
-      status: r[4] || "",
+      status: r[3] || "",
     }));
 }
 
@@ -128,13 +126,29 @@ export async function appendReceiptRow(
 ): Promise<void> {
   const sheets = getSheets();
   const spreadsheetId = extractSpreadsheetId(sheetsUrl);
+  const sheetName = "Mat. budowlane";
 
-  await sheets.spreadsheets.values.append({
+  // Find first empty row starting from row 3
+  // Check column A (Data) — if empty, that's our row
+  const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${config.google.receiptsSheetName}!A3:F`,
+    range: `'${sheetName}'!A3:A500`,
+  });
+  const existingRows = res.data.values || [];
+  let insertRow = 3; // default: row 3
+  for (let i = 0; i < existingRows.length; i++) {
+    if (existingRows[i] && existingRows[i][0]) {
+      insertRow = i + 4; // next row after last filled
+    }
+  }
+
+  // Write: Data, Sklep/Magazyn, Opis, Zakup Brutto (columns A-D)
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!A${insertRow}:D${insertRow}`,
     valueInputOption: "RAW",
     requestBody: {
-      values: [[row.date, row.sum, row.description, row.storeName, row.photoLink, row.addedBy]],
+      values: [[row.date, row.storeName, `${row.description} (${row.addedBy}) ${row.photoLink}`, row.sum]],
     },
   });
 }

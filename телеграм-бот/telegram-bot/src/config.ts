@@ -16,7 +16,16 @@ function required(name: string): string {
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadServiceAccountKey(): object {
-  const jsonPath = required("GOOGLE_SERVICE_ACCOUNT_JSON");
+  // Try inline JSON from env first (for Cloud Functions)
+  const inlineJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON;
+  if (inlineJson) {
+    return JSON.parse(inlineJson);
+  }
+  // Fallback to file path
+  const jsonPath = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!jsonPath) {
+    throw new Error("Missing GOOGLE_SERVICE_ACCOUNT_KEY_JSON or GOOGLE_SERVICE_ACCOUNT_JSON");
+  }
   const absPath = resolve(__dirname, "..", jsonPath);
   const content = readFileSync(absPath, "utf-8");
   return JSON.parse(content);

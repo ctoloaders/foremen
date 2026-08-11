@@ -68,7 +68,7 @@ export async function handleProjectSelection(ctx: Context) {
   state.step = ConversationStep.AWAIT_PHOTO;
   state.projectName = project.name;
   state.projectDriveUrl = project.googleDriveUrl;
-  state.projectSheetsUrl = project.receiptsUrl || project.googleSheetsUrl;
+  state.projectSheetsUrl = project.googleSheetsUrl;
   await setState(state);
 
   await ctx.answerCallbackQuery();

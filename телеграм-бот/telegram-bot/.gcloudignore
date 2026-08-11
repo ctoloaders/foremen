@@ -1,0 +1,10 @@
+# Files not needed for Cloud Functions
+bun.lock
+bunfig.toml
+.env.production
+.env
+scripts/
+apps-script/
+bitrix24/
+src/
+tsconfig.json
