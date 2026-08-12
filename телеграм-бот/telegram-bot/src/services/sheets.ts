@@ -91,7 +91,7 @@ export async function getAllActiveProjects(): Promise<Project[]> {
     }));
 }
 
-export async function getProjectAccessForWorker(workerName: string): Promise<ProjectAccess[]> {
+export async function getProjectAccessForWorker(bitrixUserId: string): Promise<ProjectAccess[]> {
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.workersSpreadsheetId,
@@ -99,7 +99,7 @@ export async function getProjectAccessForWorker(workerName: string): Promise<Pro
   });
 
   return (res.data.values || [])
-    .filter(r => r[1] === workerName)
+    .filter(r => r[3] === bitrixUserId)
     .map(r => ({
       projectName: r[0] || "",
       workerName: r[1] || "",
@@ -115,7 +115,7 @@ export async function getProjectsForWorker(worker: Worker): Promise<Project[]> {
     return allActive;
   }
 
-  const access = await getProjectAccessForWorker(worker.name);
+  const access = await getProjectAccessForWorker(worker.bitrixUserId);
   const projectNames = new Set(access.map(a => a.projectName));
   return allActive.filter(p => projectNames.has(p.name));
 }
