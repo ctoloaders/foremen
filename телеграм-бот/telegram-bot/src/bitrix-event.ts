@@ -99,11 +99,16 @@ export async function handleBitrixEvent(rawBody: string): Promise<any> {
   const projectName = deal.TITLE;
   const driveUrl = deal[DRIVE_FIELD] || "";
   const sheetsUrl = deal[SHEETS_FIELD] || "";
+  const stageId = deal.STAGE_ID || "";
 
-  logger.info("Deal fetched", { dealId, projectName, driveUrl: !!driveUrl, sheetsUrl: !!sheetsUrl });
+  // Determine status based on stage
+  const CLOSED_STAGES = ["WON", "LOSE", "APOLOGY", "UC_1OQS5K", "UC_7Y686T"];
+  const projectStatus = CLOSED_STAGES.includes(stageId) ? "archived" : "active";
 
-  // Skip if URLs missing
-  if (!driveUrl || !sheetsUrl) {
+  logger.info("Deal fetched", { dealId, projectName, driveUrl: !!driveUrl, sheetsUrl: !!sheetsUrl, stageId, projectStatus });
+
+  // Skip if URLs missing (only for active projects)
+  if (projectStatus === "active" && (!driveUrl || !sheetsUrl)) {
     logger.info("Deal missing Drive/Sheets URLs, skipping", { dealId, projectName });
     return { status: "ok", message: "skipped (missing URLs)" };
   }
@@ -155,7 +160,7 @@ export async function handleBitrixEvent(rawBody: string): Promise<any> {
   });
   const projRows = projRes.data.values || [];
   const projIndex = projRows.findIndex(r => r[0] === projectName);
-  const projRow = [projectName, driveUrl, sheetsUrl, "active", today];
+  const projRow = [projectName, driveUrl, sheetsUrl, projectStatus, today];
 
   if (projIndex >= 0) {
     const rowNum = projIndex + 2;
