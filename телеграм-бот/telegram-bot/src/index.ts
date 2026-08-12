@@ -8,9 +8,14 @@ import { handleBitrixEvent } from "./bitrix-event.js";
 export { bitrixWebhook } from "./webhook.js";
 
 const bot = createBot();
+let botInitialized = false;
 
 export async function receiptBot(req: any, res: any): Promise<void> {
   try {
+    if (!botInitialized) {
+      await bot.init();
+      botInitialized = true;
+    }
     const update = req.body;
     await bot.handleUpdate(update);
     res.status(200).send("OK");
