@@ -223,25 +223,63 @@ export async function handleBitrixEvent(rawBody: string): Promise<any> {
       workersRows.push(wRow);
     }
 
-    // Upsert project_access
-    const aIndex = accessRows.findIndex(r => r[0] === projectName && r[3] === worker.userId);
-    const aRow = [projectName, worker.name, worker.role, worker.userId];
-    if (aIndex >= 0) {
-      const rowNum = aIndex + 2;
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: config.google.workersSpreadsheetId,
-        range: `${config.google.accessSheetName}!A${rowNum}:D${rowNum}`,
-        valueInputOption: "RAW",
-        requestBody: { values: [aRow] },
-      });
-    } else {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: config.google.workersSpreadsheetId,
-        range: `${config.google.accessSheetName}!A:D`,
-        valueInputOption: "RAW",
-        requestBody: { values: [aRow] },
-      });
-      accessRows.push(aRow);
+    // Upsert project_access — sync roles (pm, foreman, estimator, sales)
+    // Do NOT touch role "other" — managed by admin via bot only
+    const MANAGED_ROLES = ["pm", "foreman", "estimator", "sales"];
+
+    // Get current access rows for this project (excluding "other")
+    const currentAccess = accessRows
+      .map((r, i) => ({ row: r, index: i }))
+      .filter(({ row }) => row[0] === projectName && MANAGED_ROLES.includes(row[2]));
+
+    // Build expected access from Bitrix
+    const expectedAccess = workers.filter(w => MANAGED_ROLES.includes(w.role));
+
+    // Remove workers no longer assigned (in current but not in expected)
+    for (const { row, index } of currentAccess) {
+      const stillAssigned = expectedAccess.some(w => w.userId === row[3] && w.role === row[2]);
+      if (!stillAssigned) {
+        // Clear the row (delete by blanking)
+        const rowNum = index + 2;
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: config.google.workersSpreadsheetId,
+          range: `${config.google.accessSheetName}!A${rowNum}:D${rowNum}`,
+          valueInputOption: "RAW",
+          requestBody: { values: [["", "", "", ""]] },
+        });
+        logger.info("Removed project access", { project: projectName, userId: row[3], role: row[2] });
+      }
+    }
+
+    // Add/update workers from Bitrix
+    for (const worker of expectedAccess) {
+      const existingIndex = currentAccess.findIndex(
+        ({ row }) => row[2] === worker.role
+      );
+
+      if (existingIndex >= 0) {
+        const { row, index } = currentAccess[existingIndex];
+        // Check if user changed for this role
+        if (row[3] !== worker.userId) {
+          const rowNum = index + 2;
+          await sheets.spreadsheets.values.update({
+            spreadsheetId: config.google.workersSpreadsheetId,
+            range: `${config.google.accessSheetName}!A${rowNum}:D${rowNum}`,
+            valueInputOption: "RAW",
+            requestBody: { values: [[projectName, worker.name, worker.role, worker.userId]] },
+          });
+          logger.info("Updated project access", { project: projectName, role: worker.role, newUserId: worker.userId });
+        }
+      } else {
+        // New assignment — append
+        await sheets.spreadsheets.values.append({
+          spreadsheetId: config.google.workersSpreadsheetId,
+          range: `${config.google.accessSheetName}!A:D`,
+          valueInputOption: "RAW",
+          requestBody: { values: [[projectName, worker.name, worker.role, worker.userId]] },
+        });
+        logger.info("Added project access", { project: projectName, role: worker.role, userId: worker.userId });
+      }
     }
   }
 
