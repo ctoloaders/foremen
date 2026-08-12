@@ -142,13 +142,23 @@ export async function appendReceiptRow(
     }
   }
 
-  // Write: Data(A), Sklep/Magazyn(B), Opis(C), Zakup Brutto(D), skip E-H, Komentarz(I)
+  // Write: Data(A), Sklep/Magazyn(B), Opis(C), Zakup Brutto(D)
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `'${sheetName}'!A${insertRow}:I${insertRow}`,
+    range: `'${sheetName}'!A${insertRow}:D${insertRow}`,
     valueInputOption: "RAW",
     requestBody: {
-      values: [[row.date, row.storeName, row.description, row.sum, "", "", "", "", `${row.addedBy} | ${row.photoLink}`]],
+      values: [[row.date, row.storeName, row.description, row.sum]],
+    },
+  });
+
+  // Write: Komentarz(I) — separately to not touch E-H
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!I${insertRow}`,
+    valueInputOption: "RAW",
+    requestBody: {
+      values: [[`${row.addedBy} | ${row.photoLink}`]],
     },
   });
 }
