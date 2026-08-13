@@ -152,13 +152,13 @@ export async function appendReceiptRow(
     },
   });
 
-  // Write: Komentarz(I) — separately to not touch E-H
+  // Write: Komentarz(I) = photo link, column J = who added
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `'${sheetName}'!I${insertRow}`,
+    range: `'${sheetName}'!I${insertRow}:J${insertRow}`,
     valueInputOption: "RAW",
     requestBody: {
-      values: [[`${row.addedBy} | ${row.photoLink}`]],
+      values: [[row.photoLink, row.addedBy]],
     },
   });
 }

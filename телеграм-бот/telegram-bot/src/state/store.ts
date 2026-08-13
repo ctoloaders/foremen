@@ -40,7 +40,7 @@ export async function getState(telegramId: number): Promise<ConversationState | 
     projectDriveUrl: row[3] || undefined,
     projectSheetsUrl: row[4] || undefined,
     photoFileId: row[5] || undefined,
-    sum: row[6] ? Number(row[6]) : undefined,
+    sum: row[6] ? (isNaN(Number(row[6])) ? undefined : Number(row[6])) : undefined,
     description: row[7] || undefined,
     storeName: row[8] || undefined,
     updatedAt: row[9] || new Date().toISOString(),

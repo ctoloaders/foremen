@@ -159,7 +159,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
     // Success
     await clearState(telegramId);
     await ctx.reply(
-      `✅ Записал: ${state.projectName}, ${state.sum}₪, ${state.storeName}, ${state.description}\n\nМожете отправить следующий чек или выбрать другой проект (/start)`
+      `✅ Записал: ${state.projectName}, ${state.sum || 0} PLN, ${state.storeName}, ${state.description}\n\nМожете отправить следующий чек или выбрать другой проект (/start)`
     );
 
     logger.info("Receipt saved", {
