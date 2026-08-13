@@ -34,7 +34,7 @@ export function createTextHandler(bot: Bot) {
       case ConversationStep.AWAIT_SUM: {
         const sum = validateSum(text);
         if (sum === null) {
-          await ctx.reply("Введите сумму числом (например, 340 или 250.50)");
+          await ctx.reply("Введите сумму числом (например: 340 или 55,45 или 1200.00)");
           return;
         }
         state.sum = sum;
