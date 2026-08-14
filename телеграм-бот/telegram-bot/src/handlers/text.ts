@@ -1,4 +1,4 @@
-import { Context } from "grammy";
+import { Context, InlineKeyboard } from "grammy";
 import { getState, setState, clearState } from "../state/store.js";
 import { ConversationStep } from "../state/machine.js";
 import { validateSum, validateText } from "../utils/validators.js";
@@ -7,6 +7,8 @@ import { uploadPhoto } from "../services/drive.js";
 import { appendReceiptRow } from "../services/sheets.js";
 import { logger } from "../utils/logger.js";
 import { Bot } from "grammy";
+
+const cancelKeyboard = new InlineKeyboard().text("❌ Отмена", "cancel");
 
 export function createTextHandler(bot: Bot) {
   return async function handleText(ctx: Context) {
@@ -34,13 +36,12 @@ export function createTextHandler(bot: Bot) {
       case ConversationStep.AWAIT_SUM: {
         const sum = validateSum(text);
         if (sum === null) {
-          await ctx.reply("Введите сумму числом (например: 340 или 55,45 или 1200.00)");
-          return;
+          await ctx.reply("Введите сумму числом (например: 340 или 55,45 или 1200.00)", { reply_markup: cancelKeyboard });          return;
         }
         state.sum = sum;
         state.step = ConversationStep.AWAIT_DESCRIPTION;
         await setState(state);
-        await ctx.reply("Что куплено?");
+        await ctx.reply("Что куплено?", { reply_markup: cancelKeyboard });
         break;
       }
 
@@ -53,7 +54,7 @@ export function createTextHandler(bot: Bot) {
         state.description = description;
         state.step = ConversationStep.AWAIT_STORE;
         await setState(state);
-        await ctx.reply("Название магазина?");
+        await ctx.reply("Название магазина?", { reply_markup: cancelKeyboard });
         break;
       }
 

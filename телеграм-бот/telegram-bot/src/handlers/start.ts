@@ -72,7 +72,8 @@ export async function handleProjectSelection(ctx: Context) {
   await setState(state);
 
   await ctx.answerCallbackQuery();
-  await ctx.editMessageText(`Проект: ${project.name}\n\nПришлите фото чека 📸`);
+  const cancelKb = new InlineKeyboard().text("❌ Отмена", "cancel");
+  await ctx.editMessageText(`Проект: ${project.name}\n\nПришлите фото чека 📸`, { reply_markup: cancelKb });
 
   logger.info("Project selected", { telegramId, project: project.name });
 }

@@ -28,6 +28,17 @@ export function createBot(): Bot {
   // Callback queries (project selection)
   bot.callbackQuery(/^project:/, handleProjectSelection);
 
+  // Callback query: cancel button
+  bot.callbackQuery("cancel", async (ctx) => {
+    const telegramId = ctx.from?.id;
+    if (telegramId) {
+      const { clearState } = await import("./state/store.js");
+      await clearState(telegramId);
+    }
+    await ctx.answerCallbackQuery();
+    await ctx.editMessageText("❌ Отменено. Отправьте /start для нового чека.");
+  });
+
   // Photo messages
   bot.on("message:photo", handlePhoto);
 

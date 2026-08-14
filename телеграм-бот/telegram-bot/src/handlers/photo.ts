@@ -1,7 +1,9 @@
-import { Context } from "grammy";
+import { Context, InlineKeyboard } from "grammy";
 import { getState, setState } from "../state/store.js";
 import { ConversationStep } from "../state/machine.js";
 import { logger } from "../utils/logger.js";
+
+const cancelKeyboard = new InlineKeyboard().text("❌ Отмена", "cancel");
 
 export async function handlePhoto(ctx: Context) {
   const telegramId = ctx.from?.id;
@@ -23,6 +25,6 @@ export async function handlePhoto(ctx: Context) {
   state.step = ConversationStep.AWAIT_SUM;
   await setState(state);
 
-  await ctx.reply("Какая сумма? (число)");
+  await ctx.reply("Какая сумма? (число)", { reply_markup: cancelKeyboard });
   logger.info("Photo received", { telegramId, project: state.projectName });
 }
