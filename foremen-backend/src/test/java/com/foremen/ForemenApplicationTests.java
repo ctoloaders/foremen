@@ -1,8 +1,10 @@
 package com.foremen;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
+@Disabled("Requires database connection")
 @SpringBootTest(properties = {
     "spring.profiles.active=test",
     "spring.autoconfigure.exclude=" +
