@@ -1,0 +1,206 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Generate Gradle wrapper files (v9.1.0)": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711559
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078721243
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079033724
+      }
+    ],
+    "1.2 Create `settings.gradle` with plugin management": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711644
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079038389
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079089431
+      }
+    ],
+    "1.3 Create `gradle.properties` with version variables": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711674
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079039223
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079090203
+      }
+    ],
+    "2.1 Create `build.gradle` with plugin declarations": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711697
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079094304
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079192243
+      }
+    ],
+    "2.2 Add all dependencies to `build.gradle`": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711728
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079197675
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079271025
+      }
+    ],
+    "2.3 Configure annotation processors and compiler arguments": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711758
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079275909
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079324150
+      }
+    ],
+    "2.4 Configure Liquibase plugin block and processResources": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711841
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079329356
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079362641
+      }
+    ],
+    "3. Checkpoint": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711867
+      },
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079377560
+      }
+    ],
+    "4.1 Create `ForemenApplication.java`": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711893
+      }
+    ],
+    "4.2 Create profile-based YAML configuration files": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711926
+      }
+    ],
+    "5.1 Create `docker-compose.yml` for local PostgreSQL": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711949
+      }
+    ],
+    "5.2 Create Liquibase database_files directory and initial changelog": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711976
+      }
+    ],
+    "6.1 Extend root `.gitignore` with backend-specific exclusions": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078711995
+      }
+    ],
+    "6.2 Create `application-local.yml.example` template": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078712022
+      }
+    ],
+    "7.1 Create `ForemenApplicationTests.java`": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078712041
+      }
+    ],
+    "8. Final checkpoint": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787078712064
+      }
+    ],
+    "1. Initialize Gradle wrapper and project skeleton": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079090226
+      }
+    ],
+    "2. Configure build.gradle with plugins and dependencies": [
+      {
+        "executionId": "f299f8e3-afc5-483f-bc54-40eb7d750ff8",
+        "chatSessionId": "sess_b0097ea7-fbda-476d-b497-f1fae481a569",
+        "timestamp": 1787079362680
+      }
+    ]
+  }
+}

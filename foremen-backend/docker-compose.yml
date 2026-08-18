@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: foremen
+      POSTGRES_USER: foremen
+      POSTGRES_PASSWORD: foremen
+    volumes:
+      - foremen-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U foremen -d foremen"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  foremen-pgdata:

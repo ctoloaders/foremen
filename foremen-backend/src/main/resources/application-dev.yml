@@ -1,0 +1,13 @@
+# Dev environment configuration
+# Fill in with actual dev database credentials before deployment
+
+spring:
+  datasource:
+    url: jdbc:postgresql://<dev-db-host>:5432/foremen
+    username: <dev-username>
+    password: <dev-password>
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false

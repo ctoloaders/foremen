@@ -1,0 +1,17 @@
+# Local development configuration
+# Copy this file to application-local.yml and fill in your values
+
+spring:
+  datasource:
+    # JDBC URL for the local PostgreSQL instance (see docker-compose.yml)
+    url: jdbc:postgresql://localhost:5432/foremen
+    # Database credentials (match POSTGRES_USER/POSTGRES_PASSWORD in docker-compose.yml)
+    username: foremen
+    password: foremen
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      # 'validate' ensures schema matches entities; use 'update' only for prototyping
+      ddl-auto: validate
+    # Set to true to log SQL statements in console during development
+    show-sql: true

@@ -1,0 +1,98 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'org.liquibase:liquibase-core:4.31.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.0.0'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'io.freefair.lombok' version '9.1.0'
+    id 'org.liquibase.gradle' version '3.1.0'
+}
+
+group = 'com.foremen'
+version = '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+    maven { url 'https://repo.spring.io/milestone' }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+dependencies {
+    // Spring Boot Starters
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-cache'
+    implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+
+    // MapStruct
+    implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+
+    // SpringDoc OpenAPI
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
+
+    // Caffeine cache
+    implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    // Liquibase
+    implementation 'org.liquibase:liquibase-core'
+
+    // PostgreSQL (runtime only)
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // Annotation processors (Lombok must be before MapStruct)
+    annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+
+    // Test dependencies
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation "net.jqwik:jqwik:${jqwikVersion}"
+
+    // Liquibase runtime
+    liquibaseRuntime 'org.liquibase:liquibase-core'
+    liquibaseRuntime 'org.liquibase:liquibase-groovy-dsl:4.0.0'
+    liquibaseRuntime 'org.postgresql:postgresql'
+}
+
+compileJava {
+    options.compilerArgs += ['-Amapstruct.defaultComponentModel=spring']
+}
+
+test {
+    useJUnitPlatform()
+}
+
+liquibase {
+    activities {
+        main {
+            changelogFile './database_files/changelog.xml'
+            url 'jdbc:postgresql://localhost:5432/foremen'
+            username 'foremen'
+            password 'foremen'
+        }
+    }
+}
+
+processResources {
+    from('database_files') {
+        into 'database_files'
+    }
+}
+
+wrapper {
+    gradleVersion = '9.1.0'
+}

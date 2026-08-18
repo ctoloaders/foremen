@@ -1,0 +1,12 @@
+spring:
+  profiles:
+    active: local
+  liquibase:
+    change-log: classpath:database_files/changelog.xml
+
+server:
+  port: 8080
+
+springdoc:
+  api-docs:
+    path: /api-docs

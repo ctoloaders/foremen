@@ -25,3 +25,19 @@ dist/
 
 # Excel
 *.xlsx
+
+# Foremen Backend
+foremen-backend/build/
+foremen-backend/.gradle/
+
+# Java artifacts
+*.class
+*.jar
+!foremen-backend/gradle/wrapper/gradle-wrapper.jar
+
+# IDE (Java)
+.idea/
+*.iml
+
+# Backend local secrets
+foremen-backend/src/main/resources/application-local.yml

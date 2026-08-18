@@ -1,0 +1,14 @@
+# Production environment configuration
+# Fill in with actual production database credentials before deployment
+# Consider using environment variables or a secrets manager for sensitive values
+
+spring:
+  datasource:
+    url: jdbc:postgresql://<prod-db-host>:5432/foremen
+    username: <prod-username>
+    password: <prod-password>
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
