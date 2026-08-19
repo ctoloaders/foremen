@@ -58,6 +58,11 @@ dependencies {
     annotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
     annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
 
+    // Test annotation processors (same order for test sources)
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok-mapstruct-binding:0.2.0'
+    testAnnotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+
     // Test dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation "net.jqwik:jqwik:${jqwikVersion}"
@@ -69,6 +74,10 @@ dependencies {
 }
 
 compileJava {
+    options.compilerArgs += ['-Amapstruct.defaultComponentModel=spring']
+}
+
+compileTestJava {
     options.compilerArgs += ['-Amapstruct.defaultComponentModel=spring']
 }
 
