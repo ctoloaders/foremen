@@ -1,0 +1,12 @@
+spring:
+  autoconfigure:
+    exclude: []
+  liquibase:
+    enabled: false
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: create-drop
+  security:
+    user:
+      password: test

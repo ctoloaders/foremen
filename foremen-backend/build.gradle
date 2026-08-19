@@ -28,6 +28,12 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
+dependencyManagement {
+    imports {
+        mavenBom 'org.testcontainers:testcontainers-bom:1.20.6'
+    }
+}
+
 dependencies {
     // Spring Boot Starters
     implementation 'org.springframework.boot:spring-boot-starter-web'
@@ -65,7 +71,15 @@ dependencies {
 
     // Test dependencies
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test'
     testImplementation "net.jqwik:jqwik:${jqwikVersion}"
+
+    // Testcontainers
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.testcontainers:testcontainers'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testRuntimeOnly 'org.postgresql:postgresql'
 
     // Liquibase runtime
     liquibaseRuntime 'org.liquibase:liquibase-core'
