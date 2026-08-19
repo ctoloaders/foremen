@@ -48,23 +48,26 @@ class AdminDaoStructureTest {
     }
 
     @Test
-    @DisplayName("Should declare parent interfaces in correct order: ReadOnlyAdminDao first, PagingAndSortingRepository second, JpaSpecificationExecutor third")
+    @DisplayName("Should declare parent interfaces in correct order: ReadOnlyAdminDao first, PagingAndSortingRepository second, CrudRepository third, JpaSpecificationExecutor fourth")
     void shouldHaveCorrectInterfaceOrder() {
         Type[] genericInterfaces = adminDaoClass.getGenericInterfaces();
 
-        assertEquals(3, genericInterfaces.length,
-                "AdminDao must extend exactly 3 interfaces");
+        assertEquals(4, genericInterfaces.length,
+                "AdminDao must extend exactly 4 interfaces");
 
         String firstInterface = genericInterfaces[0].getTypeName();
         String secondInterface = genericInterfaces[1].getTypeName();
         String thirdInterface = genericInterfaces[2].getTypeName();
+        String fourthInterface = genericInterfaces[3].getTypeName();
 
         assertTrue(firstInterface.contains("ReadOnlyAdminDao"),
                 "First parent interface must be ReadOnlyAdminDao, but was: " + firstInterface);
         assertTrue(secondInterface.contains("PagingAndSortingRepository"),
                 "Second parent interface must be PagingAndSortingRepository, but was: " + secondInterface);
-        assertTrue(thirdInterface.contains("JpaSpecificationExecutor"),
-                "Third parent interface must be JpaSpecificationExecutor, but was: " + thirdInterface);
+        assertTrue(thirdInterface.contains("CrudRepository"),
+                "Third parent interface must be CrudRepository, but was: " + thirdInterface);
+        assertTrue(fourthInterface.contains("JpaSpecificationExecutor"),
+                "Fourth parent interface must be JpaSpecificationExecutor, but was: " + fourthInterface);
     }
 
     @Test

@@ -1,0 +1,663 @@
+{
+  "pbtResults": {
+    "8.1 Write property test for query parser round-trip (Property 1)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787157492656
+    },
+    "8.3 Write property test for I18n sort resolution (Property 3)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787157524347
+    },
+    "8.5 Write property test for permission field masking (Property 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787157573345
+    },
+    "8.2 Write property test for AccessCriteria conjunction (Property 2)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787157582467
+    },
+    "8.4 Write property test for I18n filter field resolution (Property 4)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787157629268
+    },
+    "8.7 Write property test for universal audit (Property 7)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787158078837
+    },
+    "8.6 Write property test for nested field path parsing (Property 6)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787158595612
+    }
+  },
+  "executionHistory": {
+    "1.1 Create AuditLogEntity, AuditLogDao, and Liquibase migration": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798282
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154816267
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155035625
+      }
+    ],
+    "1.2 Create QueryOperator enum with full 20-operator set": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798347
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154817849
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155036427
+      }
+    ],
+    "1.3 Create QueryToken sealed interface and TokenStream utility": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798445
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154819044
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155037305
+      }
+    ],
+    "2.1 Implement QueryTokenizer": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798479
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155047764
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155266105
+      }
+    ],
+    "2.2 Implement SpecificationBuilder with all 20 operators and automatic collection join detection": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798512
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155048701
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155267194
+      }
+    ],
+    "2.3 Write unit tests for QueryOperator enum": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798543
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155276800
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155744104
+      }
+    ],
+    "2.4 Write unit tests for QueryTokenizer": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798565
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155277605
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155745066
+      }
+    ],
+    "3.1 Implement QueryParser (recursive-descent with i18n resolution)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798594
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155278502
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155746216
+      }
+    ],
+    "3.2 Write unit tests for QueryParser": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798617
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155751515
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156253883
+      }
+    ],
+    "4. Checkpoint - Ensure QueryDSL parser tests pass": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798684
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156269425
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156398095
+      }
+    ],
+    "5.1 Create ReadOnlyAdminService interface with abstract methods and find-by-ID defaults": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798716
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156403212
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156624506
+      }
+    ],
+    "5.2 Implement paginated find methods and view support": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798748
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156403949
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156625643
+      }
+    ],
+    "5.3 Implement query parsing (with i18n context), batch find, count, and extension points": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798775
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156632267
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156757630
+      }
+    ],
+    "5.4 Implement I18n sort processing and permission masking": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798795
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156633041
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156756834
+      }
+    ],
+    "6.1 Create AdminService interface with create, update operations and universal saveAudit": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798827
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156764060
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156961735
+      }
+    ],
+    "6.2 Implement delete operations (hard, soft, setPropertiesToNull)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798866
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156966466
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157043125
+      }
+    ],
+    "7. Checkpoint - Ensure all unit tests pass": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798894
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157054109
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157313671
+      }
+    ],
+    "8.1 Write property test for query parser round-trip (Property 1)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798917
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157320543
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157645739
+      }
+    ],
+    "8.2 Write property test for AccessCriteria conjunction (Property 2)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154798950
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157321439
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157646408
+      }
+    ],
+    "8.3 Write property test for I18n sort resolution (Property 3)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799015
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157322510
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157647292
+      }
+    ],
+    "8.4 Write property test for I18n filter field resolution (Property 4)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799078
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157323272
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157648208
+      }
+    ],
+    "8.5 Write property test for permission field masking (Property 5)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799160
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157324321
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157649180
+      }
+    ],
+    "8.6 Write property test for nested field path parsing (Property 6)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799190
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157654630
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158632633
+      }
+    ],
+    "8.7 Write property test for universal audit (Property 7)": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799215
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157655291
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158631644
+      }
+    ],
+    "9.1 Write integration tests for read operations and query filtering": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799243
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158639541
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787160262634
+      }
+    ],
+    "9.2 Write integration tests for text search and numeric operators": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799267
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158640446
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787160263665
+      }
+    ],
+    "9.3 Write integration tests for write operations and audit log": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799315
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158641376
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787160264258
+      }
+    ],
+    "9.4 Write integration tests for nested field filtering and collection joins": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799365
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158642232
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787160265179
+      }
+    ],
+    "10. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787154799419
+      },
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787160272520
+      }
+    ],
+    "1. Implement audit infrastructure and QueryDSL parser foundations": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155037336
+      }
+    ],
+    "2. Implement QueryTokenizer and SpecificationBuilder": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787155745195
+      }
+    ],
+    "3. Implement QueryParser with i18n filter field resolution": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156253929
+      }
+    ],
+    "5. Implement ReadOnlyAdminService interface": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787156757670
+      }
+    ],
+    "6. Implement AdminService interface with universal audit": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787157043253
+      }
+    ],
+    "8. Property-based tests": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787158632682
+      }
+    ],
+    "9. Integration tests with Testcontainers": [
+      {
+        "executionId": "86eb6c82-1acb-4c14-81bf-ed46659c69d0",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787160265209
+      }
+    ],
+    "11.1 Restructure Liquibase changelog to use external changeset files": [
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162921455
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162928459
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787163508176
+      }
+    ],
+    "11.2 Update AuditLogEntity with snapshot fields": [
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162921498
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162929271
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787163508994
+      }
+    ],
+    "11.3 Update AdminService.saveAudit to capture before/after snapshots": [
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162921533
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162930281
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787163510147
+      }
+    ],
+    "11.4 Add history query to AuditLogDao": [
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162921591
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162931097
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787163511078
+      }
+    ],
+    "11.5 Update tests for new audit snapshot functionality": [
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162921626
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787162932012
+      },
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787163512366
+      }
+    ],
+    "11. Add audit entity snapshots (before/after JSON) and restructure changelog": [
+      {
+        "executionId": "e55467d7-9865-4489-b078-d2a337e7fd35",
+        "chatSessionId": "sess_aa66a531-1d81-41a6-a07d-2a09ec39ec27",
+        "timestamp": 1787163512410
+      }
+    ]
+  }
+}

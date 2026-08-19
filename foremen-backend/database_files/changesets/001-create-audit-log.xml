@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="001-create-audit-log" author="foremen">
+        <createTable tableName="audit_log">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="entity_class" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="entity_id" type="BIGINT"/>
+            <column name="operation" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="performed_by" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="performed_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="snapshot_before" type="JSONB"/>
+            <column name="snapshot_after" type="JSONB"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="modified_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <createIndex indexName="idx_audit_log_entity" tableName="audit_log">
+            <column name="entity_class"/>
+            <column name="entity_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_audit_log_performed_at" tableName="audit_log">
+            <column name="performed_at"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

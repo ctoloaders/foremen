@@ -53,6 +53,9 @@ dependencies {
     // Caffeine cache
     implementation 'com.github.ben-manes.caffeine:caffeine'
 
+    // Jackson JSR310 (for JavaTimeModule in audit serialization)
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
     // Liquibase
     implementation 'org.liquibase:liquibase-core'
 
