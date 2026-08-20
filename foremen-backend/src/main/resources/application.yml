@@ -10,3 +10,9 @@ server:
 springdoc:
   api-docs:
     path: /api-docs
+
+foremen:
+  cache:
+    spec: "maximumSize=500,expireAfterWrite=10m"
+  cors:
+    allowed-origins: "http://localhost:3000"

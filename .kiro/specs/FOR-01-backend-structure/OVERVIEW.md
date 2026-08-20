@@ -71,41 +71,27 @@
 
 Спеки выстроены в порядке зависимостей. Каждая следующая опирается на совокупность предыдущих.
 
-```
-FOR-01-01-gradle          ← Фундамент: проект, зависимости
-     │
-FOR-01-02-base-entity     ← BaseEntity, аудит-поля
-     │
-FOR-01-03-exception       ← Единая система ошибок (нужна для всего выше)
-     │
-FOR-01-04-mapstruct       ← MapStruct конфигурация, базовые интерфейсы маппинга
-     │
-FOR-01-05-crud-dao        ← AdminDao, ReadOnlyAdminDao, DAO views
-     │
-FOR-01-06-crud-service    ← AdminService, ReadOnlyAdminService, CustomQueryBuilder
-     │
-FOR-01-07-crud-controller ← AdminController, REST endpoints, валидация
-     │
-FOR-01-08-audit           ← Audit система (snapshot + changes)
-     │
-FOR-01-09-liquibase       ← Миграции БД, changelog, конвенции таблиц
-     │
-     └── FOR-01-10-config  ← Общие конфиги: DataSource, Security stub, OpenAPI, Cache
-```
+| # | Спека | Статус | Что реализовано |
+|---|-------|--------|-----------------|
+| 01 | FOR-01-01-gradle | ✅ | Gradle 9.1 + Spring Boot 4.0 + Java 25, все зависимости (Lombok, MapStruct, jqwik, Testcontainers, Liquibase, SpringDoc, Caffeine, Jackson JSR310), annotation processors, docker-compose PostgreSQL 16 |
+| 02 | FOR-01-02-base-entity | ✅ | `BaseEntity` (@MappedSuperclass, id/createdDate/modifiedDate), `JpaAuditingConfig`, `ForemenApplication` |
+| 03 | FOR-01-03-exception | ✅ | `ForemenApiException` (status + messageCode + params), `ForemenControllerAdvice` (validation, data integrity, access denied, 500), `ErrorResponse` DTO, `MessageResolver`, messages.properties (PL/RU) |
+| 04 | FOR-01-04-mapstruct | ✅ | `ServiceToDaoMapper`, `ControllerToServiceMapper` (10 generic params), `I18nPropertiesMapper`, `ForemenMapperConfig` (IGNORE nulls, disable builders), `@I18nBlankToNull` qualifier |
+| 05 | FOR-01-05-crud-dao | ✅ | `AdminDao` (JpaRepository + JpaSpecificationExecutor + custom bulk ops), `ReadOnlyAdminDao` (view support, findAllByIdIn), `QueryParser` (RSQL-like DSL → JPA Specification) |
+| 06 | FOR-01-06-crud-service | ✅ | `ReadOnlyAdminService` (find/findExtended/count + i18n sort/filter + ACL hooks + view queries), `AdminService` (create/update/delete/bulk + universal audit with JSONB snapshots + setPropertiesToNull + softDelete) |
+| 07 | FOR-01-07-crud-controller | ✅ | `AdminController` (11 REST endpoints as default methods), `AdminReadOnlyController`, `ForemenLocaleInterceptor` + `ForemenWebMvcConfig` |
+| 08 | FOR-01-10-config | ✅ | `SecurityConfig` (permitAll stub, CSRF off, stateless, no frameOptions), `CacheConfig` (CaffeineCacheManager с configurable spec), `CorsConfig` (WebMvcConfigurer, configurable origins), application.yml properties |
 
-### Независимые ветки (могут делаться параллельно после FOR-01-03):
-- **FOR-01-04** (MapStruct) — независим, но нужен для FOR-01-05+
-- **FOR-01-09** (Liquibase) — независим, может делаться параллельно с FOR-01-05..08
-- **FOR-01-10** (Config) — независим, может делаться параллельно
+*Примечание: FOR-01-08-audit и FOR-01-09-liquibase были реализованы в рамках FOR-01-06/07 и FOR-01-01 соответственно, отдельные спеки не создавались.*
 
 ### Граф зависимостей:
 ```
-01-gradle → 02-base-entity → 03-exception → 04-mapstruct → 05-crud-dao → 06-crud-service → 07-crud-controller → 08-audit
-                                    ↓                                                              ↑
-                              09-liquibase ─────────────────────────────────────────────────────────┘
-                                    ↓
-                              10-config ────────────────────────────────────────────────────────────┘
+01-gradle → 02-base-entity → 03-exception → 04-mapstruct → 05-crud-dao → 06-crud-service → 07-crud-controller
+                                                                                                    ↑
+                                                                           08-config ───────────────┘
 ```
+
+**FOR-01 полностью завершён.** Audit и Liquibase были покрыты в рамках FOR-01-06/07 и FOR-01-01.
 
 ## Адаптация под Foremen
 
@@ -116,6 +102,6 @@ FOR-01-09-liquibase       ← Миграции БД, changelog, конвенци
 | БД | MySQL | PostgreSQL |
 | javax.* | javax.persistence | jakarta.persistence |
 | Cloud | AWS | Google Cloud |
-| i18n языки | EN, RU, PL, UA, BY | RU, EN (расширяемо) |
+| i18n языки | EN, RU, PL, UA, BY | RU, PL (расширяемо) |
 | Пакет | com.tickets | com.foremen |
 | Audit | JSON в MySQL | JSONB в PostgreSQL |
