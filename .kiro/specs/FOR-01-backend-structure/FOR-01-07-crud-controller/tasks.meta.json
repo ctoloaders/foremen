@@ -1,0 +1,459 @@
+{
+  "pbtResults": {
+    "6.1 Write property test for create flow data integrity (Property 1)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787226227323
+    },
+    "6.5 Write property test for update path ID preservation (Property 5)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787226260829
+    },
+    "6.4 Write property test for locale interceptor round-trip (Property 4)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787226291439
+    },
+    "6.3 Write property test for query passthrough to service (Property 3)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787226366309
+    },
+    "6.2 Write property test for pagination structure preservation (Property 2)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787226407142
+    }
+  },
+  "executionHistory": {
+    "1.1 Create ForemenLocaleInterceptor": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223643367
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223731657
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223792215
+      }
+    ],
+    "1.2 Create ForemenWebMvcConfig": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223643653
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223732375
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223793076
+      }
+    ],
+    "1.3 Write unit tests for ForemenLocaleInterceptor": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223643869
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223797634
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223896527
+      }
+    ],
+    "2.1 Create AdminController interface with type parameters and abstract methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223643942
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223798441
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223897372
+      }
+    ],
+    "2.2 Implement create and bulk create default methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644079
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223902790
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223995483
+      }
+    ],
+    "2.3 Implement update default method": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644142
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223903699
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223995582
+      }
+    ],
+    "2.4 Implement find, findExtended, findById, and getCount default methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644218
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223904585
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223996500
+      }
+    ],
+    "2.5 Implement audit, delete, setPropertiesToNull, and i18n default methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644300
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223905631
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223997605
+      }
+    ],
+    "3.1 Create AdminReadOnlyController interface": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644400
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224002640
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224365436
+      }
+    ],
+    "4. Checkpoint - Ensure all source files compile": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644517
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224380703
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224490497
+      }
+    ],
+    "5.1 Write unit tests for AdminController default methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644588
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224498700
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226076748
+      }
+    ],
+    "5.2 Write unit tests for AdminReadOnlyController default methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644669
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224499429
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226077258
+      }
+    ],
+    "5.3 Write unit tests for error propagation": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223644822
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224500327
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226078453
+      }
+    ],
+    "6.1 Write property test for create flow data integrity (Property 1)": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223645098
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226085209
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226423266
+      }
+    ],
+    "6.2 Write property test for pagination structure preservation (Property 2)": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223645558
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226086193
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226424100
+      }
+    ],
+    "6.3 Write property test for query passthrough to service (Property 3)": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223645801
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226086865
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226424906
+      }
+    ],
+    "6.4 Write property test for locale interceptor round-trip (Property 4)": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223646003
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226088037
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226425816
+      }
+    ],
+    "6.5 Write property test for update path ID preservation (Property 5)": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223646129
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226088750
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226426753
+      }
+    ],
+    "7. Checkpoint - Ensure all unit and property tests pass": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223646454
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226437138
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226550086
+      }
+    ],
+    "8.1 Write integration tests for AdminController endpoints": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223647014
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226555224
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787227043490
+      }
+    ],
+    "8.2 Write integration tests for AdminReadOnlyController endpoints": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223647092
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226555968
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787227042654
+      }
+    ],
+    "8.3 Write integration tests for locale interceptor in HTTP context": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223647171
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226556885
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787227041943
+      }
+    ],
+    "9. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223647247
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787227048519
+      },
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787227188199
+      }
+    ],
+    "1. Implement locale interceptor and web configuration": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223896683
+      }
+    ],
+    "2. Implement AdminController interface": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787223997626
+      }
+    ],
+    "3. Implement AdminReadOnlyController interface": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787224365560
+      }
+    ],
+    "5. Unit tests for controller default methods": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226078976
+      }
+    ],
+    "6. Property-based tests": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787226426786
+      }
+    ],
+    "8. Integration tests with MockMvc": [
+      {
+        "executionId": "13264af9-898e-4b23-83ea-0964b47dd684",
+        "chatSessionId": "sess_6002ebc4-84d7-4470-98ed-3de3b257eae0",
+        "timestamp": 1787227043521
+      }
+    ]
+  }
+}
