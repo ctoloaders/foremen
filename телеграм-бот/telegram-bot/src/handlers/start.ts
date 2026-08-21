@@ -27,9 +27,10 @@ export async function handleStart(ctx: Context) {
   }
 
   // Show project selection
+  // callback_data limit: 64 bytes. Use index to avoid UTF-8 overflow.
   const keyboard = new InlineKeyboard();
-  for (const project of projects) {
-    keyboard.text(project.name, `project:${project.name}`).row();
+  for (let i = 0; i < projects.length; i++) {
+    keyboard.text(projects[i].name, `p${i}`).row();
   }
 
   // Set state to SELECT_PROJECT
@@ -37,31 +38,43 @@ export async function handleStart(ctx: Context) {
   state.step = ConversationStep.SELECT_PROJECT;
   await setState(state);
 
+  // Cache projects for callback resolution
+  userProjectsCache.set(telegramId, projects);
+
   await ctx.reply(
     `Привет, ${worker.name}! (${worker.role})\nВыберите проект:`,
     { reply_markup: keyboard }
   );
 }
 
+// In-memory cache: telegramId -> projects list (for resolving index from callback)
+const userProjectsCache = new Map<number, any[]>();
+
 export async function handleProjectSelection(ctx: Context) {
   const telegramId = ctx.from?.id;
   if (!telegramId) return;
 
   const data = ctx.callbackQuery?.data;
-  if (!data?.startsWith("project:")) return;
+  if (!data?.startsWith("p")) return;
 
-  const projectName = data.slice("project:".length);
+  const index = parseInt(data.slice(1));
+  if (isNaN(index)) return;
 
-  // Get project details
-  const worker = await getWorker(telegramId);
-  if (!worker) return;
+  // Resolve project from cache or re-fetch
+  let projects = userProjectsCache.get(telegramId);
+  if (!projects) {
+    const worker = await getWorker(telegramId);
+    if (!worker) return;
+    projects = await getProjectsForWorker(worker);
+  }
 
-  const projects = await getProjectsForWorker(worker);
-  const project = projects.find(p => p.name === projectName);
+  const project = projects[index];
   if (!project) {
     await ctx.answerCallbackQuery({ text: "Проект не найден" });
     return;
   }
+
+  userProjectsCache.delete(telegramId);
 
   // Update state
   const state = emptyState(telegramId);
