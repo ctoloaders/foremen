@@ -12,5 +12,6 @@
     <include file="database_files/changesets/005-create-role-resources.xml"/>
     <include file="database_files/changesets/006-seed-client-role.xml"/>
     <include file="database_files/changesets/007-seed-permissions.xml"/>
+    <include file="database_files/changesets/008-create-users.xml"/>
 
 </databaseChangeLog>
