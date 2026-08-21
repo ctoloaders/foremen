@@ -1,0 +1,404 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Scaffold Vite 6 + React 19 + TypeScript 5 project": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864294
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301877276
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787302098799
+      }
+    ],
+    "1.2 Configure TypeScript with strict mode and path aliases": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864399
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787302103757
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303442740
+      }
+    ],
+    "1.3 Create Vite configuration with proxy and path alias": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864428
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787302104706
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303443621
+      }
+    ],
+    "2.1 Create Tailwind CSS 4 + design tokens stylesheet": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864456
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303450455
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303583994
+      }
+    ],
+    "2.2 Configure shadcn/ui component library": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864480
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303451407
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303584878
+      }
+    ],
+    "3.1 Configure TanStack Query client": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864509
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303591328
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303752871
+      }
+    ],
+    "3.2 Create Zustand store scaffold": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864538
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303592172
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303753651
+      }
+    ],
+    "3.3 Configure React Router v7": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864572
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303593104
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303754584
+      }
+    ],
+    "3.4 Install forms and validation dependencies": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864594
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303593840
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303755623
+      }
+    ],
+    "4.1 Configure i18next with PL and RU translations": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864621
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303594790
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303756342
+      }
+    ],
+    "4.2 Create application entry point": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864659
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303761391
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304702331
+      }
+    ],
+    "4.3 Create project folder structure": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864688
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303452177
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303585752
+      }
+    ],
+    "5. Checkpoint - Verify core setup": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864714
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787305006686
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787305257669
+      }
+    ],
+    "6.1 Configure Vitest with Testing Library": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864745
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304708121
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304823356
+      }
+    ],
+    "6.2 Create Playwright configuration": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864770
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304708971
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304821841
+      }
+    ],
+    "6.3 Configure ESLint and Prettier": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864795
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304709808
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304825287
+      }
+    ],
+    "6.4 Write smoke test to verify infrastructure": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864822
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304892760
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787305002086
+      }
+    ],
+    "7.1 Create full-stack Docker Compose at workspace root": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864853
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304710705
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304824422
+      }
+    ],
+    "7.2 Create environment configuration": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864890
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304711568
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304822651
+      }
+    ],
+    "7.3 Create frontend Dockerfile": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301864944
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304829534
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304887901
+      }
+    ],
+    "8. Final checkpoint - Full verification": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787301865045
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787305262018
+      },
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787305409584
+      }
+    ],
+    "1. Initialize project and build tooling": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303443645
+      }
+    ],
+    "2. Set up styling, design tokens, and component library": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303584908
+      }
+    ],
+    "3. Set up state management, routing, and forms": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787303755650
+      }
+    ],
+    "4. Set up internationalization, icons, and application entry": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304702493
+      }
+    ],
+    "7. Docker Compose and environment configuration": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787304888098
+      }
+    ],
+    "6. Set up testing and code quality": [
+      {
+        "executionId": "1a04411a-f415-4978-93d1-1bfea2a51b28",
+        "chatSessionId": "sess_a4630088-980e-4624-af5d-1f813f0fb1d7",
+        "timestamp": 1787305002146
+      }
+    ]
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Auto-commit after all tasks complete",
+      "trigger": "PostTaskExec",
+      "action": {
+        "type": "agent",
+        "prompt": "After completing this task, check if ALL tasks in the current tasks.md are now completed (remaining = 0). If so, stage all changed files (including .kiro/specs/ files) and create a git commit with a descriptive message following conventional commits format (feat/fix/refactor). Include the spec ID in the commit scope if available. Do NOT push — only commit locally."
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "common": {
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "delete": "Usuń",
+    "edit": "Edytuj",
+    "loading": "Ładowanie..."
+  },
+  "nav": {
+    "dashboard": "Panel",
+    "projects": "Projekty"
+  }
+}
