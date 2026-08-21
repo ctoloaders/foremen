@@ -8,6 +8,33 @@
   },
   "nav": {
     "dashboard": "Panel",
-    "projects": "Projekty"
+    "projects": "Projekty",
+    "rooms": "Pomieszczenia",
+    "estimate": "Kosztorys",
+    "materials": "Materiały",
+    "finances": "Finanse",
+    "deliveries": "Dostawy",
+    "users": "Użytkownicy",
+    "sections": {
+      "warehouse": "Magazyn",
+      "system": "System"
+    }
+  },
+  "pages": {
+    "dashboard": { "title": "Panel", "description": "Przegląd projektu" },
+    "projects": { "title": "Projekty", "description": "Zarządzanie projektami" },
+    "rooms": { "title": "Pomieszczenia", "description": "Zarządzanie pomieszczeniami" },
+    "estimate": { "title": "Kosztorys", "description": "Kosztorysowanie" },
+    "materials": { "title": "Materiały", "description": "Zarządzanie materiałami" },
+    "finances": { "title": "Finanse", "description": "Zarządzanie finansami" },
+    "deliveries": { "title": "Dostawy", "description": "Zarządzanie dostawami" },
+    "users": { "title": "Użytkownicy", "description": "Zarządzanie użytkownikami" },
+    "notFound": { "title": "404 — Strona nie znaleziona", "backToDashboard": "Wróć do panelu" }
+  },
+  "topBar": {
+    "language": { "pl": "PL", "ru": "RU" }
+  },
+  "skeleton": {
+    "loading": "Ładowanie..."
   }
 }

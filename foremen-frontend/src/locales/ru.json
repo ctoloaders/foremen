@@ -8,6 +8,33 @@
   },
   "nav": {
     "dashboard": "Панель",
-    "projects": "Проекты"
+    "projects": "Проекты",
+    "rooms": "Помещения",
+    "estimate": "Смета",
+    "materials": "Материалы",
+    "finances": "Финансы",
+    "deliveries": "Доставки",
+    "users": "Пользователи",
+    "sections": {
+      "warehouse": "Склад",
+      "system": "Система"
+    }
+  },
+  "pages": {
+    "dashboard": { "title": "Панель", "description": "Обзор проекта" },
+    "projects": { "title": "Проекты", "description": "Управление проектами" },
+    "rooms": { "title": "Помещения", "description": "Управление помещениями" },
+    "estimate": { "title": "Смета", "description": "Составление сметы" },
+    "materials": { "title": "Материалы", "description": "Управление материалами" },
+    "finances": { "title": "Финансы", "description": "Управление финансами" },
+    "deliveries": { "title": "Доставки", "description": "Управление доставками" },
+    "users": { "title": "Пользователи", "description": "Управление пользователями" },
+    "notFound": { "title": "404 — Страница не найдена", "backToDashboard": "Вернуться на панель" }
+  },
+  "topBar": {
+    "language": { "pl": "PL", "ru": "RU" }
+  },
+  "skeleton": {
+    "loading": "Загрузка..."
   }
 }

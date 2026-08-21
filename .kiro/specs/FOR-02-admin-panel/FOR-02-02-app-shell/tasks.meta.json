@@ -1,0 +1,431 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create centralized navigation configuration": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964235
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313050048
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313235238
+      }
+    ],
+    "1.2 Create `useBreakpoint` hook": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964273
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313051260
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313235997
+      }
+    ],
+    "1.3 Create `usePageMeta` hook": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964304
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313051839
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313236844
+      }
+    ],
+    "1.4 Update i18n locale files with navigation and page keys": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964328
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313053060
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313237923
+      }
+    ],
+    "1.5 Update `useUIStore` to persist locale in localStorage": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964367
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313054072
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313238907
+      }
+    ],
+    "2. Checkpoint — Verify config and hooks": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964392
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313256514
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318486088
+      }
+    ],
+    "3.1 Create `NavItem` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964487
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313257326
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318488220
+      }
+    ],
+    "3.2 Create `UserFooter` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964511
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313258187
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318488255
+      }
+    ],
+    "3.3 Create `Sidebar` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964539
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318494207
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318675172
+      }
+    ],
+    "3.4 Create `TopBar` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964568
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318495092
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318676160
+      }
+    ],
+    "3.5 Create `BottomNav` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964587
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318495755
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318677690
+      }
+    ],
+    "3.6 Create `Drawer` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964609
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318496804
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318679088
+      }
+    ],
+    "4. Checkpoint — Verify layout components": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964639
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318693622
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318908370
+      }
+    ],
+    "5.1 Create `SkeletonPage` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964679
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313259197
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318488726
+      }
+    ],
+    "5.2 Create `RouteErrorBoundary` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964703
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313260372
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318489407
+      }
+    ],
+    "6.1 Create `AppShell` layout component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964734
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318694522
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318911253
+      }
+    ],
+    "6.2 Create placeholder page components": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964764
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318695243
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318910219
+      }
+    ],
+    "6.3 Create `NotFoundPage` component": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964805
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318697556
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318909311
+      }
+    ],
+    "6.4 Wire up router with lazy loading and App Shell layout": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964835
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318916574
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319066549
+      }
+    ],
+    "7. Final checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964876
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319346092
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319546745
+      }
+    ],
+    "8.1 Write unit tests for navigation config and hooks": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964911
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319081996
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319333620
+      }
+    ],
+    "8.2 Write unit tests for layout components": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964942
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319082830
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319334535
+      }
+    ],
+    "8.3 Write integration tests for AppShell": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787312964971
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319083986
+      },
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319338048
+      }
+    ],
+    "1. Navigation configuration and utility hooks": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787313238941
+      }
+    ],
+    "5. Skeleton page and error boundary": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318489523
+      }
+    ],
+    "3. Core layout components": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787318679272
+      }
+    ],
+    "6. App Shell layout and routing": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319066578
+      }
+    ],
+    "8. Unit and integration tests": [
+      {
+        "executionId": "5c552991-bd4c-4a37-814c-03ce80479d7e",
+        "chatSessionId": "sess_aebde894-078f-438f-bab2-86dacac4c405",
+        "timestamp": 1787319339879
+      }
+    ]
+  }
+}
