@@ -74,7 +74,32 @@ export function createTextHandler(bot: Bot) {
       }
 
       case ConversationStep.SELECT_PROJECT: {
-        await ctx.reply("Выберите проект из кнопок выше, или отправьте /start заново.");
+        // User types project number
+        const num = parseInt(text);
+        if (isNaN(num) || num < 1) {
+          await ctx.reply("Введите номер проекта из списка.");
+          return;
+        }
+
+        // Import projectsCache from start handler
+        const { projectsCache } = await import("./start.js");
+        const projects = projectsCache.get(telegramId);
+        if (!projects || num > projects.length) {
+          await ctx.reply("Неверный номер. Отправьте /start заново.");
+          return;
+        }
+
+        const project = projects[num - 1];
+        projectsCache.delete(telegramId);
+
+        state.step = ConversationStep.AWAIT_PHOTO;
+        state.projectName = project.name;
+        state.projectDriveUrl = project.googleDriveUrl;
+        state.projectSheetsUrl = project.googleSheetsUrl;
+        await setState(state);
+
+        const cancelKb2 = new InlineKeyboard().text("❌ Отмена", "cancel");
+        await ctx.reply(`Проект: ${project.name}\n\nПришлите фото чека 📸`, { reply_markup: cancelKb2 });
         break;
       }
 

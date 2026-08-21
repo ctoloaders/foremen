@@ -26,32 +26,31 @@ export async function handleStart(ctx: Context) {
     return;
   }
 
-  // Show project selection (use index as callback_data to avoid 64-byte limit)
-  const keyboard = new InlineKeyboard();
+  // Show project selection as numbered list + ask to type number
+  // (Inline keyboard causes BUTTON_DATA_INVALID with many projects)
   const maxToShow = Math.min(projects.length, 50);
+  let message = `Привет, ${worker.name}! (${worker.role})\nВыберите проект (введите номер):\n\n`;
   for (let i = 0; i < maxToShow; i++) {
-    // Truncate label to 30 chars to ensure button text fits
-    const name = projects[i].name;
-    const label = name.length > 30 ? name.slice(0, 30) + "…" : name;
-    keyboard.text(label, `p:${i}`).row();
+    message += `${i + 1}. ${projects[i].name}\n`;
+  }
+  if (projects.length > maxToShow) {
+    message += `\n... и ещё ${projects.length - maxToShow}`;
   }
 
-  // Set state to SELECT_PROJECT — store projects list temporarily
+  // Set state to SELECT_PROJECT
   const state = emptyState(telegramId);
   state.step = ConversationStep.SELECT_PROJECT;
   await setState(state);
 
-  // Store projects in a module-level cache for this user (needed for callback resolution)
+  // Store projects in cache for number resolution
   projectsCache.set(telegramId, projects);
 
-  await ctx.reply(
-    `Привет, ${worker.name}! (${worker.role})\nВыберите проект:`,
-    { reply_markup: keyboard }
-  );
+  const cancelKb = new InlineKeyboard().text("❌ Отмена", "cancel");
+  await ctx.reply(message, { reply_markup: cancelKb });
 }
 
-// Cache projects per user for callback resolution (cleared after selection)
-const projectsCache = new Map<number, any[]>();
+// Cache projects per user for number selection (cleared after selection)
+export const projectsCache = new Map<number, any[]>();
 
 export async function handleProjectSelection(ctx: Context) {
   const telegramId = ctx.from?.id;
