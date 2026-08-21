@@ -26,7 +26,7 @@ export function createBot(): Bot {
   bot.command("cancel", handleCancel);
 
   // Callback queries (project selection)
-  bot.callbackQuery(/^project:/, handleProjectSelection);
+  bot.callbackQuery(/^p:/, handleProjectSelection);
 
   // Callback query: cancel button
   bot.callbackQuery("cancel", async (ctx) => {

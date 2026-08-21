@@ -28,9 +28,12 @@ export async function handleStart(ctx: Context) {
 
   // Show project selection (use index as callback_data to avoid 64-byte limit)
   const keyboard = new InlineKeyboard();
-  for (let i = 0; i < projects.length; i++) {
-    const label = projects[i].name.length > 40 ? projects[i].name.slice(0, 40) + "..." : projects[i].name;
-    keyboard.text(label, `project:${i}`).row();
+  const maxToShow = Math.min(projects.length, 50);
+  for (let i = 0; i < maxToShow; i++) {
+    // Truncate label to 30 chars to ensure button text fits
+    const name = projects[i].name;
+    const label = name.length > 30 ? name.slice(0, 30) + "…" : name;
+    keyboard.text(label, `p:${i}`).row();
   }
 
   // Set state to SELECT_PROJECT — store projects list temporarily
@@ -55,9 +58,9 @@ export async function handleProjectSelection(ctx: Context) {
   if (!telegramId) return;
 
   const data = ctx.callbackQuery?.data;
-  if (!data?.startsWith("project:")) return;
+  if (!data?.startsWith("p:")) return;
 
-  const index = parseInt(data.slice("project:".length));
+  const index = parseInt(data.slice("p:".length));
   
   // Get projects from cache or re-fetch
   let projects = projectsCache.get(telegramId);
