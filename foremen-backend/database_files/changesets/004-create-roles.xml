@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="004-create-roles" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="roles"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="roles">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_roles_code"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description_ru" type="VARCHAR(500)"/>
+            <column name="description_pl" type="VARCHAR(500)"/>
+            <column name="system" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="004-seed-roles" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles</sqlCheck>
+        </preConditions>
+
+        <insert tableName="roles">
+            <column name="code" value="ADMIN"/>
+            <column name="name_ru" value="Администратор"/>
+            <column name="name_pl" value="Administrator"/>
+            <column name="description_ru" value="Полный доступ ко всем ресурсам и операциям"/>
+            <column name="description_pl" value="Pełny dostęp do wszystkich zasobów i operacji"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="MANAGER"/>
+            <column name="name_ru" value="Менеджер"/>
+            <column name="name_pl" value="Manager"/>
+            <column name="description_ru" value="Управление проектами и сотрудниками"/>
+            <column name="description_pl" value="Zarządzanie projektami i pracownikami"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="FOREMAN"/>
+            <column name="name_ru" value="Прораб"/>
+            <column name="name_pl" value="Brygadzista"/>
+            <column name="description_ru" value="Управление бригадой и работами на объекте"/>
+            <column name="description_pl" value="Zarządzanie brygadą i pracami na obiekcie"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="WORKER"/>
+            <column name="name_ru" value="Рабочий"/>
+            <column name="name_pl" value="Pracownik"/>
+            <column name="description_ru" value="Выполнение работ и отчётность"/>
+            <column name="description_pl" value="Wykonywanie prac i raportowanie"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+        <insert tableName="roles">
+            <column name="code" value="FINANCIER"/>
+            <column name="name_ru" value="Финансист"/>
+            <column name="name_pl" value="Finansista"/>
+            <column name="description_ru" value="Управление финансами и сметами"/>
+            <column name="description_pl" value="Zarządzanie finansami i kosztorysami"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

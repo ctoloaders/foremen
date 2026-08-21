@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Progress tracking start",
+      "trigger": "PreToolUse",
+      "action": {
+        "type": "command",
+        "command": "When start a new spec - add in progress status in the corresponding part of PROGRESS.md"
+      },
+      "description": "When start a new spec - add in progress status in the corresponding part of PROGRESS.md",
+      "matcher": "task",
+      "enabled": true
+    }
+  ]
+}

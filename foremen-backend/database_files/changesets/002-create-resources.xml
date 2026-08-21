@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002-create-resources" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="resources"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="resources">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_resources_code"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description_ru" type="VARCHAR(500)"/>
+            <column name="description_pl" type="VARCHAR(500)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="002-seed-resources" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="PROJECTS"/>
+            <column name="name_ru" value="Проекты"/>
+            <column name="name_pl" value="Projekty"/>
+            <column name="description_ru" value="Модуль управления проектами"/>
+            <column name="description_pl" value="Moduł zarządzania projektami"/>
+        </insert>
+        <insert tableName="resources">
+            <column name="code" value="ROOMS"/>
+            <column name="name_ru" value="Помещения"/>
+            <column name="name_pl" value="Pomieszczenia"/>
+            <column name="description_ru" value="Модуль управления помещениями"/>
+            <column name="description_pl" value="Moduł zarządzania pomieszczeniami"/>
+        </insert>
+        <insert tableName="resources">
+            <column name="code" value="ESTIMATE"/>
+            <column name="name_ru" value="Смета"/>
+            <column name="name_pl" value="Kosztorys"/>
+            <column name="description_ru" value="Модуль сметы"/>
+            <column name="description_pl" value="Moduł kosztorysowania"/>
+        </insert>
+        <insert tableName="resources">
+            <column name="code" value="WAREHOUSE"/>
+            <column name="name_ru" value="Склад"/>
+            <column name="name_pl" value="Magazyn"/>
+            <column name="description_ru" value="Модуль склада"/>
+            <column name="description_pl" value="Moduł magazynowy"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

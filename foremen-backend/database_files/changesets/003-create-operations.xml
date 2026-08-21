@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="003-create-operations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="operations"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="operations">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(50)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_operations_code"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="003-seed-operations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM operations</sqlCheck>
+        </preConditions>
+
+        <insert tableName="operations">
+            <column name="code" value="CREATE"/>
+            <column name="name_ru" value="Создание"/>
+            <column name="name_pl" value="Tworzenie"/>
+        </insert>
+        <insert tableName="operations">
+            <column name="code" value="READ"/>
+            <column name="name_ru" value="Чтение"/>
+            <column name="name_pl" value="Odczyt"/>
+        </insert>
+        <insert tableName="operations">
+            <column name="code" value="UPDATE"/>
+            <column name="name_ru" value="Редактирование"/>
+            <column name="name_pl" value="Edycja"/>
+        </insert>
+        <insert tableName="operations">
+            <column name="code" value="DELETE"/>
+            <column name="name_ru" value="Удаление"/>
+            <column name="name_pl" value="Usuwanie"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

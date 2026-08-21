@@ -1,0 +1,595 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create changeset `002-create-resources.xml` with table DDL and seed data": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012542
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336023747
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336186118
+      }
+    ],
+    "1.2 Create changeset `003-create-operations.xml` with table DDL and seed data": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012646
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336024658
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336187029
+      }
+    ],
+    "1.3 Create changeset `004-create-roles.xml` with table DDL and seed data": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012680
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336025526
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336189428
+      }
+    ],
+    "1.4 Create changeset `005-create-role-resources.xml` with join tables": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012715
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336199194
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336291059
+      }
+    ],
+    "2.1 Create ResourceEntity": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012740
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336200005
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336291975
+      }
+    ],
+    "2.2 Create OperationEntity": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012768
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336201077
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336292805
+      }
+    ],
+    "2.3 Create RoleEntity": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012799
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336298573
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336359781
+      }
+    ],
+    "2.4 Create RoleResourceEntity": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012825
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336299380
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336360361
+      }
+    ],
+    "3.1 Create ResourceDao, OperationDao, RoleDao, and RoleResourceDao": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012856
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336365812
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336423414
+      }
+    ],
+    "4.1 Create service model records": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012884
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336429163
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336519201
+      }
+    ],
+    "4.2 Create ServiceToDaoMapper implementations": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012926
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336429974
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336520063
+      }
+    ],
+    "5. Checkpoint - Verify entities, DAOs, and mappers compile": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336012966
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337756122
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337820264
+      }
+    ],
+    "6.1 Create ResourceService (read-only, Lombok @Getter)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013006
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336531781
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336637729
+      }
+    ],
+    "6.2 Create OperationService (read-only, Lombok @Getter)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013035
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336532679
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336638557
+      }
+    ],
+    "6.3 Create RoleService (full CRUD + permissions, Lombok @Getter)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013073
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336533682
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336639546
+      }
+    ],
+    "7.1 Create Role DTO models": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013101
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336644771
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336702346
+      }
+    ],
+    "7.2 Create Permission DTO models": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013135
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336645531
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336702915
+      }
+    ],
+    "7.3 Create RoleControllerMapper": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013168
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336708089
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336759828
+      }
+    ],
+    "8.1 Create ResourceController (read-only)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013200
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336780698
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336844244
+      }
+    ],
+    "8.2 Create OperationController (read-only)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013223
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336781721
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336845097
+      }
+    ],
+    "8.3 Create RoleController (full CRUD + permissions)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013315
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336782499
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336846059
+      }
+    ],
+    "9. Checkpoint - Verify full stack compiles and application starts": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013338
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337832822
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787338049978
+      }
+    ],
+    "10.1 Write property test for i18n locale resolution": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013365
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336856443
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336984261
+      }
+    ],
+    "10.2 Write property test for system role deletion protection": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013415
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336991405
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337555899
+      }
+    ],
+    "10.3 Write property test for permission replacement correctness": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013454
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336992267
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337556907
+      }
+    ],
+    "10.4 Write property test for role-resource uniqueness invariant": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013485
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336993283
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337557775
+      }
+    ],
+    "10.5 Write property test for i18n empty value normalization": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013518
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336857259
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336985210
+      }
+    ],
+    "11.1 Write integration tests for ResourceController and OperationController": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013551
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336994212
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337558941
+      }
+    ],
+    "11.2 Write integration tests for RoleController CRUD": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013573
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336995138
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337559763
+      }
+    ],
+    "11.3 Write integration tests for permission management": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013614
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337568985
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337744516
+      }
+    ],
+    "12. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336013637
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787338055698
+      },
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787338475570
+      }
+    ],
+    "1. Create Liquibase changesets for ABAC database schema": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336291092
+      }
+    ],
+    "2. Implement JPA entities": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336360432
+      }
+    ],
+    "3. Implement DAO interfaces": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336423480
+      }
+    ],
+    "4. Implement service models and mappers": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336520237
+      }
+    ],
+    "6. Implement services": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336639666
+      }
+    ],
+    "7. Implement controller DTOs and mapper": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336759854
+      }
+    ],
+    "8. Implement controllers": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787336846085
+      }
+    ],
+    "10. Write property-based tests (jqwik)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337557810
+      }
+    ],
+    "11. Write integration tests (Testcontainers)": [
+      {
+        "executionId": "90fee5d3-d18e-4745-bb9b-d6fd8b552a90",
+        "chatSessionId": "sess_ba4a5929-48ee-4c88-924a-7406ea64cb06",
+        "timestamp": 1787337744574
+      }
+    ]
+  }
+}

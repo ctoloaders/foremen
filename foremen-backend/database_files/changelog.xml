@@ -6,5 +6,9 @@
         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
 
     <include file="database_files/changesets/001-create-audit-log.xml"/>
+    <include file="database_files/changesets/002-create-resources.xml"/>
+    <include file="database_files/changesets/003-create-operations.xml"/>
+    <include file="database_files/changesets/004-create-roles.xml"/>
+    <include file="database_files/changesets/005-create-role-resources.xml"/>
 
 </databaseChangeLog>

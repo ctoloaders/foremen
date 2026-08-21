@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Progress tracking end",
+      "trigger": "PostToolUse",
+      "action": {
+        "type": "command",
+        "command": "When finish a spec - add completed status in the corresponding part of PROGRESS.md"
+      },
+      "description": "When finish a spec - add completed status in the corresponding part of PROGRESS.md",
+      "matcher": "task",
+      "enabled": true
+    }
+  ]
+}

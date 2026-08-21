@@ -1,0 +1,16 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/foremen}
+    username: ${SPRING_DATASOURCE_USERNAME:foremen}
+    password: ${SPRING_DATASOURCE_PASSWORD:foremen}
+    driver-class-name: org.postgresql.Driver
+  liquibase:
+    enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:validate}
+    show-sql: false
+
+foremen:
+  cors:
+    allowed-origins: "http://localhost:3000"
