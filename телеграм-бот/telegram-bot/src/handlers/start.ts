@@ -26,15 +26,10 @@ export async function handleStart(ctx: Context) {
     return;
   }
 
-  // Show project selection as numbered list + ask to type number
-  // (Inline keyboard causes BUTTON_DATA_INVALID with many projects)
-  const maxToShow = Math.min(projects.length, 50);
-  let message = `Привет, ${worker.name}! (${worker.role})\nВыберите проект (введите номер):\n\n`;
-  for (let i = 0; i < maxToShow; i++) {
-    message += `${i + 1}. ${projects[i].name}\n`;
-  }
-  if (projects.length > maxToShow) {
-    message += `\n... и ещё ${projects.length - maxToShow}`;
+  // Show project selection
+  const keyboard = new InlineKeyboard();
+  for (const project of projects) {
+    keyboard.text(project.name, `project:${project.name}`).row();
   }
 
   // Set state to SELECT_PROJECT
@@ -42,41 +37,31 @@ export async function handleStart(ctx: Context) {
   state.step = ConversationStep.SELECT_PROJECT;
   await setState(state);
 
-  // Store projects in cache for number resolution
-  projectsCache.set(telegramId, projects);
-
-  const cancelKb = new InlineKeyboard().text("❌ Отмена", "cancel");
-  await ctx.reply(message, { reply_markup: cancelKb });
+  await ctx.reply(
+    `Привет, ${worker.name}! (${worker.role})\nВыберите проект:`,
+    { reply_markup: keyboard }
+  );
 }
-
-// Cache projects per user for number selection (cleared after selection)
-export const projectsCache = new Map<number, any[]>();
 
 export async function handleProjectSelection(ctx: Context) {
   const telegramId = ctx.from?.id;
   if (!telegramId) return;
 
   const data = ctx.callbackQuery?.data;
-  if (!data?.startsWith("p:")) return;
+  if (!data?.startsWith("project:")) return;
 
-  const index = parseInt(data.slice("p:".length));
-  
-  // Get projects from cache or re-fetch
-  let projects = projectsCache.get(telegramId);
-  if (!projects) {
-    const worker = await getWorker(telegramId);
-    if (!worker) return;
-    projects = await getProjectsForWorker(worker);
-  }
+  const projectName = data.slice("project:".length);
 
-  const project = projects[index];
+  // Get project details
+  const worker = await getWorker(telegramId);
+  if (!worker) return;
+
+  const projects = await getProjectsForWorker(worker);
+  const project = projects.find(p => p.name === projectName);
   if (!project) {
     await ctx.answerCallbackQuery({ text: "Проект не найден" });
     return;
   }
-
-  // Clear cache
-  projectsCache.delete(telegramId);
 
   // Update state
   const state = emptyState(telegramId);
