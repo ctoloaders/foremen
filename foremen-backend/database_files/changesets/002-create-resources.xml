@@ -42,32 +42,25 @@
         </preConditions>
 
         <insert tableName="resources">
-            <column name="code" value="PROJECTS"/>
-            <column name="name_ru" value="Проекты"/>
-            <column name="name_pl" value="Projekty"/>
-            <column name="description_ru" value="Модуль управления проектами"/>
-            <column name="description_pl" value="Moduł zarządzania projektami"/>
+            <column name="code" value="ROLES"/>
+            <column name="name_ru" value="Роли"/>
+            <column name="name_pl" value="Role"/>
+            <column name="description_ru" value="Управление ролями пользователей"/>
+            <column name="description_pl" value="Zarządzanie rolami użytkowników"/>
         </insert>
         <insert tableName="resources">
-            <column name="code" value="ROOMS"/>
-            <column name="name_ru" value="Помещения"/>
-            <column name="name_pl" value="Pomieszczenia"/>
-            <column name="description_ru" value="Модуль управления помещениями"/>
-            <column name="description_pl" value="Moduł zarządzania pomieszczeniami"/>
+            <column name="code" value="OPERATIONS"/>
+            <column name="name_ru" value="Операции"/>
+            <column name="name_pl" value="Operacje"/>
+            <column name="description_ru" value="Справочник операций (действий)"/>
+            <column name="description_pl" value="Katalog operacji (działań)"/>
         </insert>
         <insert tableName="resources">
-            <column name="code" value="ESTIMATE"/>
-            <column name="name_ru" value="Смета"/>
-            <column name="name_pl" value="Kosztorys"/>
-            <column name="description_ru" value="Модуль сметы"/>
-            <column name="description_pl" value="Moduł kosztorysowania"/>
-        </insert>
-        <insert tableName="resources">
-            <column name="code" value="WAREHOUSE"/>
-            <column name="name_ru" value="Склад"/>
-            <column name="name_pl" value="Magazyn"/>
-            <column name="description_ru" value="Модуль склада"/>
-            <column name="description_pl" value="Moduł magazynowy"/>
+            <column name="code" value="RESOURCES"/>
+            <column name="name_ru" value="Ресурсы"/>
+            <column name="name_pl" value="Zasoby"/>
+            <column name="description_ru" value="Справочник ресурсов (модулей системы)"/>
+            <column name="description_pl" value="Katalog zasobów (modułów systemu)"/>
         </insert>
     </changeSet>
 

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="006-seed-client-role" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE code = 'CLIENT'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="roles">
+            <column name="code" value="CLIENT"/>
+            <column name="name_ru" value="Клиент"/>
+            <column name="name_pl" value="Klient"/>
+            <column name="description_ru" value="Просмотр своих проектов и документов"/>
+            <column name="description_pl" value="Przeglądanie swoich projektów i dokumentów"/>
+            <column name="system" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

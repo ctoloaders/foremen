@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Seeds the initial ABAC permissions matrix.
+        Only ADMIN has access to the ABAC management resources:
+          ROLES      → CRUD (full management of non-system roles)
+          OPERATIONS → READ (view-only reference catalog)
+          RESOURCES  → READ (view-only reference catalog)
+        All other roles have no access to these resources.
+    -->
+
+    <changeSet id="007-seed-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM role_resources</sqlCheck>
+        </preConditions>
+
+        <!-- ADMIN: role_resources entries for all 3 resources -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN';
+        </sql>
+
+        <!-- ADMIN: CRUD on ROLES -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'ROLES';
+        </sql>
+
+        <!-- ADMIN: READ on OPERATIONS -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'ADMIN' AND res.code = 'OPERATIONS';
+        </sql>
+
+        <!-- ADMIN: READ on RESOURCES -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'ADMIN' AND res.code = 'RESOURCES';
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>

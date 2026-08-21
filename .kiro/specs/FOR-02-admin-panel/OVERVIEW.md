@@ -58,9 +58,9 @@
 └──────────────────────────────────────┘
 ```
 
-**Resource** — модуль/сущность системы (projects, rooms, estimate, warehouse...)
+**Resource** — модуль/сущность системы. Начальный набор: ROLES, OPERATIONS, RESOURCES (мета-ресурсы для управления ABAC). Домен (projects, rooms, estimate, warehouse...) добавляется по мере реализации сущностей.
 **Operation** — действие над ресурсом (create, read, update, delete)
-**Role** — именованный набор разрешений (Admin, Manager, Foreman, Worker, Financier + custom)
+**Role** — именованный набор разрешений (Admin, Manager, Foreman, Worker, Financier, Client + custom)
 **User** — пользователь с привязкой к роли
 
 ## Базовые роли (seed через Liquibase)
@@ -72,6 +72,7 @@
 | FOREMAN | Прораб — доступ по матрице |
 | WORKER | Рабочий — доступ по матрице |
 | FINANCIER | Финансист — доступ по матрице |
+| CLIENT | Клиент — просмотр своих проектов и документов (read-only) |
 
 ## Стадии работы (дочерние спеки)
 
