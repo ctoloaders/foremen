@@ -26,22 +26,29 @@ export async function handleStart(ctx: Context) {
     return;
   }
 
-  // Show project selection
+  // Show project selection (use index as callback_data to avoid 64-byte limit)
   const keyboard = new InlineKeyboard();
-  for (const project of projects) {
-    keyboard.text(project.name, `project:${project.name}`).row();
+  for (let i = 0; i < projects.length; i++) {
+    const label = projects[i].name.length > 40 ? projects[i].name.slice(0, 40) + "..." : projects[i].name;
+    keyboard.text(label, `project:${i}`).row();
   }
 
-  // Set state to SELECT_PROJECT
+  // Set state to SELECT_PROJECT — store projects list temporarily
   const state = emptyState(telegramId);
   state.step = ConversationStep.SELECT_PROJECT;
   await setState(state);
+
+  // Store projects in a module-level cache for this user (needed for callback resolution)
+  projectsCache.set(telegramId, projects);
 
   await ctx.reply(
     `Привет, ${worker.name}! (${worker.role})\nВыберите проект:`,
     { reply_markup: keyboard }
   );
 }
+
+// Cache projects per user for callback resolution (cleared after selection)
+const projectsCache = new Map<number, any[]>();
 
 export async function handleProjectSelection(ctx: Context) {
   const telegramId = ctx.from?.id;
@@ -50,18 +57,24 @@ export async function handleProjectSelection(ctx: Context) {
   const data = ctx.callbackQuery?.data;
   if (!data?.startsWith("project:")) return;
 
-  const projectName = data.slice("project:".length);
+  const index = parseInt(data.slice("project:".length));
+  
+  // Get projects from cache or re-fetch
+  let projects = projectsCache.get(telegramId);
+  if (!projects) {
+    const worker = await getWorker(telegramId);
+    if (!worker) return;
+    projects = await getProjectsForWorker(worker);
+  }
 
-  // Get project details
-  const worker = await getWorker(telegramId);
-  if (!worker) return;
-
-  const projects = await getProjectsForWorker(worker);
-  const project = projects.find(p => p.name === projectName);
+  const project = projects[index];
   if (!project) {
     await ctx.answerCallbackQuery({ text: "Проект не найден" });
     return;
   }
+
+  // Clear cache
+  projectsCache.delete(telegramId);
 
   // Update state
   const state = emptyState(telegramId);
