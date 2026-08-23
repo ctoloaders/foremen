@@ -1,7 +1,7 @@
 import React from 'react'
 import type { ColumnConfig } from '@/components/data-table/types'
 import type { AuditRecord } from '../types'
-import { JsonExpander } from '@/features/audit/components/JsonExpander'
+import { ComparisonTable } from '@/features/audit/components/ComparisonTable'
 
 export const auditFullColumns: ColumnConfig<AuditRecord>[] = [
   {
@@ -47,22 +47,17 @@ export const auditFullColumns: ColumnConfig<AuditRecord>[] = [
     filterable: true,
   },
   {
-    field: 'snapshotBefore',
-    headerKey: 'audit.column.snapshotBefore',
+    field: 'changes',
+    headerKey: 'audit.column.changes',
     dataType: 'string',
     sortable: false,
     filterable: false,
     searchable: false,
-    render: (value) => React.createElement(JsonExpander, { data: value as Record<string, unknown> | null }),
-  },
-  {
-    field: 'snapshotAfter',
-    headerKey: 'audit.column.snapshotAfter',
-    dataType: 'string',
-    sortable: false,
-    filterable: false,
-    searchable: false,
-    render: (value) => React.createElement(JsonExpander, { data: value as Record<string, unknown> | null }),
+    render: (_value, row) => React.createElement(ComparisonTable, {
+      snapshotBefore: row.snapshotBefore,
+      snapshotAfter: row.snapshotAfter,
+      operation: row.operation,
+    }),
   },
 ]
 

@@ -79,9 +79,9 @@ describe('AuditPage', () => {
 
     // Wait for column headers to render
     const headers = await screen.findAllByRole('columnheader')
-    // auditFullColumns defines 8 columns:
-    // id, entityClass, entityId, operation, performedBy, performedAt, snapshotBefore, snapshotAfter
-    expect(headers.length).toBe(8)
+    // auditFullColumns defines 7 columns:
+    // id, entityClass, entityId, operation, performedBy, performedAt, changes
+    expect(headers.length).toBe(7)
 
     // Verify all expected header keys are present (mocked t() returns the key)
     expect(screen.getByText('audit.column.id')).toBeInTheDocument()
@@ -90,8 +90,7 @@ describe('AuditPage', () => {
     expect(screen.getByText('audit.column.operation')).toBeInTheDocument()
     expect(screen.getByText('audit.column.performedBy')).toBeInTheDocument()
     expect(screen.getByText('audit.column.performedAt')).toBeInTheDocument()
-    expect(screen.getByText('audit.column.snapshotBefore')).toBeInTheDocument()
-    expect(screen.getByText('audit.column.snapshotAfter')).toBeInTheDocument()
+    expect(screen.getByText('audit.column.changes')).toBeInTheDocument()
   })
 
   it('DataTable has showAuditButton=false (no audit button rendered in rows)', async () => {
@@ -125,6 +124,7 @@ describe('Audit i18n keys', () => {
     'audit.column.performedAt',
     'audit.column.snapshotBefore',
     'audit.column.snapshotAfter',
+    'audit.column.changes',
     'audit.modal.title',
     'audit.button.viewAudit',
     'audit.operation.CREATE',

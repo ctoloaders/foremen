@@ -1,0 +1,272 @@
+{
+  "pbtResults": {
+    "6.5 Write property test: Error Snapshot Detection": {
+      "status": "passed",
+      "lastRunTimestamp": 1787479468914
+    },
+    "6.1 Write property test: Key Completeness": {
+      "status": "passed",
+      "lastRunTimestamp": 1787479470193
+    },
+    "6.4 Write property test: Classification-to-Color Mapping Completeness": {
+      "status": "passed",
+      "lastRunTimestamp": 1787479473040
+    },
+    "6.2 Write property test: Value Formatting Consistency": {
+      "status": "passed",
+      "lastRunTimestamp": 1787479486952
+    },
+    "6.3 Write property test: Default Filter Correctness": {
+      "status": "passed",
+      "lastRunTimestamp": 1787479506902
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `computeDiff`, `formatValue`, and `isErrorSnapshot` utilities": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478990759
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479015472
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479118767
+      }
+    ],
+    "2.1 Create `ComparisonTable` React component": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478990848
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479129254
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479257545
+      }
+    ],
+    "3.1 Replace snapshot columns with single \"Changes\" column": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478990887
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479261878
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479351350
+      }
+    ],
+    "4.1 Add RU and PL locale keys for comparison view": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478990928
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479016466
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479119621
+      }
+    ],
+    "5. Checkpoint — Verify integration": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991102
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479633955
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479758523
+      }
+    ],
+    "6.1 Write property test: Key Completeness": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991150
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479356726
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479522052
+      }
+    ],
+    "6.2 Write property test: Value Formatting Consistency": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991187
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479357366
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479522783
+      }
+    ],
+    "6.3 Write property test: Default Filter Correctness": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991218
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479358360
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479523593
+      }
+    ],
+    "6.4 Write property test: Classification-to-Color Mapping Completeness": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991252
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479359160
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479524496
+      }
+    ],
+    "6.5 Write property test: Error Snapshot Detection": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991357
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479360296
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479525330
+      }
+    ],
+    "7.1 Write unit tests for ComparisonTable rendering": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991421
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479533607
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479629082
+      }
+    ],
+    "8. Final checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787478991469
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479762895
+      },
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479855143
+      }
+    ],
+    "1. Implement pure utility functions": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479118830
+      }
+    ],
+    "4. Add i18n translations": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479119647
+      }
+    ],
+    "2. Implement ComparisonTable component": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479257650
+      }
+    ],
+    "3. Update column configuration and integrate": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479351377
+      }
+    ],
+    "6. Property-based tests for utility functions": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479525365
+      }
+    ],
+    "7. Unit tests for ComparisonTable component": [
+      {
+        "executionId": "cfe263fb-8a14-4514-af02-f713f12469dd",
+        "chatSessionId": "sess_ccfe21ec-2bcc-4172-bf68-2259a9d1a2a0",
+        "timestamp": 1787479629136
+      }
+    ]
+  }
+}

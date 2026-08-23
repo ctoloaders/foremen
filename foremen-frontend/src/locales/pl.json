@@ -91,7 +91,19 @@
       "performedBy": "Wykonał",
       "performedAt": "Data wykonania",
       "snapshotBefore": "Migawka przed",
-      "snapshotAfter": "Migawka po"
+      "snapshotAfter": "Migawka po",
+      "changes": "Zmiany"
+    },
+    "comparison": {
+      "fieldHeader": "Pole",
+      "valueBefore": "Było",
+      "valueAfter": "Stało się",
+      "badgeNew": "Nowy",
+      "badgeDeleted": "Usunięty",
+      "badgeError": "Błąd",
+      "showAll": "Wszystkie pola",
+      "showChanges": "Tylko zmiany",
+      "noChanges": "Brak zmian"
     },
     "modal": {
       "title": "Dziennik audytu"

@@ -91,7 +91,19 @@
       "performedBy": "Выполнил",
       "performedAt": "Дата выполнения",
       "snapshotBefore": "Снимок до",
-      "snapshotAfter": "Снимок после"
+      "snapshotAfter": "Снимок после",
+      "changes": "Изменения"
+    },
+    "comparison": {
+      "fieldHeader": "Поле",
+      "valueBefore": "Было",
+      "valueAfter": "Стало",
+      "badgeNew": "Новый",
+      "badgeDeleted": "Удалён",
+      "badgeError": "Ошибка",
+      "showAll": "Все поля",
+      "showChanges": "Только изменения",
+      "noChanges": "Нет изменений"
     },
     "modal": {
       "title": "Журнал аудита"
