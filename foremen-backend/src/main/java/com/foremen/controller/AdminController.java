@@ -1,14 +1,18 @@
 package com.foremen.controller;
 
+import com.foremen.controller.model.MetadataResponse;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.audit.AuditLogEntity;
+import com.foremen.util.EntityMetadataResolver;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -165,5 +169,16 @@ public interface AdminController<
     default ResponseEntity<Collection<String>> getI18nProperties() {
         Collection<String> properties = getService().getMapper().getI18nSupportedProperties();
         return ResponseEntity.ok(properties);
+    }
+
+    // --- METADATA ---
+
+    @GetMapping("/metadata")
+    default ResponseEntity<MetadataResponse> getMetadata() {
+        Class<?> daoClass = getService().getDaoModelClass();
+        MetadataResponse metadata = EntityMetadataResolver.resolve(daoClass);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.maxAge(Duration.ofDays(1)))
+                .body(metadata);
     }
 }

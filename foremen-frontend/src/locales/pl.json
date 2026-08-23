@@ -15,6 +15,8 @@
     "finances": "Finanse",
     "deliveries": "Dostawy",
     "users": "Użytkownicy",
+    "roles": "Role",
+    "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
       "system": "System"
@@ -36,5 +38,150 @@
   },
   "skeleton": {
     "loading": "Ładowanie..."
+  },
+  "dataTable": {
+    "search": {
+      "placeholder": "Szukaj..."
+    },
+    "filter": {
+      "string": {
+        "placeholder": "Zawiera..."
+      },
+      "number": {
+        "from": "Od",
+        "to": "Do",
+        "rangeError": "Wartość 'Do' musi być większa niż 'Od'"
+      },
+      "date": {
+        "from": "Od",
+        "to": "Do",
+        "rangeError": "Data 'Do' musi być późniejsza niż 'Od'"
+      },
+      "boolean": {
+        "true": "Tak",
+        "false": "Nie",
+        "null": "Nie przypisano"
+      },
+      "apply": "Zastosuj"
+    },
+    "filters": {
+      "clearAll": "Wyczyść filtry",
+      "activeCount": "Aktywne filtry: {{count}}"
+    },
+    "empty": {
+      "filtered": "Brak wyników. Spróbuj zmienić filtry."
+    },
+    "error": {
+      "message": "Nie udało się załadować danych.",
+      "retry": "Ponów"
+    },
+    "pagination": {
+      "showing": "Wyświetlanie {{from}}-{{to}} z {{total}}",
+      "previous": "Poprzednia strona",
+      "next": "Następna strona"
+    }
+  },
+  "audit": {
+    "pageTitle": "Dziennik audytu",
+    "column": {
+      "id": "ID",
+      "entityClass": "Klasa encji",
+      "entityId": "ID encji",
+      "operation": "Operacja",
+      "performedBy": "Wykonał",
+      "performedAt": "Data wykonania",
+      "snapshotBefore": "Migawka przed",
+      "snapshotAfter": "Migawka po"
+    },
+    "modal": {
+      "title": "Dziennik audytu"
+    },
+    "button": {
+      "viewAudit": "Zobacz audyt"
+    },
+    "operation": {
+      "CREATE": "Tworzenie",
+      "UPDATE": "Aktualizacja",
+      "DELETE": "Usunięcie",
+      "UPDATE_PERMISSIONS": "Aktualizacja uprawnień"
+    },
+    "snapshot": {
+      "show": "Pokaż",
+      "hide": "Ukryj"
+    }
+  },
+  "roles": {
+    "pageTitle": "Zarządzanie rolami",
+    "tabs": {
+      "list": "Role",
+      "matrix": "Matryca dostępu"
+    },
+    "matrix": {
+      "save": "Zapisz",
+      "search": "Szukaj roli...",
+      "unsavedChanges": "Masz niezapisane zmiany"
+    },
+    "search": {
+      "placeholder": "Szukaj roli..."
+    },
+    "actions": {
+      "create": "Utwórz rolę",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono ról"
+    },
+    "pagination": {
+      "prev": "Poprzednia",
+      "next": "Następna",
+      "page": "Strona {{current}} z {{total}}"
+    },
+    "table": {
+      "code": "Kod",
+      "name": "Nazwa",
+      "description": "Opis",
+      "system": "Systemowa",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "system": "Systemowa"
+    },
+    "form": {
+      "titleCreate": "Utwórz rolę",
+      "titleEdit": "Edytuj rolę",
+      "descriptionCreate": "Wypełnij dane nowej roli",
+      "descriptionEdit": "Zmień dane roli",
+      "code": "Kod",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "descriptionRU": "Opis (RU)",
+      "descriptionPL": "Opis (PL)",
+      "system": "Rola systemowa",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć rolę?",
+      "description": "Czy na pewno chcesz usunąć rolę \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Rola została utworzona",
+      "updateSuccess": "Rola została zaktualizowana",
+      "deleteSuccess": "Rola została usunięta",
+      "permissionsSaved": "Uprawnienia zapisane",
+      "matrixSaveSuccess": "Uprawnienia zapisane"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem",
+      "systemDelete": "Nie można usunąć roli systemowej"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod musi składać się z wielkich liter, cyfr i podkreśleń",
+      "nameMin": "Minimum 2 znaki",
+      "nameMax": "Maksimum 100 znaków",
+      "descriptionMax": "Maksimum 500 znaków"
+    }
   }
 }

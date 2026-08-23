@@ -57,4 +57,11 @@ public class RoleController implements AdminController<
         RolePermissionResponse response = roleService.replacePermissions(id, request);
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/permissions/batch")
+    public ResponseEntity<BatchRolePermissionResponse> batchReplacePermissions(
+            @Valid @RequestBody BatchRolePermissionRequest request) {
+        BatchRolePermissionResponse response = roleService.batchReplacePermissions(request);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -18,6 +18,6 @@ export function usePageMeta(): PageMeta {
   )
 
   return {
-    titleKey: matchedItem?.labelKey ?? 'nav.dashboard',
+    titleKey: matchedItem?.titleKey ?? matchedItem?.labelKey ?? 'nav.dashboard',
   }
 }

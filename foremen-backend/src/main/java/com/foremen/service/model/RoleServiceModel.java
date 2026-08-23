@@ -1,4 +1,16 @@
 package com.foremen.service.model;
 
-public record RoleServiceModel(Long id, String code, String name, String description, boolean system) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class RoleServiceModel {
+    private Long id;
+    private String code;
+    private String name;
+    private String description;
+    private boolean system;
 }

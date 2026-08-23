@@ -6,6 +6,5 @@ public record RoleUpdateRequest(
     @NotBlank String nameRU,
     @NotBlank String namePL,
     String descriptionRU,
-    String descriptionPL,
-    Boolean system
+    String descriptionPL
 ) {}

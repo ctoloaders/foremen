@@ -3,8 +3,8 @@
   "hooks": [
     {
       "name": "Spec i18n and language checklist",
-      "trigger": "PreToolUse",
-      "matcher": "invoke_sub_agent",
+      "trigger": "UserPromptSubmit",
+      "matcher": "fs_write|str_replace|fs_append",
       "action": {
         "type": "agent",
         "prompt": "Before creating or generating any spec document (requirements.md, design.md, or tasks.md), verify the following checklist:\n\n1. **Backend i18n fields**: Confirm that ALL entity fields requiring internationalization have been explicitly identified. For each entity, list which fields need i18n variants (e.g., nameRU/namePL pattern). If this has not been clarified with the user, ASK before proceeding.\n\n2. **Frontend i18n elements**: Confirm that ALL user-facing UI text elements (labels, buttons, placeholders, error messages, navigation items) have been identified for localization. Check if i18n keys and translation values for all supported locales (PL, RU) are specified. If not clarified, ASK before proceeding.\n\n3. **Spec language**: ALL spec documents (requirements.md, design.md, tasks.md) MUST be written in English. If the user provides input in another language, translate the content to English for the spec documents.\n\nOnly proceed with spec document creation after all three points are confirmed or clarified."

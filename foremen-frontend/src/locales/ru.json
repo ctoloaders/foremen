@@ -15,6 +15,8 @@
     "finances": "Финансы",
     "deliveries": "Доставки",
     "users": "Пользователи",
+    "roles": "Роли",
+    "audit": "Аудит",
     "sections": {
       "warehouse": "Склад",
       "system": "Система"
@@ -36,5 +38,150 @@
   },
   "skeleton": {
     "loading": "Загрузка..."
+  },
+  "dataTable": {
+    "search": {
+      "placeholder": "Поиск..."
+    },
+    "filter": {
+      "string": {
+        "placeholder": "Содержит..."
+      },
+      "number": {
+        "from": "От",
+        "to": "До",
+        "rangeError": "Значение 'До' должно быть больше 'От'"
+      },
+      "date": {
+        "from": "С",
+        "to": "По",
+        "rangeError": "Дата 'По' должна быть позже 'С'"
+      },
+      "boolean": {
+        "true": "Да",
+        "false": "Нет",
+        "null": "Не назначено"
+      },
+      "apply": "Применить"
+    },
+    "filters": {
+      "clearAll": "Сбросить фильтры",
+      "activeCount": "Активных фильтров: {{count}}"
+    },
+    "empty": {
+      "filtered": "Нет результатов. Попробуйте изменить фильтры."
+    },
+    "error": {
+      "message": "Не удалось загрузить данные.",
+      "retry": "Повторить"
+    },
+    "pagination": {
+      "showing": "Показано {{from}}-{{to}} из {{total}}",
+      "previous": "Предыдущая страница",
+      "next": "Следующая страница"
+    }
+  },
+  "audit": {
+    "pageTitle": "Журнал аудита",
+    "column": {
+      "id": "ID",
+      "entityClass": "Класс сущности",
+      "entityId": "ID сущности",
+      "operation": "Операция",
+      "performedBy": "Выполнил",
+      "performedAt": "Дата выполнения",
+      "snapshotBefore": "Снимок до",
+      "snapshotAfter": "Снимок после"
+    },
+    "modal": {
+      "title": "Журнал аудита"
+    },
+    "button": {
+      "viewAudit": "Просмотр аудита"
+    },
+    "operation": {
+      "CREATE": "Создание",
+      "UPDATE": "Обновление",
+      "DELETE": "Удаление",
+      "UPDATE_PERMISSIONS": "Обновление прав"
+    },
+    "snapshot": {
+      "show": "Показать",
+      "hide": "Скрыть"
+    }
+  },
+  "roles": {
+    "pageTitle": "Управление ролями",
+    "tabs": {
+      "list": "Роли",
+      "matrix": "Матрица доступов"
+    },
+    "matrix": {
+      "save": "Сохранить",
+      "search": "Поиск роли...",
+      "unsavedChanges": "Есть несохранённые изменения"
+    },
+    "search": {
+      "placeholder": "Поиск роли..."
+    },
+    "actions": {
+      "create": "Создать роль",
+      "retry": "Повторить"
+    },
+    "list": {
+      "empty": "Роли не найдены"
+    },
+    "pagination": {
+      "prev": "Назад",
+      "next": "Далее",
+      "page": "Страница {{current}} из {{total}}"
+    },
+    "table": {
+      "code": "Код",
+      "name": "Название",
+      "description": "Описание",
+      "system": "Системная",
+      "actions": "Действия"
+    },
+    "badge": {
+      "system": "Системная"
+    },
+    "form": {
+      "titleCreate": "Создать роль",
+      "titleEdit": "Редактировать роль",
+      "descriptionCreate": "Заполните данные новой роли",
+      "descriptionEdit": "Измените данные роли",
+      "code": "Код",
+      "nameRU": "Название (RU)",
+      "namePL": "Название (PL)",
+      "descriptionRU": "Описание (RU)",
+      "descriptionPL": "Описание (PL)",
+      "system": "Системная роль",
+      "submitCreate": "Создать",
+      "submitEdit": "Сохранить"
+    },
+    "delete": {
+      "title": "Удалить роль?",
+      "description": "Вы уверены, что хотите удалить роль «{{name}}»? Это действие нельзя отменить."
+    },
+    "toast": {
+      "createSuccess": "Роль создана",
+      "updateSuccess": "Роль обновлена",
+      "deleteSuccess": "Роль удалена",
+      "permissionsSaved": "Права сохранены",
+      "matrixSaveSuccess": "Права сохранены"
+    },
+    "errors": {
+      "loadFailed": "Не удалось загрузить данные",
+      "network": "Ошибка соединения с сервером",
+      "systemDelete": "Нельзя удалить системную роль"
+    },
+    "validation": {
+      "codeRequired": "Код обязателен",
+      "codePattern": "Код должен содержать заглавные буквы, цифры и подчёркивания",
+      "nameMin": "Минимум 2 символа",
+      "nameMax": "Максимум 100 символов",
+      "descriptionMax": "Максимум 500 символов"
+    }
   }
 }

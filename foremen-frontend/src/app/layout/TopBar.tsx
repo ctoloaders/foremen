@@ -17,6 +17,7 @@ export function TopBar() {
     const newLocale = locale === 'pl' ? 'ru' : 'pl'
     setLocale(newLocale)
     void i18n.changeLanguage(newLocale)
+    window.location.reload()
   }
 
   return (

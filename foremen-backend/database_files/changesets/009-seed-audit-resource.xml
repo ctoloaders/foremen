@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed AUDIT resource into resources table -->
+    <changeSet id="009-seed-audit-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'AUDIT'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="AUDIT"/>
+            <column name="name_ru" value="Аудит"/>
+            <column name="name_pl" value="Audyt"/>
+            <column name="description_ru" value="Журнал аудита"/>
+            <column name="description_pl" value="Dziennik audytu"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN role READ on AUDIT resource -->
+    <changeSet id="009-seed-audit-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'AUDIT'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- Create role_resources entry for ADMIN + AUDIT -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'AUDIT';
+        </sql>
+
+        <!-- Grant READ operation only -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'ADMIN' AND res.code = 'AUDIT';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

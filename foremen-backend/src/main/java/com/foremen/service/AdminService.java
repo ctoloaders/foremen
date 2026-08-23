@@ -18,6 +18,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -57,6 +59,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
 
     // --- Create ---
 
+    @Transactional
     default ServiceExtendedModel create(ServiceExtendedModel model) {
         DaoModel entity = getMapper().toCreateDaoModel(model);
         entity = getWriteDao().save(entity);
@@ -65,6 +68,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         return getMapper().toServiceExtendedModel(entity);
     }
 
+    @Transactional
     default List<ServiceExtendedModel> create(List<ServiceExtendedModel> models) {
         List<DaoModel> entities = models.stream()
                 .map(getMapper()::toCreateDaoModel)
@@ -79,6 +83,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
 
     // --- Update ---
 
+    @Transactional
     default ServiceExtendedModel update(ID id, ServiceExtendedModel model) {
         DaoModel existing = getReadDao().findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
@@ -92,12 +97,14 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         return getMapper().toServiceExtendedModel(saved);
     }
 
+    @Transactional
     default List<ServiceExtendedModel> updateAll(List<ID> ids, ServiceExtendedModel model) {
         return ids.stream()
                 .map(id -> update(id, model))
                 .toList();
     }
 
+    @Transactional
     default <V> void updateSingleField(ID id, V value, BiConsumer<DaoModel, V> setter) {
         DaoModel existing = getReadDao().findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
@@ -114,6 +121,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
 
     // --- Delete ---
 
+    @Transactional
     default void deleteById(ID id) {
         DaoModel entity = getReadDao().findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
@@ -122,12 +130,14 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         getEntityManager().flush();
     }
 
+    @Transactional
     default void deleteAll(List<ID> ids) {
         getReadDao().findAllByIdIn(ids).forEach(entity -> saveAudit(entity, null, "DELETE"));
         getWriteDao().deleteAllById(ids);
         getEntityManager().flush();
     }
 
+    @Transactional
     @SuppressWarnings("unchecked")
     default void softDelete(String fieldName, Set<ID> ids) {
         // Capture before-state for each entity
@@ -143,6 +153,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         getEntityManager().flush();
     }
 
+    @Transactional
     @SuppressWarnings("unchecked")
     default void setPropertiesToNull(ID id, Set<String> propertyNames) {
         Class<DaoModel> entityClass = getDaoModelClass();

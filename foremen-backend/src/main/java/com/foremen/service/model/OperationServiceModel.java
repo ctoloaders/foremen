@@ -1,4 +1,14 @@
 package com.foremen.service.model;
 
-public record OperationServiceModel(Long id, String code, String name) {
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class OperationServiceModel {
+    private Long id;
+    private String code;
+    private String name;
 }

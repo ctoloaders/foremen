@@ -28,5 +28,7 @@ public interface RoleServiceMapper
     @Override
     @Mapping(target = "roleResources", ignore = true)
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "system", ignore = true)
+    @Mapping(target = "code", ignore = true)
     void updateFields(RoleServiceExtendedModel source, @MappingTarget RoleEntity target);
 }

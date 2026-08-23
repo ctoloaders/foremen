@@ -14,6 +14,8 @@ const MaterialsPage = React.lazy(() => import('@/app/pages/MaterialsPage'))
 const FinancesPage = React.lazy(() => import('@/app/pages/FinancesPage'))
 const DeliveriesPage = React.lazy(() => import('@/app/pages/DeliveriesPage'))
 const UsersPage = React.lazy(() => import('@/app/pages/UsersPage'))
+const RolesPage = React.lazy(() => import('@/features/roles/RolesPage'))
+const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const NotFoundPage = React.lazy(() => import('@/app/pages/NotFoundPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
@@ -62,6 +64,14 @@ export const router = createBrowserRouter([
       {
         path: 'users',
         element: <SuspenseWrapper><UsersPage /></SuspenseWrapper>,
+      },
+      {
+        path: 'roles',
+        element: <SuspenseWrapper><RolesPage /></SuspenseWrapper>,
+      },
+      {
+        path: 'audit',
+        element: <SuspenseWrapper><AuditPage /></SuspenseWrapper>,
       },
       {
         path: '*',

@@ -1,0 +1,487 @@
+{
+  "pbtResults": {
+    "2.5 Write property tests for `buildSortParams` and `resolveFieldValue`": {
+      "status": "passed",
+      "lastRunTimestamp": 1787421980182
+    },
+    "2.4 Write property tests for `buildQueryString`": {
+      "status": "passed",
+      "lastRunTimestamp": 1787422090018
+    },
+    "3.3 Write property tests for state reducer": {
+      "status": "passed",
+      "lastRunTimestamp": 1787422265880
+    },
+    "12.4 Write property tests for number/date filter validation": {
+      "status": "passed",
+      "lastRunTimestamp": 1787432713307
+    }
+  },
+  "executionHistory": {
+    "1.1 Install required shadcn/ui components": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990382
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421007030
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421537334
+      }
+    ],
+    "1.2 Create DataTable TypeScript interfaces and types": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990436
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421008067
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421538185
+      }
+    ],
+    "2.1 Implement `resolveFieldValue` utility": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990470
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421546227
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421698084
+      }
+    ],
+    "2.2 Implement `buildQueryString` utility": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990505
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421546989
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421698676
+      }
+    ],
+    "2.3 Implement `buildSortParams` utility": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990553
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421547815
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421699726
+      }
+    ],
+    "2.4 Write property tests for `buildQueryString`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990595
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421712615
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422109157
+      }
+    ],
+    "2.5 Write property tests for `buildSortParams` and `resolveFieldValue`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990653
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421713483
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422110111
+      }
+    ],
+    "3.1 Implement `useTableState` reducer hook": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990712
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421714348
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422111043
+      }
+    ],
+    "3.2 Implement `useLocalStoragePersistence` hook": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990735
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422119693
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422279554
+      }
+    ],
+    "3.3 Write property tests for state reducer": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990784
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422120490
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422280418
+      }
+    ],
+    "4.1 Create `useDataTable` main hook": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990848
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422288373
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422370381
+      }
+    ],
+    "5. Checkpoint - Verify hooks and utilities compile, property tests pass": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990879
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430154170
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430187880
+      }
+    ],
+    "6.1 Implement `DataTableToolbar`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990904
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422380417
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430124849
+      }
+    ],
+    "6.2 Implement `DataTableHeader` with sort and filter controls": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990938
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422381236
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430125992
+      }
+    ],
+    "6.3 Implement filter popover components": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990968
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430304329
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430683226
+      }
+    ],
+    "6.4 Implement `DataTableBody` and `DataTableCards`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420990997
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422382166
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430126914
+      }
+    ],
+    "6.5 Implement `DataTablePagination`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991021
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422383061
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430127518
+      }
+    ],
+    "6.6 Implement `DataTableSkeleton` and `DataTableEmpty`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991053
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422383937
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430128536
+      }
+    ],
+    "7.1 Create `DataTable.tsx` main component": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991081
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430700848
+      }
+    ],
+    "8. Checkpoint - Verify DataTable renders in isolation with mock data": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991112
+      }
+    ],
+    "9.1 Implement `EntityMetadataResolver` utility class": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991138
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430155068
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430295117
+      }
+    ],
+    "9.2 Create `MetadataResponse` DTO and add default endpoint to `AdminController`": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991169
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430305115
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430684429
+      }
+    ],
+    "9.3 Write backend property tests for `EntityMetadataResolver` (jqwik)": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991198
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430701614
+      }
+    ],
+    "9.4 Write backend integration test for metadata endpoint (MockMvc)": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991228
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430699867
+      }
+    ],
+    "10.1 Add `dataTable` namespace translations (PL and RU)": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991255
+      },
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430702563
+      }
+    ],
+    "11. Checkpoint - Full integration test: DataTable with live backend": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991335
+      }
+    ],
+    "12.1 Write component tests for DataTable rendering": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991371
+      }
+    ],
+    "12.2 Write component tests for sort and filter interactions": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991398
+      }
+    ],
+    "12.3 Write component tests for toolbar and pagination": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991423
+      }
+    ],
+    "12.4 Write property tests for number/date filter validation": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787420991470
+      }
+    ],
+    "1. Install shadcn/ui dependencies and create type definitions": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787421538216
+      }
+    ],
+    "2. Implement pure utility functions": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422110157
+      }
+    ],
+    "3. Implement state management hooks": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422280455
+      }
+    ],
+    "4. Implement `useDataTable` orchestrator hook": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787422370406
+      }
+    ],
+    "6. Implement DataTable sub-components": [
+      {
+        "executionId": "e4d06933-c7aa-476b-9365-5d36db41773f",
+        "chatSessionId": "sess_2ffabebf-1f08-4b9e-9284-0c39691aa45b",
+        "timestamp": 1787430683328
+      }
+    ]
+  }
+}

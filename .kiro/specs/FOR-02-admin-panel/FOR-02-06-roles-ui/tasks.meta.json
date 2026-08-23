@@ -1,0 +1,319 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create batch request/response records and add batch endpoint to RoleController": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432526
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400442390
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787401928653
+      }
+    ],
+    "2.1 Create feature module directory structure and TypeScript interfaces": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432621
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400443118
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787401929569
+      }
+    ],
+    "2.2 Implement Zod validation schemas": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432658
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787401938755
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402108348
+      }
+    ],
+    "2.3 Implement API client layer": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432686
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787401939537
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402108965
+      }
+    ],
+    "2.4 Implement TanStack Query hooks": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432733
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402118484
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402503759
+      }
+    ],
+    "2.5 Implement TanStack Mutation hooks": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432757
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402119116
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402504542
+      }
+    ],
+    "3. Checkpoint - Verify backend compiles and API layer types are consistent": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432797
+      }
+    ],
+    "4.1 Implement matrix dirty state store": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432830
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402119962
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402505324
+      }
+    ],
+    "4.2 Write unit tests for matrix store": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432857
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402515291
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402646694
+      }
+    ],
+    "5.1 Implement RolesPage with tabbed layout": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432890
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402516048
+      }
+    ],
+    "5.2 Implement RolesListTab with table and cards": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400432955
+      }
+    ],
+    "5.3 Implement skeleton loading states": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433020
+      },
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402516978
+      }
+    ],
+    "5.4 Implement RoleFormSheet (create/edit)": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433052
+      }
+    ],
+    "5.5 Implement DeleteRoleDialog": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433153
+      }
+    ],
+    "6. Checkpoint - Verify roles list tab renders and CRUD operations work": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433184
+      }
+    ],
+    "7.1 Implement PermissionMatrixTab container": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433218
+      }
+    ],
+    "7.2 Implement PermissionMatrix grid": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433251
+      }
+    ],
+    "7.3 Implement OperationCell component": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433285
+      }
+    ],
+    "8.1 Add roles namespace translations (PL and RU)": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433342
+      }
+    ],
+    "8.2 Integrate Roles page into App Shell navigation and router": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433405
+      }
+    ],
+    "9.1 Implement inline error state component and error integration": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433442
+      }
+    ],
+    "10.1 Apply dark theme tokens and responsive breakpoints": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433473
+      }
+    ],
+    "11. Final checkpoint - Full integration verification": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433500
+      }
+    ],
+    "12.1 Write unit tests for Zod schema validation": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433527
+      }
+    ],
+    "12.2 Write unit tests for API error handling": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433555
+      }
+    ],
+    "12.3 Write component tests for RolesPage tab switching": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433583
+      }
+    ],
+    "12.4 Write component tests for RolesListTab": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433607
+      }
+    ],
+    "12.5 Write component tests for RoleFormSheet": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433640
+      }
+    ],
+    "12.6 Write component tests for PermissionMatrix": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787400433671
+      }
+    ],
+    "1. Backend: Add batch permission endpoint": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787401929363
+      }
+    ],
+    "2. Feature module setup: types, schemas, API layer": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402504709
+      }
+    ],
+    "4. Matrix Zustand store": [
+      {
+        "executionId": "412b4b8a-65e8-4c51-8886-1e87ac11d7bf",
+        "chatSessionId": "sess_6d45e28e-79a3-4bb1-a4be-9f6b6533f632",
+        "timestamp": 1787402646808
+      }
+    ]
+  }
+}

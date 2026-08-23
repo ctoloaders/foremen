@@ -41,11 +41,11 @@ class I18nLocaleResolutionPropertyTest {
         try {
             ResourceServiceModel model = resourceMapper.toServiceModel(entity);
             if ("ru".equalsIgnoreCase(locale.getLanguage())) {
-                assertEquals(nameRU, model.name());
-                assertEquals(descRU, model.description());
+                assertEquals(nameRU, model.getName());
+                assertEquals(descRU, model.getDescription());
             } else {
-                assertEquals(namePL, model.name());
-                assertEquals(descPL, model.description());
+                assertEquals(namePL, model.getName());
+                assertEquals(descPL, model.getDescription());
             }
         } finally {
             LocaleContextHolder.resetLocaleContext();
@@ -67,9 +67,9 @@ class I18nLocaleResolutionPropertyTest {
         try {
             OperationServiceModel model = operationMapper.toServiceModel(entity);
             if ("ru".equalsIgnoreCase(locale.getLanguage())) {
-                assertEquals(nameRU, model.name());
+                assertEquals(nameRU, model.getName());
             } else {
-                assertEquals(namePL, model.name());
+                assertEquals(namePL, model.getName());
             }
         } finally {
             LocaleContextHolder.resetLocaleContext();
@@ -96,11 +96,11 @@ class I18nLocaleResolutionPropertyTest {
         try {
             RoleServiceModel model = roleMapper.toServiceModel(entity);
             if ("ru".equalsIgnoreCase(locale.getLanguage())) {
-                assertEquals(nameRU, model.name());
-                assertEquals(descRU, model.description());
+                assertEquals(nameRU, model.getName());
+                assertEquals(descRU, model.getDescription());
             } else {
-                assertEquals(namePL, model.name());
-                assertEquals(descPL, model.description());
+                assertEquals(namePL, model.getName());
+                assertEquals(descPL, model.getDescription());
             }
         } finally {
             LocaleContextHolder.resetLocaleContext();

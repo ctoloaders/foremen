@@ -21,5 +21,12 @@ public interface RoleControllerMapper extends ControllerToServiceMapper<
 
     @Override
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "system", expression = "java(false)")
     RoleServiceExtendedModel toServiceExtendedModel(RoleCreateRequest source);
+
+    @Override
+    @Mapping(target = "system", ignore = true)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "code", ignore = true)
+    RoleServiceExtendedModel toUpdateServiceExtendedModel(RoleUpdateRequest source);
 }

@@ -29,7 +29,6 @@ import java.util.Locale;
 @Service
 @RequiredArgsConstructor
 @Getter
-@Transactional
 public class RoleService implements AdminService<
         RoleServiceModel, RoleServiceExtendedModel, RoleEntity, Long> {
 
@@ -43,6 +42,7 @@ public class RoleService implements AdminService<
     private final Class<RoleEntity> daoModelClass = RoleEntity.class;
 
     @Override
+    @Transactional
     public void deleteById(Long id) {
         RoleEntity role = dao.findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
@@ -52,6 +52,18 @@ public class RoleService implements AdminService<
         saveAudit(role, null, "DELETE");
         dao.deleteById(id);
         entityManager.flush();
+    }
+
+    @Override
+    public void validateUpdate(RoleEntity existing, RoleServiceExtendedModel update) {
+        if (existing.isSystem()) {
+            if (update.nameRU() != null && !update.nameRU().equals(existing.getNameRU())) {
+                throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.role.system.name.immutable");
+            }
+            if (update.namePL() != null && !update.namePL().equals(existing.getNamePL())) {
+                throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.role.system.name.immutable");
+            }
+        }
     }
 
     @Transactional(readOnly = true)
@@ -75,6 +87,17 @@ public class RoleService implements AdminService<
         return new RolePermissionResponse(roleId, entries);
     }
 
+    @Transactional
+    public BatchRolePermissionResponse batchReplacePermissions(BatchRolePermissionRequest request) {
+        List<RolePermissionResponse> results = new ArrayList<>();
+        for (BatchRolePermissionEntry entry : request.entries()) {
+            RolePermissionRequest singleRequest = new RolePermissionRequest(entry.permissions());
+            results.add(replacePermissions(entry.roleId(), singleRequest));
+        }
+        return new BatchRolePermissionResponse(results);
+    }
+
+    @Transactional
     public RolePermissionResponse replacePermissions(Long roleId, RolePermissionRequest request) {
         RoleEntity role = dao.findById(roleId)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", roleId));
