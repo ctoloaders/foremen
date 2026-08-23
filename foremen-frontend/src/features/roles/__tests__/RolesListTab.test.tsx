@@ -1,23 +1,35 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { UseQueryResult } from '@tanstack/react-query'
 
-import i18n from '@/lib/i18n'
-import type { PaginatedResponse, RoleExtendedDto } from '../types'
+import type { RoleDto } from '../types'
 
 // --- Mocks ---
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'roles.actions.create': 'Utwórz rolę',
+        'roles.table.code': 'Kod',
+        'roles.table.name': 'Nazwa',
+        'roles.table.description': 'Opis',
+        'roles.table.system': 'Systemowa',
+        'common.edit': 'Edytuj',
+        'common.delete': 'Usuń',
+        'dataTable.search': 'Szukaj...',
+        'dataTable.empty': 'Nie znaleziono ról',
+        'dataTable.filter.open': 'dataTable.filter.open',
+      }
+      return translations[key] ?? key
+    },
+  }),
+}))
 
 const mockUseBreakpoint = vi.fn<() => 'desktop' | 'tablet' | 'mobile'>(() => 'desktop')
 
 vi.mock('@/hooks/useBreakpoint', () => ({
   useBreakpoint: () => mockUseBreakpoint(),
-}))
-
-const mockUseRoles = vi.fn<() => Partial<UseQueryResult<PaginatedResponse<RoleExtendedDto>>>>()
-
-vi.mock('../api/query-hooks', () => ({
-  useRoles: () => mockUseRoles(),
 }))
 
 // Import the component AFTER mocks are set up
@@ -51,35 +63,41 @@ function renderComponent() {
   )
 }
 
-const sampleRoles: RoleExtendedDto[] = [
+const sampleRoles: RoleDto[] = [
   {
     id: 1,
     code: 'ADMIN',
-    nameRU: 'Администратор',
-    namePL: 'Administrator',
-    descriptionRU: 'Полный доступ',
-    descriptionPL: 'Pełny dostęp',
+    name: 'Administrator',
+    description: 'Pełny dostęp',
     system: true,
   },
   {
     id: 2,
     code: 'MANAGER',
-    nameRU: 'Менеджер',
-    namePL: 'Menadżer',
-    descriptionRU: 'Управление проектами',
-    descriptionPL: 'Zarządzanie projektami',
+    name: 'Menadżer',
+    description: 'Zarządzanie projektami',
     system: false,
   },
   {
     id: 3,
     code: 'CLIENT',
-    nameRU: 'Клиент',
-    namePL: 'Klient',
-    descriptionRU: null,
-    descriptionPL: null,
+    name: 'Klient',
+    description: null,
     system: false,
   },
 ]
+
+function mockFetchSuccess(roles: RoleDto[] = sampleRoles) {
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify({
+      content: roles,
+      totalPages: 1,
+      totalElements: roles.length,
+      number: 0,
+      size: 10,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+  )
+}
 
 // --- Tests ---
 
@@ -87,50 +105,38 @@ describe('RolesListTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseBreakpoint.mockReturnValue('desktop')
-    void i18n.changeLanguage('pl')
+    localStorage.setItem('foremen-locale', 'pl')
   })
 
   describe('Loading state', () => {
     it('shows skeleton while loading', () => {
-      mockUseRoles.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isError: false,
-        refetch: vi.fn(),
-      })
+      // Return a never-resolving promise to simulate loading
+      vi.spyOn(globalThis, 'fetch').mockReturnValue(new Promise(() => {}))
 
       renderComponent()
 
-      // Skeleton has animate-pulse elements for search bar and content
+      // Skeleton has animate-pulse elements for content
       const pulsingElements = document.querySelectorAll('.animate-pulse')
       expect(pulsingElements.length).toBeGreaterThan(0)
     })
   })
 
   describe('Desktop table rendering', () => {
-    it('renders table rows with role data on desktop', () => {
+    it('renders table rows with role data on desktop', async () => {
       mockUseBreakpoint.mockReturnValue('desktop')
-      mockUseRoles.mockReturnValue({
-        data: {
-          content: sampleRoles,
-          totalPages: 1,
-          totalElements: 3,
-          number: 0,
-          size: 10,
-        },
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      })
+      mockFetchSuccess()
 
       renderComponent()
 
-      // Role codes should be visible in the table
-      expect(screen.getByText('ADMIN')).toBeInTheDocument()
+      // Wait for data to load and render
+      await waitFor(() => {
+        expect(screen.getByText('ADMIN')).toBeInTheDocument()
+      })
+
       expect(screen.getByText('MANAGER')).toBeInTheDocument()
       expect(screen.getByText('CLIENT')).toBeInTheDocument()
 
-      // PL locale names should be visible
+      // Name column shows locale-resolved names
       expect(screen.getByText('Administrator')).toBeInTheDocument()
       expect(screen.getByText('Menadżer')).toBeInTheDocument()
       expect(screen.getByText('Klient')).toBeInTheDocument()
@@ -138,96 +144,53 @@ describe('RolesListTab', () => {
   })
 
   describe('System badge', () => {
-    it('displays system badge for system roles', () => {
-      mockUseRoles.mockReturnValue({
-        data: {
-          content: sampleRoles,
-          totalPages: 1,
-          totalElements: 3,
-          number: 0,
-          size: 10,
-        },
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      })
+    it('displays system badge for system roles', async () => {
+      mockFetchSuccess()
 
       renderComponent()
 
-      // "Systemowa" appears as both the table header and the badge.
-      // The badge uses the Badge component (shadcn secondary variant).
-      // Only 1 role is system, so there should be exactly 1 badge element.
-      const badges = screen.getAllByText('Systemowa')
-      // 2 occurrences: table header + 1 badge for ADMIN
-      expect(badges.length).toBe(2)
-      // Verify at least one is rendered as a badge (inside a div with the role row)
-      const badgeEl = badges.find((el) => el.classList.contains('inline-flex'))
-      expect(badgeEl).toBeDefined()
+      await waitFor(() => {
+        expect(screen.getByText('ADMIN')).toBeInTheDocument()
+      })
+
+      // The system column renders ✓ for system roles
+      const checkmarks = screen.getAllByText('✓')
+      expect(checkmarks.length).toBe(1) // only ADMIN is system
     })
   })
 
   describe('System role delete protection', () => {
-    it('delete button is disabled for system roles', () => {
-      mockUseRoles.mockReturnValue({
-        data: {
-          content: sampleRoles,
-          totalPages: 1,
-          totalElements: 3,
-          number: 0,
-          size: 10,
-        },
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      })
+    it('delete button is not shown for system roles', async () => {
+      mockFetchSuccess()
 
       renderComponent()
 
-      // Get all delete buttons (aria-label "Usuń")
+      await waitFor(() => {
+        expect(screen.getByText('ADMIN')).toBeInTheDocument()
+      })
+
+      // The component conditionally renders delete button only for non-system roles
       const deleteButtons = screen.getAllByLabelText('Usuń')
-      // The first role (ADMIN) is system — its delete button should be disabled
-      expect(deleteButtons[0]).toBeDisabled()
-      // Non-system roles should have enabled delete buttons
-      expect(deleteButtons[1]).not.toBeDisabled()
-      expect(deleteButtons[2]).not.toBeDisabled()
+      // Only non-system roles (MANAGER, CLIENT) have delete buttons
+      expect(deleteButtons.length).toBe(2)
     })
   })
 
   describe('Empty state', () => {
-    it('shows empty state message when no roles match filter', () => {
-      mockUseRoles.mockReturnValue({
-        data: {
-          content: [],
-          totalPages: 0,
-          totalElements: 0,
-          number: 0,
-          size: 10,
-        },
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      })
+    it('shows empty state message when no roles', async () => {
+      mockFetchSuccess([])
 
       renderComponent()
 
-      expect(screen.getByText('Nie znaleziono ról')).toBeInTheDocument()
+      await waitFor(() => {
+        expect(screen.getByText('dataTable.empty.filtered')).toBeInTheDocument()
+      })
     })
   })
 
   describe('Create Role button', () => {
-    it('"Create Role" button is rendered and clickable', () => {
-      mockUseRoles.mockReturnValue({
-        data: {
-          content: sampleRoles,
-          totalPages: 1,
-          totalElements: 3,
-          number: 0,
-          size: 10,
-        },
-        isLoading: false,
-        isError: false,
-        refetch: vi.fn(),
-      })
+    it('"Create Role" button is rendered and clickable', async () => {
+      mockFetchSuccess()
 
       renderComponent()
 

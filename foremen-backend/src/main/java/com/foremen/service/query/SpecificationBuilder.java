@@ -120,10 +120,10 @@ public class SpecificationBuilder {
             case ENDS_WITH_CS -> cb.like((Path<String>) path, "%" + value);
 
             // Numeric comparison
-            case GREATER_THAN -> cb.greaterThan((Path<Comparable>) path, (Comparable) convertValue(path, value));
-            case LESS_THAN -> cb.lessThan((Path<Comparable>) path, (Comparable) convertValue(path, value));
-            case GREATER_THAN_OR_EQUAL -> cb.greaterThanOrEqualTo((Path<Comparable>) path, (Comparable) convertValue(path, value));
-            case LESS_THAN_OR_EQUAL -> cb.lessThanOrEqualTo((Path<Comparable>) path, (Comparable) convertValue(path, value));
+            case GREATER_THAN, GT -> cb.greaterThan((Path<Comparable>) path, (Comparable) convertValue(path, value));
+            case LESS_THAN, LT -> cb.lessThan((Path<Comparable>) path, (Comparable) convertValue(path, value));
+            case GREATER_THAN_OR_EQUAL, GTE -> cb.greaterThanOrEqualTo((Path<Comparable>) path, (Comparable) convertValue(path, value));
+            case LESS_THAN_OR_EQUAL, LTE -> cb.lessThanOrEqualTo((Path<Comparable>) path, (Comparable) convertValue(path, value));
 
             // Date comparison
             case GT_DATE -> cb.greaterThan((Path<LocalDateTime>) path, parseDateTime(value));

@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { computeDiff, formatValue, isErrorSnapshot, getRowBackground } from '../utils/compute-diff'
 
 interface ComparisonTableProps {
-  snapshotBefore: Record<string, unknown> | null
-  snapshotAfter: Record<string, unknown> | null
+  snapshotBefore: Record<string, unknown> | string | null
+  snapshotAfter: Record<string, unknown> | string | null
   operation: string
 }
 
@@ -32,7 +32,8 @@ export function ComparisonTable({ snapshotBefore, snapshotAfter, operation }: Co
 
   // Error snapshot detection (applies to any operation)
   if (isErrorSnapshot(snapshotBefore) || isErrorSnapshot(snapshotAfter)) {
-    const errorSnapshot = isErrorSnapshot(snapshotAfter) ? snapshotAfter : snapshotBefore
+    const errorSnapshotRaw = isErrorSnapshot(snapshotAfter) ? snapshotAfter : snapshotBefore
+    const errorSnapshot = typeof errorSnapshotRaw === 'string' ? JSON.parse(errorSnapshotRaw) : errorSnapshotRaw
     const errorMessage = errorSnapshot ? String(errorSnapshot['error'] ?? '') : ''
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-sm font-medium text-red-500 border border-red-500/30">

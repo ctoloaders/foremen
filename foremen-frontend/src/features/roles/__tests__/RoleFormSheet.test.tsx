@@ -103,10 +103,6 @@ describe('RoleFormSheet', () => {
       const descPL = screen.getByLabelText('roles.form.descriptionPL')
       expect(descRU).toHaveValue('')
       expect(descPL).toHaveValue('')
-
-      // System checkbox unchecked
-      const systemCheckbox = screen.getByLabelText('roles.form.system')
-      expect(systemCheckbox).not.toBeChecked()
     })
 
     it('displays create mode title and submit button label', () => {
@@ -129,7 +125,7 @@ describe('RoleFormSheet', () => {
         expect(codeInput).toBeDisabled()
       })
 
-      // Name fields pre-populated
+      // Name fields pre-populated (disabled for system roles)
       await waitFor(() => {
         expect(screen.getByLabelText('roles.form.nameRU')).toHaveValue('Администратор')
         expect(screen.getByLabelText('roles.form.namePL')).toHaveValue('Administrator')
@@ -139,10 +135,9 @@ describe('RoleFormSheet', () => {
       expect(screen.getByLabelText('roles.form.descriptionRU')).toHaveValue('Полный доступ')
       expect(screen.getByLabelText('roles.form.descriptionPL')).toHaveValue('Pełny dostęp')
 
-      // System checkbox is checked and disabled for system roles
-      const systemCheckbox = screen.getByLabelText('roles.form.system')
-      expect(systemCheckbox).toBeChecked()
-      expect(systemCheckbox).toBeDisabled()
+      // System roles have name fields disabled
+      expect(screen.getByLabelText('roles.form.nameRU')).toBeDisabled()
+      expect(screen.getByLabelText('roles.form.namePL')).toBeDisabled()
     })
 
     it('displays edit mode title and submit button label', () => {
@@ -225,7 +220,6 @@ describe('RoleFormSheet', () => {
             code: 'TEST_ROLE',
             nameRU: 'Тестовая роль',
             namePL: 'Rola testowa',
-            system: false,
           }),
           expect.objectContaining({ onSuccess: expect.any(Function) }),
         )

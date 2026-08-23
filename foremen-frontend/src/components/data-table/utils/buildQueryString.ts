@@ -35,18 +35,18 @@ function buildFilterCondition(filter: ColumnFilterState): string | null {
       return filter.value ? `${filter.field}~ct~${filter.value}` : null
     case 'number': {
       const conditions: string[] = []
-      if (filter.from != null) conditions.push(`${filter.field}=gte=${filter.from}`)
-      if (filter.to != null) conditions.push(`${filter.field}=lte=${filter.to}`)
+      if (filter.from != null) conditions.push(`${filter.field}>=${filter.from}`)
+      if (filter.to != null) conditions.push(`${filter.field}<=${filter.to}`)
       return conditions.length > 0 ? conditions.join(' AND ') : null
     }
     case 'date': {
       const conditions: string[] = []
-      if (filter.from) conditions.push(`${filter.field}=gte=${filter.from}`)
-      if (filter.to) conditions.push(`${filter.field}=lte=${filter.to}`)
+      if (filter.from) conditions.push(`${filter.field}>=${filter.from}`)
+      if (filter.to) conditions.push(`${filter.field}<=${filter.to}`)
       return conditions.length > 0 ? conditions.join(' AND ') : null
     }
     case 'boolean': {
-      if (filter.value === null) return `${filter.field}=isnull=true`
+      if (filter.value === null) return `${filter.field}~null~true`
       return `${filter.field}==${filter.value}`
     }
   }

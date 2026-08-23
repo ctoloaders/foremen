@@ -122,6 +122,69 @@
       "hide": "Скрыть"
     }
   },
+  "users": {
+    "pageTitle": "Управление пользователями",
+    "actions": {
+      "create": "Создать пользователя",
+      "deactivate": "Деактивировать",
+      "alreadyInactive": "Пользователь уже неактивен"
+    },
+    "table": {
+      "name": "Имя",
+      "email": "E-mail",
+      "role": "Роль",
+      "active": "Активен"
+    },
+    "badge": {
+      "active": "Активен",
+      "inactive": "Неактивен"
+    },
+    "form": {
+      "titleCreate": "Создать пользователя",
+      "titleEdit": "Редактировать пользователя",
+      "descriptionCreate": "Заполните данные нового пользователя",
+      "descriptionEdit": "Измените данные пользователя",
+      "name": "Имя",
+      "email": "E-mail",
+      "phone": "Телефон",
+      "role": "Роль",
+      "locale": "Язык",
+      "localePlaceholder": "Выберите язык",
+      "active": "Активен",
+      "submitCreate": "Создать",
+      "submitEdit": "Сохранить",
+      "rolePlaceholder": "Выберите роль",
+      "roleSearch": "Поиск роли...",
+      "rolesLoading": "Загрузка...",
+      "rolesLoadError": "Ошибка загрузки ролей",
+      "rolesRetry": "Повторить",
+      "rolesEmpty": "Роли не найдены"
+    },
+    "dialog": {
+      "deactivateTitle": "Деактивировать пользователя?",
+      "deactivateDescription": "Вы уверены, что хотите деактивировать пользователя «{{name}}»? Учётная запись будет помечена как неактивная, но данные не будут удалены. Пользователь не сможет войти в систему.",
+      "deactivateConfirm": "Деактивировать"
+    },
+    "errors": {
+      "emailExists": "Пользователь с таким e-mail уже существует",
+      "network": "Ошибка соединения с сервером"
+    },
+    "toast": {
+      "createSuccess": "Пользователь создан",
+      "updateSuccess": "Пользователь обновлён",
+      "deactivateSuccess": "Пользователь деактивирован",
+      "emailExists": "Пользователь с таким e-mail уже существует"
+    },
+    "validation": {
+      "nameMin": "Минимум 2 символа",
+      "nameMax": "Максимум 100 символов",
+      "emailRequired": "E-mail обязателен",
+      "emailInvalid": "Неверный формат e-mail",
+      "phoneInvalid": "Неверный номер телефона",
+      "roleRequired": "Роль обязательна",
+      "localeRequired": "Язык обязателен"
+    }
+  },
   "roles": {
     "pageTitle": "Управление ролями",
     "tabs": {

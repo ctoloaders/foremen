@@ -24,6 +24,12 @@ public enum QueryOperator {
     GREATER_THAN_OR_EQUAL(">="),
     LESS_THAN_OR_EQUAL("<="),
 
+    // RSQL-style aliases for comparison operators (backward compatibility)
+    GTE("=gte="),
+    LTE("=lte="),
+    GT("=gt="),
+    LT("=lt="),
+
     // Date comparison
     GT_DATE(">date"),
     LT_DATE("<date"),
@@ -54,6 +60,7 @@ public enum QueryOperator {
             NOT_NULL, NOT_IN, NULL, IN,                             // tilde-wrapped (longest first)
             CONTAINS, STARTS_WITH, ENDS_WITH,                      // case-insensitive text
             CONTAINS_CS, STARTS_WITH_CS, ENDS_WITH_CS,             // case-sensitive text
+            GTE, LTE, GT, LT,                                     // RSQL-style (before >= <= > < to match longer first)
             GT_DATE, LT_DATE,                                      // date (before > and <)
             GREATER_THAN_OR_EQUAL, LESS_THAN_OR_EQUAL,             // >= and <= before > and <
             GREATER_THAN, LESS_THAN,                               // numeric

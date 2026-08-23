@@ -7,19 +7,53 @@ export interface DiffEntry {
   status: DiffStatus
 }
 
+/** Base entity fields that are excluded from comparison display */
+export const EXCLUDED_FIELDS = new Set([
+  'createdAt',
+  'updatedAt',
+  'createdBy',
+  'updatedBy',
+  'createdDate',
+  'updatedDate',
+])
+
+/**
+ * Normalizes a snapshot value — if it's a string, attempt JSON.parse;
+ * if it's already an object, use as-is; if null/undefined, return null.
+ */
+function normalizeSnapshot(snapshot: Record<string, unknown> | string | null | undefined): Record<string, unknown> | null {
+  if (snapshot === null || snapshot === undefined) return null
+  if (typeof snapshot === 'string') {
+    try {
+      const parsed = JSON.parse(snapshot)
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      // Not valid JSON — treat as empty
+    }
+    return null
+  }
+  return snapshot as Record<string, unknown>
+}
+
 /**
  * Computes field-level diff between two nullable snapshot maps.
  * Treats null as empty map. Classifies each field as changed, added, deleted, or unchanged
  * using JSON.stringify deep equality. Returns entries sorted alphabetically by field name.
+ * Excludes base entity fields (createdAt, updatedAt, etc.) from the output.
  */
 export function computeDiff(
-  before: Record<string, unknown> | null,
-  after: Record<string, unknown> | null,
+  before: Record<string, unknown> | string | null,
+  after: Record<string, unknown> | string | null,
 ): DiffEntry[] {
-  const beforeMap = before ?? {}
-  const afterMap = after ?? {}
+  const beforeMap = normalizeSnapshot(before) ?? {}
+  const afterMap = normalizeSnapshot(after) ?? {}
 
-  const allKeys = new Set([...Object.keys(beforeMap), ...Object.keys(afterMap)])
+  const allKeys = new Set(
+    [...Object.keys(beforeMap), ...Object.keys(afterMap)]
+      .filter(key => !EXCLUDED_FIELDS.has(key))
+  )
 
   const entries: DiffEntry[] = []
 
@@ -66,10 +100,12 @@ export function formatValue(value: unknown): string {
 /**
  * Detects if a snapshot is an error snapshot.
  * An error snapshot has exactly two fields: "class" and "error".
+ * Handles string snapshots (JSON) as well as parsed objects.
  */
-export function isErrorSnapshot(snapshot: Record<string, unknown> | null): boolean {
-  if (!snapshot) return false
-  const keys = Object.keys(snapshot)
+export function isErrorSnapshot(snapshot: Record<string, unknown> | string | null): boolean {
+  const normalized = normalizeSnapshot(snapshot)
+  if (!normalized) return false
+  const keys = Object.keys(normalized)
   return keys.length === 2 && keys.includes('class') && keys.includes('error')
 }
 

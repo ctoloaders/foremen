@@ -1,5 +1,6 @@
 package com.foremen.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.foremen.controller.model.*;
 import com.foremen.dao.OperationDao;
 import com.foremen.dao.ResourceDao;
@@ -11,6 +12,7 @@ import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.RoleResourceEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
+import com.foremen.service.audit.AuditLogEntity;
 import com.foremen.service.model.RoleServiceExtendedModel;
 import com.foremen.service.model.RoleServiceModel;
 import com.foremen.service.model.mapper.RoleServiceMapper;
@@ -19,12 +21,17 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -102,6 +109,10 @@ public class RoleService implements AdminService<
         RoleEntity role = dao.findById(roleId)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", roleId));
 
+        // Capture BEFORE snapshot from current permissions
+        List<RoleResourceEntity> currentResources = roleResourceDao.findAllByRoleId(roleId);
+        String beforeSnapshotJson = serializePermissionSnapshot(buildPermissionSnapshot(role, currentResources));
+
         roleResourceDao.deleteAllByRoleId(roleId);
         entityManager.flush();
 
@@ -132,7 +143,11 @@ public class RoleService implements AdminService<
         roleResourceDao.saveAll(newEntries);
         entityManager.flush();
 
-        saveAudit(role, role, "UPDATE_PERMISSIONS");
+        // Capture AFTER snapshot from new permissions
+        String afterSnapshotJson = serializePermissionSnapshot(buildPermissionSnapshot(role, newEntries));
+
+        // Custom audit log for UPDATE_PERMISSIONS
+        savePermissionAudit(role, beforeSnapshotJson, afterSnapshotJson);
 
         return getPermissions(roleId);
     }
@@ -151,5 +166,45 @@ public class RoleService implements AdminService<
             return operation.getNameRU();
         }
         return operation.getNamePL();
+    }
+
+    private Map<String, Object> buildPermissionSnapshot(RoleEntity role, List<RoleResourceEntity> roleResources) {
+        Map<String, Object> snapshot = new LinkedHashMap<>();
+        snapshot.put("name", role.getCode());
+
+        roleResources.stream()
+                .sorted((a, b) -> a.getResource().getCode().compareTo(b.getResource().getCode()))
+                .forEach(rr -> {
+                    List<String> opCodes = rr.getOperations().stream()
+                            .map(OperationEntity::getCode)
+                            .sorted()
+                            .toList();
+                    snapshot.put(rr.getResource().getCode(), opCodes);
+                });
+
+        return snapshot;
+    }
+
+    private String serializePermissionSnapshot(Map<String, Object> snapshot) {
+        try {
+            return AUDIT_OBJECT_MAPPER.writeValueAsString(snapshot);
+        } catch (JsonProcessingException e) {
+            return "{\"error\":\"serialization_failed\",\"class\":\"RoleEntity\"}";
+        }
+    }
+
+    private void savePermissionAudit(RoleEntity role, String beforeSnapshot, String afterSnapshot) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String performedBy = (auth != null && auth.isAuthenticated()) ? auth.getName() : "SYSTEM";
+
+        AuditLogEntity auditLog = new AuditLogEntity();
+        auditLog.setEntityClass("RoleEntity");
+        auditLog.setEntityId(role.getId());
+        auditLog.setOperation("UPDATE_PERMISSIONS");
+        auditLog.setPerformedBy(performedBy);
+        auditLog.setPerformedAt(LocalDateTime.now());
+        auditLog.setSnapshotBefore(beforeSnapshot);
+        auditLog.setSnapshotAfter(afterSnapshot);
+        auditLogDao.save(auditLog);
     }
 }

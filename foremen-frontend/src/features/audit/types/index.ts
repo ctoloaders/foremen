@@ -6,6 +6,6 @@ export interface AuditRecord {
   operation: string
   performedBy: string
   performedAt: string // ISO datetime string
-  snapshotBefore: Record<string, unknown> | null
-  snapshotAfter: Record<string, unknown> | null
+  snapshotBefore: Record<string, unknown> | string | null
+  snapshotAfter: Record<string, unknown> | string | null
 }

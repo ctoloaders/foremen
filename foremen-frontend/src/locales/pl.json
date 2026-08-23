@@ -122,6 +122,69 @@
       "hide": "Ukryj"
     }
   },
+  "users": {
+    "pageTitle": "Zarządzanie użytkownikami",
+    "actions": {
+      "create": "Utwórz użytkownika",
+      "deactivate": "Dezaktywuj",
+      "alreadyInactive": "Użytkownik jest już nieaktywny"
+    },
+    "table": {
+      "name": "Imię",
+      "email": "E-mail",
+      "role": "Rola",
+      "active": "Aktywny"
+    },
+    "badge": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "form": {
+      "titleCreate": "Utwórz użytkownika",
+      "titleEdit": "Edytuj użytkownika",
+      "descriptionCreate": "Wypełnij dane nowego użytkownika",
+      "descriptionEdit": "Zmień dane użytkownika",
+      "name": "Imię",
+      "email": "E-mail",
+      "phone": "Telefon",
+      "role": "Rola",
+      "locale": "Język",
+      "localePlaceholder": "Wybierz język",
+      "active": "Aktywny",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz",
+      "rolePlaceholder": "Wybierz rolę",
+      "roleSearch": "Szukaj roli...",
+      "rolesLoading": "Ładowanie...",
+      "rolesLoadError": "Błąd ładowania ról",
+      "rolesRetry": "Ponów",
+      "rolesEmpty": "Nie znaleziono ról"
+    },
+    "dialog": {
+      "deactivateTitle": "Dezaktywować użytkownika?",
+      "deactivateDescription": "Czy na pewno chcesz dezaktywować użytkownika \"{{name}}\"? Konto zostanie oznaczone jako nieaktywne, ale dane nie zostaną usunięte. Użytkownik nie będzie mógł się zalogować.",
+      "deactivateConfirm": "Dezaktywuj"
+    },
+    "errors": {
+      "emailExists": "Użytkownik z tym adresem e-mail już istnieje",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "toast": {
+      "createSuccess": "Użytkownik został utworzony",
+      "updateSuccess": "Użytkownik został zaktualizowany",
+      "deactivateSuccess": "Użytkownik został dezaktywowany",
+      "emailExists": "Użytkownik z tym adresem e-mail już istnieje"
+    },
+    "validation": {
+      "nameMin": "Minimum 2 znaki",
+      "nameMax": "Maksimum 100 znaków",
+      "emailRequired": "E-mail jest wymagany",
+      "emailInvalid": "Nieprawidłowy format e-mail",
+      "phoneInvalid": "Nieprawidłowy numer telefonu",
+      "roleRequired": "Rola jest wymagana",
+      "localeRequired": "Język jest wymagany"
+    }
+  },
   "roles": {
     "pageTitle": "Zarządzanie rolami",
     "tabs": {

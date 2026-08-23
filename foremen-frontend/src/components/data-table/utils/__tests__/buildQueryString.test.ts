@@ -103,7 +103,7 @@ describe('buildQueryString — Property 1: Query string round-trip consistency',
 
         // Count expected top-level AND-separated conditions.
         // Note: Number/date filters with both from AND to produce TWO top-level
-        // conditions (e.g., "field=gte=X AND field=lte=Y") since buildFilterCondition
+        // conditions (e.g., "field>=X AND field<=Y") since buildFilterCondition
         // joins them with " AND " without wrapping in parentheses.
         let expectedParts = 0
         for (const f of state.filters) {

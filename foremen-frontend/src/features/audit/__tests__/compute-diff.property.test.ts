@@ -1,16 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import * as fc from 'fast-check'
-import { computeDiff, formatValue, isErrorSnapshot, getRowBackground, DiffStatus } from '../utils/compute-diff'
+import { computeDiff, formatValue, isErrorSnapshot, getRowBackground, DiffStatus, EXCLUDED_FIELDS } from '../utils/compute-diff'
 
 describe('Feature: FOR-02-06a-audit-comparison-view, Property 1: Key Completeness', () => {
   /**
    * Property 1: Key Completeness
    * For any two nullable snapshot maps (before, after), the set of `field` values
-   * returned by computeDiff SHALL equal the union of keys from both maps.
+   * returned by computeDiff SHALL equal the union of keys from both maps, excluding
+   * base entity fields (EXCLUDED_FIELDS).
    *
    * Validates: Requirements 1.2
    */
-  it('computeDiff output fields equal union of input keys', () => {
+  it('computeDiff output fields equal union of input keys minus excluded fields', () => {
     fc.assert(
       fc.property(
         fc.dictionary(fc.string({ minLength: 1 }), fc.jsonValue()),
@@ -18,7 +19,10 @@ describe('Feature: FOR-02-06a-audit-comparison-view, Property 1: Key Completenes
         (before, after) => {
           const result = computeDiff(before, after)
           const resultFields = new Set(result.map((e) => e.field))
-          const expectedFields = new Set([...Object.keys(before), ...Object.keys(after)])
+          const expectedFields = new Set(
+            [...Object.keys(before), ...Object.keys(after)]
+              .filter(key => !EXCLUDED_FIELDS.has(key))
+          )
           expect(resultFields).toEqual(expectedFields)
         },
       ),
@@ -150,7 +154,7 @@ describe('Feature: FOR-02-06a-audit-comparison-view, Property 3: Default Filter 
    * For any two non-null snapshot maps, the entries returned by computeDiff filtered
    * to exclude 'unchanged' status SHALL contain only entries where valueBefore differs
    * from valueAfter (by deep equality via JSON.stringify), or where the field is absent
-   * in one of the maps.
+   * in one of the maps. Excluded base entity fields are never present in the output.
    *
    * Validates: Requirements 2.1
    */
@@ -164,6 +168,9 @@ describe('Feature: FOR-02-06a-audit-comparison-view, Property 3: Default Filter 
           const filtered = result.filter((e) => e.status !== 'unchanged')
 
           for (const entry of filtered) {
+            // Excluded fields should never appear in result
+            expect(EXCLUDED_FIELDS.has(entry.field)).toBe(false)
+
             const inBefore = entry.field in before
             const inAfter = entry.field in after
 

@@ -1,21 +1,20 @@
-# Stage 1: Build
-FROM eclipse-temurin:25-jdk AS build
+# Stage 1: Build — use official Gradle image so the distribution is pre-installed
+FROM gradle:9.1.0-jdk25 AS build
 
 WORKDIR /app
 
-# Copy Gradle wrapper and config
-COPY gradlew gradlew.bat settings.gradle build.gradle gradle.properties ./
-COPY gradle/ gradle/
+# Copy build config (dependencies layer)
+COPY settings.gradle build.gradle gradle.properties ./
 
-# Download dependencies (cacheable layer)
-RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
+# Download dependencies (cacheable layer — Gradle itself is already in the image)
+RUN gradle dependencies --no-daemon
 
 # Copy source
 COPY src/ src/
 COPY database_files/ database_files/
 
 # Build fat jar
-RUN ./gradlew bootJar --no-daemon -x test
+RUN gradle bootJar --no-daemon -x test
 
 # Stage 2: Run
 FROM eclipse-temurin:25-jre

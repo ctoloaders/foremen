@@ -33,7 +33,7 @@ export const NAV_CONFIG: NavSectionConfig[] = [
   {
     titleKey: 'nav.sections.system',
     items: [
-      { path: '/users', labelKey: 'nav.users', icon: 'users', bottomNav: true },
+      { path: '/users', labelKey: 'nav.users', titleKey: 'users.pageTitle', icon: 'users', bottomNav: true },
       { path: '/roles', labelKey: 'nav.roles', titleKey: 'roles.pageTitle', icon: 'shield', bottomNav: false },
       { path: '/audit', labelKey: 'nav.audit', titleKey: 'audit.pageTitle', icon: 'scroll-text', bottomNav: false },
     ],

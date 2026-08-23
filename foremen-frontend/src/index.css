@@ -56,3 +56,38 @@ body {
   background: var(--background);
   color: var(--foreground);
 }
+
+/* react-phone-number-input dark theme overrides */
+.phone-input-wrapper .PhoneInput {
+  --PhoneInput-color--focus: var(--ring);
+  --PhoneInputCountryFlag-borderColor: var(--border);
+  --PhoneInputCountryFlag-borderColor--focus: var(--ring);
+  --PhoneInputCountrySelectArrow-color: var(--muted-foreground);
+  --PhoneInputCountrySelectArrow-opacity: 0.7;
+}
+
+.phone-input-wrapper .PhoneInputInput {
+  background: transparent;
+  color: var(--foreground);
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.phone-input-wrapper .PhoneInputInput::placeholder {
+  color: var(--muted-foreground);
+}
+
+.phone-input-wrapper .PhoneInputCountrySelect:focus + .PhoneInputCountryIcon--border {
+  box-shadow: 0 0 0 1px var(--ring);
+}
+
+.phone-input-wrapper .PhoneInputCountryIcon--border {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.phone-input-wrapper .PhoneInputCountrySelectArrow {
+  border-color: var(--muted-foreground);
+}
