@@ -13,5 +13,5 @@
     "sourceMap": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "scripts", "src/dev.ts", "src/dev-webhook.ts"]
+  "exclude": ["node_modules", "dist", "scripts", "src/dev.ts", "src/dev-webhook.ts", "src/**/*.test.ts"]
 }

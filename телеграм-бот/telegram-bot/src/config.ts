@@ -65,4 +65,16 @@ export const config = {
   appsScript: {
     webhookSecret: process.env.APPS_SCRIPT_WEBHOOK_SECRET || "",
   },
+  ocr: {
+    enabled: (process.env.OCR_ENABLED || "true") === "true",
+    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || "",
+  },
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+    model: process.env.GEMINI_MODEL || "gemini-3.6-flash",
+  },
 } as const;
+
+if (config.ocr.enabled && !config.gemini.apiKey) {
+  throw new Error("GEMINI_API_KEY is required when OCR_ENABLED=true");
+}

@@ -2,6 +2,7 @@ import { Context, InlineKeyboard } from "grammy";
 import { getState, setState, clearState } from "../state/store.js";
 import { ConversationStep } from "../state/machine.js";
 import { validateSum, validateText } from "../utils/validators.js";
+import { compareSums } from "../utils/sum-compare.js";
 import { downloadFile } from "../services/telegram.js";
 import { uploadPhoto } from "../services/drive.js";
 import { appendReceiptRow } from "../services/sheets.js";
@@ -33,15 +34,57 @@ export function createTextHandler(bot: Bot) {
         break;
       }
 
+      case ConversationStep.AWAIT_MORE_PAGES: {
+        await ctx.reply("Пожалуйста, отправьте фото чека или нажмите кнопку");
+        break;
+      }
+
+      case ConversationStep.CONFIRM_SUM: {
+        await ctx.reply("Пожалуйста, используйте кнопки для подтверждения.");
+        break;
+      }
+
       case ConversationStep.AWAIT_SUM: {
         const sum = validateSum(text);
         if (sum === null) {
-          await ctx.reply("Введите сумму числом (например: 340 или 55,45 или 1200.00)", { reply_markup: cancelKeyboard });          return;
+          await ctx.reply("Введите сумму числом (например: 340 или 55,45 или 1200.00)", { reply_markup: cancelKeyboard });
+          return;
         }
         state.sum = sum;
-        state.step = ConversationStep.AWAIT_DESCRIPTION;
-        await setState(state);
-        await ctx.reply("Что куплено?", { reply_markup: cancelKeyboard });
+
+        // OCR verification (only if ocrGrossAmount exists)
+        if (state.ocrGrossAmount !== undefined && state.ocrGrossAmount !== null) {
+          const { match } = compareSums(sum, state.ocrGrossAmount);
+          if (!match) {
+            // Mismatch — ask for confirmation
+            state.step = ConversationStep.CONFIRM_SUM;
+            await setState(state);
+
+            const keyboard = new InlineKeyboard()
+              .text("✅ Да, сохранить", "ocr:confirm_yes")
+              .text("✏️ Ввести заново", "ocr:confirm_no");
+
+            await ctx.reply(
+              `⚠️ Распознанная сумма: ${state.ocrGrossAmount}\nВы ввели: ${sum}\n\nВы уверены?`,
+              { reply_markup: keyboard }
+            );
+            return;
+          }
+        }
+
+        // Sum matches or no OCR amount
+        // Check if OCR flow (has ocrDescription + ocrStoreName)
+        if (state.ocrDescription && state.ocrStoreName) {
+          // OCR flow: skip description/store steps, go directly to save
+          state.step = ConversationStep.SAVING;
+          await setState(state);
+          await saveReceipt(ctx, bot, state);
+        } else {
+          // Manual flow — continue to description
+          state.step = ConversationStep.AWAIT_DESCRIPTION;
+          await setState(state);
+          await ctx.reply("Что куплено?", { reply_markup: cancelKeyboard });
+        }
         break;
       }
 
@@ -129,6 +172,13 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
     // Write to Sheets
     const today = new Date().toISOString().split("T")[0];
     const addedBy = [ctx.from!.first_name, ctx.from!.last_name].filter(Boolean).join(" ");
+
+    // Determine sum note (manual entry after OCR failure)
+    let sumNote: string | undefined;
+    if (state.photoFileIds && state.photoFileIds.length > 0 && !state.ocrDescription) {
+      sumNote = "⚠️ Данные введены вручную (OCR не распознал)";
+    }
+
     try {
       await appendReceiptRow(state.projectSheetsUrl, {
         date: today,
@@ -137,6 +187,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
         storeName: state.storeName,
         photoLink,
         addedBy,
+        sumNote,
       });
     } catch (err: any) {
       logger.error("Sheets write failed", { telegramId, error: err.message });
@@ -149,6 +200,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
           storeName: state.storeName,
           photoLink,
           addedBy,
+          sumNote,
         });
       } catch (err2: any) {
         logger.error("Sheets write retry failed", { telegramId, error: err2.message });

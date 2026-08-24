@@ -122,7 +122,7 @@ export async function getProjectsForWorker(worker: Worker): Promise<Project[]> {
 
 export async function appendReceiptRow(
   sheetsUrl: string,
-  row: { date: string; sum: number; description: string; storeName: string; photoLink: string; addedBy: string }
+  row: { date: string; sum: number; description: string; storeName: string; photoLink: string; addedBy: string; sumNote?: string }
 ): Promise<void> {
   const sheets = getSheets();
   const spreadsheetId = extractSpreadsheetId(sheetsUrl);
@@ -159,6 +159,65 @@ export async function appendReceiptRow(
     valueInputOption: "RAW",
     requestBody: {
       values: [[row.photoLink, row.addedBy]],
+    },
+  });
+
+  // Add note to sum cell (column D) if provided
+  if (row.sumNote) {
+    await addNoteToCell(spreadsheetId, sheetName, insertRow, 3, row.sumNote); // column D = index 3
+  }
+}
+
+/**
+ * Adds a note (comment) to a specific cell using the Sheets API.
+ * Row is 1-indexed, column is 0-indexed.
+ */
+async function addNoteToCell(
+  spreadsheetId: string,
+  sheetName: string,
+  row: number,
+  column: number,
+  note: string
+): Promise<void> {
+  const sheets = getSheets();
+
+  // Get the sheet ID (gid) from the sheet name
+  const spreadsheet = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: "sheets.properties",
+  });
+
+  const sheet = spreadsheet.data.sheets?.find(
+    (s) => s.properties?.title === sheetName
+  );
+  const sheetId = sheet?.properties?.sheetId || 0;
+
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId,
+    requestBody: {
+      requests: [
+        {
+          updateCells: {
+            rows: [
+              {
+                values: [
+                  {
+                    note: note,
+                  },
+                ],
+              },
+            ],
+            fields: "note",
+            range: {
+              sheetId,
+              startRowIndex: row - 1, // convert to 0-indexed
+              endRowIndex: row,
+              startColumnIndex: column,
+              endColumnIndex: column + 1,
+            },
+          },
+        },
+      ],
     },
   });
 }

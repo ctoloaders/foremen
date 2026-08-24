@@ -4,6 +4,15 @@ import { config } from "../config.js";
 import { extractFolderId } from "../utils/validators.js";
 import { transliterate } from "../utils/transliterate.js";
 
+/**
+ * Formats an array of photo links for insertion into a spreadsheet cell.
+ * Single link: returns as-is.
+ * Multiple links: joins with newline.
+ */
+export function formatPhotoLinks(links: string[]): string {
+  return links.join("\n");
+}
+
 function getAuth() {
   const opts: any = {
     credentials: config.google.serviceAccountKey as any,
@@ -19,22 +28,40 @@ function getDrive() {
   return google.drive({ version: "v3", auth: getAuth() });
 }
 
-export async function uploadPhoto(
-  driveUrl: string,
+/**
+ * Generates a filename for receipt photos uploaded to Drive.
+ * Single page: YYYY-MM-DD_HH-MM_<store>_<sum>.<ext>
+ * Multi-page:  YYYY-MM-DD_HH-MM_<store>_<sum>_page<N>.<ext>
+ */
+export function generateFileName(
   storeName: string,
   sum: number,
-  fileBuffer: Buffer,
-  mimeType: string
-): Promise<{ fileId: string; webViewLink: string }> {
-  const drive = getDrive();
-  const folderId = extractFolderId(driveUrl);
-
-  // Generate filename: YYYY-MM-DD_HH-MM_store_sum.ext
+  mimeType: string,
+  pageNum?: number,
+): string {
   const now = new Date();
   const date = now.toISOString().split("T")[0];
   const time = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`;
   const ext = mimeType === "image/png" ? "png" : "jpg";
-  const fileName = `${date}_${time}_${transliterate(storeName)}_${sum}.${ext}`;
+  const store = transliterate(storeName);
+
+  if (pageNum !== undefined) {
+    return `${date}_${time}_${store}_${sum}_page${pageNum}.${ext}`;
+  }
+  return `${date}_${time}_${store}_${sum}.${ext}`;
+}
+
+/**
+ * Internal helper: uploads a single file buffer to a Drive folder with a given filename.
+ * Returns fileId and webViewLink.
+ */
+async function uploadFileToDrive(
+  folderId: string,
+  fileName: string,
+  fileBuffer: Buffer,
+  mimeType: string,
+): Promise<{ fileId: string; webViewLink: string }> {
+  const drive = getDrive();
 
   const stream = new Readable();
   stream.push(fileBuffer);
@@ -67,4 +94,46 @@ export async function uploadPhoto(
     fileId,
     webViewLink: res.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`,
   };
+}
+
+export async function uploadPhoto(
+  driveUrl: string,
+  storeName: string,
+  sum: number,
+  fileBuffer: Buffer,
+  mimeType: string,
+): Promise<{ fileId: string; webViewLink: string }> {
+  const folderId = extractFolderId(driveUrl);
+  const fileName = generateFileName(storeName, sum, mimeType);
+  return uploadFileToDrive(folderId, fileName, fileBuffer, mimeType);
+}
+
+/**
+ * Uploads multiple photos (multi-page receipt) to a Drive folder.
+ * For a single file: uses standard naming (no page suffix).
+ * For multiple files: appends _page<N> to each filename.
+ * Returns an array of webViewLinks for all uploaded photos.
+ */
+export async function uploadPhotos(
+  driveUrl: string,
+  storeName: string,
+  sum: number,
+  files: Array<{ buffer: Buffer; mimeType: string }>,
+): Promise<{ links: string[] }> {
+  const folderId = extractFolderId(driveUrl);
+  const links: string[] = [];
+  const isMultiPage = files.length > 1;
+
+  for (let i = 0; i < files.length; i++) {
+    const fileName = generateFileName(
+      storeName,
+      sum,
+      files[i].mimeType,
+      isMultiPage ? i + 1 : undefined,
+    );
+    const result = await uploadFileToDrive(folderId, fileName, files[i].buffer, files[i].mimeType);
+    links.push(result.webViewLink);
+  }
+
+  return { links };
 }

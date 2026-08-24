@@ -24,25 +24,28 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// --- CONFIG (read from .env or hardcode for now) ---
+// --- CONFIG (read from .env.production) ---
 import { config as dotenvConfig } from "dotenv";
-dotenvConfig({ path: resolve(__dirname, "../.env") });
+dotenvConfig({ path: resolve(__dirname, "../.env.production"), override: true });
 
-const BITRIX_WEBHOOK_URL = (process.env.BITRIX_WEBHOOK_URL || "https://b24-0vnef8.bitrix24.pl/rest/1/8d2rlmvb4feorcz4").replace(/\/$/, "");
-const SA_KEY_PATH = resolve(__dirname, "..", process.env.GOOGLE_SERVICE_ACCOUNT_JSON || "../forementest-2064c9f53f45.json");
+const BITRIX_WEBHOOK_URL = (process.env.BITRIX_WEBHOOK_URL || "https://foremen.bitrix24.pl/rest/747/jqsr7yxpg9yqy1nw").replace(/\/$/, "");
+const SA_KEY_PATH = resolve(__dirname, "../../starry-tracker-505110-s3-326364be8f95.json");
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
-const SHARED_DRIVE_ID = process.env.SHARED_DRIVE_ID || "0AHkU6n74cG-CUk9PVA";
-const PROJECTS_PARENT_FOLDER_ID = process.env.PROJECTS_PARENT_FOLDER_ID || "12Q66EYWWsgjRtT2-8inJ91JtVctfsvjt";
-const WORKERS_SPREADSHEET_ID = process.env.WORKERS_SPREADSHEET_ID || "";
-const PROJECTS_SPREADSHEET_ID = process.env.PROJECTS_SPREADSHEET_ID || "";
-const WEBHOOK_SECRET = process.env.APPS_SCRIPT_WEBHOOK_SECRET || "foremen-apps-script-secret-2024";
+const IMPERSONATE_EMAIL = process.env.GOOGLE_IMPERSONATE_EMAIL || "info@foremen.eu";
+const PROJECTS_PARENT_FOLDER_ID = process.env.PROJECTS_PARENT_FOLDER_ID || "1OaJZL5HjSaRgXNfhwlszfhCPtFwZoige";
+const WORKERS_SPREADSHEET_ID = process.env.WORKERS_SPREADSHEET_ID || "1X599awhaiMApbNA-ioHdhMmHKQWI4q1iV_rngqqQ-zs";
+const PROJECTS_SPREADSHEET_ID = process.env.PROJECTS_SPREADSHEET_ID || "1GxUyUoecvw4NEldj5I_LvQ2-OiVg8V5HW5rkJheU36U";
 
-// --- Google Auth ---
+// --- Google Auth (with impersonation) ---
 const keyFile = JSON.parse(readFileSync(SA_KEY_PATH, "utf-8"));
-const auth = new google.auth.GoogleAuth({
+const authOpts: any = {
   credentials: keyFile,
   scopes: ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"],
-});
+};
+if (IMPERSONATE_EMAIL) {
+  authOpts.clientOptions = { subject: IMPERSONATE_EMAIL };
+}
+const auth = new google.auth.GoogleAuth(authOpts);
 const sheets = google.sheets({ version: "v4", auth });
 const drive = google.drive({ version: "v3", auth });
 
@@ -73,7 +76,8 @@ async function main() {
   console.log("=== SETUP CLIENT ===\n");
   console.log(`Bitrix URL: ${BITRIX_WEBHOOK_URL}`);
   console.log(`SA Key: ${SA_KEY_PATH}`);
-  console.log(`Shared Drive: ${SHARED_DRIVE_ID}`);
+  console.log(`Folder: ${PROJECTS_PARENT_FOLDER_ID}`);
+  console.log(`Impersonate: ${IMPERSONATE_EMAIL}`);
 
   // Step 1: Get Bitrix field codes
   console.log("\n--- Step 1: Parse Bitrix field codes ---");
@@ -291,10 +295,11 @@ async function main() {
   const envContent = `TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
 TELEGRAM_WEBHOOK_SECRET=${crypto.randomUUID()}
 GOOGLE_SERVICE_ACCOUNT_JSON=./service-account.json
+GOOGLE_IMPERSONATE_EMAIL=${IMPERSONATE_EMAIL}
 WORKERS_SPREADSHEET_ID=${WORKERS_SPREADSHEET_ID}
 PROJECTS_SPREADSHEET_ID=${PROJECTS_SPREADSHEET_ID}
 ESTIMATES_FOLDER_ID=${PROJECTS_PARENT_FOLDER_ID}
-SHARED_DRIVE_ID=${SHARED_DRIVE_ID}
+SHARED_DRIVE_ID=
 PROJECTS_PARENT_FOLDER_ID=${PROJECTS_PARENT_FOLDER_ID}
 WORKERS_SHEET_NAME=workers
 ACCESS_SHEET_NAME=project_access
