@@ -1,0 +1,483 @@
+{
+  "pbtResults": {
+    "2.4 Write property tests for theme applicator (Properties 1, 5, 6, 7)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787771533454
+    },
+    "2.5 Write property tests for theme presets (Property 4)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787771791977
+    },
+    "4.2 Write backend tests for DisplayPreferencesController": {
+      "status": "passed",
+      "lastRunTimestamp": 1787772374732
+    },
+    "2.7 Write property tests for theme store (Properties 8, 9)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787772685908
+    },
+    "2.6 Write property tests for validation, round-trip, merge (Properties 2, 3, 9, 10)": {
+      "status": "passed",
+      "lastRunTimestamp": 1787772719325
+    }
+  },
+  "executionHistory": {
+    "1.1 Refactor index.css to support light/dark themes with CSS custom properties": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552592
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770564276
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770808769
+      }
+    ],
+    "1.2 Add inline theme script to index.html for FOUC prevention": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552658
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770565074
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770809738
+      }
+    ],
+    "2.1 Create theme types and constants": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552700
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770565974
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770810519
+      }
+    ],
+    "2.2 Implement theme applicator utility functions": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552743
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770823280
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787771261792
+      }
+    ],
+    "2.3 Create theme Zustand store": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552784
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787771279304
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772413427
+      }
+    ],
+    "2.4 Write property tests for theme applicator (Properties 1, 5, 6, 7)": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552884
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787771279739
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772414810
+      }
+    ],
+    "2.5 Write property tests for theme presets (Property 4)": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552942
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787771281099
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772415470
+      }
+    ],
+    "2.6 Write property tests for validation, round-trip, merge (Properties 2, 3, 9, 10)": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770552985
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772433755
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772837619
+      }
+    ],
+    "2.7 Write property tests for theme store (Properties 8, 9)": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553025
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772435845
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772838444
+      }
+    ],
+    "3. Checkpoint - Verify theme utilities compile and property tests pass": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553055
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774343405
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774427386
+      }
+    ],
+    "4.1 Create DisplayPreferencesRequest DTO and DisplayPreferencesController": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553090
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770824283
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787771262156
+      }
+    ],
+    "4.2 Write backend tests for DisplayPreferencesController": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553126
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787771281648
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772416120
+      }
+    ],
+    "5.1 Implement preferences API client and query/mutation hooks": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553159
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772437866
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772840336
+      }
+    ],
+    "5.2 Integrate theme store into AppShell": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553193
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772864938
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773486835
+      }
+    ],
+    "6.1 Implement ThemeModeSelector component": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553220
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772865265
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773488332
+      }
+    ],
+    "6.2 Implement ColorSchemeSelector component": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553244
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772866627
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773487107
+      }
+    ],
+    "6.3 Implement FontSizeSelector component": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553271
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772867378
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773488916
+      }
+    ],
+    "6.4 Implement SettingsAppearancePage with Save/Reset": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553294
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773506604
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773913101
+      }
+    ],
+    "6.5 Register route and navigation entry": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553326
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773507586
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773914077
+      }
+    ],
+    "7.1 Add i18n keys to pl.json and ru.json": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553354
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772868242
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773485941
+      }
+    ],
+    "8. Checkpoint - Full integration verification": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553388
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774433331
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774973238
+      }
+    ],
+    "9.1 Write unit tests for SettingsAppearancePage": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553416
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773925986
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774329574
+      }
+    ],
+    "9.2 Write unit tests for selector components": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553442
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773927036
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774330452
+      }
+    ],
+    "10. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770553469
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774982870
+      },
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787775367818
+      }
+    ],
+    "1. CSS architecture and FOUC prevention": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787770809768
+      }
+    ],
+    "4. Backend display preferences endpoint": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772416145
+      }
+    ],
+    "2. Theme store and pure utility functions": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787772838480
+      }
+    ],
+    "7. Internationalization": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773486005
+      }
+    ],
+    "5. Frontend API layer and AppShell integration": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773486952
+      }
+    ],
+    "6. Settings page UI components": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787773914130
+      }
+    ],
+    "9. Component and integration tests": [
+      {
+        "executionId": "daf6d49f-1e1b-429d-bf29-dce61bca3dd8",
+        "chatSessionId": "sess_69bc7112-5482-4fcd-8bb0-f7038947a0ff",
+        "timestamp": 1787774330499
+      }
+    ]
+  }
+}

@@ -2,6 +2,8 @@ import { Outlet } from 'react-router-dom'
 
 import { cn } from '@/lib/utils'
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import { useThemeApplicator } from '@/hooks/useThemeApplicator'
+import { useThemeSync } from '@/hooks/useThemeSync'
 import { useUIStore } from '@/stores/ui-store'
 import { Sidebar } from '@/app/layout/Sidebar'
 import { TopBar } from '@/app/layout/TopBar'
@@ -22,6 +24,12 @@ export function AppShell() {
   const breakpoint = useBreakpoint()
   const sidebarOpen = useUIStore((s) => s.sidebarOpen)
   const toggleSidebar = useUIStore((s) => s.toggleSidebar)
+
+  // Subscribe to theme store → apply CSS classes/variables on every change
+  useThemeApplicator()
+
+  // Sync theme with backend on startup; revert unsaved changes on nav away
+  useThemeSync()
 
   return (
     <div className="min-h-screen bg-background font-sans">

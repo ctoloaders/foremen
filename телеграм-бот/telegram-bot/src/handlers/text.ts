@@ -190,7 +190,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
         sumNote,
       });
     } catch (err: any) {
-      logger.error("Sheets write failed", { telegramId, error: err.message });
+      logger.error("Sheets write failed", { telegramId, error: err.message, stack: err.stack?.slice(0, 500), sheetsUrl: state.projectSheetsUrl });
       await new Promise(r => setTimeout(r, 2000));
       try {
         await appendReceiptRow(state.projectSheetsUrl, {

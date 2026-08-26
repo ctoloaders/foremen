@@ -38,4 +38,10 @@ export const NAV_CONFIG: NavSectionConfig[] = [
       { path: '/audit', labelKey: 'nav.audit', titleKey: 'audit.pageTitle', icon: 'scroll-text', bottomNav: false },
     ],
   },
+  {
+    titleKey: 'nav.sections.settings',
+    items: [
+      { path: '/settings/appearance', labelKey: 'nav.settings.appearance', icon: 'palette', bottomNav: false },
+    ],
+  },
 ]

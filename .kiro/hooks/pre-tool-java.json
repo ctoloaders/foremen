@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Progress tracking start",
+      "trigger": "PreToolUse",
+      "action": {
+        "type": "command",
+        "command": "When you plan to use java - always use sdk cli (sdkman)"
+      },
+      "description": "Always use sdk cli for java",
+      "matcher": "java",
+      "enabled": true
+    }
+  ]
+}

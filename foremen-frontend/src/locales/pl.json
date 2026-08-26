@@ -19,7 +19,11 @@
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
-      "system": "System"
+      "system": "System",
+      "settings": "Ustawienia"
+    },
+    "settings": {
+      "appearance": "Wygląd"
     }
   },
   "pages": {
@@ -257,6 +261,47 @@
       "nameMin": "Minimum 2 znaki",
       "nameMax": "Maksimum 100 znaków",
       "descriptionMax": "Maksimum 500 znaków"
+    }
+  },
+  "settings": {
+    "appearance": {
+      "title": "Wygląd",
+      "description": "Dostosuj motyw, schemat kolorów i rozmiar czcionki",
+      "themeMode": {
+        "title": "Tryb motywu",
+        "description": "Wybierz preferowany tryb wyświetlania",
+        "dark": "Ciemny",
+        "light": "Jasny",
+        "system": "Systemowy"
+      },
+      "colorScheme": {
+        "title": "Schemat kolorów",
+        "description": "Wybierz paletę kolorów akcentu",
+        "zinc": "Cynk",
+        "slate": "Łupek",
+        "stone": "Kamień",
+        "gray": "Szary",
+        "neutral": "Neutralny",
+        "blue": "Niebieski",
+        "green": "Zielony",
+        "orange": "Pomarańczowy",
+        "red": "Czerwony"
+      },
+      "fontSize": {
+        "title": "Rozmiar czcionki",
+        "description": "Dostosuj rozmiar tekstu interfejsu",
+        "sm": "Mały",
+        "default": "Domyślny",
+        "lg": "Duży",
+        "xl": "Bardzo duży"
+      },
+      "save": "Zapisz preferencje",
+      "reset": "Przywróć zapisane",
+      "saving": "Zapisywanie...",
+      "toast": {
+        "success": "Preferencje wyglądu zapisane",
+        "error": "Nie udało się zapisać preferencji"
+      }
     }
   }
 }

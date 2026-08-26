@@ -142,7 +142,7 @@ export function createOcrCallbackHandler(bot: Bot) {
           })
         );
       } catch (err: any) {
-        logger.error("Sheets write failed (OCR flow)", { telegramId, error: err.message });
+        logger.error("Sheets write failed (OCR flow)", { telegramId, error: err.message, stack: err.stack?.slice(0, 500), sheetsUrl: state.projectSheetsUrl });
         await ctx.reply("❌ Ошибка записи в таблицу. Фото загружено, но строка не добавлена. Попробуйте /start");
         return;
       }

@@ -13,6 +13,15 @@ vi.mock('@/hooks/useBreakpoint', () => ({
   useBreakpoint: () => mockUseBreakpoint(),
 }))
 
+// Mock theme hooks — theme application is tested separately
+vi.mock('@/hooks/useThemeApplicator', () => ({
+  useThemeApplicator: () => {},
+}))
+
+vi.mock('@/hooks/useThemeSync', () => ({
+  useThemeSync: () => {},
+}))
+
 function renderAppShell(initialPath = '/') {
   const router = createMemoryRouter(
     [

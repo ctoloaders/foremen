@@ -16,6 +16,9 @@ const DeliveriesPage = React.lazy(() => import('@/app/pages/DeliveriesPage'))
 const UsersPage = React.lazy(() => import('@/features/users/UsersPage'))
 const RolesPage = React.lazy(() => import('@/features/roles/RolesPage'))
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
+const SettingsAppearancePage = React.lazy(
+  () => import('@/features/settings/SettingsAppearancePage')
+)
 const NotFoundPage = React.lazy(() => import('@/app/pages/NotFoundPage'))
 
 function SuspenseWrapper({ children }: { children: React.ReactNode }) {
@@ -72,6 +75,10 @@ export const router = createBrowserRouter([
       {
         path: 'audit',
         element: <SuspenseWrapper><AuditPage /></SuspenseWrapper>,
+      },
+      {
+        path: 'settings/appearance',
+        element: <SuspenseWrapper><SettingsAppearancePage /></SuspenseWrapper>,
       },
       {
         path: '*',

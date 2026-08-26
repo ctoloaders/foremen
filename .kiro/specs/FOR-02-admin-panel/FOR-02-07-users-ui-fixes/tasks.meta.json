@@ -1,0 +1,129 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration tests for backend bugs": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519073891
+      },
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519084019
+      }
+    ],
+    "2. Write bug condition exploration tests for frontend bugs": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519073986
+      }
+    ],
+    "3. Write preservation property tests for backend": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074064
+      }
+    ],
+    "4. Write preservation property tests for frontend": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074192
+      }
+    ],
+    "5.1 Apply the fix": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074253
+      }
+    ],
+    "6.1 Implement paginated API function": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074291
+      }
+    ],
+    "6.2 Implement useRolesInfinite hook": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074380
+      }
+    ],
+    "7.1 Implement debounced server-side search + IntersectionObserver infinite scroll": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074426
+      }
+    ],
+    "8.1 Apply the fix": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074498
+      }
+    ],
+    "9.1 Apply the fix": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074536
+      }
+    ],
+    "10.1 Apply the fix": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074576
+      }
+    ],
+    "11.1 Apply the fix": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074669
+      }
+    ],
+    "12.1 Verify backend bug condition tests pass": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074710
+      }
+    ],
+    "12.2 Verify frontend bug condition tests pass": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074793
+      }
+    ],
+    "13.1 Verify backend preservation tests still pass": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519074898
+      }
+    ],
+    "13.2 Verify frontend preservation tests still pass": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519075008
+      }
+    ],
+    "14. Checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
+        "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
+        "timestamp": 1787519075050
+      }
+    ]
+  }
+}

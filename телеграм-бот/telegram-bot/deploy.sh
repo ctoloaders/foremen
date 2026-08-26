@@ -8,7 +8,7 @@ source "$(dirname "$0")/.env.production"
 set +a
 
 PROJECT_ID="starry-tracker-505110-s3"
-REGION="me-west1"
+REGION="europe-central2"
 SOURCE_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 cd "$SOURCE_DIR"
