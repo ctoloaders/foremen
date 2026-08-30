@@ -61,6 +61,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
 
     @Transactional
     default ServiceExtendedModel create(ServiceExtendedModel model) {
+        validateCreate(model);
         DaoModel entity = getMapper().toCreateDaoModel(model);
         entity = getWriteDao().save(entity);
         getEntityManager().flush();
@@ -113,6 +114,10 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         getWriteDao().save(existing);
         getEntityManager().flush();
         saveAuditWithSnapshot(beforeSnapshot, existing, "UPDATE");
+    }
+
+    default void validateCreate(ServiceExtendedModel model) {
+        // No-op default — subclasses override for custom validation
     }
 
     default void validateUpdate(DaoModel existing, ServiceExtendedModel update) {

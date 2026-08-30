@@ -26,6 +26,7 @@ public class UserService implements AdminService<
         UserServiceModel, UserServiceExtendedModel, UserEntity, Long> {
 
     private static final Set<String> SUPPORTED_LOCALES = Set.of("ru", "pl", "en");
+    private static final String ADMIN_ROLE_CODE = "ADMIN";
 
     private final UserDao dao;
     private final RoleDao roleDao;
@@ -34,49 +35,40 @@ public class UserService implements AdminService<
     private final EntityManager entityManager;
     private final Class<UserEntity> daoModelClass = UserEntity.class;
 
-    // --- Create with validation ---
+    // --- Validation hooks (framework reuses default create()/update() for audit/snapshot) ---
 
+    /**
+     * Create-time validation. The ADMIN-role prohibition is enforced FIRST: assigning the
+     * ADMIN role via the CRUD API is never permitted (12.1). The check runs regardless of
+     * caller role and independent of any frontend, because the framework invokes this hook
+     * for every create (12.3, 12.4).
+     */
     @Override
-    public UserServiceExtendedModel create(UserServiceExtendedModel model) {
+    public void validateCreate(UserServiceExtendedModel model) {
+        RoleEntity role = resolveRole(model.roleId());
+        if (ADMIN_ROLE_CODE.equals(role.getCode())) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.user.admin.role.forbidden");
+        }
         validateEmailUniqueness(model.email(), null);
         validateLocale(model.locale());
-        RoleEntity role = resolveRole(model.roleId());
-
-        UserEntity entity = mapper.toCreateDaoModel(model);
-        entity.setRole(role);
-        entity = dao.save(entity);
-        entityManager.flush();
-        saveAudit(null, entity, "CREATE");
-        return mapper.toServiceExtendedModel(entity);
     }
 
-    // --- Update with validation ---
-
+    /**
+     * Update-time validation. The ADMIN-role prohibition is enforced FIRST: promoting a
+     * non-ADMIN user to ADMIN is never permitted (12.2). An unchanged role — including an
+     * existing ADMIN remaining ADMIN — is allowed (12.6). Enforcement is independent of the
+     * caller's role and any frontend, since the framework invokes this hook for every update
+     * (12.3, 12.4).
+     */
     @Override
-    public UserServiceExtendedModel update(Long id, UserServiceExtendedModel model) {
-        UserEntity existing = dao.findById(id)
-                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
-
-        validateEmailUniqueness(model.email(), id);
-        validateLocale(model.locale());
-        RoleEntity role = resolveRole(model.roleId());
-
-        UserEntity before = new UserEntity();
-        before.setId(existing.getId());
-        before.setName(existing.getName());
-        before.setEmail(existing.getEmail());
-        before.setPhone(existing.getPhone());
-        before.setRole(existing.getRole());
-        before.setActive(existing.isActive());
-        before.setLocale(existing.getLocale());
-        before.setDisplayPreferences(existing.getDisplayPreferences());
-
-        mapper.updateFields(model, existing);
-        existing.setRole(role);
-        UserEntity saved = dao.save(existing);
-        entityManager.flush();
-        saveAudit(before, saved, "UPDATE");
-        return mapper.toServiceExtendedModel(saved);
+    public void validateUpdate(UserEntity existing, UserServiceExtendedModel update) {
+        RoleEntity targetRole = resolveRole(update.roleId());
+        String existingRoleCode = existing.getRole() != null ? existing.getRole().getCode() : null;
+        if (!ADMIN_ROLE_CODE.equals(existingRoleCode) && ADMIN_ROLE_CODE.equals(targetRole.getCode())) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.user.admin.role.forbidden");
+        }
+        validateEmailUniqueness(update.email(), existing.getId());
+        validateLocale(update.locale());
     }
 
     // --- Soft-delete (set active = false) ---

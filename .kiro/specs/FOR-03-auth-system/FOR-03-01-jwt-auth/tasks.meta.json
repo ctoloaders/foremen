@@ -1,0 +1,839 @@
+{
+  "pbtResults": {
+    "5.2 Write property tests for bcrypt hashing": {
+      "status": "passed",
+      "lastRunTimestamp": 1787989819149
+    },
+    "8.3 Write property test for message localization": {
+      "status": "passed",
+      "lastRunTimestamp": 1787990112814
+    },
+    "6.2 Write property tests for JwtTokenProvider": {
+      "status": "passed",
+      "lastRunTimestamp": 1787990318337
+    },
+    "11.2 Write property tests for JwtAuthenticationFilter": {
+      "status": "passed",
+      "lastRunTimestamp": 1787990755616
+    },
+    "7.2 Write property tests for RefreshTokenService": {
+      "status": "passed",
+      "lastRunTimestamp": 1787990811777
+    },
+    "9.3 Write property tests for AuthService.login": {
+      "status": "passed",
+      "lastRunTimestamp": 1787993217507
+    },
+    "9.5 Write property test for current-user response": {
+      "status": "passed",
+      "lastRunTimestamp": 1787993464056
+    },
+    "13.3 Write property test for ADMIN prohibition": {
+      "status": "passed",
+      "lastRunTimestamp": 1787993480464
+    },
+    "9.7 Write property tests for password reset": {
+      "status": "passed",
+      "lastRunTimestamp": 1787993784033
+    }
+  },
+  "executionHistory": {
+    "1.1 Add Gradle dependencies": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832211
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988850819
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989003653
+      }
+    ],
+    "1.2 Create JwtProperties and application.yml config keys": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832302
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988855910
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989009784
+      }
+    ],
+    "1.3 Write example tests for configuration defaults and fail-fast": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832478
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989016600
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989216736
+      }
+    ],
+    "2.1 Add UserStatus enum and extend UserEntity": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832519
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989021217
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989224838
+      }
+    ],
+    "2.2 Add RefreshTokenEntity and PasswordResetTokenEntity": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832561
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989027017
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989229935
+      }
+    ],
+    "2.3 Write example tests for entity defaults": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832592
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989272195
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989955037
+      }
+    ],
+    "3.1 Author changesets 010, 011, 012 and register them": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832619
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989278016
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989960119
+      }
+    ],
+    "3.2 Write Testcontainers migration idempotency test": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832660
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990144203
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990465939
+      }
+    ],
+    "4.1 Create RefreshTokenDao and PasswordResetTokenDao": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832685
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989283897
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989965846
+      }
+    ],
+    "5.1 Create PasswordEncoderConfig": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832718
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989031837
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989235270
+      }
+    ],
+    "5.2 Write property tests for bcrypt hashing": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832745
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989289000
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989970953
+      }
+    ],
+    "6.1 Create JwtTokenProvider and JwtClaims": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832792
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989293637
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989976161
+      }
+    ],
+    "6.2 Write property tests for JwtTokenProvider": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832830
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990150354
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990471455
+      }
+    ],
+    "7.1 Create RefreshTokenService": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832864
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990155376
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990477521
+      }
+    ],
+    "7.2 Write property tests for RefreshTokenService": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832892
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990498771
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990968341
+      }
+    ],
+    "8.1 Create MailSender abstraction and SMTP implementation": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832916
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989983537
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990131920
+      }
+    ],
+    "8.2 Add auth error message codes in PL and RU": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832944
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989036783
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989240837
+      }
+    ],
+    "8.3 Write property test for message localization": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832968
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989988862
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990137811
+      }
+    ],
+    "9.1 Create request/response DTO records": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988832995
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990160968
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990482870
+      }
+    ],
+    "9.2 Implement AuthService.login with status branching and timing resistance": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833044
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990493486
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990974960
+      }
+    ],
+    "9.3 Write property tests for AuthService.login": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833129
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991400587
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993248615
+      }
+    ],
+    "9.4 Implement AuthService refresh, logout, and currentUser": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833162
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990998519
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991249066
+      }
+    ],
+    "9.5 Write property test for current-user response": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833197
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991405821
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993805252
+      }
+    ],
+    "9.6 Implement AuthService password reset request and confirm": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833237
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991255367
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991394167
+      }
+    ],
+    "9.7 Write property tests for password reset": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833281
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991411036
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993811301
+      }
+    ],
+    "10. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833302
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993847351
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062218963
+      }
+    ],
+    "11.1 Create JwtAuthenticationFilter and JwtAuthenticationEntryPoint": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833369
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990166090
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062211827
+      }
+    ],
+    "11.2 Write property tests for JwtAuthenticationFilter": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833481
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990506325
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990980247
+      }
+    ],
+    "11.3 Update SecurityConfig": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833501
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990512320
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990985085
+      }
+    ],
+    "12.1 Create AuthController endpoints": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833527
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991418764
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787992035679
+      }
+    ],
+    "12.2 Write example tests for endpoint wiring": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833550
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062224693
+      }
+    ],
+    "13.1 Add `validateCreate` hook to the AdminService CRUD framework": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833585
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990517414
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990990834
+      }
+    ],
+    "13.2 Refactor UserService onto validateCreate/validateUpdate with ADMIN check first": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833620
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787991424461
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993254549
+      }
+    ],
+    "13.3 Write property test for ADMIN prohibition": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833650
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993264051
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993817715
+      }
+    ],
+    "14.1 Create AdminBootstrap": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833684
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993271331
+      },
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993823762
+      }
+    ],
+    "14.2 Write example tests for AdminBootstrap scenarios": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833724
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062232553
+      }
+    ],
+    "15.1 Write SecurityConfig integration tests": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833751
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062237911
+      }
+    ],
+    "15.2 Write end-to-end auth flow integration test": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833792
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062243319
+      }
+    ],
+    "15.3 Write ForemenControllerAdvice localization test": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833818
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062249916
+      }
+    ],
+    "16. Author test-cases.md": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833887
+      },
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062255335
+      }
+    ],
+    "17.1 Set up the API test automation harness": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833934
+      }
+    ],
+    "17.2 Implement repeatability: unique-data generator and teardown": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988833966
+      }
+    ],
+    "17.3 Automate the Login feature test cases": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988834008
+      }
+    ],
+    "17.4 Automate the Refresh + rotation and Logout test cases": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988834031
+      }
+    ],
+    "17.5 Automate the Current-user, Password-reset, ADMIN-prohibition, and Localization test cases": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988834068
+      }
+    ],
+    "17.6 Automate the Regression group and MD report generation": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988834100
+      }
+    ],
+    "18. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787988834132
+      }
+    ],
+    "1. Add dependencies and JWT/admin configuration": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989216820
+      }
+    ],
+    "2. Extend the user model and add token entities": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989955137
+      }
+    ],
+    "4. Add DAOs for the new entities": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989965954
+      }
+    ],
+    "5. Implement password encoding": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787989970990
+      }
+    ],
+    "8. Add the mail abstraction and error message localization": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990137843
+      }
+    ],
+    "3. Create Liquibase changesets for the auth schema": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990465992
+      }
+    ],
+    "6. Implement the JWT token provider": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990471534
+      }
+    ],
+    "7. Implement the refresh token service": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787990968389
+      }
+    ],
+    "9. Implement authentication DTOs and AuthService": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993811336
+      }
+    ],
+    "13. Enforce ADMIN-role prohibition in UserService": [
+      {
+        "executionId": "421d592b-d4f0-486d-99c7-6680ce2797f1",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1787993817778
+      }
+    ],
+    "11. Implement the JWT filter and security wiring": [
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062211932
+      }
+    ],
+    "12. Implement AuthController": [
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062224745
+      }
+    ],
+    "14. Implement the admin bootstrap bean": [
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062232596
+      }
+    ],
+    "15. Integration and wiring": [
+      {
+        "executionId": "ef29da3c-cfe6-4ff3-8d53-6fc150f3357a",
+        "chatSessionId": "sess_f45d642f-f538-40de-b57b-74467d42263b",
+        "timestamp": 1788062250033
+      }
+    ]
+  }
+}

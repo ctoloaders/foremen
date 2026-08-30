@@ -15,3 +15,11 @@ spring:
   security:
     user:
       password: test
+
+foremen:
+  jwt:
+    secret: test-only-jwt-secret-value-0123456789-abcdef
+    access-ttl-minutes: 30
+    refresh-ttl-days: 7
+  admin:
+    create: false

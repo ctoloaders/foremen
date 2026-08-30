@@ -43,6 +43,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.boot:spring-boot-starter-aspectj'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
 
     // MapStruct
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"
@@ -52,6 +53,11 @@ dependencies {
 
     // Caffeine cache
     implementation 'com.github.ben-manes.caffeine:caffeine'
+
+    // JJWT (JSON Web Token) - not managed by Spring Boot BOM, so pin version
+    implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+    runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
 
     // Jackson JSR310 (for JavaTimeModule in audit serialization)
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'

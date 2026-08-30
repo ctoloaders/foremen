@@ -3,6 +3,17 @@ spring:
     active: local
   liquibase:
     change-log: classpath:database_files/changelog.xml
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: 8080
@@ -16,3 +27,14 @@ foremen:
     spec: "maximumSize=500,expireAfterWrite=10m"
   cors:
     allowed-origins: "http://localhost:3000"
+  jwt:
+    access-ttl-minutes: ${FOREMEN_JWT_ACCESS_TTL_MINUTES:30}
+    refresh-ttl-days: ${FOREMEN_JWT_REFRESH_TTL_DAYS:7}
+    secret: ${FOREMEN_JWT_SECRET:}
+  admin:
+    create: ${FOREMEN_ADMIN_CREATE:false}
+    email: ${FOREMEN_ADMIN_EMAIL:}
+    password: ${FOREMEN_ADMIN_PASSWORD:}
+  mail:
+    from: ${MAIL_FROM:${MAIL_USERNAME:}}
+    reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/set-password}

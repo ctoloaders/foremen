@@ -1,6 +1,8 @@
 package com.foremen.config.web;
 
 import com.foremen.config.i18n.MessageResolver;
+import com.foremen.config.security.JwtAuthenticationEntryPoint;
+import com.foremen.config.security.JwtTokenProvider;
 import com.foremen.config.security.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,7 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - Disallowed origin gets no CORS headers (Requirements 3.8, 3.9)
  */
 @WebMvcTest(controllers = CorsConfigTest.TestController.class)
-@Import({CorsConfig.class, SecurityConfig.class})
+@Import({CorsConfig.class, SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationEntryPoint.class})
 class CorsConfigTest {
 
     @MockitoBean

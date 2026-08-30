@@ -31,6 +31,13 @@ public class UserEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", length = 20, nullable = false)
+    private UserStatus status = UserStatus.INVITED;
+
     @Column(length = 5, nullable = false)
     private String locale = "ru";
 

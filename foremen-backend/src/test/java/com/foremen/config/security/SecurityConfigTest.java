@@ -22,7 +22,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * - X-Frame-Options header is disabled (Requirement 1.6)
  */
 @WebMvcTest(controllers = SecurityConfigTest.TestController.class)
-@Import({SecurityConfig.class, SecurityConfigTest.TestController.class})
+@Import({SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationEntryPoint.class,
+        SecurityConfigTest.TestController.class})
 class SecurityConfigTest {
 
     @MockitoBean
