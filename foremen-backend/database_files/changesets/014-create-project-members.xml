@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="014-create-project-members" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="project_members"/></not>
+        </preConditions>
+
+        <createTable tableName="project_members">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="fk_project_members_user"
+                    references="users(id)"/>
+            </column>
+            <!-- Plain BIGINT with no foreign key: the projects table does not exist in this spec (arrives in FOR-06). -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_role_id" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="fk_project_members_project_role"
+                    references="roles(id)"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addUniqueConstraint
+            tableName="project_members"
+            columnNames="user_id, project_id"
+            constraintName="uk_project_members_user_project"/>
+    </changeSet>
+
+</databaseChangeLog>

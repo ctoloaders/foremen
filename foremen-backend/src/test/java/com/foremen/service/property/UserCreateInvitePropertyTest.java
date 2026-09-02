@@ -139,7 +139,7 @@ class UserCreateInvitePropertyTest {
             when(userDao.save(any(UserEntity.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             service = new UserService(
-                    userDao, roleDao, mapper, auditLogDao, entityManager, inviteService);
+                    userDao, roleDao, mapper, auditLogDao, entityManager, inviteService, null);
         }
     }
 

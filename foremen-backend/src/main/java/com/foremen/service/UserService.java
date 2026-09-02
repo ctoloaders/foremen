@@ -34,6 +34,7 @@ public class UserService implements AdminService<
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
     private final InviteService inviteService;
+    private final ProjectAccessCache projectAccessCache;
     private final Class<UserEntity> daoModelClass = UserEntity.class;
 
     // --- Validation hooks (framework reuses default create()/update() for audit/snapshot) ---
@@ -70,6 +71,20 @@ public class UserService implements AdminService<
         }
         validateEmailUniqueness(update.email(), existing.getId());
         validateLocale(update.locale());
+    }
+
+    /**
+     * Overrides the framework update to evict the affected user's project-access cache entry
+     * after a user update completes (Requirement 8.4). A user's role change can alter what
+     * projects the user may see (e.g. ADMIN bypass), so the cached allowed-project-ids set is
+     * invalidated so the next project-scoped read reloads it. Scope is limited to this touch
+     * point; no FOR-03-08 controller migration is performed here.
+     */
+    @Override
+    public UserServiceExtendedModel update(Long id, UserServiceExtendedModel model) {
+        UserServiceExtendedModel result = AdminService.super.update(id, model);
+        projectAccessCache.invalidate(id);
+        return result;
     }
 
     /**

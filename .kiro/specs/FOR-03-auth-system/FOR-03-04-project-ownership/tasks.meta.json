@@ -1,0 +1,554 @@
+{
+  "pbtResults": {
+    "3.2 Write property test for cache load-then-hit": {
+      "status": "passed",
+      "lastRunTimestamp": 1788368411589
+    },
+    "4.2 Write property test for the decision logic": {
+      "status": "passed",
+      "lastRunTimestamp": 1788368695320
+    },
+    "12.2 Write property test for nested path resolution": {
+      "status": "passed",
+      "lastRunTimestamp": 1788369535283
+    }
+  },
+  "executionHistory": {
+    "1.1 Add the `014-create-project-members.xml` changeset and register it": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364002866
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364012878
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364114439
+      }
+    ],
+    "1.2 Create `ProjectMemberEntity`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364002950
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364016452
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364115446
+      }
+    ],
+    "1.3 Create `ProjectMemberDao`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364002998
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364121834
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364237421
+      }
+    ],
+    "1.4 Write integration test for the migration, unique constraint, and distinct-ids query": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003036
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364243151
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368247966
+      }
+    ],
+    "2.1 Create `ProjectAccessProperties`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003081
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364017550
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364116548
+      }
+    ],
+    "2.2 Write smoke tests for the properties default and fail-fast": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003112
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364123089
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364238564
+      }
+    ],
+    "3.1 Create `ProjectAccessCache`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003137
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364244233
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368248988
+      }
+    ],
+    "3.2 Write property test for cache load-then-hit": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003178
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368254446
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368439103
+      }
+    ],
+    "3.3 Write property test for the invalidation round-trip": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003201
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368254725
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368439977
+      }
+    ],
+    "4.1 Create `ProjectScopedService`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003229
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368255822
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368441146
+      }
+    ],
+    "4.2 Write property test for the decision logic": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003287
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368455183
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368741263
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003313
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371578078
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788373973580
+      }
+    ],
+    "6.1 Create `ProjectMemberService`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003336
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368456392
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368742512
+      }
+    ],
+    "6.2 Write example/unit tests for the service branches": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003370
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368754659
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369193998
+      }
+    ],
+    "7.1 Create the request/response DTOs": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003397
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368456956
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368738793
+      }
+    ],
+    "7.2 Create `ProjectMemberController`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003430
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368755655
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369197975
+      }
+    ],
+    "8.1 Add the `015-seed-project-members-resource.xml` changeset and register it": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003454
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368458030
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368737458
+      }
+    ],
+    "9.1 Evict the project-access cache entry on a role-changing user update": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003498
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368757008
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369196875
+      }
+    ],
+    "10.1 Add the new message codes to both bundles": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003520
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368458795
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368740224
+      }
+    ],
+    "10.2 Write property test for PL/RU localization presence": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003550
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368758380
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369192998
+      }
+    ],
+    "11. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003580
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788373978488
+      }
+    ],
+    "12.1 Add the test-only `@Entity` fixture and its service": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003602
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368759444
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369195431
+      }
+    ],
+    "12.2 Write property test for nested path resolution": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003652
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369205577
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371566926
+      }
+    ],
+    "12.3 Write end-to-end filtering integration tests through the fixture service": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003678
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369206726
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371565720
+      }
+    ],
+    "12.4 Write `ProjectMemberController` integration tests": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003700
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369207497
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371567987
+      }
+    ],
+    "12.5 Write the `015` ABAC seed integration test": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003731
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369208804
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371569451
+      }
+    ],
+    "13. Author test-cases.md": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003767
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369209829
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371570618
+      }
+    ],
+    "14. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364003804
+      },
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788373983163
+      }
+    ],
+    "2. Add the project-access configuration properties": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788364238602
+      }
+    ],
+    "1. Create the `project_members` schema, entity, and DAO": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368248021
+      }
+    ],
+    "3. Add the dedicated project-access cache": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368440012
+      }
+    ],
+    "8. Seed the `PROJECT_MEMBERS` ABAC resource": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368737558
+      }
+    ],
+    "4. Implement the `ProjectScopedService` decision-logic mixin": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788368741312
+      }
+    ],
+    "10. Localize the new error codes": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369193046
+      }
+    ],
+    "6. Implement `ProjectMemberService`": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369194042
+      }
+    ],
+    "9. Wire cache invalidation on user role change": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369196949
+      }
+    ],
+    "7. Implement `ProjectMemberController` and its DTOs": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788369198050
+      }
+    ],
+    "12. Prove end-to-end filtering with a test-only fixture": [
+      {
+        "executionId": "7283f6a0-923c-49de-af19-3032122ac28c",
+        "chatSessionId": "sess_0899123e-dd24-41e0-bd29-f8b86fa7bf3b",
+        "timestamp": 1788371569491
+      }
+    ]
+  }
+}

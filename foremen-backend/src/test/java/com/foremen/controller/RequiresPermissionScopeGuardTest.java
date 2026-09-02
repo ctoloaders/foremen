@@ -30,13 +30,32 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the {@code com.foremen.testsupport} test-source package, so it is outside the scanned package and
  * is correctly not flagged.
  *
- * <p>Requirements: 11.4
+ * <p><strong>FOR-03-04 exception:</strong> FOR-03-04 (project ownership) intentionally ships
+ * {@code com.foremen.controller.ProjectMemberController} as the first legitimately-protected
+ * production controller — its endpoints are guarded by {@code @RequiresPermission} on the
+ * {@code PROJECT_MEMBERS} resource, in scope for that spec (FOR-03-04 Requirement 10). This is the
+ * documented exception to the FOR-03-08 deferral: only ProjectMemberController is whitelisted here,
+ * and every OTHER production controller must still remain free of {@code @RequiresPermission} until
+ * the wholesale FOR-03-08 migration. Do NOT add further entries to the whitelist as part of
+ * migrating other controllers — that belongs to FOR-03-08.
+ *
+ * <p>Requirements: 11.4 (FOR-03-03), 10 (FOR-03-04)
  */
 @DisplayName("RequiresPermission scope guard - no production controller is annotated (FOR-03-08 deferral)")
 class RequiresPermissionScopeGuardTest {
 
     /** Production controller package that must remain free of {@code @RequiresPermission}. */
     private static final String PRODUCTION_CONTROLLER_PACKAGE = "com.foremen.controller";
+
+    /**
+     * Controllers explicitly permitted to carry {@code @RequiresPermission} ahead of the wholesale
+     * FOR-03-08 migration. {@code ProjectMemberController} is the first legitimately-protected
+     * production controller, delivered by FOR-03-04 (Requirement 10). Every OTHER production
+     * controller must still remain unannotated; do NOT extend this set as part of migrating other
+     * controllers (that is FOR-03-08's job).
+     */
+    private static final Set<String> WHITELISTED_CONTROLLERS =
+            Set.of("com.foremen.controller.ProjectMemberController");
 
     @Test
     @DisplayName("no production controller type or method carries @RequiresPermission")
@@ -50,6 +69,10 @@ class RequiresPermissionScopeGuardTest {
         List<String> violations = new ArrayList<>();
 
         for (Class<?> controller : controllers) {
+            // FOR-03-04 exception: skip the single whitelisted, legitimately-protected controller.
+            if (WHITELISTED_CONTROLLERS.contains(controller.getName())) {
+                continue;
+            }
             if (controller.isAnnotationPresent(RequiresPermission.class)) {
                 violations.add(controller.getName() + " (type-level @RequiresPermission)");
             }
@@ -62,9 +85,10 @@ class RequiresPermissionScopeGuardTest {
         }
 
         assertThat(violations)
-                .as("no production controller in %s may carry @RequiresPermission "
-                        + "(migration is deferred to FOR-03-08 per Requirement 11.4)",
-                        PRODUCTION_CONTROLLER_PACKAGE)
+                .as("no production controller in %s (other than the FOR-03-04 whitelist %s) may "
+                        + "carry @RequiresPermission (migration of the rest is deferred to FOR-03-08 "
+                        + "per Requirement 11.4)",
+                        PRODUCTION_CONTROLLER_PACKAGE, WHITELISTED_CONTROLLERS)
                 .isEmpty();
     }
 

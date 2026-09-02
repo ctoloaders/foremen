@@ -33,7 +33,7 @@ class UserServiceBugConditionTest {
     UserServiceBugConditionTest() {
         // Create UserService with mock dependencies — we only need roleDao for BUG 1.6
         this.roleDao = mock(RoleDao.class);
-        this.userService = new UserService(null, roleDao, null, null, null, null);
+        this.userService = new UserService(null, roleDao, null, null, null, null, null);
     }
 
     // --- BUG 1.4: validateLocale("en") should throw ForemenApiException with BAD_REQUEST ---

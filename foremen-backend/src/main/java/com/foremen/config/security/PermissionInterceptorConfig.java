@@ -13,14 +13,17 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * <p>Also enables binding of {@link PermissionProperties} (the {@code foremen.permission}
  * namespace carrying the permission-cache idle TTL) so the dedicated
- * {@link com.foremen.service.permission.PermissionCache} can be configured.
+ * {@link com.foremen.service.permission.PermissionCache} can be configured, and of
+ * {@link ProjectAccessProperties} (the {@code foremen.project-access} namespace carrying the
+ * project-access cache idle TTL) so the dedicated
+ * {@link com.foremen.service.ProjectAccessCache} can be configured.
  *
  * <p>This is a dedicated {@link WebMvcConfigurer} distinct from the locale/cors configurers;
  * Spring merges every {@code WebMvcConfigurer} bean, so registering here does not conflict with
  * the existing interceptors.
  */
 @Configuration
-@EnableConfigurationProperties(PermissionProperties.class)
+@EnableConfigurationProperties({PermissionProperties.class, ProjectAccessProperties.class})
 @RequiredArgsConstructor
 public class PermissionInterceptorConfig implements WebMvcConfigurer {
 
