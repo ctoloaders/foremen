@@ -17,5 +17,6 @@
     <include file="database_files/changesets/010-add-user-auth-columns.xml"/>
     <include file="database_files/changesets/011-create-refresh-tokens.xml"/>
     <include file="database_files/changesets/012-create-password-reset-tokens.xml"/>
+    <include file="database_files/changesets/013-create-invite-tokens.xml"/>
 
 </databaseChangeLog>

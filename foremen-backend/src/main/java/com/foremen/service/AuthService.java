@@ -18,8 +18,10 @@ import com.foremen.config.security.JwtTokenProvider;
 import com.foremen.controller.dto.auth.CurrentUserResponse;
 import com.foremen.controller.dto.auth.PermissionView;
 import com.foremen.controller.dto.auth.TokenResponse;
+import com.foremen.dao.InviteTokenDao;
 import com.foremen.dao.PasswordResetTokenDao;
 import com.foremen.dao.UserDao;
+import com.foremen.dao.model.InviteTokenEntity;
 import com.foremen.dao.model.OperationEntity;
 import com.foremen.dao.model.PasswordResetTokenEntity;
 import com.foremen.dao.model.RoleResourceEntity;
@@ -53,6 +55,8 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final PasswordResetTokenDao passwordResetTokenDao;
     private final MailSender mailSender;
+    private final InviteService inviteService;
+    private final InviteTokenDao inviteTokenDao;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -70,7 +74,9 @@ public class AuthService {
                        RefreshTokenService refreshTokenService,
                        JwtProperties jwtProperties,
                        PasswordResetTokenDao passwordResetTokenDao,
-                       MailSender mailSender) {
+                       MailSender mailSender,
+                       InviteService inviteService,
+                       InviteTokenDao inviteTokenDao) {
         this.userDao = userDao;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -78,6 +84,8 @@ public class AuthService {
         this.jwtProperties = jwtProperties;
         this.passwordResetTokenDao = passwordResetTokenDao;
         this.mailSender = mailSender;
+        this.inviteService = inviteService;
+        this.inviteTokenDao = inviteTokenDao;
         this.dummyHash = passwordEncoder.encode(randomSecret());
     }
 
@@ -242,6 +250,46 @@ public class AuthService {
         passwordResetTokenDao.save(resetToken);
 
         refreshTokenService.revokeAllForUser(user.getId());
+    }
+
+    /**
+     * Activates an invited account by setting its password from a valid invite token and, on
+     * success, immediately logs the user in by issuing an access/refresh token pair (Requirement 5).
+     *
+     * <p>Token validation is delegated to {@link InviteService#consume(String)}, which enforces the
+     * invalid &rarr; used &rarr; expired &rarr; owner-status ordering and raises the appropriate
+     * {@link ForemenApiException} for each negative branch (5.6&ndash;5.8, 5.10). When the token is
+     * valid and the owner is INVITED, all writes happen in this single {@code @Transactional}
+     * method so activation is atomic (5.4):
+     * <ul>
+     *   <li>the owner's {@code passwordHash} is set to the bcrypt hash (cost 12) of
+     *       {@code rawPassword};</li>
+     *   <li>the owner's status is set to {@link UserStatus#ACTIVE};</li>
+     *   <li>the invite token is marked {@code used = true}, so any later set-password with the same
+     *       value hits the {@code error.invite.token.used} branch (5.9).</li>
+     * </ul>
+     * On completion an access token and a refresh token are returned for the owner via
+     * {@link #issueTokens(UserEntity)}, reusing the FOR-03-01 {@link JwtTokenProvider} and
+     * {@link RefreshTokenService} (5.5).
+     *
+     * @param token       the raw invite-token value from the set-password request
+     * @param rawPassword the new password to hash and store
+     * @return the access/refresh token pair for the now-active user
+     * @throws ForemenApiException per {@link InviteService#consume(String)}
+     */
+    @Transactional
+    public TokenResponse setPassword(String token, String rawPassword) {
+        InviteTokenEntity invite = inviteService.consume(token);
+
+        UserEntity user = invite.getUser();
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setStatus(UserStatus.ACTIVE);
+        userDao.save(user);
+
+        invite.setUsed(true);
+        inviteTokenDao.save(invite);
+
+        return issueTokens(user);
     }
 
     private TokenResponse issueTokens(UserEntity user) {

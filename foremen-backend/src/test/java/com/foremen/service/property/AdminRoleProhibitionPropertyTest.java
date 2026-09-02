@@ -76,7 +76,7 @@ class AdminRoleProhibitionPropertyTest {
         EntityManager entityManager = mock(EntityManager.class);
         // Email uniqueness passes: no existing user for any email.
         when(dao.findByEmail(any())).thenReturn(Optional.empty());
-        UserService service = new UserService(dao, roleDao, mapper, auditLogDao, entityManager);
+        UserService service = new UserService(dao, roleDao, mapper, auditLogDao, entityManager, null);
         return new Fixture(service, dao, roleDao);
     }
 

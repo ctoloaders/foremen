@@ -33,6 +33,7 @@ public class UserService implements AdminService<
     private final UserServiceMapper mapper;
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
+    private final InviteService inviteService;
     private final Class<UserEntity> daoModelClass = UserEntity.class;
 
     // --- Validation hooks (framework reuses default create()/update() for audit/snapshot) ---
@@ -69,6 +70,19 @@ public class UserService implements AdminService<
         }
         validateEmailUniqueness(update.email(), existing.getId());
         validateLocale(update.locale());
+    }
+
+    /**
+     * Post-create hook: issues exactly one invite token and dispatches the role-dependent
+     * invitation email for the freshly created user (3.4, 3.7, 3.8). The user is always persisted
+     * with User_Status INVITED and a null passwordHash because {@code UserServiceMapper} hard-codes
+     * the status and the request DTOs expose none. Because the framework runs this hook inside the
+     * transactional {@code create(...)}, a token-persist or mail failure propagates and rolls back
+     * the user insert so neither the user nor the invite is retained (3.6).
+     */
+    @Override
+    public void afterCreate(UserEntity user) {
+        inviteService.issueInvite(user);
     }
 
     // --- Soft-delete (set active = false) ---

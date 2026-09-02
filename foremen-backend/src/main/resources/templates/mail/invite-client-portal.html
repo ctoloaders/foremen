@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:lang="${#locale.language}">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title th:text="${subject}">Foremen client portal invitation</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif;color:#333333;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f7;">
+        <tr>
+            <td align="center" style="padding:24px 12px;">
+                <table role="presentation" width="600" cellpadding="0" cellspacing="0"
+                       style="background-color:#ffffff;border-radius:8px;overflow:hidden;">
+                    <tr>
+                        <td style="padding:32px;">
+                            <h1 style="margin:0 0 16px;font-size:20px;color:#1a1a1a;" th:text="${subject}">
+                                Foremen client portal invitation
+                            </h1>
+                            <p style="margin:0;font-size:15px;line-height:1.5;" th:text="${bodyText}">
+                                You have been invited to the client portal. Log in using the one-time code
+                                sent to your email address.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

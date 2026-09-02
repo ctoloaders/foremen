@@ -22,3 +22,7 @@ foremen:
     refresh-ttl-days: 7
   admin:
     create: false
+  invite:
+    ttl-hours: 72
+  mail:
+    invite-base-url: http://localhost:3000/auth/set-password

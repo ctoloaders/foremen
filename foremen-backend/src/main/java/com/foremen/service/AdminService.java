@@ -65,6 +65,7 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         DaoModel entity = getMapper().toCreateDaoModel(model);
         entity = getWriteDao().save(entity);
         getEntityManager().flush();
+        afterCreate(entity);
         saveAudit(null, entity, "CREATE");
         return getMapper().toServiceExtendedModel(entity);
     }
@@ -118,6 +119,18 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
 
     default void validateCreate(ServiceExtendedModel model) {
         // No-op default — subclasses override for custom validation
+    }
+
+    /**
+     * Post-create hook invoked inside the single-entity {@link #create(Object)} transaction,
+     * after the entity has been saved and flushed (so its generated id is available) and
+     * around the audit write. No-op by default — subclasses override for side effects such
+     * as issuing invitations. A thrown exception rolls back the enclosing create transaction.
+     *
+     * @param entity the persisted entity
+     */
+    default void afterCreate(DaoModel entity) {
+        // No-op default — subclasses override for post-create side effects
     }
 
     default void validateUpdate(DaoModel existing, ServiceExtendedModel update) {

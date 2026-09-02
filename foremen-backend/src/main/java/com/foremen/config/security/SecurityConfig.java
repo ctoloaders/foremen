@@ -2,6 +2,7 @@ package com.foremen.config.security;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -21,7 +22,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  *
  * <p>Authorization ordering: {@code /api/auth/me} requires authentication and is matched BEFORE
  * the broader {@code /api/auth/**} {@code permitAll} rule so that login/refresh/logout/password-reset
- * stay public while {@code /me} is protected (6.1, 9.3). All other paths remain {@code permitAll}
+ * stay public while {@code /me} is protected (6.1, 9.3). The invite resend endpoint
+ * {@code POST /api/auth/resend-invite} requires {@code ROLE_ADMIN} and is matched BEFORE the
+ * broad {@code /api/auth/**} {@code permitAll} rule so that an unauthenticated caller gets 401
+ * and a non-ADMIN caller gets 403, while {@code /api/auth/set-password} stays public under the
+ * broad rule (FOR-03-02: 5.2, 6.2, 6.4, 6.5). All other paths remain {@code permitAll}
  * for now; the wholesale tightening is deferred to FOR-03-08.
  */
 @Configuration
@@ -54,6 +59,7 @@ public class SecurityConfig {
         return http
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/me").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/resend-invite").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().permitAll()
                 )

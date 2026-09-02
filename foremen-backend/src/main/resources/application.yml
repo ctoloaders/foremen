@@ -35,6 +35,9 @@ foremen:
     create: ${FOREMEN_ADMIN_CREATE:false}
     email: ${FOREMEN_ADMIN_EMAIL:}
     password: ${FOREMEN_ADMIN_PASSWORD:}
+  invite:
+    ttl-hours: ${FOREMEN_INVITE_TTL_HOURS:72}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
     reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/set-password}
+    invite-base-url: ${MAIL_INVITE_BASE_URL:http://localhost:3000/auth/set-password}

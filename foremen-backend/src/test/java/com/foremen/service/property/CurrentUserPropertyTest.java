@@ -77,7 +77,7 @@ class CurrentUserPropertyTest {
 
         AuthService service = new AuthService(
                 userDao, encoder, jwtTokenProvider, refreshTokenService, props,
-                passwordResetTokenDao, mailSender);
+                passwordResetTokenDao, mailSender, null, null);
         return new Fixture(service, userDao);
     }
 

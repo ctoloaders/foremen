@@ -5,8 +5,11 @@ import com.foremen.controller.dto.auth.LoginRequest;
 import com.foremen.controller.dto.auth.PasswordResetConfirm;
 import com.foremen.controller.dto.auth.PasswordResetRequest;
 import com.foremen.controller.dto.auth.RefreshRequest;
+import com.foremen.controller.dto.auth.ResendInviteRequest;
+import com.foremen.controller.dto.auth.SetPasswordRequest;
 import com.foremen.controller.dto.auth.TokenResponse;
 import com.foremen.service.AuthService;
+import com.foremen.service.InviteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final InviteService inviteService;
 
     /**
      * Authenticates a user and issues an access/refresh token pair (Requirement 3.1).
@@ -98,5 +102,33 @@ public class AuthController {
     @ResponseStatus(HttpStatus.OK)
     public void confirmPasswordReset(@RequestBody @Valid PasswordResetConfirm request) {
         authService.confirmPasswordReset(request.token(), request.newPassword());
+    }
+
+    /**
+     * Sets the password for an invited user via a valid invite token, activating the account and
+     * immediately issuing an access/refresh token pair (auto-login, Requirements 5.1, 5.4, 5.5).
+     *
+     * <p>{@code @Valid} rejects a blank token or a password outside 8..72 characters with HTTP 400
+     * through the existing {@code MethodArgumentNotValidException} handler, before any token lookup
+     * (Requirement 5.3).
+     *
+     * @return HTTP 200 with a {@link TokenResponse}
+     */
+    @PostMapping("/set-password")
+    public ResponseEntity<TokenResponse> setPassword(@RequestBody @Valid SetPasswordRequest request) {
+        return ResponseEntity.ok(authService.setPassword(request.token(), request.password()));
+    }
+
+    /**
+     * Resends an invitation for the target user, rotating the invite token and dispatching a fresh
+     * invitation email (Requirements 6.1, 6.6). Restricted to ADMIN callers by the security layer.
+     *
+     * <p>{@code @Valid} rejects a null {@code userId} with HTTP 400 through the existing handler,
+     * before any user lookup (Requirement 6.3).
+     */
+    @PostMapping("/resend-invite")
+    @ResponseStatus(HttpStatus.OK)
+    public void resendInvite(@RequestBody @Valid ResendInviteRequest request) {
+        inviteService.resend(request.userId());
     }
 }

@@ -1,0 +1,676 @@
+{
+  "pbtResults": {
+    "7.4 Write property tests for consume validation": {
+      "status": "passed",
+      "lastRunTimestamp": 1788288897447
+    },
+    "9.3 Write property tests for set-password activation": {
+      "status": "passed",
+      "lastRunTimestamp": 1788289289611
+    }
+  },
+  "executionHistory": {
+    "1.1 Add the Thymeleaf Gradle dependency": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059519
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282073134
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282382787
+      }
+    ],
+    "1.2 Create InviteProperties and MailInviteProperties with fail-fast validation": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059615
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282078343
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282384208
+      }
+    ],
+    "1.3 Write property tests for the config validation predicates": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059706
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282395836
+      }
+    ],
+    "1.4 Write example tests for configuration defaults and startup fail-fast": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059770
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282396793
+      }
+    ],
+    "2.1 Implement the invite-link builder": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059833
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282079775
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282385333
+      }
+    ],
+    "2.2 Implement the email-locale resolver": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059869
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282081185
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282386624
+      }
+    ],
+    "2.3 Write property tests for the link builder and locale resolver": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059906
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282398192
+      }
+    ],
+    "3.1 Create InviteTokenEntity": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282059937
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282082083
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282387594
+      }
+    ],
+    "3.2 Write example test for entity defaults and package": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060025
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282399606
+      }
+    ],
+    "4.1 Author changeset 013 and register it": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060086
+      },
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282400902
+      }
+    ],
+    "4.2 Write Testcontainers migration idempotency test": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060134
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284360734
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284530500
+      }
+    ],
+    "5.1 Create InviteTokenDao": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060169
+      },
+      {
+        "executionId": "1400e22c-68a6-4ddf-b8f7-691ee9731dcf",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788283896785
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284346063
+      }
+    ],
+    "6.1 Create the InvitationMailSender abstraction and Thymeleaf implementation": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060201
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284362115
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284531249
+      }
+    ],
+    "6.2 Write example tests for template rendering and dispatch": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060235
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288303070
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288511249
+      }
+    ],
+    "7.1 Implement issuance and role-dependent email dispatch": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060274
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284363316
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284532703
+      }
+    ],
+    "7.2 Write property tests for issuance and email dispatch": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060304
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288529979
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288674401
+      }
+    ],
+    "7.3 Implement token validation/consume for set-password": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060336
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288300720
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288513605
+      }
+    ],
+    "7.4 Write property tests for consume validation": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060380
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288680274
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288974947
+      }
+    ],
+    "7.5 Implement resend": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060434
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288301672
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288516130
+      }
+    ],
+    "7.6 Write property tests for resend": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060477
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288681369
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288976001
+      }
+    ],
+    "8. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060516
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293372538
+      }
+    ],
+    "9.1 Create the request DTO records": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060552
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284364394
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284533723
+      }
+    ],
+    "9.2 Implement AuthService.setPassword": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060585
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288682743
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288977299
+      }
+    ],
+    "9.3 Write property tests for set-password activation": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060619
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788289089458
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293154910
+      }
+    ],
+    "9.4 Add the AuthController endpoints": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060652
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288983875
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788289084235
+      }
+    ],
+    "9.5 Write property/example tests for endpoint validation": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060686
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788289090916
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293156272
+      }
+    ],
+    "10.1 Update SecurityConfig": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060717
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284540748
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288291350
+      }
+    ],
+    "10.2 Write security wiring integration tests": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060766
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288304169
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288512193
+      }
+    ],
+    "11.1 Add the afterCreate hook to the AdminService CRUD framework": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060801
+      },
+      {
+        "executionId": "1400e22c-68a6-4ddf-b8f7-691ee9731dcf",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788283898079
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284528577
+      }
+    ],
+    "11.2 Override afterCreate in UserService to issue the invite": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060834
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288683761
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288978386
+      }
+    ],
+    "11.3 Write property test for the created-user invariant": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060867
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788289092169
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293157675
+      }
+    ],
+    "11.4 Write integration test for create-time atomicity": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060922
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788289093648
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293158754
+      }
+    ],
+    "12.1 Add invite message codes in PL and RU": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060951
+      },
+      {
+        "executionId": "1400e22c-68a6-4ddf-b8f7-691ee9731dcf",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788283899247
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284347283
+      }
+    ],
+    "12.2 Write property test for message localization": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282060985
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284541734
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288292359
+      }
+    ],
+    "12.3 Write example test for request-locale error resolution": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282061020
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284542774
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288510152
+      }
+    ],
+    "13.1 Write the invite end-to-end integration test": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282061050
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788289094448
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293159956
+      }
+    ],
+    "14. Author test-cases.md": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282061084
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293165604
+      },
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293366772
+      }
+    ],
+    "15. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "609cc557-a376-4748-b301-29a3f6211424",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788282061118
+      }
+    ],
+    "5. Add the InviteTokenDao": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788284346143
+      }
+    ],
+    "12. Add invitation error and email message localization": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288510249
+      }
+    ],
+    "6. Implement invitation email rendering and dispatch": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288511289
+      }
+    ],
+    "10. Wire security for the new endpoints": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288512229
+      }
+    ],
+    "7. Implement InviteService": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788288976044
+      }
+    ],
+    "9. Extend AuthService and AuthController with set-password and resend": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293156307
+      }
+    ],
+    "11. Integrate invite issuance into user creation": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293158838
+      }
+    ],
+    "13. End-to-end integration": [
+      {
+        "executionId": "6181508d-c7d7-485c-b4bc-6b2b5d0452ea",
+        "chatSessionId": "sess_4ac7d95e-df21-4961-8acb-18a79bc3d07a",
+        "timestamp": 1788293159991
+      }
+    ]
+  }
+}

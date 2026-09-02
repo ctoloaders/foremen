@@ -7,6 +7,7 @@ import com.foremen.controller.dto.auth.CurrentUserResponse;
 import com.foremen.controller.dto.auth.PermissionView;
 import com.foremen.controller.dto.auth.TokenResponse;
 import com.foremen.service.AuthService;
+import com.foremen.service.InviteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -357,6 +358,11 @@ class AuthControllerIntegrationTest {
         @Bean
         public AuthService authService() {
             return Mockito.mock(AuthService.class);
+        }
+
+        @Bean
+        public InviteService inviteService() {
+            return Mockito.mock(InviteService.class);
         }
     }
 }
