@@ -12,6 +12,7 @@ import com.foremen.dao.model.RoleResourceEntity;
 import com.foremen.service.RoleService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.mapper.RoleServiceMapper;
+import com.foremen.service.permission.PermissionCache;
 import jakarta.persistence.EntityManager;
 import net.jqwik.api.*;
 import org.mockito.Mockito;
@@ -47,10 +48,11 @@ class PermissionReplacementPropertyTest {
         RoleServiceMapper mapper = Mockito.mock(RoleServiceMapper.class);
         AuditLogDao auditLogDao = Mockito.mock(AuditLogDao.class);
         EntityManager entityManager = Mockito.mock(EntityManager.class);
+        PermissionCache permissionCache = Mockito.mock(PermissionCache.class);
 
         RoleService roleService = new RoleService(
                 roleDao, roleResourceDao, resourceDao, operationDao,
-                mapper, auditLogDao, entityManager);
+                mapper, auditLogDao, entityManager, permissionCache);
 
         // Setup role
         RoleEntity role = new RoleEntity();

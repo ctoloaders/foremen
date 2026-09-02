@@ -9,6 +9,7 @@ import com.foremen.exception.ForemenApiException;
 import com.foremen.service.RoleService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.mapper.RoleServiceMapper;
+import com.foremen.service.permission.PermissionCache;
 import jakarta.persistence.EntityManager;
 import net.jqwik.api.*;
 import org.mockito.Mockito;
@@ -44,10 +45,11 @@ class SystemRoleDeletionPropertyTest {
         RoleServiceMapper mapper = Mockito.mock(RoleServiceMapper.class);
         AuditLogDao auditLogDao = Mockito.mock(AuditLogDao.class);
         EntityManager entityManager = Mockito.mock(EntityManager.class);
+        PermissionCache permissionCache = Mockito.mock(PermissionCache.class);
 
         RoleService roleService = new RoleService(
                 roleDao, roleResourceDao, resourceDao, operationDao,
-                mapper, auditLogDao, entityManager);
+                mapper, auditLogDao, entityManager, permissionCache);
 
         // Create a system role entity
         RoleEntity systemRole = new RoleEntity();
@@ -84,10 +86,11 @@ class SystemRoleDeletionPropertyTest {
         RoleServiceMapper mapper = Mockito.mock(RoleServiceMapper.class);
         AuditLogDao auditLogDao = Mockito.mock(AuditLogDao.class);
         EntityManager entityManager = Mockito.mock(EntityManager.class);
+        PermissionCache permissionCache = Mockito.mock(PermissionCache.class);
 
         RoleService roleService = new RoleService(
                 roleDao, roleResourceDao, resourceDao, operationDao,
-                mapper, auditLogDao, entityManager);
+                mapper, auditLogDao, entityManager, permissionCache);
 
         // Create a non-system role
         RoleEntity nonSystemRole = new RoleEntity();

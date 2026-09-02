@@ -16,6 +16,7 @@ import com.foremen.service.audit.AuditLogEntity;
 import com.foremen.service.model.RoleServiceExtendedModel;
 import com.foremen.service.model.RoleServiceModel;
 import com.foremen.service.model.mapper.RoleServiceMapper;
+import com.foremen.service.permission.PermissionCache;
 import jakarta.persistence.EntityManager;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +47,7 @@ public class RoleService implements AdminService<
     private final RoleServiceMapper mapper;
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
+    private final PermissionCache permissionCache;
     private final Class<RoleEntity> daoModelClass = RoleEntity.class;
 
     @Override
@@ -56,9 +58,33 @@ public class RoleService implements AdminService<
         if (role.isSystem()) {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.role.system.cannot.delete", id);
         }
+        // Capture the role code BEFORE deletion; the entity is no longer readable afterward
+        // and the permission cache is keyed by role code (Requirements 9.2, 9.5).
+        String code = role.getCode();
         saveAudit(role, null, "DELETE");
         dao.deleteById(id);
         entityManager.flush();
+        permissionCache.invalidate(code);
+    }
+
+    @Override
+    @Transactional
+    public RoleServiceExtendedModel update(Long id, RoleServiceExtendedModel model) {
+        // Delegate to the default AdminService update, then evict the affected role's cache
+        // entry so the next evaluation reloads (Requirements 9.3, 9.5). updateAll delegates to
+        // update, so it is covered too. RoleUpdateRequest exposes no code, so the affected code
+        // equals the existing role's code, which is returned unchanged in the extended model.
+        RoleServiceExtendedModel updated = AdminService.super.update(id, model);
+        permissionCache.invalidate(updated.code());
+        return updated;
+    }
+
+    @Override
+    public void afterCreate(RoleEntity role) {
+        // A newly created role starts with an empty matrix, but a previously-cached
+        // empty/deny entry for a reused code could linger, so evict defensively so the
+        // next evaluation reloads (Requirements 9.4, 9.5).
+        permissionCache.invalidate(role.getCode());
     }
 
     @Override
@@ -148,6 +174,11 @@ public class RoleService implements AdminService<
 
         // Custom audit log for UPDATE_PERMISSIONS
         savePermissionAudit(role, beforeSnapshotJson, afterSnapshotJson);
+
+        // Evict the permission cache entry for this role so the next evaluation reloads the
+        // updated matrix (Requirements 9.1, 9.5). batchReplacePermissions inherits this because
+        // it delegates to replacePermissions.
+        permissionCache.invalidate(role.getCode());
 
         return getPermissions(roleId);
     }
