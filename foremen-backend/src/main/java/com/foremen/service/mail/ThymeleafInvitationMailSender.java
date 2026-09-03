@@ -3,19 +3,17 @@ package com.foremen.service.mail;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
+import com.foremen.config.i18n.MessageResolver;
+import com.foremen.dao.model.UserEntity;
+import com.foremen.service.EmailLocaleResolver;
+import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
-
-import com.foremen.config.i18n.MessageResolver;
-import com.foremen.dao.model.UserEntity;
-import com.foremen.service.EmailLocaleResolver;
-
-import jakarta.mail.internet.MimeMessage;
-import lombok.extern.slf4j.Slf4j;
 
 /**
  * {@link InvitationMailSender} implementation that renders HTML invitation bodies with a Thymeleaf
@@ -99,6 +97,17 @@ public class ThymeleafInvitationMailSender implements InvitationMailSender {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper =
                     new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            // Log the SMTP envelope-from (mail.smtp.from) presented to the relay in the MAIL FROM
+            // command. This is what an SMTP relay (e.g. Google Workspace) matches against the
+            // sending domain — distinct from the visible "From" header set below. Kept at DEBUG so
+            // it aids diagnosis of relay/domain issues without adding noise in production.
+            if (log.isDebugEnabled()) {
+                String envelopeFrom = message.getSession() != null
+                        ? message.getSession().getProperty("mail.smtp.from")
+                        : null;
+                log.debug("Sending invitation email: header-from={}, envelope-from={}, to={}",
+                        from, envelopeFrom, toEmail);
+            }
             if (from != null && !from.isBlank()) {
                 helper.setFrom(from);
             }

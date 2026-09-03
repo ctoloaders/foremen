@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Pull in Spring Boot's defaults (colors, log levels, base properties). -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <!--
+      Compressed stack traces.
+
+      logback-core's built-in %throwable{exclude=...} option is NOT honoured (that
+      feature belongs to logstash-logback-encoder). So we register our own
+      converter, which keeps only com.foremen.* frames and collapses framework/JDK
+      frames into "... N frames omitted", while preserving the Caused by chain.
+    -->
+    <conversionRule conversionWord="compactEx"
+                    converterClass="com.foremen.config.logging.CompactStackTraceConverter"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:-%5p} %clr(${PID:- }){magenta} --- [%15.15t] %clr(%-40.40logger{39}){cyan} : %m%n%compactEx</pattern>
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

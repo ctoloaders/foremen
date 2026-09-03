@@ -11,9 +11,10 @@ spring:
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${MAIL_SMTP_AUTH:true}
+          from: ${MAIL_ENVELOPE_FROM:${MAIL_FROM:${MAIL_USERNAME:}}}
           starttls:
-            enable: true
+            enable: ${MAIL_SMTP_STARTTLS:true}
 
 server:
   port: 8080
