@@ -4,6 +4,7 @@ import com.foremen.config.i18n.MessageResolver;
 import com.foremen.config.security.JwtAuthenticationEntryPoint;
 import com.foremen.config.security.JwtTokenProvider;
 import com.foremen.config.security.SecurityConfig;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ class CorsConfigTest {
 
     @MockitoBean
     private MessageResolver messageResolver;
+
+    @MockitoBean
+    private ForemenPermissionEvaluator permissionEvaluator;
 
     @RestController
     @RequestMapping("/test/cors")

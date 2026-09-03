@@ -13,7 +13,6 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -71,23 +70,6 @@ public abstract class UserServiceMapper
             if (role != null) {
                 target.setRole(role);
             }
-        }
-    }
-
-    /**
-     * Defaults {@code displayPreferences} to an empty map when the incoming value is {@code null},
-     * so the entity never carries a {@code null} for this {@code jsonb} column. This keeps the
-     * {@link com.foremen.config.persistence.JsonMapConverter} on its non-null path (which returns
-     * a {@code jsonb}-typed {@code PGobject} that Hibernate can bind), avoiding the
-     * "Unable to bind parameter ... null [Unknown Types value.]" failure that occurs when a null
-     * map reaches the converter whose relational type is {@code Object}. Runs for both the create
-     * mapping and the update mapping. The stored value for an absent preference set is an empty
-     * {@code jsonb} object ({@code {}}); reads coalesce this to {@code {}} identically to a null.
-     */
-    @AfterMapping
-    protected void defaultDisplayPreferences(@MappingTarget UserEntity target) {
-        if (target.getDisplayPreferences() == null) {
-            target.setDisplayPreferences(Map.of());
         }
     }
 }

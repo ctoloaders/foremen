@@ -9,6 +9,7 @@ import com.foremen.controller.advice.ForemenControllerAdvice;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,6 +47,9 @@ class DisplayPreferencesControllerIntegrationTest {
 
     @MockitoBean
     private MessageResolver messageResolver;
+
+    @MockitoBean
+    private ForemenPermissionEvaluator permissionEvaluator;
 
     private UserEntity testUser;
 

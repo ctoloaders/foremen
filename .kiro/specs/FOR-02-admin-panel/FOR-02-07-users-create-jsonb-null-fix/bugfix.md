@@ -7,20 +7,20 @@ request body does not include a `displayPreferences` value. Since the Users mana
 does not send `displayPreferences` on create, every user creation from the admin panel is
 broken.
 
-This is a regression introduced by a previous fix (FOR-02-07-users-ui-fixes, bug 2.7).
-That fix changed `JsonMapConverter.convertToDatabaseColumn` to return a PostgreSQL
-`PGobject` typed `jsonb` in order to fix the *non-null* case (a `jsonb` vs `character varying`
-type mismatch). The converter, however, declares its relational (database-side) type as the
-bare `java.lang.Object`. When the attribute value is `null` — the normal case on create —
-Hibernate has no registered JDBC type for `Object` and cannot bind the null parameter,
-producing the observed failure. The *non-null* path still works because the returned
-`PGobject` carries its own `jsonb` type.
+This is now understood as a **JDBC-type-resolution problem**, not merely a null-handling
+problem. `UserEntity.displayPreferences` was mapped with
+`@Convert(converter = JsonMapConverter.class)` whose relational (database-side) type is the
+bare `java.lang.Object`. Because Hibernate has no resolvable JDBC type for that column, it
+cannot bind a value for it — this affects BOTH a null bind and an empty-map (`{}`) bind.
 
-The chosen fix keeps the entity's `null` value from ever reaching the converter's null path:
-the mapper defaults `displayPreferences` to an empty map (`Map.of()`) when the incoming value
-is `null`, so the converter always receives a non-null map and always returns a typed
-`PGobject`. See design.md for the rationale and the behavior note (an empty map is stored as
-`jsonb` `{}` rather than SQL `NULL`).
+An initial fix (mapper default to `Map.of()`) was shipped and FAILED: it only moved the error
+from the null case (`null [Unknown Types value.]`) to the empty-map case
+(`{} [Unsupported Types value: 545,108,554]`), confirming the column itself lacked a
+resolvable JDBC type. The revised fix maps the `Map` field with `@JdbcTypeCode(SqlTypes.JSON)`
+(the proven `AuditLogEntity` pattern), giving Hibernate a concrete JSON JDBC type so it binds
+null as a typed `jsonb` null and non-null maps as `jsonb`. See design.md for the full rationale
+and the behavior note (an absent value is stored as SQL `NULL`, and reads back as `{}` at the
+API).
 
 ## Bug Analysis
 
@@ -47,16 +47,22 @@ org.springframework.dao.InvalidDataAccessResourceUsageException:
 - `UserEntity.displayPreferences` (`dao/model/UserEntity.java`) is a `Map<String, Object>`
   mapped with `@Convert(converter = JsonMapConverter.class)` on a `jsonb` column.
 - `JsonMapConverter` (`config/persistence/JsonMapConverter.java`) implements
-  `AttributeConverter<Map<String, Object>, Object>`. The database-side type is `Object`.
-- On create, the request omits `displayPreferences`; the MapStruct mapper only sets the
-  field when the incoming map is non-null, so the entity value stays `null`.
-- Hibernate cannot resolve a JDBC/SQL type for a null bind whose relational type is
-  `java.lang.Object`, so it raises "Unable to bind parameter #4 - null [Unknown Types value.]".
+  `AttributeConverter<Map<String, Object>, Object>`. The database-side (relational) type is the
+  bare `java.lang.Object`, for which Hibernate has NO resolvable JDBC type.
+- Because the column has no resolvable JDBC type, Hibernate cannot bind ANY value for it —
+  this affects both a null bind and an empty-map (`{}`) bind. It is a JDBC-type-resolution
+  problem, not a null-value problem.
+- Evidence: the initial mapper-default fix (default null → `Map.of()`) moved the failure from
+  `null [Unknown Types value.]` to `{} [Unsupported Types value: 545,108,554]` — the empty map
+  still could not bind, proving the column type itself was unresolvable.
 - The `locale` value ("pl") is NOT the cause: `locale` is a plain `VARCHAR(5)` String column
   and "pl" is a supported locale. "Parameter #4" is a Hibernate INSERT bind ordinal, not a
   JSON field index.
 - The JDBC URL does not set `stringtype=unspecified`, and the project has no
   hypersistence-utils dependency, so neither of those alternative mechanisms is in play.
+- Fix: map the field with `@JdbcTypeCode(SqlTypes.JSON)` (dropping the `@Convert` converter on
+  the entity) so Hibernate has a concrete JSON JDBC type for the column and binds null as a
+  typed `jsonb` null — the pattern `AuditLogEntity` already uses.
 
 ### Current Behavior (Defect)
 
@@ -74,7 +80,8 @@ error.
 
 2.1 WHEN a user is created via `POST /api/users` with a body that omits `displayPreferences`
 THEN the system SHALL persist the user successfully (HTTP 201) with `display_preferences`
-stored as an empty `jsonb` object (`{}`), because the mapper defaults a null map to `Map.of()`.
+stored as SQL `NULL` (which reads back as `{}` at the API), because `@JdbcTypeCode(SqlTypes.JSON)`
+lets Hibernate bind a null value as a typed `jsonb` null.
 
 2.2 WHEN a user is created via `POST /api/users` with a non-null `displayPreferences` map
 THEN the system SHALL persist the user successfully and store the map as valid `jsonb`.

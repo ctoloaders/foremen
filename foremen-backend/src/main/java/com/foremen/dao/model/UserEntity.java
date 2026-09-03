@@ -1,10 +1,11 @@
 package com.foremen.dao.model;
 
-import com.foremen.config.persistence.JsonMapConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.util.Map;
 
@@ -41,7 +42,7 @@ public class UserEntity extends BaseEntity {
     @Column(length = 5, nullable = false)
     private String locale = "ru";
 
-    @Convert(converter = JsonMapConverter.class)
+    @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> displayPreferences;
 }

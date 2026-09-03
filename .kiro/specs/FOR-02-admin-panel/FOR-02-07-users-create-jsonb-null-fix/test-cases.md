@@ -48,9 +48,9 @@ Testcontainers/юнит-слой, а поднятый docker-стек). Кажд
 
 ## Фича 1. Создание пользователя без displayPreferences (основной баг)
 
-Проверяет, что запрос без поля `displayPreferences` успешно создаёт пользователя. По выбранному
-фиксу мапер подставляет `Map.of()`, поэтому `display_preferences` сохраняется как пустой `jsonb`
-объект `{}` (не `NULL`). Для API это неотличимо от `NULL`, т.к. чтение коалесцирует к `{}`.
+Проверяет, что запрос без поля `displayPreferences` успешно создаёт пользователя. По
+пересмотренному фиксу (`@JdbcTypeCode(SqlTypes.JSON)`) `display_preferences` сохраняется как SQL
+`NULL`. Для API это неотличимо от пустого объекта, т.к. чтение коалесцирует `NULL` к `{}`.
 
 ### TC-JSONB-01 — Создание без displayPreferences возвращает 201
 
@@ -63,8 +63,10 @@ Testcontainers/юнит-слой, а поднятый docker-стек). Кажд
    `{"name":"Alex","email":"pref+{run-id}+1@example.com","phone":"+48789736624","roleId":{roleId},"locale":"pl"}`
    (поле `displayPreferences` **отсутствует**).
    → **Ожидание: 201 Created**; в теле — созданный пользователь с `id`, `status=INVITED`,
-   `locale=pl`, `displayPreferences` = пустой объект `{}`.
-4. `GET /api/users/{id}` (ADMIN-токен) → 200; `displayPreferences` = `{}` (пустой объект).
+   `locale=pl`. В БД `display_preferences` хранится как SQL `NULL`; в ответе API поле
+   коалесцируется к `{}`.
+4. `GET /api/users/{id}` (ADMIN-токен) → 200; `displayPreferences` = `{}` (пустой объект,
+   т.к. API коалесцирует `NULL` к `{}`).
 
 **Ожидаемый результат:** шаг 3 возвращает 201 (а НЕ 500 с "Unknown Types value"); пользователь
 создан.
@@ -103,13 +105,13 @@ Testcontainers/юнит-слой, а поднятый docker-стек). Кажд
 
 ### TC-JSONB-04 — Чтение display-preferences у пользователя без предпочтений возвращает {}
 
-**Предусловия:** создан пользователь из TC-JSONB-01 (без `displayPreferences`; в БД хранится `{}`).
+**Предусловия:** создан пользователь из TC-JSONB-01 (без `displayPreferences`; в БД хранится SQL `NULL`).
 
 **Шаги:**
 1. `GET /api/users/{id}/display-preferences` → 200; тело — пустой объект `{}`.
 
-**Ожидаемый результат:** пустой `jsonb` объект читается как `{}` (для API идентично старому
-поведению с `NULL`).
+**Ожидаемый результат:** SQL `NULL` коалесцируется и читается как `{}` (поведение API
+неизменно).
 
 ---
 
@@ -126,7 +128,8 @@ Testcontainers/юнит-слой, а поднятый docker-стек). Кажд
 1. `PUT /api/users/{id}` (ADMIN-токен), тело без `displayPreferences`, например:
    `{"name":"Alex Renamed","email":"pref+{run-id}+1@example.com","roleId":{roleId},"locale":"ru"}`
    → **Ожидание: 200 OK** (без ошибки "Unknown Types value").
-2. `GET /api/users/{id}` → 200; `name` обновлён, `displayPreferences` = `{}`.
+2. `GET /api/users/{id}` → 200; `name` обновлён, `displayPreferences` = `{}` (в БД остаётся
+   SQL `NULL`, API коалесцирует к `{}`).
 
 **Ожидаемый результат:** обновление проходит; null-путь на UPDATE не падает.
 
@@ -173,7 +176,7 @@ Testcontainers/юнит-слой, а поднятый docker-стек). Кажд
 
 | # | Тест-кейс   | Шаг | Запрос/Действие                                  | Ожидание                     | Факт | Статус |
 |---|-------------|-----|--------------------------------------------------|------------------------------|------|--------|
-| 1 | TC-JSONB-01 | 3   | POST /api/users (без displayPreferences)         | 201 + user, prefs=null       |      |        |
+| 1 | TC-JSONB-01 | 3   | POST /api/users (без displayPreferences)         | 201 + user, prefs {} (БД NULL)|      |        |
 | 2 | TC-JSONB-02 | 1   | POST /api/users (displayPreferences=null)        | 201                          |      |        |
 | 3 | TC-JSONB-03 | 1   | POST /api/users (непустой displayPreferences)    | 201 + jsonb сохранён         |      |        |
 | 4 | TC-JSONB-03 | 2   | GET /api/users/{id}/display-preferences          | 200 + объект                 |      |        |
