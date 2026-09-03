@@ -2,7 +2,7 @@
 
 ## Phase 1: Bug Condition Exploration Tests (BEFORE fix)
 
-- [-] 1. Write bug condition exploration tests for backend bugs
+- [x] 1. Write bug condition exploration tests for backend bugs
   - **Property 1: Bug Condition** - Backend Validation & Persistence Bugs (BUG 1.4, 1.6, 1.7)
   - **CRITICAL**: These tests MUST FAIL on unfixed code — failure confirms the bugs exist
   - **DO NOT attempt to fix the tests or the code when they fail**
@@ -23,7 +23,7 @@
   - Mark task complete when tests are written, run, and failure is documented
   - _Requirements: 1.4, 1.6, 1.7_
 
-- [~] 2. Write bug condition exploration tests for frontend bugs
+- [x] 2. Write bug condition exploration tests for frontend bugs
   - **Property 1: Bug Condition** - Frontend Rendering & Architecture Bugs (BUG 1.1, 1.2, 1.3, 1.5)
   - **CRITICAL**: These tests MUST FAIL on unfixed code — failure confirms the bugs exist
   - **DO NOT attempt to fix the tests or the code when they fail**
@@ -47,7 +47,7 @@
 
 ## Phase 2: Preservation Property Tests (BEFORE fix)
 
-- [~] 3. Write preservation property tests for backend
+- [x] 3. Write preservation property tests for backend
   - **Property 2: Preservation** - Backend Valid Behavior Unchanged
   - **IMPORTANT**: Follow observation-first methodology
   - Observe on UNFIXED code:
@@ -69,7 +69,7 @@
   - Mark task complete when tests are written, run, and passing on unfixed code
   - _Requirements: 3.2, 3.3, 3.4, 3.5_
 
-- [~] 4. Write preservation property tests for frontend
+- [x] 4. Write preservation property tests for frontend
   - **Property 2: Preservation** - Frontend Valid Behavior Unchanged
   - **IMPORTANT**: Follow observation-first methodology
   - Observe on UNFIXED code:
@@ -92,9 +92,9 @@
 
 ## Phase 3: Implementation
 
-- [ ] 5. Fix BUG 1.1 — Add bg-popover class to PopoverContent in RoleSelect
+- [x] 5. Fix BUG 1.1 — Add bg-popover class to PopoverContent in RoleSelect
 
-  - [~] 5.1 Apply the fix
+  - [x] 5.1 Apply the fix
     - Add `bg-popover` class to PopoverContent in `RoleSelect.tsx`
     - Change: `className="w-[var(--radix-popover-trigger-width)] p-0"` → `className="w-[var(--radix-popover-trigger-width)] bg-popover p-0"`
     - _Bug_Condition: input.action == "openRoleSelect" AND input.theme == "dark"_
@@ -102,9 +102,9 @@
     - _Preservation: Light theme rendering unchanged_
     - _Requirements: 2.1, 3.1_
 
-- [ ] 6. Fix BUG 1.2 — Replace fetch-all loop with paginated fetchRolesPage()
+- [x] 6. Fix BUG 1.2 — Replace fetch-all loop with paginated fetchRolesPage()
 
-  - [~] 6.1 Implement paginated API function
+  - [x] 6.1 Implement paginated API function
     - Replace `fetchRolesForSelect()` in `users-api.ts` with `fetchRolesPage({ page, size, query? })` that fetches a single page
     - Keep `fetchRolesForSelect()` signature temporarily for backward compat if needed, or remove entirely
     - Add `PaginatedResponse<RoleOption>` as return type for single-page fetch
@@ -113,7 +113,7 @@
     - _Preservation: Correct role data returned, just paginated differently_
     - _Requirements: 2.2, 3.6_
 
-  - [~] 6.2 Implement useRolesInfinite hook
+  - [x] 6.2 Implement useRolesInfinite hook
     - Replace `useRolesForSelect()` in `query-hooks.ts` with `useRolesInfinite(search?: string)` using TanStack Query `useInfiniteQuery`
     - queryKey: `[...userKeys.roles(), { search }]`
     - queryFn: `({ pageParam = 0 }) => fetchRolesPage({ page: pageParam, size: 20, query: search ? \`name~ct~${search}\` : undefined })`
@@ -121,9 +121,9 @@
     - staleTime: 60_000
     - _Requirements: 2.2, 2.3_
 
-- [ ] 7. Fix BUG 1.3 — Rewrite RoleSelect with server-side search and infinite scroll
+- [x] 7. Fix BUG 1.3 — Rewrite RoleSelect with server-side search and infinite scroll
 
-  - [~] 7.1 Implement debounced server-side search + IntersectionObserver infinite scroll
+  - [x] 7.1 Implement debounced server-side search + IntersectionObserver infinite scroll
     - Add `useDebounce(search, 300)` hook (custom or from a utility) for 300ms debounce
     - Replace `useRolesForSelect()` with `useRolesInfinite(debouncedSearch)` in RoleSelect
     - Remove client-side `filteredRoles` useMemo — data comes from infinite query pages
@@ -137,18 +137,18 @@
     - _Preservation: Mouse/keyboard interaction patterns unchanged, scrolling without search shows all roles in paginated order, re-opening resets search_
     - _Requirements: 2.2, 2.3, 3.6, 3.7_
 
-- [ ] 8. Fix BUG 1.4 — Remove "en" from SUPPORTED_LOCALES in UserService.java
+- [x] 8. Fix BUG 1.4 — Remove "en" from SUPPORTED_LOCALES in UserService.java
 
-  - [~] 8.1 Apply the fix
+  - [x] 8.1 Apply the fix
     - Change `Set.of("ru", "pl", "en")` to `Set.of("ru", "pl")` in `UserService.java`
     - _Bug_Condition: input.action == "submitUserForm" AND input.locale == "en"_
     - _Expected_Behavior: validateLocale("en") throws ForemenApiException with BAD_REQUEST_
     - _Preservation: validateLocale("ru") and validateLocale("pl") continue to pass_
     - _Requirements: 2.4, 3.2_
 
-- [ ] 9. Fix BUG 1.5 — Remove English locale option from frontend
+- [x] 9. Fix BUG 1.5 — Remove English locale option from frontend
 
-  - [~] 9.1 Apply the fix
+  - [x] 9.1 Apply the fix
     - In `user-schema.ts`: change `z.enum(['ru', 'pl', 'en'], ...)` to `z.enum(['ru', 'pl'], ...)`
     - In `UserFormSheet.tsx`: remove `<SelectItem value="en">English (EN)</SelectItem>`
     - In `UserFormSheet.tsx`: change `as 'ru' | 'pl' | 'en'` to `as 'ru' | 'pl'` in edit mode reset
@@ -157,9 +157,9 @@
     - _Preservation: Valid locale values "ru" and "pl" continue to work in form and schema_
     - _Requirements: 2.5, 3.2_
 
-- [ ] 10. Fix BUG 1.6 — Add admin role check in resolveRole()
+- [x] 10. Fix BUG 1.6 — Add admin role check in resolveRole()
 
-  - [~] 10.1 Apply the fix
+  - [x] 10.1 Apply the fix
     - Add admin role check after `findById` in `resolveRole()` method of `UserService.java`:
       ```java
       if ("ADMIN".equals(role.getCode())) {
@@ -171,9 +171,9 @@
     - _Preservation: Non-admin roles (CLIENT, MANAGER, etc.) continue to be assigned without restriction_
     - _Requirements: 2.6, 3.3_
 
-- [ ] 11. Fix BUG 1.7 — Change JsonMapConverter to return PGobject with type "jsonb"
+- [x] 11. Fix BUG 1.7 — Change JsonMapConverter to return PGobject with type "jsonb"
 
-  - [~] 11.1 Apply the fix
+  - [x] 11.1 Apply the fix
     - Change `AttributeConverter<Map<String, Object>, String>` to `AttributeConverter<Map<String, Object>, Object>`
     - In `convertToDatabaseColumn()`: return `PGobject` with `setType("jsonb")` and `setValue(json)` instead of raw String
     - In `convertToEntityAttribute()`: handle both `PGobject` (extract `.getValue()`) and `String` (direct parse) inputs
@@ -185,9 +185,9 @@
 
 ## Phase 4: Verify Fixes
 
-- [ ] 12. Verify bug condition exploration tests now pass
+- [x] 12. Verify bug condition exploration tests now pass
 
-  - [~] 12.1 Verify backend bug condition tests pass
+  - [x] 12.1 Verify backend bug condition tests pass
     - **Property 1: Expected Behavior** - Backend Validation & Persistence Fixed
     - **IMPORTANT**: Re-run the SAME tests from task 1 — do NOT write new tests
     - The tests from task 1 encode the expected behavior
@@ -196,7 +196,7 @@
     - **EXPECTED OUTCOME**: Tests PASS (confirms bugs 1.4, 1.6, 1.7 are fixed)
     - _Requirements: 2.4, 2.6, 2.7_
 
-  - [~] 12.2 Verify frontend bug condition tests pass
+  - [x] 12.2 Verify frontend bug condition tests pass
     - **Property 1: Expected Behavior** - Frontend Rendering & Architecture Fixed
     - **IMPORTANT**: Re-run the SAME tests from task 2 — do NOT write new tests
     - The tests from task 2 encode the expected behavior
@@ -205,9 +205,9 @@
     - **EXPECTED OUTCOME**: Tests PASS (confirms bugs 1.1, 1.2, 1.3, 1.5 are fixed)
     - _Requirements: 2.1, 2.2, 2.3, 2.5_
 
-- [ ] 13. Verify preservation tests still pass
+- [x] 13. Verify preservation tests still pass
 
-  - [~] 13.1 Verify backend preservation tests still pass
+  - [x] 13.1 Verify backend preservation tests still pass
     - **Property 2: Preservation** - Backend Valid Behavior Still Unchanged
     - **IMPORTANT**: Re-run the SAME tests from task 3 — do NOT write new tests
     - Run preservation property tests from step 3
@@ -215,7 +215,7 @@
     - Confirm locale "ru"/"pl" accepted, non-admin roles assigned, null preferences handled, converter round-trips
     - _Requirements: 3.2, 3.3, 3.4, 3.5_
 
-  - [~] 13.2 Verify frontend preservation tests still pass
+  - [x] 13.2 Verify frontend preservation tests still pass
     - **Property 2: Preservation** - Frontend Valid Behavior Still Unchanged
     - **IMPORTANT**: Re-run the SAME tests from task 4 — do NOT write new tests
     - Run preservation property tests from step 4
@@ -225,7 +225,7 @@
 
 ## Phase 5: Checkpoint
 
-- [~] 14. Checkpoint — Ensure all tests pass
+- [x] 14. Checkpoint — Ensure all tests pass
   - Run full backend test suite: `./gradlew test` in `foremen-backend/`
   - Run full frontend test suite: `npx vitest --run` in `foremen-frontend/`
   - Ensure all bug condition tests pass (bugs are fixed)

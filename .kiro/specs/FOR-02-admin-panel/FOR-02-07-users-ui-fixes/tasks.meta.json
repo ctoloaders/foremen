@@ -1,5 +1,24 @@
 {
-  "pbtResults": {},
+  "pbtResults": {
+    "1. Write bug condition exploration tests for backend bugs": {
+      "status": "passed",
+      "failingExample": "All 3 backend bug condition tests FAILED on unfixed code, confirming the bugs exist (this is the SUCCESS case for exploration tests):\n\nBUG 1.4 — UserServiceBugConditionTest.validateLocale_en_shouldThrowBadRequest:\n  AssertionFailedError: Expected ForemenApiException to be thrown, but nothing was thrown.\n  Counterexample: validateLocale(\"en\") does NOT throw — \"en\" is in SUPPORTED_LOCALES = Set.of(\"ru\",\"pl\",\"en\") and is accepted silently.\n\nBUG 1.6 — UserServiceBugConditionTest.resolveRole_adminRole_shouldThrowConflict:\n  Sample roleId: 1. AssertionFailedError: Expected ForemenApiException to be thrown, but nothing was thrown.\n  Counterexample: resolveRole(adminRoleId) returns the ADMIN RoleEntity without throwing CONFLICT (resolveRole only checks existence; admin prohibition currently lives in validateCreate/validateUpdate as FORBIDDEN, not as CONFLICT in resolveRole).\n\nBUG 1.7 — JsonMapConverterBugConditionTest.convertToDatabaseColumn_nonNullMap_shouldReturnPGobjectWithJsonbType:\n  Sample map: {\"A\"=0}. AssertionFailedError: expected: <org.postgresql.util.PGobject> but was: <java.lang.String>.\n  Counterexample: convertToDatabaseColumn({\"A\":0}) returns a String instead of a PGobject with type \"jsonb\".",
+      "lastRunTimestamp": 1788426164995
+    },
+    "2. Write bug condition exploration tests for frontend bugs": {
+      "status": "passed",
+      "failingExample": "All 4 exploration tests FAIL on unfixed code (correct — confirms bugs exist):\n- BUG 1.1: PopoverContent className is \"w-[var(--radix-popover-trigger-width)] p-0\" — lacks \"bg-popover\" (expected to contain \"bg-popover\").\n- BUG 1.2: Opening RoleSelect called fetch 3 times (one per page, size=100) instead of exactly 1 (page=0, size=20). fetchRolesForSelect() loops all pages.\n- BUG 1.3: Typing \"manager\" in the search input produced NO server request matching \"query=name~ct~manager\" (search only filters client-side). expect(searchCall).toBeTruthy() → undefined.\n- BUG 1.5: UserFormSheet renders 1 locale option with value=\"en\" (English (EN)) — expected 0.",
+      "lastRunTimestamp": 1788426339864
+    },
+    "12.2 Verify frontend bug condition tests pass": {
+      "status": "passed",
+      "lastRunTimestamp": 1788428993449
+    },
+    "13.2 Verify frontend preservation tests still pass": {
+      "status": "passed",
+      "lastRunTimestamp": 1788428994712
+    }
+  },
   "executionHistory": {
     "1. Write bug condition exploration tests for backend bugs": [
       {
@@ -11,6 +30,11 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519084019
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426183961
       }
     ],
     "2. Write bug condition exploration tests for frontend bugs": [
@@ -18,6 +42,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519073986
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426194005
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426362412
       }
     ],
     "3. Write preservation property tests for backend": [
@@ -25,6 +59,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074064
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426376062
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426931093
       }
     ],
     "4. Write preservation property tests for frontend": [
@@ -32,6 +76,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074192
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426379714
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426935063
       }
     ],
     "5.1 Apply the fix": [
@@ -39,6 +93,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074253
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788426945549
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427057367
       }
     ],
     "6.1 Implement paginated API function": [
@@ -46,6 +110,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074291
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427062547
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427197213
       }
     ],
     "6.2 Implement useRolesInfinite hook": [
@@ -53,6 +127,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074380
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427201277
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427313098
       }
     ],
     "7.1 Implement debounced server-side search + IntersectionObserver infinite scroll": [
@@ -60,6 +144,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074426
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427317513
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427731216
       }
     ],
     "8.1 Apply the fix": [
@@ -67,6 +161,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074498
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427735145
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427784898
       }
     ],
     "9.1 Apply the fix": [
@@ -74,6 +178,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074536
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427789107
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427874631
       }
     ],
     "10.1 Apply the fix": [
@@ -81,6 +195,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074576
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427880861
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428749476
       }
     ],
     "11.1 Apply the fix": [
@@ -88,6 +212,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074669
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428754386
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428883955
       }
     ],
     "12.1 Verify backend bug condition tests pass": [
@@ -95,6 +229,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074710
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428895573
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429043901
       }
     ],
     "12.2 Verify frontend bug condition tests pass": [
@@ -102,6 +246,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074793
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428899671
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429048034
       }
     ],
     "13.1 Verify backend preservation tests still pass": [
@@ -109,6 +263,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519074898
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428908501
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429052372
       }
     ],
     "13.2 Verify frontend preservation tests still pass": [
@@ -116,6 +280,16 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519075008
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428912540
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429056887
       }
     ],
     "14. Checkpoint — Ensure all tests pass": [
@@ -123,6 +297,79 @@
         "executionId": "23a8b71a-96da-4e64-947e-e6e544d036ea",
         "chatSessionId": "sess_67ddc0ec-3c5f-4a2e-93b2-90791ec363b1",
         "timestamp": 1787519075050
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429295444
+      },
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788432046867
+      }
+    ],
+    "5. Fix BUG 1.1 — Add bg-popover class to PopoverContent in RoleSelect": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427057434
+      }
+    ],
+    "6. Fix BUG 1.2 — Replace fetch-all loop with paginated fetchRolesPage()": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427313213
+      }
+    ],
+    "7. Fix BUG 1.3 — Rewrite RoleSelect with server-side search and infinite scroll": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427731294
+      }
+    ],
+    "8. Fix BUG 1.4 — Remove \"en\" from SUPPORTED_LOCALES in UserService.java": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427784965
+      }
+    ],
+    "9. Fix BUG 1.5 — Remove English locale option from frontend": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788427874758
+      }
+    ],
+    "10. Fix BUG 1.6 — Add admin role check in resolveRole()": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428749538
+      }
+    ],
+    "11. Fix BUG 1.7 — Change JsonMapConverter to return PGobject with type \"jsonb\"": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788428884040
+      }
+    ],
+    "12. Verify bug condition exploration tests now pass": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429048088
+      }
+    ],
+    "13. Verify preservation tests still pass": [
+      {
+        "executionId": "1bc84a51-9b96-45fe-9082-1fc5105784d3",
+        "chatSessionId": "sess_bd63f778-0ab0-4414-b7ec-fbe2fd2a7fc6",
+        "timestamp": 1788429056985
       }
     ]
   }
