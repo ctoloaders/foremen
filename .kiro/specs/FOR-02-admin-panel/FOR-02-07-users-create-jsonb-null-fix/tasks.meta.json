@@ -1,0 +1,32 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Default displayPreferences to Map.of() in the mapper when null": [
+      {
+        "executionId": "359080e0-477d-4cba-b392-32130364b33d",
+        "chatSessionId": "sess_6ddadc27-c276-4d6f-a0d8-3f21f4cb4b7d",
+        "timestamp": 1788438824789
+      },
+      {
+        "executionId": "359080e0-477d-4cba-b392-32130364b33d",
+        "chatSessionId": "sess_6ddadc27-c276-4d6f-a0d8-3f21f4cb4b7d",
+        "timestamp": 1788438832299
+      },
+      {
+        "executionId": "c9cb78c6-94be-4feb-848d-d2bc4b7630d8",
+        "chatSessionId": "sess_24a76886-57d8-4114-bf95-cfc0a1fce20c",
+        "timestamp": 1788438872814
+      },
+      {
+        "executionId": "c9cb78c6-94be-4feb-848d-d2bc4b7630d8",
+        "chatSessionId": "sess_24a76886-57d8-4114-bf95-cfc0a1fce20c",
+        "timestamp": 1788438879877
+      },
+      {
+        "executionId": "c9cb78c6-94be-4feb-848d-d2bc4b7630d8",
+        "chatSessionId": "sess_24a76886-57d8-4114-bf95-cfc0a1fce20c",
+        "timestamp": 1788438980411
+      }
+    ]
+  }
+}
