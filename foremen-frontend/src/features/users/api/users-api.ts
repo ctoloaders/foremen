@@ -114,8 +114,44 @@ export function deactivateUser(id: number): Promise<void> {
 }
 
 /**
+ * Fetch a single page of roles for the select dropdown.
+ * GET /api/roles with page, size, and optional RSQL-style query params
+ * (e.g. query=name~ct~{search}).
+ *
+ * Returns the raw Spring Data page so callers (e.g. useInfiniteQuery) can
+ * paginate via `last` / `number` and lazily load subsequent pages.
+ */
+export async function fetchRolesPage(params: {
+  page: number
+  size: number
+  query?: string
+}): Promise<PaginatedResponse<RoleOption>> {
+  const searchParams = new URLSearchParams()
+  searchParams.set('page', String(params.page))
+  searchParams.set('size', String(params.size))
+
+  // Build the URL manually so the RSQL query keeps literal `~` operators
+  // (e.g. `name~ct~{search}`). `URLSearchParams` would percent-encode `~` to
+  // `%7E`; `~` is an RFC 3986 unreserved character so a literal tilde is valid
+  // and keeps the wire format aligned with the documented `query=name~ct~...`.
+  let url = `${BASE_URL}/roles?${searchParams}`
+  if (params.query) {
+    url += `&query=${encodeURIComponent(params.query).replace(/%7E/gi, '~')}`
+  }
+
+  const response = await fetch(url, {
+    headers: getHeaders(),
+  })
+  return handleResponse<PaginatedResponse<RoleOption>>(response)
+}
+
+/**
  * Fetch all roles for the select dropdown.
  * Fetches all pages from GET /api/roles to build a complete list.
+ *
+ * @deprecated Use {@link fetchRolesPage} with an infinite query instead. This
+ * loads every page eagerly and does not scale; kept temporarily until the
+ * RoleSelect component migrates to paginated/infinite fetching.
  */
 export async function fetchRolesForSelect(): Promise<RoleOption[]> {
   const roles: RoleOption[] = []
@@ -123,14 +159,7 @@ export async function fetchRolesForSelect(): Promise<RoleOption[]> {
   let totalPages = 1
 
   while (page < totalPages) {
-    const searchParams = new URLSearchParams()
-    searchParams.set('page', String(page))
-    searchParams.set('size', '100')
-
-    const response = await fetch(`${BASE_URL}/roles?${searchParams}`, {
-      headers: getHeaders(),
-    })
-    const data = await handleResponse<PaginatedResponse<{ id: number; name: string }>>(response)
+    const data = await fetchRolesPage({ page, size: 100 })
 
     roles.push(...data.content.map((r) => ({ id: r.id, name: r.name })))
     totalPages = data.totalPages

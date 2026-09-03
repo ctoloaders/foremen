@@ -23,7 +23,7 @@ export const userFormSchema = z.object({
   roleId: z
     .number({ required_error: 'users.validation.roleRequired' })
     .min(1, 'users.validation.roleRequired'),
-  locale: z.enum(['ru', 'pl', 'en'], {
+  locale: z.enum(['ru', 'pl'], {
     required_error: 'users.validation.localeRequired',
   }),
   active: z.boolean().default(true),

@@ -97,7 +97,7 @@ export function UserFormSheet({
         email: userData.email,
         phone: userData.phone ?? '',
         roleId: userData.roleId,
-        locale: userData.locale as 'ru' | 'pl' | 'en',
+        locale: userData.locale as 'ru' | 'pl',
         active: userData.active,
       })
     } else if (mode === 'create' && open) {
@@ -290,7 +290,6 @@ export function UserFormSheet({
                         <SelectContent>
                           <SelectItem value="pl">Polski (PL)</SelectItem>
                           <SelectItem value="ru">Русский (RU)</SelectItem>
-                          <SelectItem value="en">English (EN)</SelectItem>
                         </SelectContent>
                       </Select>
                     )}

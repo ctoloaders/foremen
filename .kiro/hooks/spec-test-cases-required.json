@@ -1,0 +1,15 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Spec test-cases.md required",
+      "trigger": "PostTaskExec",
+      "action": {
+        "type": "agent",
+        "prompt": "A spec task just completed. Verify that the active spec folder contains a `test-cases.md` file alongside requirements.md, design.md, and tasks.md. If `test-cases.md` is MISSING, create it now following the `.kiro/steering/test-cases.md` standard: group by feature, detailed step-by-step scenarios, repeatability (unique-data generator or explicit clean-up/teardown), a dedicated regression group, and an MD-report-with-tables template. For API-only specs, scenarios must be API tests against the Dockerized app at http://localhost:8080 (docker compose up). For UI specs, scenarios are browser-engine steps whose run artifacts are MD reports with tables (not screenshots). Do not duplicate the file if it already exists."
+      },
+      "description": "Ensures every spec has a test-cases.md artifact; creates it from the steering standard if missing after a spec task completes.",
+      "enabled": true
+    }
+  ]
+}

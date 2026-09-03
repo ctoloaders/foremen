@@ -41,3 +41,7 @@ foremen-backend/.gradle/
 
 # Backend local secrets
 foremen-backend/src/main/resources/application-local.yml
+
+# Test/build caches (local artifacts)
+foremen-backend/.jqwik-database
+foremen-frontend/tsconfig.app.tsbuildinfo

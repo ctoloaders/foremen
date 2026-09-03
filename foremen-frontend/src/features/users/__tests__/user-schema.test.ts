@@ -133,9 +133,13 @@ describe('userFormSchema', () => {
       expect(result.success).toBe(true)
     })
 
-    it('valid locale "en" passes', () => {
+    it('locale "en" is rejected (English removed per BUG 1.5 fix)', () => {
       const result = userFormSchema.safeParse({ ...validPayload, locale: 'en' })
-      expect(result.success).toBe(true)
+      expect(result.success).toBe(false)
+      if (!result.success) {
+        const localeErrors = result.error.issues.filter((i) => i.path.includes('locale'))
+        expect(localeErrors.length).toBeGreaterThan(0)
+      }
     })
 
     it('invalid locale is rejected', () => {

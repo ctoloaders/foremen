@@ -10,7 +10,7 @@
       },
       "description": "When start a new spec - add in progress status in the corresponding part of PROGRESS.md",
       "matcher": "task",
-      "enabled": true
+      "enabled": false
     }
   ]
 }

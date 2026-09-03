@@ -10,7 +10,7 @@
       },
       "description": "Always use sdk cli for java",
       "matcher": "java",
-      "enabled": true
+      "enabled": false
     }
   ]
 }

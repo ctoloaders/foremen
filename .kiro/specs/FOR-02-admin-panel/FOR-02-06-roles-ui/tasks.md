@@ -47,7 +47,7 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - `useBatchUpdatePermissions` invalidates permission caches for each role in the batch result
     - _Requirements: 9.2, 9.3_
 
-- [ ] 3. Checkpoint - Verify backend compiles and API layer types are consistent
+- [x] 3. Checkpoint - Verify backend compiles and API layer types are consistent
   - Ensure all tests pass, ask the user if questions arise.
 
 - [x] 4. Matrix Zustand store
@@ -59,7 +59,7 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Implement `hasChanges()` — returns boolean
     - _Requirements: 6.5, 6.6, 6.15_
 
-  - [ ] 4.2 Write unit tests for matrix store
+  - [x] 4.2 Write unit tests for matrix store
     - Test toggleOperation adds to localChanges and dirtyRoleIds
     - Test toggle back to original removes override
     - Test resetChanges clears state
@@ -67,14 +67,14 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Test getLocalState returns undefined when no override
     - _Requirements: 6.5, 6.6_
 
-- [ ] 5. Roles List Tab (Tab 1) components
-  - [ ] 5.1 Implement RolesPage with tabbed layout
+- [x] 5. Roles List Tab (Tab 1) components
+  - [x] 5.1 Implement RolesPage with tabbed layout
     - Create `src/features/roles/RolesPage.tsx` — top-level page component using shadcn/ui Tabs
     - Implement controlled tab state (default: 'list'), tab labels via i18n keys `roles.tabs.list` and `roles.tabs.matrix`
     - Manage form sheet state (`open`, `mode`, `roleId`) and delete dialog state (`open`, `role`)
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 16.5_
 
-  - [ ] 5.2 Implement RolesListTab with table and cards
+  - [x] 5.2 Implement RolesListTab with table and cards
     - Create `src/features/roles/components/RolesListTab.tsx` — container with search input, "Create Role" button, table/cards, and pagination
     - Create `src/features/roles/components/RolesTable.tsx` — desktop table using shadcn/ui Table showing: code, localized name, description, system badge, action buttons (edit, delete)
     - Create `src/features/roles/components/RolesCards.tsx` — mobile card layout (viewport < 768px)
@@ -84,13 +84,13 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Disable delete button for system roles with tooltip
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.6, 1.7, 1.8, 7.1, 7.2, 7.3, 12.1, 12.2, 16.1, 16.6, 16.8_
 
-  - [ ] 5.3 Implement skeleton loading states
+  - [x] 5.3 Implement skeleton loading states
     - Create `src/features/roles/components/RolesListSkeleton.tsx` — 5 skeleton table rows (desktop) or 5 skeleton cards (mobile) with CSS pulse animation (1.5–2s cycle)
     - Create `src/features/roles/components/RoleFormSkeleton.tsx` — skeleton placeholders for form fields
     - Create `src/features/roles/components/MatrixSkeleton.tsx` — skeleton grid with placeholder cells
     - _Requirements: 1.5, 13.1, 13.2, 13.3, 13.4_
 
-  - [ ] 5.4 Implement RoleFormSheet (create/edit)
+  - [x] 5.4 Implement RoleFormSheet (create/edit)
     - Create `src/features/roles/components/RoleFormSheet.tsx` — sheet overlay using shadcn Sheet component
     - Use React Hook Form with `@hookform/resolvers/zod` and `roleCreateSchema`/`roleUpdateSchema`
     - Create mode: all fields empty, code editable
@@ -104,7 +104,7 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Form fields: single column on mobile, two columns (nameRU/namePL side-by-side) on desktop
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 7.4, 10.1, 10.2, 10.3, 10.4, 10.5, 12.3, 16.2_
 
-  - [ ] 5.5 Implement DeleteRoleDialog
+  - [x] 5.5 Implement DeleteRoleDialog
     - Create `src/features/roles/components/DeleteRoleDialog.tsx` — shadcn AlertDialog with localized title, description (includes role name), and action buttons
     - On confirm: call `useDeleteRole` mutation
     - On success: close dialog, success toast, invalidate caches
@@ -112,11 +112,11 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - On other errors: error toast with API error message
     - _Requirements: 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 16.3_
 
-- [ ] 6. Checkpoint - Verify roles list tab renders and CRUD operations work
+- [x] 6. Checkpoint - Verify roles list tab renders and CRUD operations work
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 7. Permission Matrix Tab (Tab 2)
-  - [ ] 7.1 Implement PermissionMatrixTab container
+- [x] 7. Permission Matrix Tab (Tab 2)
+  - [x] 7.1 Implement PermissionMatrixTab container
     - Create `src/features/roles/components/PermissionMatrixTab.tsx` — container with search input, unsaved changes indicator, "Save" button, matrix grid, and pagination
     - Fetch roles (paginated, with search filter), resources (all), and operations (all) using query hooks
     - Fetch permissions for all visible roles using `useMultipleRolePermissions`
@@ -127,7 +127,7 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Display unsaved changes indicator text (`roles.matrix.unsavedChanges` i18n key) when dirty
     - _Requirements: 6.1, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 6.15, 6.16_
 
-  - [ ] 7.2 Implement PermissionMatrix grid
+  - [x] 7.2 Implement PermissionMatrix grid
     - Create `src/features/roles/components/PermissionMatrix.tsx` — table with role names as rows and resource names as columns
     - Sticky first column (role names) with `sticky left-0 z-10` and explicit background for narrow viewports
     - Horizontal scroll for resource columns on viewport < 1024px
@@ -135,36 +135,36 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - All 4 operation letters visible in every cell at all viewport widths (no collapsing)
     - _Requirements: 6.2, 6.3, 6.13, 6.14, 6.17, 7.5, 7.6, 16.4_
 
-  - [ ] 7.3 Implement OperationCell component
+  - [x] 7.3 Implement OperationCell component
     - Create `src/features/roles/components/OperationCell.tsx` — renders 4 operation letter buttons (C, R, U, D) in compact `w-6 h-6` size
     - Active letters: primary color; inactive letters: muted-foreground (#a1a1aa)
     - Determine effective state: local override (from matrix store) takes precedence over server state
     - On click: call `matrixStore.toggleOperation(roleId, resourceId, operationId, currentActive)`
     - _Requirements: 6.3, 6.4, 6.5, 15.2_
 
-- [ ] 8. i18n translations and navigation integration
-  - [ ] 8.1 Add roles namespace translations (PL and RU)
+- [x] 8. i18n translations and navigation integration
+  - [x] 8.1 Add roles namespace translations (PL and RU)
     - Add `roles` key to `src/locales/pl.json` with all translation keys: tabs, page title, table headers, form labels, button labels, dialog text, toast messages, validation messages, empty states, badge labels, matrix-specific labels
     - Add `roles` key to `src/locales/ru.json` with equivalent Russian translations
     - Include specific keys: `roles.tabs.list` (PL: "Role", RU: "Роли"), `roles.tabs.matrix` (PL: "Matryca dostępu", RU: "Матрица доступов"), `roles.matrix.save`, `roles.matrix.search`, `roles.matrix.unsavedChanges`, `roles.pageTitle`, `roles.errors.network`, `roles.errors.systemDelete`
     - _Requirements: 8.1, 8.2, 8.5, 8.6_
 
-  - [ ] 8.2 Integrate Roles page into App Shell navigation and router
+  - [x] 8.2 Integrate Roles page into App Shell navigation and router
     - Add lazy-loaded `RolesPage` import and `/roles` route to `src/app/router.tsx`
     - Add `nav.roles` key with Lucide `Shield` icon to the navigation config in the "System" section
     - Set Top_Bar page title from i18n key `roles.pageTitle` when on `/roles` route
     - _Requirements: 14.1, 14.2, 14.3, 14.4_
 
-- [ ] 9. Error handling and inline error states
-  - [ ] 9.1 Implement inline error state component and error integration
+- [x] 9. Error handling and inline error states
+  - [x] 9.1 Implement inline error state component and error integration
     - Create a reusable inline error component with error icon, localized message, and "Retry" button
     - Integrate into RolesListTab: show inline error with retry when list query fails after all retries
     - Integrate into PermissionMatrixTab: show inline error with retry when matrix data fails
     - Ensure mutation buttons show loading spinner and are disabled during pending state
     - _Requirements: 11.1, 11.2, 11.3, 11.4, 11.5_
 
-- [ ] 10. Dark theme and responsive polish
-  - [ ] 10.1 Apply dark theme tokens and responsive breakpoints
+- [x] 10. Dark theme and responsive polish
+  - [x] 10.1 Apply dark theme tokens and responsive breakpoints
     - Verify all components use design tokens: background (#09090b), foreground (#fafafa), border (#27272a), muted (#27272a), muted-foreground (#a1a1aa)
     - Verify toast colors: success (#22c55e), error/destructive (#7f1d1d)
     - Verify system badge uses muted background with muted-foreground text
@@ -173,11 +173,11 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Verify tab bar remains visible at all viewport widths
     - _Requirements: 7.1, 7.2, 7.3, 7.5, 7.6, 7.7, 15.1, 15.2, 15.3, 15.4_
 
-- [ ] 11. Final checkpoint - Full integration verification
+- [x] 11. Final checkpoint - Full integration verification
   - Ensure all tests pass, ask the user if questions arise.
 
-- [ ] 12. Write unit and component tests
-  - [ ] 12.1 Write unit tests for Zod schema validation
+- [x] 12. Write unit and component tests
+  - [x] 12.1 Write unit tests for Zod schema validation
     - Test valid create payload passes
     - Test code pattern enforcement (lowercase fails, digit-start fails)
     - Test name min/max length boundaries
@@ -186,19 +186,19 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Test update schema omits code
     - _Requirements: 10.2_
 
-  - [ ] 12.2 Write unit tests for API error handling
+  - [x] 12.2 Write unit tests for API error handling
     - Test `handleResponse` throws `ApiError` for non-ok responses
     - Test error message parsing from JSON body
     - Test fallback when JSON parsing fails
     - _Requirements: 11.1, 11.2_
 
-  - [ ] 12.3 Write component tests for RolesPage tab switching
+  - [x] 12.3 Write component tests for RolesPage tab switching
     - Test renders two tabs with correct i18n labels
     - Test defaults to "list" tab active
     - Test switching tabs renders correct content
     - _Requirements: 5.1, 5.2, 5.3, 5.4_
 
-  - [ ] 12.4 Write component tests for RolesListTab
+  - [x] 12.4 Write component tests for RolesListTab
     - Test skeleton display while loading
     - Test table rows render with role data on desktop
     - Test cards render on mobile viewport
@@ -208,7 +208,7 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Test empty state message
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 12.1, 12.2, 13.1_
 
-  - [ ] 12.5 Write component tests for RoleFormSheet
+  - [x] 12.5 Write component tests for RoleFormSheet
     - Test create mode: empty fields, code editable
     - Test edit mode: pre-populated, code disabled
     - Test validation errors shown inline
@@ -216,7 +216,7 @@ Implement the Roles management page for the Foremen admin panel. This includes a
     - Test API error handling
     - _Requirements: 2.1, 2.2, 2.3, 3.1, 3.2, 10.3, 10.4, 10.5_
 
-  - [ ] 12.6 Write component tests for PermissionMatrix
+  - [x] 12.6 Write component tests for PermissionMatrix
     - Test skeleton while loading
     - Test grid renders role rows and resource columns
     - Test operation letters show correct active/inactive state

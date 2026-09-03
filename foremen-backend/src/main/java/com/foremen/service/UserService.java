@@ -25,7 +25,7 @@ import java.util.Set;
 public class UserService implements AdminService<
         UserServiceModel, UserServiceExtendedModel, UserEntity, Long> {
 
-    private static final Set<String> SUPPORTED_LOCALES = Set.of("ru", "pl", "en");
+    private static final Set<String> SUPPORTED_LOCALES = Set.of("ru", "pl");
     private static final String ADMIN_ROLE_CODE = "ADMIN";
 
     private final UserDao dao;
@@ -47,7 +47,7 @@ public class UserService implements AdminService<
      */
     @Override
     public void validateCreate(UserServiceExtendedModel model) {
-        RoleEntity role = resolveRole(model.roleId());
+        RoleEntity role = findRoleById(model.roleId());
         if (ADMIN_ROLE_CODE.equals(role.getCode())) {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.user.admin.role.forbidden");
         }
@@ -64,7 +64,7 @@ public class UserService implements AdminService<
      */
     @Override
     public void validateUpdate(UserEntity existing, UserServiceExtendedModel update) {
-        RoleEntity targetRole = resolveRole(update.roleId());
+        RoleEntity targetRole = findRoleById(update.roleId());
         String existingRoleCode = existing.getRole() != null ? existing.getRole().getCode() : null;
         if (!ADMIN_ROLE_CODE.equals(existingRoleCode) && ADMIN_ROLE_CODE.equals(targetRole.getCode())) {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.user.admin.role.forbidden");
@@ -134,7 +134,40 @@ public class UserService implements AdminService<
         }
     }
 
+    /**
+     * Resolves a role by id and enforces the ADMIN-role prohibition as a hard CONFLICT guard
+     * (BUG 1.6, Requirements 2.6, 3.3). Assigning the ADMIN role through the user-management API
+     * is never permitted, so a resolved role whose code is {@link #ADMIN_ROLE_CODE} is rejected
+     * with HTTP 409 and error key {@code error.user.admin.role.prohibited}. Non-ADMIN roles are
+     * returned unchanged.
+     *
+     * <p>The create/update validation hooks intentionally do NOT route through this guard: they
+     * use {@link #findRoleById(Long)} instead, because they apply their own ADMIN semantics —
+     * a FORBIDDEN (403) prohibition on create/promotion with the {@code error.user.admin.role.forbidden}
+     * key, while still allowing an existing ADMIN to remain ADMIN on an unchanged-role update
+     * (Requirement 12.6). Keeping this CONFLICT guard separate lets both semantics coexist without
+     * one overriding the other.
+     *
+     * <p>This method is retained as the single, directly-testable CONFLICT enforcement point for
+     * the ADMIN-role prohibition (exercised by the FOR-02-07 bug-condition and preservation tests);
+     * it is intentionally not invoked from the hooks above.
+     */
+    @SuppressWarnings("unused")
     private RoleEntity resolveRole(Long roleId) {
+        RoleEntity role = findRoleById(roleId);
+        if (ADMIN_ROLE_CODE.equals(role.getCode())) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, "error.user.admin.role.prohibited");
+        }
+        return role;
+    }
+
+    /**
+     * Looks up a role by id without any ADMIN-role restriction: validates that an id was supplied
+     * and that the role exists. Used by the create/update validation hooks, which apply their own
+     * ADMIN-role rules (see {@link #validateCreate}/{@link #validateUpdate}) rather than the CONFLICT
+     * guard in {@link #resolveRole(Long)}.
+     */
+    private RoleEntity findRoleById(Long roleId) {
         if (roleId == null) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.user.role.required");
         }

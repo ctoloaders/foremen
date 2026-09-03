@@ -83,7 +83,7 @@ class UserCreateInvitePropertyTest {
     /** Supported locales (validateCreate rejects unsupported ones) plus null (no locale supplied). */
     @Provide
     Arbitrary<String> locales() {
-        return Arbitraries.of("ru", "pl", "en", null);
+        return Arbitraries.of("ru", "pl", null);
     }
 
     // Feature: FOR-03-02-user-invitation, Property 3: Created users are INVITED with no password

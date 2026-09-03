@@ -66,8 +66,8 @@ dependencies {
     // Liquibase
     implementation 'org.liquibase:liquibase-core'
 
-    // PostgreSQL (runtime only)
-    runtimeOnly 'org.postgresql:postgresql'
+    // PostgreSQL — compile scope needed for PGobject used in JsonMapConverter (jsonb persistence)
+    implementation 'org.postgresql:postgresql'
 
     // Annotation processors (Lombok must be before MapStruct)
     annotationProcessor 'org.projectlombok:lombok'
