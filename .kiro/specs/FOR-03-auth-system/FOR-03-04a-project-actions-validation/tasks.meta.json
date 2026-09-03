@@ -1,0 +1,295 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Re-declare `ProjectScopedService extends AdminService<S, SE, D, ID>` and add the `getProjectId` override point": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473870868
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473879224
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474090551
+      }
+    ],
+    "1.2 Add the shared `assertProjectAccess(ID)` decision logic": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473870916
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474095563
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474196202
+      }
+    ],
+    "1.3 Add the `default` by-id CRUD overrides that delegate via `AdminService.super`": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473870996
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474200574
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474327451
+      }
+    ],
+    "2.1 Write the property test for `assertProjectAccess`": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871024
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474332337
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474549558
+      }
+    ],
+    "2.2 Write example/unit tests for each decision branch": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871050
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474333753
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474550986
+      }
+    ],
+    "2.3 Write the mutating-method override guard test": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871075
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474334633
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474551927
+      }
+    ],
+    "3. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871107
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474565707
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474784274
+      }
+    ],
+    "4.1 Simplify `ScopedFixtureService` to `implements ProjectScopedService` only, relying on the default `getProjectId`": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871135
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474566875
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474706350
+      }
+    ],
+    "5.1 Write read/update/delete enforcement integration tests": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871165
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474785527
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478803420
+      }
+    ],
+    "5.2 Write the no-partial-mutation and multi-id integration tests": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871190
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474786962
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478804820
+      }
+    ],
+    "5.3 Write the read-filter non-regression integration test": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871216
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474788095
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478806379
+      }
+    ],
+    "5.4 Write the default `getProjectId` resolution integration tests": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871239
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474791304
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478808563
+      }
+    ],
+    "5.5 Write the edge-case test": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871264
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474792283
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478808799
+      }
+    ],
+    "6. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871288
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478814621
+      }
+    ],
+    "7. Author test-cases.md": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871309
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478815679
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788479047951
+      }
+    ],
+    "8. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788473871334
+      },
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788479277716
+      }
+    ],
+    "1. Rework the `ProjectScopedService` contract to extend `AdminService` and add action validation": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474327572
+      }
+    ],
+    "2. Prove the decision logic and lock the override set": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474551958
+      }
+    ],
+    "4. Collapse the test fixture to the single-contract shape": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788474706430
+      }
+    ],
+    "5. Prove enforcement end to end against the fixture": [
+      {
+        "executionId": "52f7e9f8-84a9-4af3-8d8f-9e19ad995275",
+        "chatSessionId": "sess_93e7f2e9-d3a5-4e27-9b09-f7909ceacba8",
+        "timestamp": 1788478808840
+      }
+    ]
+  }
+}

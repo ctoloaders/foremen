@@ -256,8 +256,12 @@ class ProjectScopedServiceDecisionPropertyTest {
     /**
      * A minimal {@link ProjectScopedService} stub: it declares a generated project-id path and
      * returns a fixed generated allowed set, exercising only the interface's default decision logic.
+     *
+     * <p>Because {@link ProjectScopedService} now {@code extends AdminService}, the stub supplies
+     * no-op CRUD plumbing so it can be instantiated; those members are unused by
+     * {@code addRequiredQuery()}, which is the only behavior this test drives.</p>
      */
-    static class StubScopedService implements ProjectScopedService<Object> {
+    static class StubScopedService implements ProjectScopedService<Object, Object, Object, Object> {
 
         private final String projectIdPath;
         private final Set<Long> allowed;
@@ -275,6 +279,33 @@ class ProjectScopedServiceDecisionPropertyTest {
         @Override
         public Set<Long> allowedProjectIds(Long userId) {
             return allowed;
+        }
+
+        // --- no-op CRUD plumbing inherited from AdminService (unused by addRequiredQuery) ---
+
+        @Override
+        public com.foremen.mapper.ServiceToDaoMapper<Object, Object, Object> getMapper() {
+            return null;
+        }
+
+        @Override
+        public com.foremen.dao.AdminDao<Object, Object> getDao() {
+            return null;
+        }
+
+        @Override
+        public com.foremen.service.audit.AuditLogDao getAuditLogDao() {
+            return null;
+        }
+
+        @Override
+        public jakarta.persistence.EntityManager getEntityManager() {
+            return null;
+        }
+
+        @Override
+        public Class<Object> getDaoModelClass() {
+            return Object.class;
         }
     }
 
