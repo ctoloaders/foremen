@@ -51,6 +51,7 @@ export interface UserUpdateRequest {
 export interface RoleOption {
   id: number
   name: string // locale-resolved
+  code: string // stable role code (e.g. ADMIN, CLIENT); used for filtering, not display
 }
 
 /** Re-export PaginatedResponse from data-table types */

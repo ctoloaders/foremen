@@ -60,6 +60,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/auth/resend-invite").hasRole("ADMIN")
+                        // FOR-03-05 (8.1, 8.2): the OTP client-auth endpoints POST /api/auth/otp/request
+                        // and POST /api/auth/otp/verify are publicly reachable through this existing
+                        // /api/auth/** permitAll rule. The Ant "**" wildcard spans multiple path
+                        // segments, so both /api/auth/otp/request and /api/auth/otp/verify are matched
+                        // here; neither is caught by the more specific /api/auth/me or
+                        // /api/auth/resend-invite matchers declared above. Verified: no new matcher is
+                        // needed for the OTP endpoints.
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().permitAll()
                 )

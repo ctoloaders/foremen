@@ -27,6 +27,15 @@ public class UserService implements AdminService<
 
     private static final Set<String> SUPPORTED_LOCALES = Set.of("ru", "pl");
     private static final String ADMIN_ROLE_CODE = "ADMIN";
+    private static final String CLIENT_ROLE_CODE = "CLIENT";
+
+    /**
+     * Per-thread flag that signals the current {@code create(...)} call originated from the
+     * dedicated client-registration path ({@link #createClient}). When set, {@link #validateCreate}
+     * permits the server-resolved CLIENT role; otherwise the generic {@code POST /api/users} create
+     * rejects a CLIENT role as defense in depth for FOR-03-05 Requirement 10.11.
+     */
+    private static final ThreadLocal<Boolean> CLIENT_CREATE_ALLOWED = ThreadLocal.withInitial(() -> Boolean.FALSE);
 
     private final UserDao dao;
     private final RoleDao roleDao;
@@ -44,12 +53,21 @@ public class UserService implements AdminService<
      * ADMIN role via the CRUD API is never permitted (12.1). The check runs regardless of
      * caller role and independent of any frontend, because the framework invokes this hook
      * for every create (12.3, 12.4).
+     *
+     * <p>The CLIENT-role prohibition is enforced next as defense in depth (FOR-03-05 Requirement
+     * 10.11): a {@code roleId} resolving to code {@code CLIENT} is rejected on the generic
+     * {@code POST /api/users} create with HTTP 403, so CLIENT users can only be created through the
+     * dedicated client-registration endpoint. The legitimate {@link #createClient} path sets a
+     * per-thread flag that permits the server-resolved CLIENT role here.
      */
     @Override
     public void validateCreate(UserServiceExtendedModel model) {
         RoleEntity role = findRoleById(model.roleId());
         if (ADMIN_ROLE_CODE.equals(role.getCode())) {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.user.admin.role.forbidden");
+        }
+        if (CLIENT_ROLE_CODE.equals(role.getCode()) && !CLIENT_CREATE_ALLOWED.get()) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.user.client.role.forbidden");
         }
         validateEmailUniqueness(model.email(), null);
         validateLocale(model.locale());
@@ -98,6 +116,59 @@ public class UserService implements AdminService<
     @Override
     public void afterCreate(UserEntity user) {
         inviteService.issueInvite(user);
+    }
+
+    // --- Client registration (reuses the invite create path) ---
+
+    /**
+     * Creates a CLIENT user through the same framework {@code create(...)} path the admin create
+     * uses, so the existing {@link #afterCreate(UserEntity)} &rarr;
+     * {@link InviteService#issueInvite(UserEntity)} hook issues the invite token and dispatches the
+     * client-portal invitation email (FOR-03-05 Requirements 10.4, 10.5).
+     *
+     * <p>The user is built as a {@link UserServiceExtendedModel} carrying the server-resolved
+     * {@code clientRole} id; the {@code UserServiceMapper} resolves that id into the managed
+     * {@link RoleEntity} on the created entity. Because the service-model exposes neither status nor
+     * password, the persisted user keeps the {@link UserEntity} defaults — {@code status = INVITED}
+     * and a {@code null} password hash — exactly like the invite flow (Requirement 10.4). Running
+     * inside the transactional framework {@code create(...)}, an invite-token or mail failure rolls
+     * back the whole create.
+     *
+     * <p>The supplied {@code clientRole} is expected to be the seeded {@code CLIENT} role resolved by
+     * the caller ({@code ClientRegistrationService} via {@code RoleDao.findByCode("CLIENT")}); this
+     * method does not itself resolve or restrict the role, it only fixes it on the created user.
+     *
+     * @param name       the client's display name
+     * @param email      the client's email address (uniqueness enforced by {@link #validateCreate})
+     * @param phone      the client's optional phone number
+     * @param locale     the client's optional locale
+     * @param clientRole the server-resolved CLIENT role to assign to the created user
+     * @return the persisted, INVITED CLIENT {@link UserEntity}
+     */
+    public UserEntity createClient(String name, String email, String phone, String locale, RoleEntity clientRole) {
+        // locale is optional (Req 10.1); the users.locale column is NOT NULL with a "ru" default,
+        // so fall back to "ru" when the caller omits it or supplies a blank value.
+        String resolvedLocale = (locale == null || locale.isBlank()) ? "ru" : locale;
+        UserServiceExtendedModel model = new UserServiceExtendedModel(
+                null,
+                name,
+                email,
+                phone,
+                clientRole.getId(),
+                clientRole.getNameRU(),
+                true,
+                resolvedLocale,
+                null
+        );
+        UserServiceExtendedModel created;
+        CLIENT_CREATE_ALLOWED.set(Boolean.TRUE);
+        try {
+            created = create(model);
+        } finally {
+            CLIENT_CREATE_ALLOWED.remove();
+        }
+        return dao.findById(created.id())
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.INTERNAL_SERVER_ERROR, "error.entity.not.found", created.id()));
     }
 
     // --- Soft-delete (set active = false) ---

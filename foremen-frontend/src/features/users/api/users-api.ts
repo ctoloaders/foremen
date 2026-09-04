@@ -161,7 +161,7 @@ export async function fetchRolesForSelect(): Promise<RoleOption[]> {
   while (page < totalPages) {
     const data = await fetchRolesPage({ page, size: 100 })
 
-    roles.push(...data.content.map((r) => ({ id: r.id, name: r.name })))
+    roles.push(...data.content.map((r) => ({ id: r.id, name: r.name, code: r.code })))
     totalPages = data.totalPages
     page++
   }

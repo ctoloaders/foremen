@@ -109,7 +109,7 @@ class PasswordResetPropertyTest {
 
         AuthService service = new AuthService(
                 userDao, ENCODER, jwtTokenProvider, refreshTokenService,
-                props, passwordResetTokenDao, mailSender, null, null);
+                props, passwordResetTokenDao, mailSender, null, null, null);
         return new Fixture(service, userDao, passwordResetTokenDao, refreshTokenService, mailSender);
     }
 

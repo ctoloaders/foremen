@@ -2,6 +2,8 @@ package com.foremen.controller;
 
 import com.foremen.controller.dto.auth.CurrentUserResponse;
 import com.foremen.controller.dto.auth.LoginRequest;
+import com.foremen.controller.dto.auth.OtpRequestRequest;
+import com.foremen.controller.dto.auth.OtpVerifyRequest;
 import com.foremen.controller.dto.auth.PasswordResetConfirm;
 import com.foremen.controller.dto.auth.PasswordResetRequest;
 import com.foremen.controller.dto.auth.RefreshRequest;
@@ -10,6 +12,7 @@ import com.foremen.controller.dto.auth.SetPasswordRequest;
 import com.foremen.controller.dto.auth.TokenResponse;
 import com.foremen.service.AuthService;
 import com.foremen.service.InviteService;
+import com.foremen.service.OtpService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -39,6 +42,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final InviteService inviteService;
+    private final OtpService otpService;
 
     /**
      * Authenticates a user and issues an access/refresh token pair (Requirement 3.1).
@@ -130,5 +134,35 @@ public class AuthController {
     @ResponseStatus(HttpStatus.OK)
     public void resendInvite(@RequestBody @Valid ResendInviteRequest request) {
         inviteService.resend(request.userId());
+    }
+
+    /**
+     * Requests a passwordless OTP login code for the given client email (Requirement 4.1). Always
+     * returns HTTP 200 to avoid disclosing whether the email is an eligible client (Silent_Success,
+     * anti-enumeration, Requirement 4.4); rate limiting and eligibility are handled by
+     * {@link OtpService#request(String)}.
+     *
+     * <p>{@code @Valid} rejects a blank or missing {@code email} with HTTP 400 through the existing
+     * {@code MethodArgumentNotValidException} handler, before any rate-limit check or user lookup
+     * (Requirement 4.2).
+     */
+    @PostMapping("/otp/request")
+    @ResponseStatus(HttpStatus.OK)
+    public void otpRequest(@RequestBody @Valid OtpRequestRequest request) {
+        otpService.request(request.email());
+    }
+
+    /**
+     * Verifies an OTP code and, on success, issues a client-TTL access/refresh token pair
+     * (Requirements 6.1, 6.3).
+     *
+     * <p>{@code @Valid} rejects a blank or missing {@code email} or {@code code} with HTTP 400
+     * through the existing handler, before any code lookup (Requirement 6.2).
+     *
+     * @return HTTP 200 with a {@link TokenResponse}
+     */
+    @PostMapping("/otp/verify")
+    public ResponseEntity<TokenResponse> otpVerify(@RequestBody @Valid OtpVerifyRequest request) {
+        return ResponseEntity.ok(authService.verifyOtp(request.email(), request.code()));
     }
 }

@@ -58,10 +58,14 @@ class AdminRoleProhibitionPropertyTest {
         return Arbitraries.of(ADMIN, "MANAGER", "FOREMAN", "WORKER", "FINANCIER", "CLIENT");
     }
 
-    /** Non-ADMIN role codes only. */
+    /**
+     * Non-ADMIN role codes creatable via the generic path.
+     * CLIENT is excluded: it is only creatable via {@code /api/users/client} (Requirement 10.11),
+     * and the generic {@code validateCreate} rejects it as a defense-in-depth guard.
+     */
     @Provide
     Arbitrary<String> nonAdminRoleCodes() {
-        return Arbitraries.of("MANAGER", "FOREMAN", "WORKER", "FINANCIER", "CLIENT");
+        return Arbitraries.of("MANAGER", "FOREMAN", "WORKER", "FINANCIER");
     }
 
     // --- Fixtures ---

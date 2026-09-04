@@ -316,6 +316,7 @@ export function UserFormSheet({
                       onChange={(val) => field.onChange(val)}
                       error={errors.roleId ? t(errors.roleId.message ?? '') : undefined}
                       disabled={isPending}
+                      currentRoleName={mode === 'edit' ? userData?.roleName : undefined}
                     />
                   )}
                 />

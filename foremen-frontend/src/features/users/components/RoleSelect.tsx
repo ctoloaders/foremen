@@ -6,17 +6,33 @@ import { cn } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { useRolesInfinite } from '../api/query-hooks'
+import { EXCLUDED_ROLE_CODES, useRolesInfinite } from '../api/query-hooks'
 import type { RoleOption } from '../types'
+
+const EXCLUDED_CODES = new Set<string>(EXCLUDED_ROLE_CODES)
 
 interface RoleSelectProps {
   value: number | undefined
   onChange: (value: number) => void
   error?: string
   disabled?: boolean
+  /**
+   * Display name of the user's current role, used only for edit-form context
+   * (Requirement 11.4). When the current role is one of the excluded codes
+   * (ADMIN/CLIENT) it is not present in the fetched options, so the trigger
+   * falls back to this name to show the current role for context. It is never
+   * added to the selectable options list.
+   */
+  currentRoleName?: string
 }
 
-export function RoleSelect({ value, onChange, error, disabled }: RoleSelectProps) {
+export function RoleSelect({
+  value,
+  onChange,
+  error,
+  disabled,
+  currentRoleName,
+}: RoleSelectProps) {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
@@ -32,10 +48,15 @@ export function RoleSelect({ value, onChange, error, disabled }: RoleSelectProps
     isFetchingNextPage,
   } = useRolesInfinite(debouncedSearch.trim() || undefined)
 
-  // Flatten paginated results — data comes from the infinite query pages, not
-  // a client-side filter.
+  // Flatten paginated results, then apply a client-side fallback filter that
+  // drops any excluded role code (ADMIN/CLIENT). The fetch already excludes
+  // these server-side; this guards against a backend that ignores the filter.
+  // Requirements: 11.1, 11.2, 11.3
   const roles = useMemo<RoleOption[]>(
-    () => data?.pages.flatMap((page) => page.content) ?? [],
+    () =>
+      (data?.pages.flatMap((page) => page.content) ?? []).filter(
+        (role) => !EXCLUDED_CODES.has(role.code),
+      ),
     [data],
   )
 
@@ -43,6 +64,12 @@ export function RoleSelect({ value, onChange, error, disabled }: RoleSelectProps
     if (value == null) return null
     return roles.find((role) => role.id === value) ?? null
   }, [roles, value])
+
+  // Label shown on the trigger. When editing a user whose current role is
+  // excluded (ADMIN/CLIENT), that role is absent from the options, so fall back
+  // to the provided current-role name for context without offering it as a
+  // selectable option. Requirement 11.4.
+  const triggerLabel = selectedRole?.name ?? (value != null ? currentRoleName : undefined)
 
   // --- Infinite scroll: observe a sentinel at the bottom of the list ---
   const sentinelRef = useRef<HTMLDivElement | null>(null)
@@ -110,12 +137,12 @@ export function RoleSelect({ value, onChange, error, disabled }: RoleSelectProps
           disabled={disabled}
           className={cn(
             'h-9 w-full justify-between font-normal',
-            !selectedRole && 'text-muted-foreground',
+            !triggerLabel && 'text-muted-foreground',
             error && 'border-destructive',
           )}
         >
-          {selectedRole ? (
-            <span className="truncate">{selectedRole.name}</span>
+          {triggerLabel ? (
+            <span className="truncate">{triggerLabel}</span>
           ) : (
             <span>{t('users.form.rolePlaceholder')}</span>
           )}

@@ -20,5 +20,6 @@
     <include file="database_files/changesets/013-create-invite-tokens.xml"/>
     <include file="database_files/changesets/014-create-project-members.xml"/>
     <include file="database_files/changesets/015-seed-project-members-resource.xml"/>
+    <include file="database_files/changesets/016-create-otp-tokens.xml"/>
 
 </databaseChangeLog>

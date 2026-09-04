@@ -65,6 +65,91 @@ class JwtPropertiesTest {
                 });
     }
 
+    // --- Requirements 7.1, 7.2: client TTL defaults when unset ---
+
+    @Test
+    @DisplayName("applies client defaults of 120 minutes and 30 days when client lifetimes are unset")
+    void appliesClientDefaultsWhenLifetimesUnset() {
+        runner.withPropertyValues("foremen.jwt.secret=" + SECRET)
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    JwtProperties props = context.getBean(JwtProperties.class);
+                    assertThat(props.clientAccessTtlMinutes()).isEqualTo(120);
+                    assertThat(props.clientRefreshTtlDays()).isEqualTo(30);
+                });
+    }
+
+    @Test
+    @DisplayName("binds explicit positive client lifetimes")
+    void bindsExplicitPositiveClientLifetimes() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-access-ttl-minutes=240",
+                        "foremen.jwt.client-refresh-ttl-days=60")
+                .run(context -> {
+                    assertThat(context).hasNotFailed();
+                    JwtProperties props = context.getBean(JwtProperties.class);
+                    assertThat(props.clientAccessTtlMinutes()).isEqualTo(240);
+                    assertThat(props.clientRefreshTtlDays()).isEqualTo(60);
+                });
+    }
+
+    // --- Requirement 7.5: fail-fast on non-positive / non-numeric client lifetimes ---
+
+    @Test
+    @DisplayName("fails startup when client-access-ttl-minutes is zero")
+    void failsWhenClientAccessTtlZero() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-access-ttl-minutes=0")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("fails startup when client-access-ttl-minutes is negative")
+    void failsWhenClientAccessTtlNegative() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-access-ttl-minutes=-5")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("fails startup when client-refresh-ttl-days is zero")
+    void failsWhenClientRefreshTtlZero() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-refresh-ttl-days=0")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("fails startup when client-refresh-ttl-days is negative")
+    void failsWhenClientRefreshTtlNegative() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-refresh-ttl-days=-1")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("fails startup when client-access-ttl-minutes is non-numeric")
+    void failsWhenClientAccessTtlNonNumeric() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-access-ttl-minutes=abc")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    @DisplayName("fails startup when client-refresh-ttl-days is non-numeric")
+    void failsWhenClientRefreshTtlNonNumeric() {
+        runner.withPropertyValues(
+                        "foremen.jwt.secret=" + SECRET,
+                        "foremen.jwt.client-refresh-ttl-days=not-a-number")
+                .run(context -> assertThat(context).hasFailed());
+    }
+
     // --- Requirement 14.5: fail-fast on non-positive lifetimes ---
 
     @Test

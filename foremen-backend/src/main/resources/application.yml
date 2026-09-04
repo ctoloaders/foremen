@@ -31,6 +31,8 @@ foremen:
   jwt:
     access-ttl-minutes: ${FOREMEN_JWT_ACCESS_TTL_MINUTES:30}
     refresh-ttl-days: ${FOREMEN_JWT_REFRESH_TTL_DAYS:7}
+    client-access-ttl-minutes: ${FOREMEN_JWT_CLIENT_ACCESS_TTL_MINUTES:120}
+    client-refresh-ttl-days: ${FOREMEN_JWT_CLIENT_REFRESH_TTL_DAYS:30}
     secret: ${FOREMEN_JWT_SECRET:}
   admin:
     create: ${FOREMEN_ADMIN_CREATE:false}

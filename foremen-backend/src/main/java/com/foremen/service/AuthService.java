@@ -57,6 +57,7 @@ public class AuthService {
     private final MailSender mailSender;
     private final InviteService inviteService;
     private final InviteTokenDao inviteTokenDao;
+    private final OtpService otpService;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -76,7 +77,8 @@ public class AuthService {
                        PasswordResetTokenDao passwordResetTokenDao,
                        MailSender mailSender,
                        InviteService inviteService,
-                       InviteTokenDao inviteTokenDao) {
+                       InviteTokenDao inviteTokenDao,
+                       OtpService otpService) {
         this.userDao = userDao;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -86,6 +88,7 @@ public class AuthService {
         this.mailSender = mailSender;
         this.inviteService = inviteService;
         this.inviteTokenDao = inviteTokenDao;
+        this.otpService = otpService;
         this.dummyHash = passwordEncoder.encode(randomSecret());
     }
 
@@ -290,6 +293,39 @@ public class AuthService {
         inviteTokenDao.save(invite);
 
         return issueTokens(user);
+    }
+
+    /**
+     * Completes an OTP login by verifying the submitted code and issuing a client-TTL token pair
+     * (Requirements 6.3, 6.9, 7.3).
+     *
+     * <p>Verification is delegated to {@link OtpService#verifyCode(String, String)}, which walks
+     * the fixed OTP state machine and, on success, marks the code used and returns the
+     * authenticated ACTIVE CLIENT user (raising the appropriate {@link ForemenApiException} for
+     * every negative branch). Tokens are then issued with the <strong>client</strong> lifetimes
+     * from {@link JwtProperties} — the client access TTL for the access token and the client
+     * refresh TTL for the refresh token — independently of the employee TTLs (7.3). The returned
+     * {@link TokenResponse} reports {@code expiresIn} as the client access TTL in seconds
+     * ({@code clientAccessTtlMinutes * 60}) per Requirement 6.9.
+     *
+     * @param email the client email
+     * @param code  the submitted OTP code
+     * @return the client-TTL access/refresh token pair
+     * @throws ForemenApiException per {@link OtpService#verifyCode(String, String)}
+     */
+    @Transactional
+    public TokenResponse verifyOtp(String email, String code) {
+        UserEntity user = otpService.verifyCode(email, code);
+
+        int accessTtlMinutes = jwtProperties.clientAccessTtlMinutes();
+        int refreshTtlDays = jwtProperties.clientRefreshTtlDays();
+
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                user.getId(), user.getRole().getCode(), user.getEmail(), accessTtlMinutes);
+        String refreshToken = refreshTokenService.issue(user, refreshTtlDays);
+        long expiresIn = (long) accessTtlMinutes * 60;
+
+        return new TokenResponse(accessToken, refreshToken, expiresIn);
     }
 
     private TokenResponse issueTokens(UserEntity user) {

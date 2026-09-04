@@ -62,10 +62,15 @@ import static org.mockito.Mockito.when;
  */
 class UserCreateInvitePropertyTest {
 
-    /** Non-ADMIN role codes: the create path forbids ADMIN, so we never generate it here. */
+    /**
+     * Role codes creatable via the generic user-management create path.
+     * ADMIN is excluded (the create path forbids it) and CLIENT is excluded too: CLIENT is only
+     * creatable via {@code /api/users/client} (Requirement 10.11), and the generic
+     * {@code validateCreate} rejects it as a defense-in-depth guard.
+     */
     @Provide
     Arbitrary<String> nonAdminRoleCodes() {
-        return Arbitraries.of("MANAGER", "FOREMAN", "WORKER", "FINANCIER", "CLIENT", "CUSTOM_ROLE");
+        return Arbitraries.of("MANAGER", "FOREMAN", "WORKER", "FINANCIER", "CUSTOM_ROLE");
     }
 
     @Provide

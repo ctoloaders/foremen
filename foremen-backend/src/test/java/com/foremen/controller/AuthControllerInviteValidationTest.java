@@ -5,6 +5,7 @@ import com.foremen.controller.advice.ForemenControllerAdvice;
 import com.foremen.controller.dto.auth.TokenResponse;
 import com.foremen.service.AuthService;
 import com.foremen.service.InviteService;
+import com.foremen.service.OtpService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -50,18 +51,20 @@ class AuthControllerInviteValidationTest {
 
     private AuthService authService;
     private InviteService inviteService;
+    private OtpService otpService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         authService = mock(AuthService.class);
         inviteService = mock(InviteService.class);
+        otpService = mock(OtpService.class);
 
         MessageResolver messageResolver = mock(MessageResolver.class);
         when(messageResolver.resolve(anyString(), any(), any(Locale.class)))
                 .thenReturn("validation error");
 
-        AuthController controller = new AuthController(authService, inviteService);
+        AuthController controller = new AuthController(authService, inviteService, otpService);
         ForemenControllerAdvice advice = new ForemenControllerAdvice(messageResolver);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)

@@ -43,17 +43,35 @@ public class RefreshTokenService {
     private final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * Issues a new refresh token for the given user, persisting a fresh {@link RefreshTokenEntity}
-     * with a 256-bit random value, {@code revoked=false}, and an expiry {@code refreshTtlDays}
-     * days after issuance.
+     * Issues a new refresh token for the given user with the employee refresh TTL
+     * ({@code foremen.jwt.refresh-ttl-days}). Delegates to {@link #issue(UserEntity, int)}.
+     *
+     * <p>Used by the FOR-03-01 employee login and refresh flows; its lifetime is unaffected by
+     * the client TTLs (Requirement 7.4).
      *
      * @return the opaque token value to hand back to the client
      */
     public String issue(UserEntity user) {
+        return issue(user, jwtProperties.refreshTtlDays());
+    }
+
+    /**
+     * Issues a new refresh token for the given user, persisting a fresh {@link RefreshTokenEntity}
+     * with a 256-bit random value, {@code revoked=false}, and an expiry {@code ttlDays} days after
+     * issuance.
+     *
+     * <p>TTL-aware overload used by the OTP verify path so client refresh tokens can be issued with
+     * the client refresh TTL ({@code foremen.jwt.client-refresh-ttl-days}) independently of the
+     * employee refresh TTL (Requirement 7.3).
+     *
+     * @param ttlDays the refresh-token lifetime in days
+     * @return the opaque token value to hand back to the client
+     */
+    public String issue(UserEntity user, int ttlDays) {
         RefreshTokenEntity entity = new RefreshTokenEntity();
         entity.setToken(generateTokenValue());
         entity.setUser(user);
-        entity.setExpiresAt(Instant.now().plus(Duration.ofDays(jwtProperties.refreshTtlDays())));
+        entity.setExpiresAt(Instant.now().plus(Duration.ofDays(ttlDays)));
         entity.setRevoked(false);
         return dao.save(entity).getToken();
     }

@@ -1,0 +1,1059 @@
+{
+  "pbtResults": {
+    "12.2 Write property test for localization completeness": {
+      "status": "passed",
+      "lastRunTimestamp": 1788516634631
+    },
+    "3.2 Write property test for client TTL validation predicate": {
+      "status": "passed",
+      "lastRunTimestamp": 1788516645467
+    },
+    "5.2 Write property test for code shape": {
+      "status": "passed",
+      "lastRunTimestamp": 1788516678082
+    },
+    "9.2 Write property test for email locale resolution": {
+      "status": "passed",
+      "lastRunTimestamp": 1788517863370
+    },
+    "6.4 Write property test for silent success": {
+      "status": "passed",
+      "lastRunTimestamp": 1788518309425
+    },
+    "6.5 Write property test for rate limiting": {
+      "status": "passed",
+      "lastRunTimestamp": 1788518321151
+    },
+    "6.3 Write property test for OTP code expiry": {
+      "status": "passed",
+      "lastRunTimestamp": 1788518338873
+    },
+    "6.2 Write property test for OTP issuance shape": {
+      "status": "passed",
+      "lastRunTimestamp": 1788519198198
+    },
+    "14.6 Write property tests for client registration": {
+      "status": "passed",
+      "lastRunTimestamp": 1788523604727
+    },
+    "7.3 Write property test for no-matching-row rejection": {
+      "status": "passed",
+      "lastRunTimestamp": 1788519518530
+    },
+    "7.2 Write property test for verify success + client access TTL": {
+      "status": "passed",
+      "lastRunTimestamp": 1788519587728
+    },
+    "7.6 Write property test for expired code": {
+      "status": "passed",
+      "lastRunTimestamp": 1788523488640
+    },
+    "7.7 Write property test for single-use code": {
+      "status": "passed",
+      "lastRunTimestamp": 1788523524632
+    },
+    "7.4 Write property test for wrong-code attempts increment": {
+      "status": "passed",
+      "lastRunTimestamp": 1788523561399
+    },
+    "7.5 Write property test for locked code": {
+      "status": "passed",
+      "lastRunTimestamp": 1788523623791
+    },
+    "10.4 Write property test for blank-field rejection": {
+      "status": "passed",
+      "lastRunTimestamp": 1788524406371
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `OtpTokenEntity`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072141
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516082893
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516184801
+      }
+    ],
+    "1.2 Author changeset `016-create-otp-tokens.xml` and register it": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072191
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516345315
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516484414
+      }
+    ],
+    "1.3 Write integration test for migration and entity mapping": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072227
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517198383
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517740118
+      }
+    ],
+    "1.4 Write unit test for entity defaults": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072262
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516493510
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516764803
+      }
+    ],
+    "2.1 Create `OtpTokenDao`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072340
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517004188
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517192016
+      }
+    ],
+    "2.2 Write DAO example test": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072364
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517752193
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518155684
+      }
+    ],
+    "3.1 Extend `JwtProperties` with client TTLs": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072393
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516086815
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516185907
+      }
+    ],
+    "3.2 Write property test for client TTL validation predicate": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072426
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516494424
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516768562
+      }
+    ],
+    "3.3 Write config-default example test": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072457
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516495945
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516767162
+      }
+    ],
+    "4.1 Add TTL-aware `generateAccessToken` overload to `JwtTokenProvider`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072481
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516346617
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516485800
+      }
+    ],
+    "4.2 Add TTL-aware `issue` overload to `RefreshTokenService`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072507
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516348082
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516487129
+      }
+    ],
+    "4.3 Write property test for client TTL selection vs employee flows": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072528
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517199831
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517741216
+      }
+    ],
+    "5.1 Create `OtpCodeGenerator`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072557
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516088217
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516187316
+      }
+    ],
+    "5.2 Write property test for code shape": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072580
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516497265
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516766104
+      }
+    ],
+    "6.1 Implement `OtpService.request`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072609
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517005324
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517187933
+      }
+    ],
+    "6.2 Write property test for OTP issuance shape": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072639
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518163776
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519217985
+      }
+    ],
+    "6.3 Write property test for OTP code expiry": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072663
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518164832
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519219007
+      }
+    ],
+    "6.4 Write property test for silent success": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072691
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518166111
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519220104
+      }
+    ],
+    "6.5 Write property test for rate limiting": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072713
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518167168
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519221109
+      }
+    ],
+    "7.1 Implement `OtpService.verifyCode`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072786
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517749822
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518152920
+      }
+    ],
+    "7.2 Write property test for verify success + client access TTL": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072814
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519230960
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523335664
+      }
+    ],
+    "7.3 Write property test for no-matching-row rejection": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072841
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519232178
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523337323
+      }
+    ],
+    "7.4 Write property test for wrong-code attempts increment": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072864
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523354999
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523649083
+      }
+    ],
+    "7.5 Write property test for locked code": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072883
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523356358
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523645419
+      }
+    ],
+    "7.6 Write property test for expired code": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072915
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523357644
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523646737
+      }
+    ],
+    "7.7 Write property test for single-use code": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072942
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523358709
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523647914
+      }
+    ],
+    "8. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516072965
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524554997
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788528334373
+      }
+    ],
+    "9.1 Create `OtpMailSender` and Thymeleaf template": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073046
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517009217
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517189345
+      }
+    ],
+    "9.2 Write property test for email locale resolution": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073081
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517753494
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518156676
+      }
+    ],
+    "9.3 Write example test for template rendering": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073115
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517754548
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518157610
+      }
+    ],
+    "10.1 Create OTP request DTOs": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073148
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516089363
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516188612
+      }
+    ],
+    "10.2 Add `AuthService.verifyOtp` with client-TTL issuance": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073174
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519227352
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523336271
+      }
+    ],
+    "10.3 Add controller endpoints": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073196
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523664277
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524255249
+      }
+    ],
+    "10.4 Write property test for blank-field rejection": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073266
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524269298
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524542455
+      }
+    ],
+    "11.1 Confirm `/api/auth/**` permit rule covers OTP paths": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073298
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516349475
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516483061
+      }
+    ],
+    "11.2 Write integration test for OTP endpoint reachability": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073325
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517200908
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517742653
+      }
+    ],
+    "12.1 Add OTP message codes to PL and RU bundles": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073350
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516090361
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516189642
+      }
+    ],
+    "12.2 Write property test for localization completeness": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073380
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516498134
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516763417
+      }
+    ],
+    "13.1 Write end-to-end and durability integration tests": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073410
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524270367
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524543465
+      }
+    ],
+    "14.1 Create client-registration DTOs": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073434
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516195782
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516331515
+      }
+    ],
+    "14.2 Add `UserService.createClient` reusing the invite create path": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073475
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516350382
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516488282
+      }
+    ],
+    "14.3 Implement `ClientRegistrationService`": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073514
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517006736
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517190742
+      }
+    ],
+    "14.4 Add the controller endpoint": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073539
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517751133
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518154231
+      }
+    ],
+    "14.5 Reject CLIENT role on the generic create path (defense in depth)": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073563
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517008167
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517193078
+      }
+    ],
+    "14.6 Write property tests for client registration": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073592
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519228721
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523650103
+      }
+    ],
+    "14.7 Write integration test for the endpoint": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073623
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519230095
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524256124
+      }
+    ],
+    "15.1 Add message codes to PL and RU bundles": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073660
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516197179
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516333117
+      }
+    ],
+    "16.1 Surface role `code` to the RoleSelect roles read path": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073690
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516198327
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516330130
+      }
+    ],
+    "16.2 Filter ADMIN and CLIENT out of RoleSelect": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073715
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516769734
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516998266
+      }
+    ],
+    "16.3 Write frontend tests": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073747
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517201932
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517743531
+      }
+    ],
+    "17. Author test-cases.md": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073789
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788528340769
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788528478638
+      }
+    ],
+    "18. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516073810
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788528484348
+      },
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788528500557
+      }
+    ],
+    "15. Add client-registration i18n message codes": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516333211
+      }
+    ],
+    "12. Add i18n message codes": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516763479
+      }
+    ],
+    "5. Implement OTP code generation": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516766133
+      }
+    ],
+    "3. Add client token TTL configuration": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788516768602
+      }
+    ],
+    "1. Create OtpTokenEntity and Liquibase migration": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517740210
+      }
+    ],
+    "4. Add TTL-aware token issuance overloads": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517741266
+      }
+    ],
+    "11. Verify security configuration covers OTP endpoints": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517742718
+      }
+    ],
+    "16. Frontend: exclude ADMIN and CLIENT from the user-form role dropdown": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788517743651
+      }
+    ],
+    "2. Create OtpTokenDao": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518155730
+      }
+    ],
+    "9. Implement OTP email": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788518157648
+      }
+    ],
+    "6. Implement OtpService request path (rate limit, silent success, issuance)": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788519221151
+      }
+    ],
+    "7. Implement OtpService verify state machine": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788523649111
+      }
+    ],
+    "14. Implement the client-registration endpoint": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524256165
+      }
+    ],
+    "10. Wire OTP endpoints into AuthController and AuthService": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524542503
+      }
+    ],
+    "13. End-to-end integration test and rate-limit durability": [
+      {
+        "executionId": "59e841fb-1098-4878-a249-8edbef3b6498",
+        "chatSessionId": "sess_f804103f-0067-4237-9f1c-ee0d4e010aba",
+        "timestamp": 1788524543499
+      }
+    ]
+  }
+}

@@ -50,12 +50,16 @@ class RequiresPermissionScopeGuardTest {
     /**
      * Controllers explicitly permitted to carry {@code @RequiresPermission} ahead of the wholesale
      * FOR-03-08 migration. {@code ProjectMemberController} is the first legitimately-protected
-     * production controller, delivered by FOR-03-04 (Requirement 10). Every OTHER production
-     * controller must still remain unannotated; do NOT extend this set as part of migrating other
-     * controllers (that is FOR-03-08's job).
+     * production controller, delivered by FOR-03-04 (Requirement 10). {@code UserController} is
+     * whitelisted for FOR-03-05 (Requirement 10.2): its {@code registerClient} endpoint
+     * (POST /api/users/client) legitimately carries {@code @RequiresPermission} on the
+     * {@code PROJECTS} resource. Every OTHER production controller must still remain unannotated; do
+     * NOT extend this set as part of migrating other controllers (that is FOR-03-08's job).
      */
     private static final Set<String> WHITELISTED_CONTROLLERS =
-            Set.of("com.foremen.controller.ProjectMemberController");
+            Set.of(
+                    "com.foremen.controller.ProjectMemberController",
+                    "com.foremen.controller.UserController");
 
     @Test
     @DisplayName("no production controller type or method carries @RequiresPermission")

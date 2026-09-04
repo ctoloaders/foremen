@@ -47,12 +47,29 @@ public class JwtTokenProvider {
 
     /**
      * Generates a signed access token carrying {@code sub}, {@code role}, and {@code email}
-     * claims. The {@code iat} claim is set to the current instant and {@code exp} to
-     * {@code iat + accessTtlMinutes} (Requirements 4.1, 4.2, 4.3, 14.3).
+     * claims using the employee access TTL. The {@code iat} claim is set to the current
+     * instant and {@code exp} to {@code iat + accessTtlMinutes} (Requirements 4.1, 4.2,
+     * 4.3, 14.3).
+     *
+     * <p>Delegates to {@link #generateAccessToken(Long, String, String, int)} with the
+     * employee access TTL captured at construction, so employee token behavior is
+     * unchanged (Requirement 7.4).
      */
     public String generateAccessToken(Long userId, String roleCode, String email) {
+        return generateAccessToken(userId, roleCode, email, accessTtlMinutes);
+    }
+
+    /**
+     * Generates a signed access token carrying {@code sub}, {@code role}, and {@code email}
+     * claims, with an explicit token lifetime in minutes. The {@code iat} claim is set to
+     * the current instant and {@code exp} to {@code iat + ttlMinutes}.
+     *
+     * <p>Used by the OTP verify path to issue client access tokens with the client access
+     * TTL, independently of the employee access TTL (Requirement 7.3).
+     */
+    public String generateAccessToken(Long userId, String roleCode, String email, int ttlMinutes) {
         Instant now = Instant.now();
-        Instant expiry = now.plus(accessTtlMinutes, ChronoUnit.MINUTES);
+        Instant expiry = now.plus(ttlMinutes, ChronoUnit.MINUTES);
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim(CLAIM_ROLE, roleCode)

@@ -36,7 +36,17 @@ public class ForemenPermissionEvaluator {
     /**
      * Returns {@code true} iff the given role holds the (resource, operation) permission.
      * ADMIN is always allowed; every other decision is exact matrix membership, deny by default.
+     *
+     * <p>Annotated {@code @Transactional(readOnly = true)} so that a cache miss, which triggers
+     * {@link #loadPermissionSet(String)} through the Caffeine loader (a self-invocation that would
+     * otherwise bypass {@code loadPermissionSet}'s own {@code @Transactional} proxy), still runs
+     * inside an active persistence session. Without this the lazy {@code role.getRoleResources()}
+     * traversal in the loader throws a {@code LazyInitializationException} whenever
+     * open-session-in-view is disabled (as in the integration-test profile and any hardened
+     * deployment). The employee/permission flows that already ran under an open session are
+     * unaffected — this only guarantees a session exists for the cache-miss load path.
      */
+    @Transactional(readOnly = true)
     public boolean isAllowed(String roleCode, String resource, String operation) {
         if (ADMIN_ROLE_CODE.equals(roleCode)) {
             return true; // ADMIN bypass — exact code match, no matrix lookup

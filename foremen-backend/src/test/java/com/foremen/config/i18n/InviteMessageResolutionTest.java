@@ -70,16 +70,16 @@ class InviteMessageResolutionTest {
     @Test
     @DisplayName("PL-only base code falls back to the Polish text when RU is requested (8.5)")
     void baseOnlyCodeFallsBackToPolishForRuLocale() {
-        // error.user.email.already.exists exists only in the PL base bundle
-        // (messages.properties) and has no RU override in messages_ru.properties,
-        // so a RU request falls back to the Polish base text.
-        String expectedBase = messageResolver.resolve("error.user.email.already.exists",
-                new Object[]{"user@example.com"}, PL);
+        // error.entity.not.found exists only in the PL base bundle (messages.properties)
+        // and has no RU override in messages_ru.properties, so a RU request falls back to
+        // the Polish base text.
+        String expectedBase = messageResolver.resolve("error.entity.not.found",
+                new Object[]{42L}, PL);
 
-        String ruResult = messageResolver.resolve("error.user.email.already.exists",
-                new Object[]{"user@example.com"}, RU);
+        String ruResult = messageResolver.resolve("error.entity.not.found",
+                new Object[]{42L}, RU);
 
         assertThat(ruResult).isEqualTo(expectedBase);
-        assertThat(ruResult).contains("user@example.com");
+        assertThat(ruResult).contains("42");
     }
 }

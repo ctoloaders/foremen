@@ -8,6 +8,7 @@ import com.foremen.controller.advice.ForemenControllerAdvice;
 import com.foremen.controller.dto.auth.SetPasswordRequest;
 import com.foremen.service.AuthService;
 import com.foremen.service.InviteService;
+import com.foremen.service.OtpService;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.ForAll;
@@ -67,6 +68,7 @@ class SetPasswordRequestValidationPropertyTest {
     private static final class Harness {
         final AuthService authService = mock(AuthService.class);
         final InviteService inviteService = mock(InviteService.class);
+        final OtpService otpService = mock(OtpService.class);
         final MockMvc mockMvc;
 
         Harness() {
@@ -74,7 +76,7 @@ class SetPasswordRequestValidationPropertyTest {
             when(messageResolver.resolve(anyString(), any(), any(Locale.class)))
                     .thenReturn("validation error");
             mockMvc = MockMvcBuilders
-                    .standaloneSetup(new AuthController(authService, inviteService))
+                    .standaloneSetup(new AuthController(authService, inviteService, otpService))
                     .setControllerAdvice(new ForemenControllerAdvice(messageResolver))
                     .build();
         }
