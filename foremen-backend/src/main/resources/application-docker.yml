@@ -14,3 +14,5 @@ spring:
 foremen:
   cors:
     allowed-origins: "http://localhost:3000"
+  google:
+    client-id: ${FOREMEN_GOOGLE_CLIENT_ID:}

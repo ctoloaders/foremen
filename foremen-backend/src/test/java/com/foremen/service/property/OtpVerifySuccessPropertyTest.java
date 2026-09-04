@@ -129,7 +129,7 @@ class OtpVerifySuccessPropertyTest {
 
         AuthService authService = new AuthService(
                 userDao, passwordEncoder, jwtTokenProvider, refreshTokenService, props,
-                passwordResetTokenDao, mailSender, inviteService, inviteTokenDao, otpService);
+                passwordResetTokenDao, mailSender, inviteService, inviteTokenDao, otpService, null);
 
         // The verify path resolves the user by email (OtpService confirms Eligible_Email before
         // consuming the code); the userDao stub is wired per-property once the email is known.

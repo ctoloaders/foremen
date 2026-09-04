@@ -16,8 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.foremen.config.security.JwtProperties;
 import com.foremen.config.security.JwtTokenProvider;
 import com.foremen.controller.dto.auth.CurrentUserResponse;
+import com.foremen.controller.dto.auth.GoogleLoginResponse;
 import com.foremen.controller.dto.auth.PermissionView;
 import com.foremen.controller.dto.auth.TokenResponse;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.foremen.dao.InviteTokenDao;
 import com.foremen.dao.PasswordResetTokenDao;
 import com.foremen.dao.UserDao;
@@ -58,6 +61,7 @@ public class AuthService {
     private final InviteService inviteService;
     private final InviteTokenDao inviteTokenDao;
     private final OtpService otpService;
+    private final GoogleIdTokenVerifier googleIdTokenVerifier;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -78,7 +82,8 @@ public class AuthService {
                        MailSender mailSender,
                        InviteService inviteService,
                        InviteTokenDao inviteTokenDao,
-                       OtpService otpService) {
+                       OtpService otpService,
+                       GoogleIdTokenVerifier googleIdTokenVerifier) {
         this.userDao = userDao;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
@@ -89,6 +94,7 @@ public class AuthService {
         this.inviteService = inviteService;
         this.inviteTokenDao = inviteTokenDao;
         this.otpService = otpService;
+        this.googleIdTokenVerifier = googleIdTokenVerifier;
         this.dummyHash = passwordEncoder.encode(randomSecret());
     }
 
@@ -326,6 +332,86 @@ public class AuthService {
         long expiresIn = (long) accessTtlMinutes * 60;
 
         return new TokenResponse(accessToken, refreshToken, expiresIn);
+    }
+
+    /**
+     * Exchanges a verified Google ID token for the application session, or an activation bridge,
+     * depending on the matched account's status (Requirement 14).
+     *
+     * <p>Flow:
+     * <ol>
+     *   <li>The {@code idToken} is verified via the injected {@link GoogleIdTokenVerifier}
+     *       (audience = {@code foremen.google.client-id}). Any verification failure — bad
+     *       signature, wrong audience, expired token, malformed token, or a transport error —
+     *       is surfaced as {@code 401 error.auth.google.token.invalid} (14.7 client counterpart).</li>
+     *   <li>The verified email is extracted from the token payload and looked up case-insensitively
+     *       via {@link UserDao#findByEmail(String)}.</li>
+     *   <li>Branch on the matched account:
+     *     <ul>
+     *       <li><b>Not found</b> &rarr; {@code 403 error.auth.google.no.account} (14.5): the token
+     *           is valid but no session-eligible account is linked to the verified email.</li>
+     *       <li><b>ACTIVE</b> &rarr; {@link GoogleLoginResponse#authenticated(TokenResponse)} with a
+     *           freshly issued JWT pair, reusing the employee token-issue path (14.4).</li>
+     *       <li><b>INVITED</b> &rarr; no session is issued; a fresh set-password token is minted via
+     *           {@link InviteService#mintSetPasswordToken(UserEntity)} (reusing the FOR-03-02 invite
+     *           token, same TTL/semantics) and returned in
+     *           {@link GoogleLoginResponse#activationRequired(String)}. The response carries no
+     *           access/refresh token — the single activation gate remains
+     *           {@code POST /api/auth/set-password} (14.5, 14.14).</li>
+     *       <li><b>DEACTIVATED</b> &rarr; {@code 403 error.auth.account.deactivated} (14.8), reusing
+     *           the existing deactivated message code.</li>
+     *     </ul>
+     *   </li>
+     * </ol>
+     *
+     * @param idToken the raw Google ID token from the client's Google Identity flow
+     * @return an {@code AUTHENTICATED} response for an ACTIVE account, or an
+     *         {@code ACTIVATION_REQUIRED} response for an INVITED account
+     * @throws ForemenApiException 401 {@code error.auth.google.token.invalid} on any verification
+     *                             failure; 403 {@code error.auth.google.no.account} when unlinked;
+     *                             403 {@code error.auth.account.deactivated} for a DEACTIVATED account
+     */
+    @Transactional
+    public GoogleLoginResponse loginWithGoogle(String idToken) {
+        GoogleIdToken verifiedToken = verifyGoogleIdToken(idToken);
+        String email = verifiedToken.getPayload().getEmail();
+        if (email == null || email.isBlank()) {
+            throw googleTokenInvalid();
+        }
+
+        UserEntity user = userDao.findByEmail(email.toLowerCase())
+                .orElseThrow(() -> new ForemenApiException(
+                        HttpStatus.FORBIDDEN, "error.auth.google.no.account"));
+
+        return switch (user.getStatus()) {
+            case ACTIVE -> GoogleLoginResponse.authenticated(issueTokens(user));
+            case INVITED -> GoogleLoginResponse.activationRequired(
+                    inviteService.mintSetPasswordToken(user));
+            case DEACTIVATED -> throw new ForemenApiException(
+                    HttpStatus.FORBIDDEN, "error.auth.account.deactivated");
+        };
+    }
+
+    /**
+     * Verifies a Google ID token with the configured verifier, normalizing every failure mode
+     * (invalid signature/audience/expiry, a malformed token, or an I/O error contacting Google's
+     * certificate endpoint) into a single {@code 401 error.auth.google.token.invalid}.
+     */
+    private GoogleIdToken verifyGoogleIdToken(String idToken) {
+        GoogleIdToken verifiedToken;
+        try {
+            verifiedToken = googleIdTokenVerifier.verify(idToken);
+        } catch (Exception e) {
+            throw googleTokenInvalid();
+        }
+        if (verifiedToken == null) {
+            throw googleTokenInvalid();
+        }
+        return verifiedToken;
+    }
+
+    private static ForemenApiException googleTokenInvalid() {
+        return new ForemenApiException(HttpStatus.UNAUTHORIZED, "error.auth.google.token.invalid");
     }
 
     private TokenResponse issueTokens(UserEntity user) {

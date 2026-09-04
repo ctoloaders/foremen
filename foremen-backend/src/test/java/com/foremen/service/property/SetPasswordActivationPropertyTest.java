@@ -116,7 +116,7 @@ class SetPasswordActivationPropertyTest {
         JwtProperties props = new JwtProperties(30, 7, "unused-secret-for-mocked-provider-0123456789");
         AuthService service = new AuthService(
                 userDao, ENCODER, jwtTokenProvider, refreshTokenService,
-                props, passwordResetTokenDao, mailSender, inviteService, inviteTokenDao, null);
+                props, passwordResetTokenDao, mailSender, inviteService, inviteTokenDao, null, null);
 
         return new Fixture(service, inviteTokenDao, userDao);
     }

@@ -60,6 +60,10 @@ dependencies {
     runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
     runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
 
+    // Google API client - provides GoogleIdTokenVerifier for POST /api/auth/google.
+    // Not managed by the Spring Boot BOM, so pin the version.
+    implementation "com.google.api-client:google-api-client:${googleApiClientVersion}"
+
     // Jackson JSR310 (for JavaTimeModule in audit serialization)
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 

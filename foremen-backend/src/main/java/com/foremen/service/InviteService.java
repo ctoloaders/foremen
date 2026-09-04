@@ -104,6 +104,36 @@ public class InviteService {
     }
 
     /**
+     * Invalidates any outstanding unused invite token for the user and mints a fresh single-use
+     * invite/set-password token, returning its raw value <em>without</em> dispatching an email
+     * (FOR-03-06, Requirements 14.5, 14.14).
+     *
+     * <p>Used by the Google-exchange activation bridge: when a Google login matches an
+     * {@code INVITED} account, no session is issued; instead a fresh set-password token is minted
+     * so the account can complete activation through the existing
+     * {@code POST /api/auth/set-password} flow. The minted token reuses the exact FOR-03-02
+     * generation and TTL semantics ({@link #generateToken(UserEntity)}), so it is consumable by
+     * {@link #consume(String)} with no new token type.
+     *
+     * <p>As with {@link #resend(Long)}, every currently-unused token for the user is marked
+     * {@code used = true} first so that only the freshly minted token remains valid. Unlike the
+     * invite and resend paths, this method never sends an invitation email &mdash; email dispatch
+     * is not part of the activation-bridge path.
+     *
+     * @param user the {@code INVITED} user to mint a set-password token for
+     * @return the raw invite/set-password token value
+     */
+    public String mintSetPasswordToken(UserEntity user) {
+        List<InviteTokenEntity> outstanding = inviteTokenDao.findByUserIdAndUsedFalse(user.getId());
+        for (InviteTokenEntity token : outstanding) {
+            token.setUsed(true);
+            inviteTokenDao.save(token);
+        }
+
+        return generateToken(user).getToken();
+    }
+
+    /**
      * Admin resend: invalidates any outstanding invite token for the target user and issues a
      * fresh one with a new invitation email (Requirement 6.6&ndash;6.9).
      *
@@ -158,13 +188,7 @@ public class InviteService {
      * @return the persisted invite token
      */
     private InviteTokenEntity generateAndSend(UserEntity user) {
-        InviteTokenEntity invite = new InviteTokenEntity();
-        invite.setToken(UUID.randomUUID().toString());
-        invite.setUser(user);
-        invite.setExpiresAt(Instant.now().plus(inviteProperties.ttlHours(), ChronoUnit.HOURS));
-        invite.setUsed(false);
-
-        InviteTokenEntity saved = inviteTokenDao.save(invite);
+        InviteTokenEntity saved = generateToken(user);
 
         if (isClient(user)) {
             invitationMailSender.sendClientPortalInvitation(user);
@@ -175,6 +199,31 @@ public class InviteService {
         }
 
         return saved;
+    }
+
+    /**
+     * Creates and persists a single-use invite token for the user, without any email dispatch.
+     *
+     * <p>Token: a canonical 36-character random UUID string (Requirement 3.1), {@code expiresAt}
+     * set to now plus the configured TTL in hours (Requirement 3.2), {@code used = false} and
+     * associated with the user (Requirement 3.3). Persisted via {@link InviteTokenDao}; the DB
+     * unique constraint guarantees distinct token values (Requirement 3.5).
+     *
+     * <p>Shared by {@link #generateAndSend(UserEntity)} (which then dispatches the role-dependent
+     * invitation email) and {@link #mintSetPasswordToken(UserEntity)} (which skips email), so the
+     * generation + TTL logic is not duplicated.
+     *
+     * @param user the user to issue the token for
+     * @return the persisted invite token
+     */
+    private InviteTokenEntity generateToken(UserEntity user) {
+        InviteTokenEntity invite = new InviteTokenEntity();
+        invite.setToken(UUID.randomUUID().toString());
+        invite.setUser(user);
+        invite.setExpiresAt(Instant.now().plus(inviteProperties.ttlHours(), ChronoUnit.HOURS));
+        invite.setUsed(false);
+
+        return inviteTokenDao.save(invite);
     }
 
     /**

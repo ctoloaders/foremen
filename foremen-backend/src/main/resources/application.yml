@@ -28,6 +28,8 @@ foremen:
     spec: "maximumSize=500,expireAfterWrite=10m"
   cors:
     allowed-origins: "http://localhost:3000"
+  google:
+    client-id: ${FOREMEN_GOOGLE_CLIENT_ID:}
   jwt:
     access-ttl-minutes: ${FOREMEN_JWT_ACCESS_TTL_MINUTES:30}
     refresh-ttl-days: ${FOREMEN_JWT_REFRESH_TTL_DAYS:7}

@@ -303,5 +303,67 @@
         "error": "Не удалось сохранить настройки"
       }
     }
+  },
+  "auth": {
+    "login": {
+      "title": "Вход",
+      "email": "E-mail",
+      "password": "Пароль",
+      "submit": "Войти",
+      "submitting": "Вход...",
+      "validation": {
+        "emailRequired": "E-mail обязателен",
+        "emailInvalid": "Неверный формат e-mail",
+        "passwordRequired": "Пароль обязателен"
+      }
+    },
+    "setPassword": {
+      "title": "Установка пароля",
+      "newPassword": "Новый пароль",
+      "confirmPassword": "Подтвердите пароль",
+      "submit": "Установить пароль",
+      "submitting": "Сохранение...",
+      "invalidLink": "Ссылка недействительна или устарела. Запросите новое приглашение.",
+      "validation": {
+        "length": "Пароль должен содержать от 8 до 72 символов",
+        "mismatch": "Пароли не совпадают"
+      }
+    },
+    "otp": {
+      "emailStep": {
+        "title": "Вход по коду",
+        "email": "E-mail",
+        "requestCode": "Отправить код"
+      },
+      "codeStep": {
+        "title": "Введите код",
+        "sentTo": "Мы отправили код на адрес {{email}}",
+        "verify": "Подтвердить",
+        "verifying": "Проверка...",
+        "back": "Изменить e-mail"
+      },
+      "codeInput": {
+        "groupLabel": "Одноразовый код, 6 цифр",
+        "digitLabel": "Цифра {{index}} из 6"
+      },
+      "resend": "Отправить код повторно",
+      "resendIn": "Повторная отправка через {{seconds}} с",
+      "validation": {
+        "emailRequired": "E-mail обязателен",
+        "codeLength": "Код должен состоять из 6 цифр"
+      }
+    },
+    "google": {
+      "button": "Войти через Google",
+      "noAccount": "Обратитесь к администратору для получения учётной записи",
+      "failed": "Не удалось войти через Google. Попробуйте ещё раз."
+    },
+    "guard": {
+      "loading": "Загрузка..."
+    },
+    "logout": "Выйти",
+    "error": {
+      "generic": "Произошла непредвиденная ошибка. Попробуйте ещё раз."
+    }
   }
 }

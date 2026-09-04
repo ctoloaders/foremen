@@ -303,5 +303,67 @@
         "error": "Nie udało się zapisać preferencji"
       }
     }
+  },
+  "auth": {
+    "login": {
+      "title": "Logowanie",
+      "email": "E-mail",
+      "password": "Hasło",
+      "submit": "Zaloguj się",
+      "submitting": "Logowanie...",
+      "validation": {
+        "emailRequired": "E-mail jest wymagany",
+        "emailInvalid": "Nieprawidłowy format e-mail",
+        "passwordRequired": "Hasło jest wymagane"
+      }
+    },
+    "setPassword": {
+      "title": "Ustaw hasło",
+      "newPassword": "Nowe hasło",
+      "confirmPassword": "Potwierdź hasło",
+      "submit": "Ustaw hasło",
+      "submitting": "Zapisywanie...",
+      "invalidLink": "Link jest nieprawidłowy lub wygasł. Poproś o nowe zaproszenie.",
+      "validation": {
+        "length": "Hasło musi mieć od 8 do 72 znaków",
+        "mismatch": "Hasła nie są zgodne"
+      }
+    },
+    "otp": {
+      "emailStep": {
+        "title": "Logowanie kodem",
+        "email": "E-mail",
+        "requestCode": "Wyślij kod"
+      },
+      "codeStep": {
+        "title": "Wprowadź kod",
+        "sentTo": "Wysłaliśmy kod na adres {{email}}",
+        "verify": "Potwierdź",
+        "verifying": "Sprawdzanie...",
+        "back": "Zmień e-mail"
+      },
+      "codeInput": {
+        "groupLabel": "Jednorazowy kod, 6 cyfr",
+        "digitLabel": "Cyfra {{index}} z 6"
+      },
+      "resend": "Wyślij kod ponownie",
+      "resendIn": "Wyślij ponownie za {{seconds}} s",
+      "validation": {
+        "emailRequired": "E-mail jest wymagany",
+        "codeLength": "Kod musi składać się z 6 cyfr"
+      }
+    },
+    "google": {
+      "button": "Zaloguj się przez Google",
+      "noAccount": "Skontaktuj się z administratorem, aby uzyskać konto",
+      "failed": "Logowanie przez Google nie powiodło się. Spróbuj ponownie."
+    },
+    "guard": {
+      "loading": "Ładowanie..."
+    },
+    "logout": "Wyloguj się",
+    "error": {
+      "generic": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie."
+    }
   }
 }

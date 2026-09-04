@@ -101,7 +101,7 @@ class AuthServiceLoginPropertyTest {
 
         return new AuthService(
                 userDao, ENCODER, jwtTokenProvider, refreshTokenService,
-                props, passwordResetTokenDao, mailSender, null, null, null);
+                props, passwordResetTokenDao, mailSender, null, null, null, null);
     }
 
     private static UserEntity user(long id, String email, UserStatus status, String rawPassword) {
