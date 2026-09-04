@@ -1,7 +1,9 @@
 import { Context, InlineKeyboard } from "grammy";
+import { randomUUID } from "crypto";
 import { getWorker, getProjectsForWorker } from "../services/sheets.js";
-import { setState } from "../state/store.js";
+import { setState, getState } from "../state/store.js";
 import { ConversationStep, emptyState } from "../state/machine.js";
+import { sessionLog } from "../services/session-log.js";
 import { logger } from "../utils/logger.js";
 
 export async function handleStart(ctx: Context) {
@@ -33,10 +35,24 @@ export async function handleStart(ctx: Context) {
     keyboard.text(projects[i].name, `p${i}`).row();
   }
 
+  // Start a new session (fresh id). Any prior unfinished session row remains
+  // in_progress (abandoned) — we never finalize it here.
+  const sessionId = randomUUID();
+
   // Set state to SELECT_PROJECT
   const state = emptyState(telegramId);
   state.step = ConversationStep.SELECT_PROJECT;
+  state.sessionId = sessionId;
   await setState(state);
+
+  // Session Log: create the in_progress row
+  await sessionLog.startSession({
+    sessionId,
+    telegramId,
+    workerName: worker.name,
+    role: worker.role,
+    step: ConversationStep.SELECT_PROJECT,
+  });
 
   // Cache projects for callback resolution
   userProjectsCache.set(telegramId, projects);
@@ -76,13 +92,28 @@ export async function handleProjectSelection(ctx: Context) {
 
   userProjectsCache.delete(telegramId);
 
+  // Carry the session id forward from the existing state (emptyState omits it).
+  const prev = await getState(telegramId);
+  const sessionId = prev?.sessionId;
+
   // Update state
   const state = emptyState(telegramId);
   state.step = ConversationStep.AWAIT_PHOTO;
+  state.sessionId = sessionId;
   state.projectName = project.name;
   state.projectDriveUrl = project.googleDriveUrl;
   state.projectSheetsUrl = project.googleSheetsUrl;
   await setState(state);
+
+  // Session Log: record the selected project
+  if (sessionId) {
+    await sessionLog.updateSession(sessionId, {
+      step: ConversationStep.AWAIT_PHOTO,
+      projectName: project.name,
+      projectDriveUrl: project.googleDriveUrl,
+      projectSheetsUrl: project.googleSheetsUrl,
+    });
+  }
 
   await ctx.answerCallbackQuery();
   const cancelKb = new InlineKeyboard().text("❌ Отмена", "cancel");

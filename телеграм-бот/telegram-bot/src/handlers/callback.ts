@@ -6,6 +6,7 @@ import { extractTextFromPages } from "../services/ocr.js";
 import { parseReceipt } from "../services/gemini.js";
 import { uploadPhotos, formatPhotoLinks } from "../services/drive.js";
 import { appendReceiptRow } from "../services/sheets.js";
+import { sessionLog } from "../services/session-log.js";
 import { withRetry } from "../utils/retry.js";
 import { logger } from "../utils/logger.js";
 
@@ -73,6 +74,14 @@ export function createOcrCallbackHandler(bot: Bot) {
       state.step = ConversationStep.AWAIT_SUM;
       await setState(state);
 
+      if (state.sessionId) {
+        await sessionLog.updateSession(state.sessionId, {
+          step: ConversationStep.AWAIT_SUM,
+          description: receiptData.description,
+          storeName: receiptData.store_name,
+        });
+      }
+
       // 10. Display recognized data without showing the amount
       await ctx.reply(
         `📋 Распознано:\n🛒 Куплено: ${receiptData.description}\n🏪 Магазин: ${receiptData.store_name}\n\nВведите сумму покупки (число):`,
@@ -112,6 +121,13 @@ export function createOcrCallbackHandler(bot: Bot) {
         links = result.links;
       } catch (err: any) {
         logger.error("Drive upload failed (OCR flow)", { telegramId, error: err.message });
+        if (state.sessionId) {
+          await sessionLog.finalizeFailed(state.sessionId, err, {
+            step: state.step,
+            sum: state.sum,
+            photoFileIds: state.photoFileIds,
+          });
+        }
         await ctx.reply("❌ Ошибка загрузки фото. Попробуйте ещё раз (/start)");
         return;
       }
@@ -143,12 +159,29 @@ export function createOcrCallbackHandler(bot: Bot) {
         );
       } catch (err: any) {
         logger.error("Sheets write failed (OCR flow)", { telegramId, error: err.message, stack: err.stack?.slice(0, 500), sheetsUrl: state.projectSheetsUrl });
+        if (state.sessionId) {
+          await sessionLog.finalizeFailed(state.sessionId, err, {
+            step: state.step,
+            sum: state.sum,
+            photoFileIds: state.photoFileIds,
+            photoLinks: links,
+          });
+        }
         await ctx.reply("❌ Ошибка записи в таблицу. Фото загружено, но строка не добавлена. Попробуйте /start");
         return;
       }
 
       // 4. Success — clear state and confirm
       await clearState(telegramId);
+      if (state.sessionId) {
+        // Reuse the Drive links already produced by uploadPhotos (no re-upload).
+        await sessionLog.finalizeSuccess(state.sessionId, {
+          step: ConversationStep.SAVING,
+          sum: state.sum,
+          photoFileIds: state.photoFileIds,
+          photoLinks: links,
+        });
+      }
       await ctx.reply(
         `✅ Записал: ${state.projectName}, ${state.sum} PLN, ${state.storeName}, ${state.description}\n\nМожете отправить следующий чек или выбрать другой проект (/start)`
       );
@@ -162,6 +195,7 @@ export function createOcrCallbackHandler(bot: Bot) {
       });
     } catch (err: any) {
       logger.error("Save receipt OCR error", { telegramId, error: err.message });
+      if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err, { step: state.step });
       await ctx.reply("⚠️ Произошла ошибка. Попробуйте позже или напишите /start");
     }
   }
@@ -181,6 +215,7 @@ export function createOcrCallbackHandler(bot: Bot) {
         // Transition back to AWAIT_PHOTO for next page
         state.step = ConversationStep.AWAIT_PHOTO;
         await setState(state);
+        if (state.sessionId) await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_PHOTO });
         await ctx.editMessageText("Пришлите следующую страницу 📸");
         break;
       }
@@ -196,6 +231,7 @@ export function createOcrCallbackHandler(bot: Bot) {
         state.photoFileIds = [];
         state.step = ConversationStep.AWAIT_PHOTO;
         await setState(state);
+        if (state.sessionId) await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_PHOTO, photoFileIds: [] });
         await ctx.editMessageText("Пришлите фото чека 📸");
         break;
       }
@@ -205,6 +241,7 @@ export function createOcrCallbackHandler(bot: Bot) {
         state.step = ConversationStep.AWAIT_SUM;
         state.ocrGrossAmount = undefined;
         await setState(state);
+        if (state.sessionId) await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_SUM });
         await ctx.editMessageText("Какая сумма? (число)");
         break;
       }

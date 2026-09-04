@@ -1,6 +1,7 @@
 import { Context, InlineKeyboard } from "grammy";
 import { getState, setState } from "../state/store.js";
 import { ConversationStep } from "../state/machine.js";
+import { sessionLog } from "../services/session-log.js";
 import { config } from "../config.js";
 import { logger } from "../utils/logger.js";
 
@@ -44,8 +45,15 @@ export async function handlePhoto(ctx: Context) {
   // Feature flag: OCR disabled → old flow (single photo → AWAIT_SUM)
   if (!config.ocr.enabled) {
     state.photoFileId = largestPhoto.file_id;
+    state.photoFileIds = [largestPhoto.file_id];
     state.step = ConversationStep.AWAIT_SUM;
     await setState(state);
+    if (state.sessionId) {
+      await sessionLog.updateSession(state.sessionId, {
+        step: ConversationStep.AWAIT_SUM,
+        photoFileIds: state.photoFileIds,
+      });
+    }
     await ctx.reply("Какая сумма? (число)", { reply_markup: cancelKeyboard });
     logger.info("Photo received (legacy flow)", { telegramId, project: state.projectName });
     return;
@@ -65,6 +73,13 @@ export async function handlePhoto(ctx: Context) {
   state.photoFileIds.push(largestPhoto.file_id);
   state.step = ConversationStep.AWAIT_MORE_PAGES;
   await setState(state);
+
+  if (state.sessionId) {
+    await sessionLog.updateSession(state.sessionId, {
+      step: ConversationStep.AWAIT_MORE_PAGES,
+      photoFileIds: state.photoFileIds,
+    });
+  }
 
   const pageNum = state.photoFileIds.length;
   const keyboard = new InlineKeyboard()

@@ -6,6 +6,7 @@ import { compareSums } from "../utils/sum-compare.js";
 import { downloadFile } from "../services/telegram.js";
 import { uploadPhoto } from "../services/drive.js";
 import { appendReceiptRow } from "../services/sheets.js";
+import { sessionLog } from "../services/session-log.js";
 import { logger } from "../utils/logger.js";
 import { Bot } from "grammy";
 
@@ -78,11 +79,17 @@ export function createTextHandler(bot: Bot) {
           // OCR flow: skip description/store steps, go directly to save
           state.step = ConversationStep.SAVING;
           await setState(state);
+          if (state.sessionId) {
+            await sessionLog.updateSession(state.sessionId, { step: ConversationStep.SAVING, sum: state.sum });
+          }
           await saveReceipt(ctx, bot, state);
         } else {
           // Manual flow — continue to description
           state.step = ConversationStep.AWAIT_DESCRIPTION;
           await setState(state);
+          if (state.sessionId) {
+            await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_DESCRIPTION, sum: state.sum });
+          }
           await ctx.reply("Что куплено?", { reply_markup: cancelKeyboard });
         }
         break;
@@ -97,6 +104,9 @@ export function createTextHandler(bot: Bot) {
         state.description = description;
         state.step = ConversationStep.AWAIT_STORE;
         await setState(state);
+        if (state.sessionId) {
+          await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_STORE, description });
+        }
         await ctx.reply("Название магазина?", { reply_markup: cancelKeyboard });
         break;
       }
@@ -110,6 +120,9 @@ export function createTextHandler(bot: Bot) {
         state.storeName = storeName;
         state.step = ConversationStep.SAVING;
         await setState(state);
+        if (state.sessionId) {
+          await sessionLog.updateSession(state.sessionId, { step: ConversationStep.SAVING, storeName });
+        }
 
         // Save flow
         await saveReceipt(ctx, bot, state);
@@ -164,6 +177,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
         photoLink = result.webViewLink;
       } catch (err2: any) {
         logger.error("Drive upload retry failed", { telegramId, error: err2.message });
+        if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err2, { step: state.step, sum: state.sum });
         await ctx.reply("❌ Ошибка загрузки фото. Попробуйте ещё раз (/start)");
         return;
       }
@@ -204,6 +218,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
         });
       } catch (err2: any) {
         logger.error("Sheets write retry failed", { telegramId, error: err2.message });
+        if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err2, { step: state.step, sum: state.sum, photoLinks: [photoLink] });
         await ctx.reply("❌ Ошибка записи в таблицу. Фото загружено, но строка не добавлена. Попробуйте /start");
         return;
       }
@@ -211,6 +226,13 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
 
     // Success
     await clearState(telegramId);
+    if (state.sessionId) {
+      await sessionLog.finalizeSuccess(state.sessionId, {
+        step: ConversationStep.SAVING,
+        sum: state.sum,
+        photoLinks: [photoLink],
+      });
+    }
     await ctx.reply(
       `✅ Записал: ${state.projectName}, ${state.sum || 0} PLN, ${state.storeName}, ${state.description}\n\nМожете отправить следующий чек или выбрать другой проект (/start)`
     );
@@ -223,6 +245,7 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
     });
   } catch (err: any) {
     logger.error("Save receipt error", { telegramId, error: err.message });
+    if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err, { step: state.step });
     await ctx.reply("⚠️ Произошла ошибка. Попробуйте позже или напишите /start");
   }
 }

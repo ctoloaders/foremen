@@ -37,7 +37,12 @@ export function createBot(): Bot {
   bot.callbackQuery("cancel", async (ctx) => {
     const telegramId = ctx.from?.id;
     if (telegramId) {
-      const { clearState } = await import("./state/store.js");
+      const { getState, clearState } = await import("./state/store.js");
+      const { sessionLog } = await import("./services/session-log.js");
+      const state = await getState(telegramId);
+      if (state?.sessionId) {
+        await sessionLog.finalizeCancelled(state.sessionId);
+      }
       await clearState(telegramId);
     }
     await ctx.answerCallbackQuery();

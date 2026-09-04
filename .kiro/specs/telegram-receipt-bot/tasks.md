@@ -345,3 +345,66 @@
    - ASSIGN_CONFIRM_UPDATE
 3. Support /cancel at any step within the assign flow
 4. Register /assign handler in bot.ts
+
+---
+
+## Task 19: Session Log service and full-process logging
+
+**Requirements:** Requirement 11 (Session Log / Журнал сессий), Requirement 9 (Обработка ошибок и логирование)
+**Design Reference:** Addendum: Session Log — SessionLogService, `session_log` sheet, integration points
+
+### Subtasks:
+1. Add config: `sessionLogSheetName` (env `SESSION_LOG_SHEET_NAME`, default `session_log`) to `src/config.ts`; document the key in `.env.example`. No new spreadsheet/credentials — reuse `WORKERS_SPREADSHEET_ID` and existing auth.
+2. Implement `src/utils/sanitize.ts` — `sanitizeErrorTrace(error: unknown): string`: compose message + stack (cap ~4000 chars), redact bot token, service-account private key, Gemini API key, webhook secrets, and credential-bearing URL query strings (source secret values from `config`).
+3. Implement `src/services/session-log.ts` (`SessionLogService`) reusing the `GoogleAuth` + Sheets v4 client pattern from `state/store.ts` against `config.google.workersSpreadsheetId`:
+   - `startSession({sessionId, telegramId, workerName, role, step})` — append a row, `status="in_progress"`, `started_at=last_activity_at=now`.
+   - `updateSession(sessionId, patch)` — find row by `session_id` in col A, update `A{n}:Q{n}`, refresh `last_activity_at`.
+   - `finalizeSuccess(sessionId, patch)` — set `status="success"`, write final `sum` and `photo_links`.
+   - `finalizeCancelled(sessionId)` — set `status="cancelled"`.
+   - `finalizeFailed(sessionId, error, patch?)` — set `status="failed"`, write `sanitizeErrorTrace(error)` into `error_trace`.
+   - Serialize `photo_file_ids` / `photo_links` as JSON arrays (reuse the `serializePhotoIds`/`deserializePhotoIds` approach).
+   - Every method: wrap the Sheets call in try/catch; on failure `logger.error(...)` and return (best-effort, never throw into the flow — Requirement 11.12).
+4. Extend state to carry the session id:
+   - Add `sessionId?: string` to `ConversationState` in `src/state/machine.ts`.
+   - Add a new `bot_state` column N for `session_id`; update `src/state/store.ts` read/write/clear ranges from `A:M`/`A2:M` to `A:N`/`A2:N` and map the new column.
+
+### Definition of done:
+- New `session_log` tab created in the workers workbook with headers A–Q as specified in the design addendum.
+- Unit tests for `sanitizeErrorTrace` (secrets redacted, message/stack preserved) and for row-lookup/serialization in `session-log.ts` (mock Sheets client).
+
+---
+
+## Task 20: Wire Session Log into the conversation flow
+
+**Requirements:** Requirement 11 (Session Log / Журнал сессий)
+**Design Reference:** Addendum: Session Log — Integration points table
+
+### Subtasks:
+1. `src/handlers/start.ts` — when a recognized worker begins a new receipt flow: generate `sessionId = crypto.randomUUID()`, set it on state, call `startSession(...)` with resolved `worker_name`/`role`. On project selection callback: `updateSession(step=AWAIT_PHOTO, project_name/urls)`.
+2. `src/handlers/photo.ts` — on each page received (legacy AND OCR flow): `updateSession(step, photo_file_ids)`.
+3. `src/handlers/callback.ts`:
+   - `processOcr` transitions (recognized data): `updateSession(step, description/store_name)`.
+   - `ocr:retry` / `ocr:manual`: `updateSession` (same session continues — do NOT finalize).
+   - `saveReceiptOcr` success: `finalizeSuccess(sum, photo_links=links)` reusing the `links` array already produced by `uploadPhotos` (no re-upload).
+   - `saveReceiptOcr` Drive/Sheets failure branches and outer catch: `finalizeFailed(error, ...)`.
+   - Terminal OCR/Gemini give-up (only when the user cannot continue): `finalizeFailed(error, ...)`.
+4. `src/handlers/text.ts`:
+   - AWAIT_SUM / AWAIT_DESCRIPTION / AWAIT_STORE steps: `updateSession(step, sum/description/store_name)`.
+   - `saveReceipt` success branch: `finalizeSuccess(sum, photo_links=[photoLink])`.
+   - `saveReceipt` Drive/Sheets failure branches and outer catch: `finalizeFailed(error, ...)`.
+5. `src/handlers/cancel.ts` and the `cancel` callback: `finalizeCancelled(sessionId)` (alongside the existing `clearState`).
+6. Ensure a second `/start` mid-flow leaves the prior `in_progress` row untouched (abandoned) and starts a fresh session id.
+
+### Definition of done:
+- Manual E2E: a full successful receipt yields exactly one `session_log` row transitioning `in_progress → success` with populated `photo_links` matching the estimate; a `/cancel` yields `cancelled`; a forced Sheets failure yields `failed` with a sanitized `error_trace`; multi-page receipt records a multi-element `photo_file_ids`/`photo_links`.
+- A simulated Session Log write failure does not disrupt the user-facing receipt flow (only an error is logged).
+
+---
+
+## Task 21: Author test-cases.md
+
+**Requirements:** Requirement 11 (Session Log / Журнал сессий)
+
+### Subtasks:
+1. Create `test-cases.md` in the spec folder following the `.kiro/steering/test-cases.md` standard: feature grouping, detailed step-by-step scenarios, repeatability via generator/clean-up (unique `run-id` per run; the append-only `session_log` needs no manual DB cleanup between runs), a regression group, and an MD report template with tables. This is an API/backend-oriented spec (Telegram bot + Google Sheets, no browser UI), so scenarios exercise the bot flow and then assert the resulting `session_log` rows/columns; result artifacts are MD reports with tables.
+   - _Requirements: Requirement 11 (all acceptance criteria), plus the success/cancel/failure paths of Requirement 4._

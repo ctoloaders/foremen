@@ -47,6 +47,7 @@ export const config = {
     workersSheetName: process.env.WORKERS_SHEET_NAME || "workers",
     accessSheetName: process.env.ACCESS_SHEET_NAME || "project_access",
     botStateSheetName: process.env.BOT_STATE_SHEET_NAME || "bot_state",
+    sessionLogSheetName: process.env.SESSION_LOG_SHEET_NAME || "session_log",
     projectsSheetName: process.env.PROJECTS_SHEET_NAME || "projects",
     receiptsSheetName: process.env.RECEIPTS_SHEET_NAME || "Чеки",
     templateSpreadsheetId: process.env.TEMPLATE_SPREADSHEET_ID || "",

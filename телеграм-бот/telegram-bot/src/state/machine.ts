@@ -14,6 +14,7 @@ export enum ConversationStep {
 export interface ConversationState {
   telegramId: number;
   step: ConversationStep;
+  sessionId?: string;            // Session Log correlation id (UUID)
   projectName?: string;
   projectDriveUrl?: string;
   projectSheetsUrl?: string;

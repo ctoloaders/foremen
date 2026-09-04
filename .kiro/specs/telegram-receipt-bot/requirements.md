@@ -200,3 +200,42 @@ Telegram-бот для сбора бумажных счетов (фактур) �
 9. THE System SHALL confirm: "✅ [Имя] добавлен на проект [Название] как [Роль]"
 10. IF the worker is already assigned to that project, THE System SHALL respond: "Этот работник уже привязан к проекту. Обновить роль?" with Yes/No buttons
 11. THE /assign flow SHALL support /cancel at any step to abort
+
+### Requirement 11: Session Log (Журнал сессий)
+
+**User Story:** As an administrator, I want a persistent log of every bot session — including successful, failed, and cancelled ones — so that I can verify that all receipts were actually recorded and diagnose what happened when something did not.
+
+**Context:** The `bot_state` sheet holds only ephemeral conversation state: its rows are cleared on completion or cancel, and stale rows (>24h) are auto-purged. It therefore cannot answer "did every receipt get recorded, and if not, which ones failed and for whom". This requirement introduces a separate, permanent Session Log that records the full lifecycle of each session. The Session Log is a backend data artifact only — it has no UI and no internationalized fields; the bot's user-facing texts remain the existing fixed Russian strings and are out of scope here.
+
+#### Acceptance Criteria
+
+1. THE Session Log SHALL be a new sheet (tab) named "session_log" inside the existing workers registry spreadsheet (the spreadsheet identified by `WORKERS_SPREADSHEET_ID`, the same workbook that contains `bot_state`, `workers`, `project_access`).
+2. THE Session Log SHALL be maintained SEPARATELY from `bot_state`: `bot_state` continues to hold ephemeral conversation state (cleared on completion/cancel, purged when stale), while the Session Log persists history and is never cleared by the normal completion/cancel/stale-cleanup paths (retention is unlimited — records are kept indefinitely).
+3. THE Session Log SHALL identify each session by a unique `session_id` (UUID) stored in the first column. A new `session_id` SHALL be generated when a session starts (on `/start`, when a recognized worker begins a new receipt flow).
+4. THE Session Log SHALL contain the following columns, in order:
+   - A: `session_id` (UUID, unique key)
+   - B: `telegram_id` (integer)
+   - C: `worker_name` (text, resolved from the Worker Registry)
+   - D: `role` (text, resolved from the Worker Registry)
+   - E: `started_at` (ISO 8601 date-time, session start)
+   - F: `last_activity_at` (ISO 8601 date-time, updated on every interaction within the session)
+   - G: `step` (current or final `ConversationStep` value)
+   - H: `project_name` (text, from conversation state)
+   - I: `project_drive_url` (URL, from conversation state)
+   - J: `project_sheets_url` (URL, from conversation state)
+   - K: `photo_file_ids` (JSON array of Telegram file_id values; supports multi-page receipts — may contain one or many entries)
+   - L: `photo_links` (JSON array of Google Drive links for uploaded files; populated on successful upload; may contain one or many entries)
+   - M: `sum` (number — the recognized-or-entered amount that was ultimately used)
+   - N: `description` (text, from conversation state)
+   - O: `store_name` (text, from conversation state)
+   - P: `status` (enum: "in_progress", "success", "failed", "cancelled")
+   - Q: `error_trace` (text — sanitized error message and stack trace, populated on any failure; empty otherwise)
+5. WHEN a recognized worker starts a new session, THE System SHALL create a Session Log row with a fresh `session_id`, `telegram_id`, resolved `worker_name` and `role`, `started_at` = `last_activity_at` = now, `step` = the initial step, and `status` = "in_progress".
+6. WHEN the worker performs any subsequent interaction within the session (selecting a project, sending a photo/page, entering sum/description/store, confirming, etc.), THE System SHALL update that session's row: refresh `last_activity_at`, `step`, and any collected fields (project, photo_file_ids, sum, description, store_name).
+7. WHEN a receipt is saved successfully (photo(s) uploaded to Drive AND row appended to the project estimate), THE System SHALL update the session's row with `status` = "success", the final `sum`, `photo_links` (the Drive links, reusing the links already produced during upload — no re-upload), and `last_activity_at` = now.
+8. WHEN a session is cancelled by the worker (via /cancel or the Отмена button) OR is abandoned, THE System SHALL update the session's row with `status` = "cancelled" and `last_activity_at` = now. Cancelled sessions SHALL remain in the log (they are not deleted).
+9. WHEN any error occurs during the session (OCR failure, Gemini failure, Drive upload failure after retries, Sheets write failure after retries, or any unhandled exception in the flow), THE System SHALL update the session's row with `status` = "failed" and write a sanitized error message plus stack trace into `error_trace`.
+10. THE `error_trace` content SHALL be sanitized before writing: secrets, tokens, API keys, and credential-bearing URLs SHALL be redacted, consistent with the existing "no secret logging" rule (Requirement 9.6). Everything else (error message, stack frames, relevant context) SHALL be recorded.
+11. THE `photo_file_ids` and `photo_links` columns SHALL be serialized as JSON arrays (the same serialization approach already used for photo file_ids in `bot_state`), so that multi-page receipts are represented as arrays and single-page receipts as one-element arrays.
+12. Session Log writes SHALL be best-effort and MUST NOT block or break the user-facing flow: if writing to the Session Log itself fails, THE System SHALL log that failure via the structured logger and continue serving the user normally (the receipt save path takes precedence over logging).
+13. THE Session Log write operations SHALL reuse the existing Google Service Account authentication and the existing workers-registry spreadsheet connection; no new credentials or new spreadsheet SHALL be introduced.

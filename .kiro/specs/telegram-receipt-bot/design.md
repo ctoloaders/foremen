@@ -599,3 +599,143 @@ Property-based testing applicable for:
 4. **Input sanitization**: All user text trimmed, length-limited, no code execution
 5. **State isolation**: Each user's state keyed by their Telegram ID, no cross-user access
 6. **HTTPS only**: All communication over TLS (Cloud Functions, Apps Script, Telegram API)
+
+## Addendum: Session Log (Журнал сессий)
+
+> This addendum documents the Session Log feature (Requirement 11). It reflects the current implemented codebase, which has evolved beyond the original design above: the receipt flow now supports multi-page receipts (`photoFileIds: string[]`, up to 10 pages) and an OCR pipeline (Google Cloud Vision OCR + Gemini parsing) with a sum-verification/mismatch confirmation step. The Session Log wraps that existing flow with persistent, append-then-update logging. It is a backend-only data artifact: no UI, no i18n fields.
+
+### Purpose and relationship to `bot_state`
+
+`bot_state` (sheet, columns A–M in the workers workbook) is ephemeral conversation state. `getState`/`setState` upsert a single row per `telegram_id`; `clearState` blanks the row on success/cancel; rows older than 24h are auto-purged in `getState`. It cannot serve as history.
+
+The Session Log is a **separate** sheet (`session_log`) in the **same** workbook (`WORKERS_SPREADSHEET_ID`). It records one row per session, keyed by a generated `session_id`, and is never cleared by the completion/cancel/stale paths. This is the "variant B" decision: `bot_state` stays as-is for live state; `session_log` mirrors the lifecycle into durable history.
+
+Both sheets are written during a session, but they are independent: a failure to write `session_log` must never break the receipt flow (best-effort logging).
+
+### Data Model — Google Sheets: `session_log`
+
+Sheet name configurable via `SESSION_LOG_SHEET_NAME` (default `session_log`). Columns:
+
+| Col | Field | Type | Notes |
+|-----|-------|------|-------|
+| A | session_id | string (UUID) | Unique key. Generated on session start. |
+| B | telegram_id | integer | |
+| C | worker_name | string | Resolved from Worker Registry at session start |
+| D | role | string | Resolved from Worker Registry at session start |
+| E | started_at | ISO 8601 | Session start |
+| F | last_activity_at | ISO 8601 | Updated on every interaction |
+| G | step | string | Current/final `ConversationStep` |
+| H | project_name | string | |
+| I | project_drive_url | URL | |
+| J | project_sheets_url | URL | |
+| K | photo_file_ids | JSON array | Multi-page: `["id1","id2",...]` (one-element for single page) |
+| L | photo_links | JSON array | Drive links; filled on successful upload |
+| M | sum | number | Recognized-or-entered amount actually used |
+| N | description | string | |
+| O | store_name | string | |
+| P | status | enum | `in_progress` \| `success` \| `failed` \| `cancelled` |
+| Q | error_trace | string | Sanitized message + stack; empty unless failure |
+
+`photo_file_ids` / `photo_links` reuse the JSON-array serialization already present in `state/store.ts` (`serializePhotoIds` / `deserializePhotoIds`).
+
+### Component: SessionLogService (`src/services/session-log.ts`)
+
+New module, using the same `GoogleAuth` + Sheets v4 client and the same `spreadsheetId = config.google.workersSpreadsheetId` as `state/store.ts`.
+
+```typescript
+interface SessionLogRecord {
+  sessionId: string;
+  telegramId: number;
+  workerName?: string;
+  role?: string;
+  startedAt: string;         // ISO
+  lastActivityAt: string;    // ISO
+  step: string;              // ConversationStep
+  projectName?: string;
+  projectDriveUrl?: string;
+  projectSheetsUrl?: string;
+  photoFileIds?: string[];
+  photoLinks?: string[];
+  sum?: number;
+  description?: string;
+  storeName?: string;
+  status: "in_progress" | "success" | "failed" | "cancelled";
+  errorTrace?: string;
+}
+
+interface SessionLogService {
+  // Create a new row with status=in_progress. Returns the sessionId.
+  startSession(input: {
+    sessionId: string;
+    telegramId: number;
+    workerName?: string;
+    role?: string;
+    step: string;
+  }): Promise<void>;
+
+  // Upsert (update by sessionId) with the latest state; refreshes last_activity_at.
+  updateSession(sessionId: string, patch: Partial<SessionLogRecord>): Promise<void>;
+
+  // Terminal transitions (set status + last_activity_at, plus final fields / error).
+  finalizeSuccess(sessionId: string, patch: Partial<SessionLogRecord>): Promise<void>;
+  finalizeCancelled(sessionId: string): Promise<void>;
+  finalizeFailed(sessionId: string, error: unknown, patch?: Partial<SessionLogRecord>): Promise<void>;
+}
+```
+
+Implementation notes:
+- Row lookup is by `session_id` in column A (analogous to the `telegram_id` lookup in `store.ts`): read `session_log!A2:A`, find index, update `A{n}:Q{n}`; append if not found.
+- Every method wraps its Sheets call in try/catch and, on failure, logs via `logger.error("session-log write failed", ...)` and returns without throwing (Requirement 11.12 — best-effort, never breaks the flow).
+- `finalizeFailed` runs the error through a sanitizer before writing (below).
+
+### session_id lifecycle and where it lives
+
+The session must be correlated across handlers (photo.ts, text.ts, callback.ts) that each independently load state via `getState`. To carry the id without a second lookup, add a `sessionId?: string` field to `ConversationState` (`state/machine.ts`) and persist it in a new `bot_state` column (extend the sheet to column N; update `store.ts` read/write ranges from `A:M` to `A:N`).
+
+Flow:
+- On `/start` (in `handlers/start.ts`), after the worker is recognized and a fresh receipt flow begins: generate `sessionId = crypto.randomUUID()`, set it on the state, and call `sessionLog.startSession(...)`.
+- All subsequent handlers read `state.sessionId` and call `sessionLog.updateSession` / finalize methods.
+- If a worker sends `/start` again mid-flow (allowed by Requirement 2.6), the previous unfinished session row remains `in_progress` (it represents an abandoned session) and a new `session_id` is generated for the new flow.
+
+### Error trace sanitization (`src/utils/sanitize.ts`)
+
+`sanitizeErrorTrace(error: unknown): string`:
+- Compose `message` + `stack` (stack already truncated in current code to ~500 chars in some paths; keep a generous cap, e.g. 4000 chars, to fit a Sheets cell comfortably).
+- Redact: the bot token, service-account private key material, Gemini API key, webhook secrets, and any `https://...` query strings that may carry tokens (replace with `***REDACTED***`). Source the secret values from `config` so redaction stays in sync.
+- This satisfies Requirement 11.10 and reuses the intent of Requirement 9.6 (no secret logging).
+
+### Integration points (where calls are added)
+
+| Location (existing code) | Session Log call |
+|--------------------------|------------------|
+| `handlers/start.ts` — new receipt flow begins after auth + project resolution | `startSession(...)` with resolved worker_name/role; store `sessionId` in state |
+| `handlers/start.ts` — project selected (callback) | `updateSession(step=AWAIT_PHOTO, project_name/urls)` |
+| `handlers/photo.ts` — page received (both legacy and OCR flow) | `updateSession(step, photo_file_ids)` |
+| `handlers/callback.ts` — `ocr:done` → `processOcr` transitions | `updateSession(step, description/store_name)` |
+| `handlers/text.ts` — AWAIT_SUM / AWAIT_DESCRIPTION / AWAIT_STORE steps | `updateSession(step, sum/description/store_name)` |
+| `handlers/text.ts` `saveReceipt` — success branch (after `clearState`) | `finalizeSuccess(sum, photo_links=[photoLink])` |
+| `handlers/text.ts` `saveReceipt` — Drive/Sheets failure branches & catch | `finalizeFailed(error, ...)` |
+| `handlers/callback.ts` `saveReceiptOcr` — success branch | `finalizeSuccess(sum, photo_links=links)` (reuse `links` already produced by `uploadPhotos`) |
+| `handlers/callback.ts` `saveReceiptOcr` — Drive/Sheets failure branches & catch | `finalizeFailed(error, ...)` |
+| `handlers/callback.ts` `processOcr` — OCR/Gemini failure paths | `finalizeFailed(error, ...)` OR keep `in_progress` if the user can retry (retry keeps same session; see note) |
+| `handlers/cancel.ts` — `/cancel` and the Отмена button (callback `cancel`) | `finalizeCancelled(sessionId)` before/after `clearState` |
+
+Note on OCR retry: `ocr:retry` and `ocr:manual` keep the same session (the user continues), so those paths call `updateSession`, not a finalize. Only a terminal give-up/exception finalizes as `failed`.
+
+The critical "reuse the Drive link" point (Requirement 11.7): in `saveReceiptOcr` the `links` array from `uploadPhotos(...)` is already in scope and is the exact value written to the estimate via `formatPhotoLinks(links)`. `finalizeSuccess` stores that same array as `photo_links` — no additional upload or Drive call.
+
+### Config additions
+
+Add to `config.google` in `src/config.ts`:
+```typescript
+sessionLogSheetName: process.env.SESSION_LOG_SHEET_NAME || "session_log",
+```
+Document `SESSION_LOG_SHEET_NAME` in `.env.example`. No new spreadsheet, credentials, or scopes are required (reuses `WORKERS_SPREADSHEET_ID` and the existing spreadsheets scope).
+
+### Verification value (answers "how do we know all receipts were recorded")
+
+With the Session Log in place, an administrator can answer the customer's question without reading chat history:
+- Count `status = success` rows per project/worker/date.
+- `status = failed` rows (with `error_trace`) are exactly the receipts a worker sent that did NOT reach the estimate.
+- `status = cancelled` / lingering `in_progress` rows show abandoned attempts.
+- Because a successful row carries the same Drive `photo_links` written to the estimate, the log ↔ estimate correspondence can be cross-checked. (A dedicated reconciliation report is out of scope for this iteration but is enabled by this data model.)

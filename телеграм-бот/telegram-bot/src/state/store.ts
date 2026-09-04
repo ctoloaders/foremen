@@ -56,7 +56,7 @@ export async function getState(telegramId: number): Promise<ConversationState | 
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A2:M`,
+    range: `${sheetName}!A2:N`,
   });
 
   const rows = res.data.values || [];
@@ -82,6 +82,8 @@ export async function getState(telegramId: number): Promise<ConversationState | 
     ocrDescription: row[10] || undefined,
     ocrStoreName: row[11] || undefined,
     ocrGrossAmount: row[12] ? parseFloat(String(row[12])) || undefined : undefined,
+    // Session Log correlation id (column N)
+    sessionId: row[13] || undefined,
   };
 
   // Check staleness
@@ -113,6 +115,7 @@ export async function setState(state: ConversationState): Promise<void> {
     state.ocrDescription || "",                             // K
     state.ocrStoreName || "",                               // L
     state.ocrGrossAmount !== undefined ? String(state.ocrGrossAmount) : "",  // M
+    state.sessionId || "",                                  // N
   ];
 
   // Find existing row
@@ -129,7 +132,7 @@ export async function setState(state: ConversationState): Promise<void> {
     const rowNum = rowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A${rowNum}:M${rowNum}`,
+      range: `${sheetName}!A${rowNum}:N${rowNum}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -137,7 +140,7 @@ export async function setState(state: ConversationState): Promise<void> {
     // Append new
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:M`,
+      range: `${sheetName}!A:N`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -159,9 +162,9 @@ export async function clearState(telegramId: number): Promise<void> {
     const rowNum = rowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A${rowNum}:M${rowNum}`,
+      range: `${sheetName}!A${rowNum}:N${rowNum}`,
       valueInputOption: "RAW",
-      requestBody: { values: [["", "", "", "", "", "", "", "", "", "", "", "", ""]] },
+      requestBody: { values: [["", "", "", "", "", "", "", "", "", "", "", "", "", ""]] },
     });
   }
 }
