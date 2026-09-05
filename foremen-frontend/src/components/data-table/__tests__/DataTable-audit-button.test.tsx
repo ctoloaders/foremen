@@ -1,9 +1,11 @@
 // Task 8.3: Component tests for DataTable audit button integration
 // Requirements: 5.1, 5.2, 5.3, 5.4
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+import { useAuthStore } from '@/stores/auth-store'
 
 import type { ColumnConfig, PaginatedResponse } from '../types'
 
@@ -12,17 +14,23 @@ vi.mock('@/hooks/useBreakpoint', () => ({
   useBreakpoint: () => 'desktop',
 }))
 
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) =>
-      (opts as { defaultValue?: string })?.defaultValue || key,
-    i18n: { language: 'ru' },
-  }),
-}))
+// Mock react-i18next — keep the real module (i18n.ts wires initReactI18next,
+// pulled in transitively via usePermission → Auth_Store → api-client → i18n)
+// but override useTranslation so `t` returns the key verbatim for assertions.
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, opts?: Record<string, unknown>) =>
+        (opts as { defaultValue?: string })?.defaultValue || key,
+      i18n: { language: 'ru', changeLanguage: vi.fn() },
+    }),
+  }
+})
 
 // Mock AuditModal to capture its props
-const mockAuditModal = vi.fn((_props: Record<string, unknown>) => null)
+const mockAuditModal = vi.fn()
 vi.mock('../AuditModal', () => ({
   AuditModal: (props: Record<string, unknown>) => {
     mockAuditModal(props)
@@ -74,6 +82,22 @@ describe('DataTable audit button integration', () => {
   beforeEach(() => {
     localStorage.clear()
     mockAuditModal.mockClear()
+    // FOR-03-07 gates the audit button behind a `resource` prop AND
+    // `AUDIT:READ`. Seed an ADMIN user (matrix bypass) so the audit button is
+    // authorized; the `resource` prop is passed on each render below.
+    useAuthStore.setState({
+      user: {
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.com',
+        roleCode: 'ADMIN',
+        permissions: [],
+      },
+    })
+  })
+
+  afterEach(() => {
+    useAuthStore.setState({ user: null })
   })
 
   it('renders audit button by default (showAuditButton undefined)', async () => {
@@ -81,6 +105,7 @@ describe('DataTable audit button integration', () => {
     renderWithProviders(
       <DataTable
         entityKey="roles"
+        resource="ROLES"
         columns={testColumns}
         fetchFn={fetchFn}
       />,
@@ -99,6 +124,7 @@ describe('DataTable audit button integration', () => {
     renderWithProviders(
       <DataTable
         entityKey="roles"
+        resource="ROLES"
         columns={testColumns}
         fetchFn={fetchFn}
         showAuditButton={true}
@@ -116,6 +142,7 @@ describe('DataTable audit button integration', () => {
     renderWithProviders(
       <DataTable
         entityKey="audit"
+        resource="AUDIT"
         columns={testColumns}
         fetchFn={fetchFn}
         showAuditButton={false}
@@ -134,6 +161,7 @@ describe('DataTable audit button integration', () => {
     renderWithProviders(
       <DataTable
         entityKey="roles"
+        resource="ROLES"
         columns={testColumns}
         fetchFn={fetchFn}
       />,

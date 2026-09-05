@@ -3,6 +3,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { AppShell } from '@/app/layout/AppShell'
+import { useAuthStore } from '@/stores/auth-store'
 import { useUIStore } from '@/stores/ui-store'
 import i18n from '@/lib/i18n'
 
@@ -47,6 +48,20 @@ describe('AppShell Integration Tests', () => {
 
     // Reset store state
     useUIStore.setState({ sidebarOpen: true, locale: 'pl' })
+
+    // Seed an ADMIN user so permission-gated nav items (e.g. "Projekty") are
+    // visible. FOR-03-07 filters the Sidebar/Drawer/BottomNav by permission, and
+    // ADMIN bypasses the matrix, so the full navigation renders for these
+    // shell-level integration assertions.
+    useAuthStore.setState({
+      user: {
+        id: 1,
+        name: 'Jan Kowalski',
+        email: 'admin@example.com',
+        roleCode: 'ADMIN',
+        permissions: [],
+      },
+    })
 
     // Reset i18n to PL
     void i18n.changeLanguage('pl')

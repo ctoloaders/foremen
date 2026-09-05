@@ -12,14 +12,20 @@ vi.mock('@/hooks/useBreakpoint', () => ({
   useBreakpoint: () => 'desktop',
 }))
 
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, opts?: Record<string, unknown>) =>
-      (opts as { defaultValue?: string })?.defaultValue || key,
-    i18n: { language: 'pl' },
-  }),
-}))
+// Mock react-i18next — keep the real module (i18n.ts wires initReactI18next,
+// pulled in transitively via usePermission → Auth_Store → api-client → i18n)
+// but override useTranslation so `t` returns the key verbatim for assertions.
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, opts?: Record<string, unknown>) =>
+        (opts as { defaultValue?: string })?.defaultValue || key,
+      i18n: { language: 'pl', changeLanguage: vi.fn() },
+    }),
+  }
+})
 
 import { DataTable } from '../DataTable'
 

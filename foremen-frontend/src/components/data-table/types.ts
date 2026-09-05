@@ -97,6 +97,12 @@ export interface DataTableProps<T> {
   rowActions?: (row: T) => React.ReactNode
   /** Show audit button in row actions (default: true) */
   showAuditButton?: boolean
+  /**
+   * ABAC resource code this table represents (e.g. "USERS"). When set, the
+   * composed audit button is gated behind `hasPermission('AUDIT', 'READ')`
+   * (FOR-03-07). Left unset for tables that opt out of permission gating.
+   */
+  resource?: string
   /** Default sort configuration applied when no persisted state exists */
   defaultSort?: SortState[]
 }

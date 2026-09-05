@@ -1,32 +1,41 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { FetchParams, PaginatedResponse } from '@/components/data-table'
+import { useAuthStore } from '@/stores/auth-store'
 import type { UserDto } from '../types'
 
 // --- i18n Mock ---
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, string>) => {
-      const translations: Record<string, string> = {
-        'users.pageTitle': 'Zarządzanie użytkownikami',
-        'users.actions.create': 'Utwórz użytkownika',
-        'users.actions.deactivate': 'Deactivate',
-        'users.actions.alreadyInactive': 'User already inactive',
-        'users.toast.createSuccess': 'User created successfully',
-        'users.toast.updateSuccess': 'User updated successfully',
-        'users.toast.deactivateSuccess': 'User deactivated successfully',
-        'common.edit': 'Edit',
-      }
-      if (key === 'users.dialog.deactivateDescription' && params?.name) {
-        return `Are you sure you want to deactivate ${params.name}?`
-      }
-      return translations[key] ?? key
-    },
-  }),
-}))
+// Keep the real react-i18next module (i18n.ts wires initReactI18next, pulled in
+// transitively via usePermission → Auth_Store → api-client → i18n) and only
+// override useTranslation so `t` returns stable labels for assertions.
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, params?: Record<string, string>) => {
+        const translations: Record<string, string> = {
+          'users.pageTitle': 'Zarządzanie użytkownikami',
+          'users.actions.create': 'Utwórz użytkownika',
+          'users.actions.deactivate': 'Deactivate',
+          'users.actions.alreadyInactive': 'User already inactive',
+          'users.toast.createSuccess': 'User created successfully',
+          'users.toast.updateSuccess': 'User updated successfully',
+          'users.toast.deactivateSuccess': 'User deactivated successfully',
+          'common.edit': 'Edit',
+        }
+        if (key === 'users.dialog.deactivateDescription' && params?.name) {
+          return `Are you sure you want to deactivate ${params.name}?`
+        }
+        return translations[key] ?? key
+      },
+      i18n: { language: 'pl', changeLanguage: vi.fn() },
+    }),
+  }
+})
 
 // --- Sonner mock ---
 
@@ -234,6 +243,22 @@ describe('UsersPage', () => {
     mockFetchUsers.mockResolvedValue(mockUsersResponse)
     mockUseUser.mockReturnValue({ data: undefined, isLoading: false })
     mockUseRolesForSelect.mockReturnValue({ data: [], isLoading: false, isError: false })
+    // FOR-03-07 gates the Create/Edit/Deactivate actions behind USERS
+    // permissions. Seed an ADMIN user (matrix bypass) so the full action set
+    // renders for these behavior tests.
+    useAuthStore.setState({
+      user: {
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.com',
+        roleCode: 'ADMIN',
+        permissions: [],
+      },
+    })
+  })
+
+  afterEach(() => {
+    useAuthStore.setState({ user: null })
   })
 
   describe('DataTable rendering with users data', () => {

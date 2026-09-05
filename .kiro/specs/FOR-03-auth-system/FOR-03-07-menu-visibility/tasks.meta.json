@@ -1,0 +1,467 @@
+{
+  "pbtResults": {
+    "6.4 Write property + unit tests for action gating": {
+      "status": "passed",
+      "lastRunTimestamp": 1788614008488
+    }
+  },
+  "executionHistory": {
+    "1.1 Implement `usePermission` with the grant set and ADMIN bypass": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803358
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612812313
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612926143
+      }
+    ],
+    "1.2 Write property test for non-ADMIN membership / deny-by-default": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803425
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612939241
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613148434
+      }
+    ],
+    "1.3 Write property test for the ADMIN bypass and its exact-match rule": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803515
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612940685
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613152483
+      }
+    ],
+    "1.4 Write property test for the no-current-user deny": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803540
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612942114
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613153783
+      }
+    ],
+    "2.1 Extend `NAV_CONFIG` with `requiredPermission`": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803565
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612943074
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613154961
+      }
+    ],
+    "2.2 Implement the Route_Requirement_Map": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803589
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613161408
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613313317
+      }
+    ],
+    "3.1 Filter Sidebar, Drawer, and BottomNav by permission": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803614
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613162709
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613314765
+      }
+    ],
+    "3.2 Write property test for nav item + section visibility": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803639
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613621191
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613744510
+      }
+    ],
+    "3.3 Update existing NAV_CONFIG / BottomNav count tests and add filtering unit tests": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803667
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613325864
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613615308
+      }
+    ],
+    "4.1 Implement the Last_Allowed_Location tracking module": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803690
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612815572
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612930993
+      }
+    ],
+    "4.2 Implement `PermissionGuard`": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803718
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613320962
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613611629
+      }
+    ],
+    "4.3 Implement `ForbiddenPage`": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803747
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613322201
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613615524
+      }
+    ],
+    "4.4 Wire `PermissionGuard` and `/403` into the router": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803771
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613751082
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617451497
+      }
+    ],
+    "4.5 Write property + unit tests for the guard and the tracking module": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803798
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613753313
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617448964
+      }
+    ],
+    "4.6 Write unit test for ForbiddenPage": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803822
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613753761
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617447868
+      }
+    ],
+    "5. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803847
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617459373
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617875577
+      }
+    ],
+    "6.1 Add `resource` to `DataTable` and gate the audit button + column collapse": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803869
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613163877
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613315761
+      }
+    ],
+    "6.2 Gate actions on the Users page": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803891
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613323293
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613612668
+      }
+    ],
+    "6.3 Gate actions on the Roles and Audit pages": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803944
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613324836
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613616661
+      }
+    ],
+    "6.4 Write property + unit tests for action gating": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612803982
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613754881
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617450515
+      }
+    ],
+    "7.1 Add `forbidden.*` keys to PL and RU resources": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612804004
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612820223
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612934773
+      }
+    ],
+    "8.1 Verify the whole flow builds and behaves end-to-end": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612804032
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617876524
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788618084293
+      }
+    ],
+    "9. Author test-cases.md": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612804055
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788618089149
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788618296602
+      }
+    ],
+    "10. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612804084
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788618301349
+      },
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788618335543
+      }
+    ],
+    "7. i18n keys for the Forbidden page": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788612934825
+      }
+    ],
+    "1. Permission_Hook (`usePermission`)": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613153847
+      }
+    ],
+    "2. Navigation requirements and Route_Requirement_Map": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613313395
+      }
+    ],
+    "3. Menu visibility filtering": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788613744543
+      }
+    ],
+    "6. CRUD action gating": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617450609
+      }
+    ],
+    "4. Permission route guard, /403 page, go-back tracking, and router wiring": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788617451543
+      }
+    ],
+    "8. Final wiring and verification": [
+      {
+        "executionId": "62ab5c7a-5272-4fef-a682-190dc9876808",
+        "chatSessionId": "sess_add4852a-aa10-471d-be19-b66951949edb",
+        "timestamp": 1788618084341
+      }
+    ]
+  }
+}

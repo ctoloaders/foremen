@@ -1,30 +1,40 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { useAuthStore } from '@/stores/auth-store'
 
 import type { RoleDto } from '../types'
 
 // --- Mocks ---
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => {
-      const translations: Record<string, string> = {
-        'roles.actions.create': 'Utwórz rolę',
-        'roles.table.code': 'Kod',
-        'roles.table.name': 'Nazwa',
-        'roles.table.description': 'Opis',
-        'roles.table.system': 'Systemowa',
-        'common.edit': 'Edytuj',
-        'common.delete': 'Usuń',
-        'dataTable.search': 'Szukaj...',
-        'dataTable.empty': 'Nie znaleziono ról',
-        'dataTable.filter.open': 'dataTable.filter.open',
-      }
-      return translations[key] ?? key
-    },
-  }),
-}))
+// Keep the real react-i18next module (i18n.ts wires initReactI18next, pulled in
+// transitively via usePermission → Auth_Store → api-client → i18n) and only
+// override useTranslation so `t` returns stable labels for assertions.
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => {
+        const translations: Record<string, string> = {
+          'roles.actions.create': 'Utwórz rolę',
+          'roles.table.code': 'Kod',
+          'roles.table.name': 'Nazwa',
+          'roles.table.description': 'Opis',
+          'roles.table.system': 'Systemowa',
+          'common.edit': 'Edytuj',
+          'common.delete': 'Usuń',
+          'dataTable.search': 'Szukaj...',
+          'dataTable.empty': 'Nie znaleziono ról',
+          'dataTable.filter.open': 'dataTable.filter.open',
+        }
+        return translations[key] ?? key
+      },
+      i18n: { language: 'pl', changeLanguage: vi.fn() },
+    }),
+  }
+})
 
 const mockUseBreakpoint = vi.fn<() => 'desktop' | 'tablet' | 'mobile'>(() => 'desktop')
 
@@ -106,6 +116,21 @@ describe('RolesListTab', () => {
     vi.clearAllMocks()
     mockUseBreakpoint.mockReturnValue('desktop')
     localStorage.setItem('foremen-locale', 'pl')
+    // FOR-03-07 gates the Create/Edit/Delete actions behind ROLES permissions.
+    // Seed an ADMIN user (matrix bypass) so the full action set renders.
+    useAuthStore.setState({
+      user: {
+        id: 1,
+        name: 'Admin',
+        email: 'admin@example.com',
+        roleCode: 'ADMIN',
+        permissions: [],
+      },
+    })
+  })
+
+  afterEach(() => {
+    useAuthStore.setState({ user: null })
   })
 
   describe('Loading state', () => {

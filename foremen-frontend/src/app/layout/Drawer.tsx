@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
-import { NAV_CONFIG } from '@/config/navigation'
+import { NAV_CONFIG, isNavItemVisible } from '@/config/navigation'
 import { NavItem } from '@/app/layout/NavItem'
+import { usePermission } from '@/hooks/usePermission'
 
 /**
  * Drawer — Mobile slide-out navigation panel.
@@ -23,6 +24,7 @@ export interface DrawerProps {
 export function Drawer({ open, onClose }: DrawerProps) {
   const { pathname } = useLocation()
   const { t } = useTranslation()
+  const { hasPermission } = usePermission()
 
   return (
     <div className={cn('fixed inset-0 z-50', open ? 'visible' : 'invisible')}>
@@ -66,30 +68,42 @@ export function Drawer({ open, onClose }: DrawerProps) {
 
         {/* Navigation sections */}
         <nav className="flex-1 overflow-y-auto px-2 py-2">
-          {NAV_CONFIG.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="mb-4">
-              {/* Section title */}
-              {section.titleKey && (
-                <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {t(section.titleKey)}
-                </p>
-              )}
+          {NAV_CONFIG.map((section, sectionIndex) => {
+            const visibleItems = section.items.filter((item) =>
+              isNavItemVisible(item, hasPermission)
+            )
 
-              {/* Section items */}
-              <div className="flex flex-col gap-0.5">
-                {section.items.map((item) => (
-                  <NavItem
-                    key={item.path}
-                    icon={item.icon}
-                    labelKey={item.labelKey}
-                    path={item.path}
-                    active={pathname === item.path}
-                    variant="drawer"
-                  />
-                ))}
+            // Suppress a section entirely (header included) when all its items
+            // are filtered out by permission (Req 3.4).
+            if (visibleItems.length === 0) {
+              return null
+            }
+
+            return (
+              <div key={sectionIndex} className="mb-4">
+                {/* Section title */}
+                {section.titleKey && (
+                  <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    {t(section.titleKey)}
+                  </p>
+                )}
+
+                {/* Section items */}
+                <div className="flex flex-col gap-0.5">
+                  {visibleItems.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      icon={item.icon}
+                      labelKey={item.labelKey}
+                      path={item.path}
+                      active={pathname === item.path}
+                      variant="drawer"
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </nav>
       </aside>
     </div>

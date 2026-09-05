@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { SlidersHorizontal, ScrollText } from 'lucide-react'
 
 import { useBreakpoint } from '@/hooks/useBreakpoint'
+import { usePermission } from '@/hooks/usePermission'
 import { Table } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import {
@@ -28,8 +29,10 @@ import { BooleanFilter } from './filters/BooleanFilter'
 import { AuditModal } from './AuditModal'
 
 export function DataTable<T>(props: DataTableProps<T>) {
-  const { columns, onRowClick, rowActions, pageSizeOptions, showAuditButton, entityKey } = props
+  const { columns, onRowClick, rowActions, pageSizeOptions, showAuditButton, entityKey, resource } =
+    props
   const { t } = useTranslation()
+  const { hasPermission } = usePermission()
   const breakpoint = useBreakpoint()
   const isMobile = breakpoint === 'mobile'
   const isTablet = breakpoint === 'tablet'
@@ -46,12 +49,18 @@ export function DataTable<T>(props: DataTableProps<T>) {
     dispatch({ type: 'CLEAR_ALL' })
   }, [dispatch])
 
+  // The audit button is visible only when it is enabled AND the table declares
+  // a `resource` AND the current user may read the audit trail (FOR-03-07,
+  // Req 6.5). Audit uses the fixed `AUDIT` resource regardless of the table's
+  // own `resource`.
+  const auditVisible =
+    showAuditButton !== false && resource != null && hasPermission('AUDIT', 'READ')
+
   // Build combined row actions (user actions + audit button)
   const combinedRowActions = useCallback((row: T) => {
-    const auditEnabled = showAuditButton !== false
     const rowId = (row as Record<string, unknown>).id as number
 
-    const auditButton = auditEnabled ? (
+    const auditButton = auditVisible ? (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -82,7 +91,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         {auditButton}
       </div>
     )
-  }, [showAuditButton, rowActions, t])
+  }, [auditVisible, rowActions, t])
 
   // Render filter content for a given field — passed to DataTableHeader
   const renderFilter = useCallback((field: string, dataType: ColumnDataType) => {
@@ -145,8 +154,19 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const isFirst = query.data?.first ?? true
   const isLast = query.data?.last ?? true
 
-  // Check if we have any row actions to render (user or audit)
-  const hasRowActions = showAuditButton !== false || !!rowActions
+  // Check if we have any row actions to render. The actions column (and its
+  // header) collapses entirely when nothing is visible: it renders only when
+  // the audit button is visible OR the page's `rowActions(row)` yields a
+  // non-null/non-empty result for at least one row (FOR-03-07, Req 6.6, 8.3).
+  const hasVisibleUserActions =
+    !!rowActions &&
+    data.some((row) => {
+      const node = rowActions(row)
+      if (node == null || node === false) return false
+      if (Array.isArray(node)) return node.length > 0
+      return true
+    })
+  const hasRowActions = auditVisible || hasVisibleUserActions
 
   return (
     <div className="space-y-4">

@@ -1,6 +1,7 @@
 import React, { Suspense, useEffect } from 'react'
 import { createBrowserRouter, Outlet, useNavigate } from 'react-router-dom'
 
+import { PermissionGuard } from '@/app/guards/PermissionGuard'
 import { ProtectedLayout } from '@/app/guards/ProtectedLayout'
 import { RouteErrorBoundary } from '@/app/layout/RouteErrorBoundary'
 import { SkeletonPage } from '@/components/ui/SkeletonPage'
@@ -21,6 +22,7 @@ const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
 )
 const NotFoundPage = React.lazy(() => import('@/app/pages/NotFoundPage'))
+const ForbiddenPage = React.lazy(() => import('@/app/pages/ForbiddenPage'))
 
 // Public auth pages (Public_Routes) — live OUTSIDE the AppShell / ProtectedLayout.
 // These are lightweight placeholders until FOR-03-06 tasks 11/12/13 replace them
@@ -82,54 +84,74 @@ export const router = createBrowserRouter([
       {
         path: '/',
         element: <ProtectedLayout />,
+        // Pathless layout route: the Permission_Route_Guard (FOR-03-07) wraps
+        // the protected children so it sees the matched child path and gates it
+        // against the Route_Requirement_Map, redirecting to `/403` on denial.
+        // It runs strictly after ProtectedLayout's authentication, so anonymous
+        // users still go to `/login` upstream.
         children: [
           {
-            index: true,
-            element: <SuspenseWrapper><DashboardPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'projects',
-            element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'rooms',
-            element: <SuspenseWrapper><RoomsPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'estimate',
-            element: <SuspenseWrapper><EstimatePage /></SuspenseWrapper>,
-          },
-          {
-            path: 'materials',
-            element: <SuspenseWrapper><MaterialsPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'finances',
-            element: <SuspenseWrapper><FinancesPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'deliveries',
-            element: <SuspenseWrapper><DeliveriesPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'users',
-            element: <SuspenseWrapper><UsersPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'roles',
-            element: <SuspenseWrapper><RolesPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'audit',
-            element: <SuspenseWrapper><AuditPage /></SuspenseWrapper>,
-          },
-          {
-            path: 'settings/appearance',
-            element: <SuspenseWrapper><SettingsAppearancePage /></SuspenseWrapper>,
-          },
-          {
-            path: '*',
-            element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper>,
+            element: <PermissionGuard />,
+            children: [
+              {
+                index: true,
+                element: <SuspenseWrapper><DashboardPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'projects',
+                element: <SuspenseWrapper><ProjectsPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'rooms',
+                element: <SuspenseWrapper><RoomsPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'estimate',
+                element: <SuspenseWrapper><EstimatePage /></SuspenseWrapper>,
+              },
+              {
+                path: 'materials',
+                element: <SuspenseWrapper><MaterialsPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'finances',
+                element: <SuspenseWrapper><FinancesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'deliveries',
+                element: <SuspenseWrapper><DeliveriesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'users',
+                element: <SuspenseWrapper><UsersPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'roles',
+                element: <SuspenseWrapper><RolesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'audit',
+                element: <SuspenseWrapper><AuditPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'settings/appearance',
+                element: <SuspenseWrapper><SettingsAppearancePage /></SuspenseWrapper>,
+              },
+              // Forbidden_Page (`/403`) — a protected child WITHOUT a
+              // requirement, so it renders inside the AppShell for any
+              // authenticated user (ROUTE_REQUIREMENTS has no `/403` entry, so
+              // PermissionGuard lets it through). Req 5.1, 5.4, 5.7.
+              {
+                path: '403',
+                element: <SuspenseWrapper><ForbiddenPage /></SuspenseWrapper>,
+              },
+              // Catch-all NotFound — requirement-free; unmapped paths resolve
+              // to no requirement in the Route_Requirement_Map.
+              {
+                path: '*',
+                element: <SuspenseWrapper><NotFoundPage /></SuspenseWrapper>,
+              },
+            ],
           },
         ],
       },

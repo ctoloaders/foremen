@@ -3,9 +3,10 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { cn } from '@/lib/utils'
-import { NAV_CONFIG } from '@/config/navigation'
+import { NAV_CONFIG, isNavItemVisible } from '@/config/navigation'
 import { NavItem } from '@/app/layout/NavItem'
 import { UserFooter } from '@/app/layout/UserFooter'
+import { usePermission } from '@/hooks/usePermission'
 
 /**
  * Sidebar — Desktop/Tablet sidebar navigation panel.
@@ -25,6 +26,7 @@ export function Sidebar({ collapsed, visible }: SidebarProps) {
   const [hovered, setHovered] = useState(false)
   const { pathname } = useLocation()
   const { t } = useTranslation()
+  const { hasPermission } = usePermission()
 
   // When collapsed and hovered, expand to full width overlay
   const expanded = collapsed && hovered
@@ -76,31 +78,43 @@ export function Sidebar({ collapsed, visible }: SidebarProps) {
 
         {/* Navigation sections */}
         <nav className="flex-1 overflow-y-auto px-2 py-2">
-          {NAV_CONFIG.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="mb-4">
-              {/* Section title */}
-              {section.titleKey && (!collapsed || expanded) && (
-                <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  {t(section.titleKey)}
-                </p>
-              )}
+          {NAV_CONFIG.map((section, sectionIndex) => {
+            const visibleItems = section.items.filter((item) =>
+              isNavItemVisible(item, hasPermission)
+            )
 
-              {/* Section items */}
-              <div className="flex flex-col gap-0.5">
-                {section.items.map((item) => (
-                  <NavItem
-                    key={item.path}
-                    icon={item.icon}
-                    labelKey={item.labelKey}
-                    path={item.path}
-                    active={pathname === item.path}
-                    collapsed={collapsed && !expanded}
-                    variant="sidebar"
-                  />
-                ))}
+            // Suppress a section entirely (header included) when all its items
+            // are filtered out by permission (Req 3.4).
+            if (visibleItems.length === 0) {
+              return null
+            }
+
+            return (
+              <div key={sectionIndex} className="mb-4">
+                {/* Section title */}
+                {section.titleKey && (!collapsed || expanded) && (
+                  <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    {t(section.titleKey)}
+                  </p>
+                )}
+
+                {/* Section items */}
+                <div className="flex flex-col gap-0.5">
+                  {visibleItems.map((item) => (
+                    <NavItem
+                      key={item.path}
+                      icon={item.icon}
+                      labelKey={item.labelKey}
+                      path={item.path}
+                      active={pathname === item.path}
+                      collapsed={collapsed && !expanded}
+                      variant="sidebar"
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </nav>
 
         {/* User footer */}

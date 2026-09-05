@@ -26,6 +26,11 @@
       "appearance": "Оформление"
     }
   },
+  "forbidden": {
+    "title": "Нет доступа",
+    "message": "У вас нет прав для просмотра этой страницы.",
+    "goBack": "Вернуться назад"
+  },
   "pages": {
     "dashboard": { "title": "Панель", "description": "Обзор проекта" },
     "projects": { "title": "Проекты", "description": "Управление проектами" },

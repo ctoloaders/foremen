@@ -28,7 +28,9 @@ export default function AuditPage() {
     [t],
   )
 
-  // Props that will be handled by DataTable after task 5.3 adds support
+  // Props that will be handled by DataTable after task 5.3 adds support.
+  // Read-only page: no Create/Edit/Delete. The `resource="AUDIT"` prop gates the
+  // composed audit button behind `hasPermission('AUDIT', 'READ')` (FOR-03-07).
   const extraProps = {
     showAuditButton: false,
     defaultSort: [{ field: 'performedAt', direction: 'desc', priority: 1 }] as SortState[],
@@ -37,6 +39,7 @@ export default function AuditPage() {
   return (
     <DataTable<AuditRecord>
       entityKey="audit"
+      resource="AUDIT"
       columns={columns}
       fetchFn={fetchAuditRecords}
       {...extraProps}

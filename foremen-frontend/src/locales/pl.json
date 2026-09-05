@@ -26,6 +26,11 @@
       "appearance": "Wygląd"
     }
   },
+  "forbidden": {
+    "title": "Brak dostępu",
+    "message": "Nie masz uprawnień do wyświetlenia tej strony.",
+    "goBack": "Wróć"
+  },
   "pages": {
     "dashboard": { "title": "Panel", "description": "Przegląd projektu" },
     "projects": { "title": "Projekty", "description": "Zarządzanie projektami" },
