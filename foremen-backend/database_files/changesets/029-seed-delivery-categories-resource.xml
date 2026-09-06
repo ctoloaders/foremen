@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed DELIVERY_CATEGORIES resource into resources table -->
+    <changeSet id="029-seed-delivery-categories-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'DELIVERY_CATEGORIES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="DELIVERY_CATEGORIES"/>
+            <column name="name_ru" value="Категории доставок"/>
+            <column name="name_pl" value="Kategorie dostaw"/>
+            <column name="description_ru" value="Справочник категорий доставок"/>
+            <column name="description_pl" value="Katalog kategorii dostaw"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on DELIVERY_CATEGORIES resource -->
+    <changeSet id="029-seed-delivery-categories-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'DELIVERY_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on DELIVERY_CATEGORIES resource -->
+    <changeSet id="029-seed-delivery-categories-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'DELIVERY_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on DELIVERY_CATEGORIES resource -->
+    <changeSet id="029-seed-delivery-categories-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'DELIVERY_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on DELIVERY_CATEGORIES resource -->
+    <changeSet id="029-seed-delivery-categories-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'DELIVERY_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'DELIVERY_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!--
+        FINANCIER and CLIENT are intentionally omitted from the DELIVERY_CATEGORIES grants
+        (deny-by-default). Unlike MEASUREMENT_UNITS, FINANCIER receives NO grant here.
+        Custom (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- Seed the nine default delivery categories -->
+    <changeSet id="029-seed-delivery-categories-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM delivery_categories</sqlCheck>
+        </preConditions>
+
+        <insert tableName="delivery_categories">
+            <column name="code" value="bathroom_equipment"/>
+            <column name="name_ru" value="Оборудование ванной"/>
+            <column name="name_pl" value="Wyposażenie łazienki"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="accessories"/>
+            <column name="name_ru" value="Аксессуары"/>
+            <column name="name_pl" value="Akcesoria"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="decor"/>
+            <column name="name_ru" value="Декор"/>
+            <column name="name_pl" value="Dekor"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="tiles"/>
+            <column name="name_ru" value="Плитка"/>
+            <column name="name_pl" value="Płytki"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="paints"/>
+            <column name="name_ru" value="Краски"/>
+            <column name="name_pl" value="Farby"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="lighting"/>
+            <column name="name_ru" value="Освещение"/>
+            <column name="name_pl" value="Oświetlenie"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="flooring"/>
+            <column name="name_ru" value="Пол"/>
+            <column name="name_pl" value="Podłoga"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="doors"/>
+            <column name="name_ru" value="Двери"/>
+            <column name="name_pl" value="Drzwi"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_categories">
+            <column name="code" value="windows"/>
+            <column name="name_ru" value="Окна"/>
+            <column name="name_pl" value="Okna"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -32,5 +32,7 @@
     <include file="database_files/changesets/025-seed-room-types-resource.xml"/>
     <include file="database_files/changesets/026-create-work-categories.xml"/>
     <include file="database_files/changesets/027-seed-work-categories-resource.xml"/>
+    <include file="database_files/changesets/028-create-delivery-categories.xml"/>
+    <include file="database_files/changesets/029-seed-delivery-categories-resource.xml"/>
 
 </databaseChangeLog>

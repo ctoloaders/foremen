@@ -21,6 +21,7 @@
     "vatRates": "Stawki VAT",
     "roomTypes": "Typy pomieszczeń",
     "workCategories": "Kategorie prac",
+    "deliveryCategories": "Kategorie dostaw",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -411,6 +412,60 @@
     "validation": {
       "codeRequired": "Kod jest wymagany",
       "codePattern": "Kod może zawierać tylko małe litery i cyfry (maks. 50 znaków)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "deliveryCategories": {
+    "pageTitle": "Kategorie dostaw",
+    "search": {
+      "placeholder": "Szukaj kategorii dostaw..."
+    },
+    "actions": {
+      "create": "Utwórz kategorię dostawy",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono kategorii dostaw"
+    },
+    "table": {
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "form": {
+      "titleCreate": "Utwórz kategorię dostawy",
+      "titleEdit": "Edytuj kategorię dostawy",
+      "descriptionCreate": "Wypełnij dane nowej kategorii dostawy",
+      "descriptionEdit": "Zmień dane kategorii dostawy",
+      "code": "Kod",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywna",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć kategorię dostawy?",
+      "description": "Czy na pewno chcesz usunąć kategorię dostawy \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Kategoria dostawy została utworzona",
+      "updateSuccess": "Kategoria dostawy została zaktualizowana",
+      "deleteSuccess": "Kategoria dostawy została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko małe litery, cyfry i podkreślenia (maks. 50 znaków)",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 100 znaków"
     }

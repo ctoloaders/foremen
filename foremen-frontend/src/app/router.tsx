@@ -26,6 +26,9 @@ const RoomTypesPage = React.lazy(() => import('@/features/room-types/RoomTypesPa
 const WorkCategoriesPage = React.lazy(
   () => import('@/features/work-categories/WorkCategoriesPage')
 )
+const DeliveryCategoriesPage = React.lazy(
+  () => import('@/features/delivery-categories/DeliveryCategoriesPage')
+)
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
@@ -157,6 +160,10 @@ export const router = createBrowserRouter([
               {
                 path: 'work-categories',
                 element: <SuspenseWrapper><WorkCategoriesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'delivery-categories',
+                element: <SuspenseWrapper><DeliveryCategoriesPage /></SuspenseWrapper>,
               },
               {
                 path: 'audit',
