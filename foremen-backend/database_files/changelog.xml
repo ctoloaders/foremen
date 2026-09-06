@@ -30,5 +30,7 @@
     <include file="database_files/changesets/023-seed-vat-rates-resource.xml"/>
     <include file="database_files/changesets/024-create-room-types.xml"/>
     <include file="database_files/changesets/025-seed-room-types-resource.xml"/>
+    <include file="database_files/changesets/026-create-work-categories.xml"/>
+    <include file="database_files/changesets/027-seed-work-categories-resource.xml"/>
 
 </databaseChangeLog>

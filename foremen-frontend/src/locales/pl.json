@@ -20,6 +20,7 @@
     "currencies": "Waluty",
     "vatRates": "Stawki VAT",
     "roomTypes": "Typy pomieszczeń",
+    "workCategories": "Kategorie prac",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -410,6 +411,63 @@
     "validation": {
       "codeRequired": "Kod jest wymagany",
       "codePattern": "Kod może zawierać tylko małe litery i cyfry (maks. 50 znaków)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "workCategories": {
+    "pageTitle": "Kategorie prac",
+    "search": {
+      "placeholder": "Szukaj kategorii prac..."
+    },
+    "actions": {
+      "create": "Utwórz kategorię prac",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono kategorii prac"
+    },
+    "table": {
+      "orderNo": "Kolejność",
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "form": {
+      "titleCreate": "Utwórz kategorię prac",
+      "titleEdit": "Edytuj kategorię prac",
+      "descriptionCreate": "Wypełnij dane nowej kategorii prac",
+      "descriptionEdit": "Zmień dane kategorii prac",
+      "code": "Kod",
+      "orderNo": "Kolejność",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywna",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć kategorię prac?",
+      "description": "Czy na pewno chcesz usunąć kategorię prac \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Kategoria prac została utworzona",
+      "updateSuccess": "Kategoria prac została zaktualizowana",
+      "deleteSuccess": "Kategoria prac została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko wielkie litery, cyfry i podkreślenia (maks. 50 znaków)",
+      "orderNoRequired": "Kolejność jest wymagana (liczba całkowita ≥ 0)",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 100 znaków"
     }

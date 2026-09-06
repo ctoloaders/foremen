@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed WORK_CATEGORIES resource into resources table -->
+    <changeSet id="027-seed-work-categories-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'WORK_CATEGORIES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="WORK_CATEGORIES"/>
+            <column name="name_ru" value="Категории работ"/>
+            <column name="name_pl" value="Kategorie prac"/>
+            <column name="description_ru" value="Справочник категорий работ"/>
+            <column name="description_pl" value="Katalog kategorii prac"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on WORK_CATEGORIES resource -->
+    <changeSet id="027-seed-work-categories-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'WORK_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on WORK_CATEGORIES resource -->
+    <changeSet id="027-seed-work-categories-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'WORK_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on WORK_CATEGORIES resource -->
+    <changeSet id="027-seed-work-categories-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'WORK_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on WORK_CATEGORIES resource -->
+    <changeSet id="027-seed-work-categories-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'WORK_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on WORK_CATEGORIES resource -->
+    <changeSet id="027-seed-work-categories-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'WORK_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the WORK_CATEGORIES grants
+        (deny-by-default). Custom (non-system) roles likewise receive no grant here.
+    -->
+
+    <!-- Seed the thirteen default work categories (Polish names authoritative, orderNo 1..13) -->
+    <changeSet id="027-seed-work-categories-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_categories</sqlCheck>
+        </preConditions>
+
+        <insert tableName="work_categories">
+            <column name="code" value="PRELIMINARY"/>
+            <column name="order_no" valueNumeric="1"/>
+            <column name="name_ru" value="Подготовительные работы, демонтажи"/>
+            <column name="name_pl" value="PRACE WSTĘPNE, DEMONTAŻE"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="CONSTRUCTIONS_GK"/>
+            <column name="order_no" valueNumeric="2"/>
+            <column name="name_ru" value="Конструкции и ГК"/>
+            <column name="name_pl" value="KONSTRUKCJE I GK"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="PLUMBING_ROUGH"/>
+            <column name="order_no" valueNumeric="3"/>
+            <column name="name_ru" value="Сантехника черновая"/>
+            <column name="name_pl" value="HYDRAULIKA STAN SUROWY"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="PLUMBING_FINISH"/>
+            <column name="order_no" valueNumeric="4"/>
+            <column name="name_ru" value="Сантехника чистовая"/>
+            <column name="name_pl" value="HYDRAULIKA BIAŁY MONTAŻ"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="ELECTRICAL_ROUGH"/>
+            <column name="order_no" valueNumeric="5"/>
+            <column name="name_ru" value="Электрика черновая"/>
+            <column name="name_pl" value="ELEKTRYKA STAN SUROWY"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="ELECTRICAL_FINISH"/>
+            <column name="order_no" valueNumeric="6"/>
+            <column name="name_ru" value="Электрика чистовая"/>
+            <column name="name_pl" value="ELEKTRYKA BIAŁY MONTAŻ"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="TILING"/>
+            <column name="order_no" valueNumeric="7"/>
+            <column name="name_ru" value="Плиточные работы"/>
+            <column name="name_pl" value="PRACE GLAZURNICZE"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="PLASTERING"/>
+            <column name="order_no" valueNumeric="8"/>
+            <column name="name_ru" value="Шпаклёвка, подготовка основания"/>
+            <column name="name_pl" value="GŁADZIE, PRZYGOTOWANIE PODŁOŻA"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="PAINTING_DECOR"/>
+            <column name="order_no" valueNumeric="9"/>
+            <column name="name_ru" value="Малярные работы, лепнина, декор"/>
+            <column name="name_pl" value="PRACE MALARSKIE, SZTUKATERIA, DEKOR"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="FLOORS"/>
+            <column name="order_no" valueNumeric="10"/>
+            <column name="name_ru" value="Полы"/>
+            <column name="name_pl" value="POSADZKI"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="CARPENTRY"/>
+            <column name="order_no" valueNumeric="11"/>
+            <column name="name_ru" value="Столярка"/>
+            <column name="name_pl" value="STOLARKA"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="EXTRAS"/>
+            <column name="order_no" valueNumeric="12"/>
+            <column name="name_ru" value="Дополнения"/>
+            <column name="name_pl" value="DODATKI"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="work_categories">
+            <column name="code" value="OTHER"/>
+            <column name="order_no" valueNumeric="13"/>
+            <column name="name_ru" value="Прочее / координация / нестандартное"/>
+            <column name="name_pl" value="INNE / KOORDYNACJA / NIESTANDARDOWE"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

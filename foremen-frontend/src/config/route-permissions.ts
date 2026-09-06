@@ -32,6 +32,9 @@ const extra: Record<string, PermissionRequirement> = {
   // FOR-04-05: interim guard for the Room Types page until the FOR-04-15
   // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
   '/room-types': { resource: 'ROOM_TYPES', operation: 'READ' },
+  // FOR-04-06: interim guard for the Work Categories page until the FOR-04-15
+  // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
+  '/work-categories': { resource: 'WORK_CATEGORIES', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {
