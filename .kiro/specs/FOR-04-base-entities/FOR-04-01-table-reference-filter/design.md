@@ -156,3 +156,56 @@ Property-based testing **applies** to the pure filter-emission function (selecte
 - PBT: the filter-emission function property above.
 
 Follow the repo test-execution rules: run only the affected test classes/files and read results from a temp log / JUnit XML; do not run the full suite.
+
+## Mobile & Table UX fixes (Requirement 7)
+
+These fixes harden the shared DataTable so the reference filter (and all filters/sorts) are usable on mobile. They are layout/interaction changes to the existing DataTable, not new backend surface.
+
+### 5. Layout — sticky controls, scroll container
+
+Restructure the DataTable into three regions inside a fixed-height flex column so the body scrolls independently:
+
+```
+DataTable (flex column, height: 100% of its viewport slot)
+├─ Header region  (flex-shrink:0, sticky top)   → search input + filters toggle + applied summary
+├─ Body region    (flex:1, overflow-y:auto)      → rows (desktop) / entity cards (mobile)
+└─ Footer region  (flex-shrink:0, sticky bottom) → pagination
+```
+
+- Header and footer are `flex-shrink: 0`; the body is the only scroll container (`overflow-y:auto`, `min-height:0` so flex children can shrink). This keeps search/filters visible at the top and pagination at the bottom from any scroll position (Req 7.5), replacing today's single-page scroll where mid-list hides both.
+- On mobile the same three-region structure applies within the mobile card layout.
+- Desktop layout must not regress: the same structure degrades to the existing table with a sticky header row and a fixed footer (Req 7.8).
+
+### 6. Filters panel — interactivity, collapse, applied summary
+
+- **Interactivity fix (Req 7.2):** the expanded filters panel must be a normal in-flow interactive region (correct stacking context, no `pointer-events:none`, no covering overlay, no `z-index` trap). Root-cause the current "nothing clickable" defect (likely an overlay/portal/z-index or a transform-created stacking context on the collapsible) and fix it so inputs, dropdowns, checkboxes, the reference filter, and apply/clear all receive clicks.
+- **Toggle label (Req 7.1):** add the missing i18n key for the filters toggle (`dataTable.filters.toggle`) and audit all DataTable control labels for unresolved keys; every label resolves in PL and RU.
+- **Apply / collapse / summary (Req 7.6, 7.7):**
+  - The panel has an explicit "Apply" affordance (or applies on change, then collapses). On apply, the panel collapses (toggle returns to closed) and a **summary chip/row** renders in the header showing counts: `{filtersCount} filters · {sortsCount} sorts` (localized, with proper plural handling in PL/RU).
+  - The summary is itself the reopen control (click → expand panel to review/edit).
+  - A "Clear all" action is available from the collapsed summary state, resetting all column filters and sorts and refreshing the table.
+  - `filtersCount` = number of columns with an active filter (a reference filter with ≥1 selected id counts as one); `sortsCount` = number of active sort clauses.
+
+### 7. Sorting UX (Req 7.3)
+
+- Provide an explicit sort control: on desktop, sortable column headers expose an ascending/descending toggle with a visible active-direction indicator; on mobile (cards), a "Sort" section inside the filters panel lets the user pick the sort field and direction.
+- Chosen sort maps to the existing Spring `sort=field,(asc|desc)` param (multi-sort appends multiple `sort` params, consistent with current backend). The active sort is reflected in the header indicator and counted in the applied summary.
+
+### 8. Entity cards — uniform height & alignment (Req 7.4)
+
+- The mobile entity card is a fixed template: a consistent set of label→value rows with uniform vertical rhythm. Use a consistent min-height and a label/value grid (`grid-template-columns: auto 1fr` or a two-line stacked layout) so labels left-align and values align consistently across all cards.
+- Missing/empty values render a consistent placeholder (e.g. "—") so a card's height and alignment do not depend on which fields are populated.
+- Cards in a list therefore share the same height and value alignment regardless of content length (long values truncate/ellipsize within the fixed cell).
+
+### i18n keys (PL + RU) added by Requirement 7
+
+`dataTable.filters.toggle`, `dataTable.filters.apply`, `dataTable.filters.clearAll`, `dataTable.filters.summary` (with count interpolation / plural forms), `dataTable.sort.label`, `dataTable.sort.asc`, `dataTable.sort.desc`, plus any other currently-unresolved DataTable control keys surfaced by the audit. All added to both `pl.json` and `ru.json`.
+
+### Testing additions for Requirement 7
+
+- Component tests (jsdom): expanded panel controls are clickable and update filter state; apply collapses the panel and renders the summary with correct `{filters, sorts}` counts; the summary reopens the panel; clear-all resets filters/sorts; the filters toggle renders a resolved label (no raw key).
+- Sorting: choosing a column sort emits `sort=field,dir` and reflects the active direction; multi-sort appends params; summary counts sorts.
+- Cards: given rows with varying field population, all rendered cards report equal height and consistent label/value alignment (assert consistent structure/classes; empty values show the placeholder).
+- Sticky layout: header and footer regions are outside the scrollable body container (assert the DOM structure / overflow container), so they remain visible while the body scrolls. (jsdom cannot measure real scroll pinning; the browser-engine UI test-cases cover visual pinning.)
+- No desktop regression: existing DataTable desktop tests continue to pass.
+- PBT (optional): the applied-summary counter is a pure function of active-filters/active-sorts state — a small property test (counts equal the number of active entries) may be added.

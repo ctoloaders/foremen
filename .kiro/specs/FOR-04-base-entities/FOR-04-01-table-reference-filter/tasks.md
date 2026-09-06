@@ -86,13 +86,45 @@
 - [ ] 8. Checkpoint - Ensure all tests pass
   - Run only the affected frontend test files + backend classes; read results from a temp log.
 
-- [ ] 9. Author test-cases.md
-  - Create `test-cases.md` in the spec folder following the `.kiro/steering/test-cases.md` standard (feature grouping, step-by-step scenarios, repeatability via generator/clean-up, regression group, MD report template). This spec has both an API surface and browser screens: include API tests against the Dockerized app (metadata reference descriptor, options endpoint ordering/search/pagination/permission, `role.id==` and `role.id=in=(...)` filtering) and browser-engine UI scenarios for the reference dropdown (infinite scroll, search, single/multi select, clear, mode toggle). Result artifacts are MD reports with tables.
-  - _Requirements: 1, 2, 3, 4, 5, 6_
+- [ ] 9. Mobile & table UX fixes (Requirement 7)
+  - [ ] 9.1 Fix DataTable control i18n keys (filters toggle)
+    - Add the missing `dataTable.filters.toggle` key and audit all DataTable control labels for unresolved keys; add every key to `pl.json` and `ru.json`; assert no raw i18n keys render
+    - _Requirements: 7.1_
 
-- [ ] 10. Final checkpoint - Ensure all tests pass
+  - [ ] 9.2 Restructure DataTable into sticky header / scrollable body / sticky footer
+    - Wrap the table in a fixed-height flex column: header region (search + filters toggle + summary, `flex-shrink:0`), body region (rows/cards, `flex:1`, `overflow-y:auto`, `min-height:0`), footer region (pagination, `flex-shrink:0`); keep search+toggle pinned top and pagination pinned bottom from any scroll position; apply on mobile without regressing desktop
+    - _Requirements: 7.5, 7.8_
+
+  - [ ] 9.3 Fix filters-panel interactivity
+    - Root-cause and fix the "nothing clickable in expanded panel" defect (overlay / z-index / stacking context / pointer-events); ensure inputs, dropdowns, checkboxes, the reference filter, and apply/clear all receive clicks inside the expanded panel
+    - _Requirements: 7.2, 7.9_
+
+  - [ ] 9.4 Implement apply → collapse → applied summary
+    - On apply, collapse the panel (toggle closes) and render a localized summary chip showing `{filtersCount} filters · {sortsCount} sorts`; make the summary reopen the panel; add a "Clear all" action from the collapsed state that resets filters+sorts and refreshes; count a reference filter with ≥1 selected id as one filter; PL/RU plural handling
+    - _Requirements: 7.6, 7.7_
+
+  - [ ] 9.5 Implement explicit sorting UX
+    - Add an ascending/descending sort control per sortable column (desktop header indicator) and a "Sort" section in the mobile filters panel; map to `sort=field,(asc|desc)` (multi-sort appends params); reflect active direction and count sorts in the summary
+    - _Requirements: 7.3_
+
+  - [ ] 9.6 Make entity cards uniform (mobile)
+    - Render mobile cards from a fixed template with uniform min-height and a consistent label/value grid; left-align labels, align values consistently; render a placeholder ("—") for empty values so height/alignment do not depend on populated fields; truncate long values
+    - _Requirements: 7.4_
+
+  - [ ] 9.7 Write UX component/layout tests
+    - Expanded panel controls are clickable and update state; apply collapses panel + renders summary with correct counts; summary reopens; clear-all resets; toggle label resolved (no raw key); sort control emits `sort=field,dir` and counts; cards report equal height + consistent alignment with empty-value placeholder; header/footer are outside the scrollable body container; desktop DataTable tests still pass
+    - _Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9_
+
+- [ ] 10. Checkpoint - Ensure all tests pass
+  - Run only the affected frontend test files + backend classes; read results from a temp log.
+
+- [ ] 11. Author test-cases.md
+  - Create `test-cases.md` in the spec folder following the `.kiro/steering/test-cases.md` standard (feature grouping, step-by-step scenarios, repeatability via generator/clean-up, regression group, MD report template). This spec has both an API surface and browser screens: include API tests against the Dockerized app (metadata reference descriptor, options endpoint ordering/search/pagination/permission, `role.id==` and `role.id=in=(...)` filtering) and browser-engine UI scenarios for the reference dropdown (infinite scroll, search, single/multi select, clear, mode toggle) AND the mobile/table UX fixes (resolved toggle label, clickable filters panel, sticky search/toggle top + pagination bottom while scrolling mid-list, uniform card height/alignment, apply→collapse→applied-summary, sorting UX). Result artifacts are MD reports with tables.
+  - _Requirements: 1, 2, 3, 4, 5, 6, 7_
+
+- [ ] 12. Final checkpoint - Ensure all tests pass
   - Ensure the backend build compiles and the affected frontend + backend tests pass (per the test-execution rules — targeted runs, not the full suite).
-  - _Requirements: 1.1, 2.1, 3.4, 4.2, 5.1, 5.2_
+  - _Requirements: 1.1, 2.1, 3.4, 4.2, 5.1, 5.2, 7.1, 7.2, 7.5, 7.6_
 
 ## Notes
 

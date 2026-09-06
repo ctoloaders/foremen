@@ -92,3 +92,19 @@ The backend query grammar already supports equality (`==`), the `=in=` operator,
 2. THE System SHALL localize the reference filter's UI chrome (search placeholder, empty-state, loading, "select"/"clear" affordances, single/multi toggle) via i18n keys present in both `pl.json` and `ru.json`.
 3. THE System SHALL order options alphabetically by the locale-resolved name so ordering matches what the user reads.
 4. WHILE options are loading, THE System SHALL show a loading indication; WHEN no options match a search, THE System SHALL show a localized empty-state.
+
+### Requirement 7: Mobile and table UX fixes for the DataTable
+
+**User Story:** As a user on mobile, I want the table's filters, sorting, cards, and scroll to be ergonomic and functional, so that I can actually search, filter, sort, and browse records comfortably.
+
+#### Acceptance Criteria
+
+1. THE System SHALL resolve every DataTable control label — including the filters toggle (currently the unresolved key `dataTable.filters.toggle`) — to a localized string present in both `pl.json` and `ru.json`, with no raw i18n keys rendered in the UI.
+2. WHEN the filters panel is expanded, THE System SHALL make all controls inside it interactive (inputs, dropdowns, checkboxes, apply/clear, and the reference filter) so that filters can be entered and applied; no control inside the expanded panel SHALL be non-clickable or blocked by an overlay/z-index/pointer-events defect.
+3. THE System SHALL provide an explicit, discoverable sorting control per sortable column (and/or a sort section in the filters panel) that lets the user choose the sort field and direction (ascending/descending), and WHEN a sort is chosen, THE System SHALL apply it via the existing `sort` parameter and reflect the active sort in the UI.
+4. THE System SHALL render entity cards (the mobile row representation) with a consistent, uniform height and consistent alignment of labels and values, so that cards in a list do not vary in height or value centering.
+5. WHILE the user scrolls the table body, THE System SHALL keep the top controls region (search input and filters toggle) pinned/sticky at the top and the pagination controls pinned/sticky at the bottom, so that both remain visible from anywhere in the list (not only at the extreme top/bottom).
+6. WHEN the user applies filters and/or sorting from the expanded panel, THE System SHALL collapse the filters panel (the toggle returns to its closed state) and SHALL display a summary indicating how many filters and how many sorts are currently applied (e.g. "N filters, M sorts"), localized in PL and RU.
+7. WHEN one or more filters/sorts are active, THE System SHALL make the summary a control that reopens the panel to review or change them, and SHALL provide a way to clear all applied filters/sorts from the collapsed summary state.
+8. THE System SHALL apply the sticky top/bottom regions, uniform cards, working filter interactions, and applied-summary behavior consistently at mobile breakpoints and SHALL NOT regress the desktop table layout.
+9. THE System SHALL keep the reference filter (Requirements 3–6) fully functional inside the fixed/collapsible filters panel on mobile, including infinite scroll and backend search within the panel's scroll context.
