@@ -28,5 +28,7 @@
     <include file="database_files/changesets/021-seed-currencies-resource.xml"/>
     <include file="database_files/changesets/022-create-vat-rates.xml"/>
     <include file="database_files/changesets/023-seed-vat-rates-resource.xml"/>
+    <include file="database_files/changesets/024-create-room-types.xml"/>
+    <include file="database_files/changesets/025-seed-room-types-resource.xml"/>
 
 </databaseChangeLog>

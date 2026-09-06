@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed ROOM_TYPES resource into resources table -->
+    <changeSet id="025-seed-room-types-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'ROOM_TYPES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="ROOM_TYPES"/>
+            <column name="name_ru" value="Типы помещений"/>
+            <column name="name_pl" value="Typy pomieszczeń"/>
+            <column name="description_ru" value="Справочник типов помещений"/>
+            <column name="description_pl" value="Katalog typów pomieszczeń"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on ROOM_TYPES resource -->
+    <changeSet id="025-seed-room-types-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'ROOM_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'ROOM_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'ROOM_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on ROOM_TYPES resource -->
+    <changeSet id="025-seed-room-types-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'ROOM_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'ROOM_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'ROOM_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on ROOM_TYPES resource -->
+    <changeSet id="025-seed-room-types-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'ROOM_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'ROOM_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'ROOM_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on ROOM_TYPES resource -->
+    <changeSet id="025-seed-room-types-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'ROOM_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'ROOM_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'ROOM_TYPES';
+        </sql>
+    </changeSet>
+
+    <!--
+        FINANCIER and CLIENT are intentionally omitted from the ROOM_TYPES grants
+        (deny-by-default). Unlike MEASUREMENT_UNITS, FINANCIER receives NO grant here.
+        Custom (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- Seed the eight default room types -->
+    <changeSet id="025-seed-room-types-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM room_types</sqlCheck>
+        </preConditions>
+
+        <insert tableName="room_types">
+            <column name="code" value="przedpokoj"/>
+            <column name="name_ru" value="Прихожая"/>
+            <column name="name_pl" value="Przedpokój"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="hol"/>
+            <column name="name_ru" value="Холл"/>
+            <column name="name_pl" value="Hol"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="kuchnia"/>
+            <column name="name_ru" value="Кухня"/>
+            <column name="name_pl" value="Kuchnia"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="salon"/>
+            <column name="name_ru" value="Гостиная"/>
+            <column name="name_pl" value="Salon"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="biuro"/>
+            <column name="name_ru" value="Кабинет"/>
+            <column name="name_pl" value="Biuro"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="master"/>
+            <column name="name_ru" value="Мастер-спальня"/>
+            <column name="name_pl" value="Sypialnia master"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="pokoj"/>
+            <column name="name_ru" value="Комната"/>
+            <column name="name_pl" value="Pokój"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="room_types">
+            <column name="code" value="lazienka"/>
+            <column name="name_ru" value="Ванная"/>
+            <column name="name_pl" value="Łazienka"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -29,6 +29,9 @@ const extra: Record<string, PermissionRequirement> = {
   // FOR-04-04: interim guard for the VAT Rates page until the FOR-04-15
   // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
   '/vat-rates': { resource: 'VAT_RATES', operation: 'READ' },
+  // FOR-04-05: interim guard for the Room Types page until the FOR-04-15
+  // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
+  '/room-types': { resource: 'ROOM_TYPES', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {

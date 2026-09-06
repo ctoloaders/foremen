@@ -19,6 +19,7 @@
     "measurementUnits": "Jednostki miary",
     "currencies": "Waluty",
     "vatRates": "Stawki VAT",
+    "roomTypes": "Typy pomieszczeń",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -347,6 +348,60 @@
       "createSuccess": "Jednostka miary została utworzona",
       "updateSuccess": "Jednostka miary została zaktualizowana",
       "deleteSuccess": "Jednostka miary została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko małe litery i cyfry (maks. 50 znaków)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "roomTypes": {
+    "pageTitle": "Typy pomieszczeń",
+    "search": {
+      "placeholder": "Szukaj typu pomieszczenia..."
+    },
+    "actions": {
+      "create": "Utwórz typ pomieszczenia",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono typów pomieszczeń"
+    },
+    "table": {
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywny",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "form": {
+      "titleCreate": "Utwórz typ pomieszczenia",
+      "titleEdit": "Edytuj typ pomieszczenia",
+      "descriptionCreate": "Wypełnij dane nowego typu pomieszczenia",
+      "descriptionEdit": "Zmień dane typu pomieszczenia",
+      "code": "Kod",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywny",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć typ pomieszczenia?",
+      "description": "Czy na pewno chcesz usunąć typ pomieszczenia \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Typ pomieszczenia został utworzony",
+      "updateSuccess": "Typ pomieszczenia został zaktualizowany",
+      "deleteSuccess": "Typ pomieszczenia został usunięty"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować danych",
