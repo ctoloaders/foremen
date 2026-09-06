@@ -1,4 +1,5 @@
 import type { TableState, ColumnConfig, ColumnFilterState } from '../types'
+import { emitReferenceFragment } from './emitReferenceFragment'
 
 export function buildQueryString(
   state: TableState,
@@ -49,5 +50,10 @@ function buildFilterCondition(filter: ColumnFilterState): string | null {
       if (filter.value === null) return `${filter.field}~null~true`
       return `${filter.field}==${filter.value}`
     }
+    case 'reference':
+      // Empty ids → null (no fragment); one id → `idPath==id`; many →
+      // `idPath~in~id1,id2,...`. Returning null composes with the existing
+      // ' AND ' joiner automatically (Req 5.2, 3.4, 4.2).
+      return emitReferenceFragment(filter.idPath, filter.ids)
   }
 }

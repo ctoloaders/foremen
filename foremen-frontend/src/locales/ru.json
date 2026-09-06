@@ -48,6 +48,17 @@
   "skeleton": {
     "loading": "Загрузка..."
   },
+  "referenceFilter": {
+    "searchPlaceholder": "Поиск...",
+    "loading": "Загрузка...",
+    "empty": "Ничего не найдено",
+    "selectOne": "Выбрать один",
+    "selectMultiple": "Выбрать несколько",
+    "clear": "Очистить",
+    "noAccess": "Нет доступа к списку",
+    "error": "Не удалось загрузить варианты",
+    "retry": "Повторить"
+  },
   "dataTable": {
     "search": {
       "placeholder": "Поиск..."
@@ -71,11 +82,34 @@
         "false": "Нет",
         "null": "Не назначено"
       },
-      "apply": "Применить"
+      "apply": "Применить",
+      "active": "Активен",
+      "open": "Открыть фильтр",
+      "clear": "Очистить фильтр"
     },
     "filters": {
+      "toggle": "Фильтры",
+      "apply": "Применить",
       "clearAll": "Сбросить фильтры",
-      "activeCount": "Активных фильтров: {{count}}"
+      "activeCount": "Активных фильтров: {{count}}",
+      "summaryFilters_one": "{{count}} фильтр",
+      "summaryFilters_few": "{{count}} фильтра",
+      "summaryFilters_many": "{{count}} фильтров",
+      "summaryFilters_other": "{{count}} фильтра",
+      "summarySorts_one": "{{count}} сортировка",
+      "summarySorts_few": "{{count}} сортировки",
+      "summarySorts_many": "{{count}} сортировок",
+      "summarySorts_other": "{{count}} сортировки",
+      "summarySeparator": " · ",
+      "summaryLabel": "Применённые фильтры"
+    },
+    "sort": {
+      "label": "Сортировка",
+      "asc": "По возрастанию",
+      "desc": "По убыванию",
+      "none": "Без сортировки",
+      "toggle": "Изменить сортировку",
+      "sortable": "Нажмите для сортировки"
     },
     "empty": {
       "filtered": "Нет результатов. Попробуйте изменить фильтры."

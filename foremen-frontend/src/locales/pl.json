@@ -48,6 +48,17 @@
   "skeleton": {
     "loading": "Ładowanie..."
   },
+  "referenceFilter": {
+    "searchPlaceholder": "Szukaj...",
+    "loading": "Ładowanie...",
+    "empty": "Brak wyników",
+    "selectOne": "Wybierz jeden",
+    "selectMultiple": "Wybierz wiele",
+    "clear": "Wyczyść",
+    "noAccess": "Brak dostępu do listy",
+    "error": "Nie udało się załadować opcji",
+    "retry": "Ponów"
+  },
   "dataTable": {
     "search": {
       "placeholder": "Szukaj..."
@@ -71,11 +82,34 @@
         "false": "Nie",
         "null": "Nie przypisano"
       },
-      "apply": "Zastosuj"
+      "apply": "Zastosuj",
+      "active": "Aktywny",
+      "open": "Otwórz filtr",
+      "clear": "Wyczyść filtr"
     },
     "filters": {
+      "toggle": "Filtry",
+      "apply": "Zastosuj",
       "clearAll": "Wyczyść filtry",
-      "activeCount": "Aktywne filtry: {{count}}"
+      "activeCount": "Aktywne filtry: {{count}}",
+      "summaryFilters_one": "{{count}} filtr",
+      "summaryFilters_few": "{{count}} filtry",
+      "summaryFilters_many": "{{count}} filtrów",
+      "summaryFilters_other": "{{count}} filtra",
+      "summarySorts_one": "{{count}} sortowanie",
+      "summarySorts_few": "{{count}} sortowania",
+      "summarySorts_many": "{{count}} sortowań",
+      "summarySorts_other": "{{count}} sortowania",
+      "summarySeparator": " · ",
+      "summaryLabel": "Zastosowane filtry"
+    },
+    "sort": {
+      "label": "Sortowanie",
+      "asc": "Rosnąco",
+      "desc": "Malejąco",
+      "none": "Bez sortowania",
+      "toggle": "Zmień sortowanie",
+      "sortable": "Kliknij, aby sortować"
     },
     "empty": {
       "filtered": "Brak wyników. Spróbuj zmienić filtry."

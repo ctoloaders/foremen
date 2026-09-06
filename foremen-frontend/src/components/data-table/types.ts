@@ -6,6 +6,24 @@ export type ColumnDataType = 'string' | 'number' | 'date' | 'boolean'
 /** Sort direction */
 export type SortDirection = 'asc' | 'desc'
 
+/**
+ * Reference (association) descriptor mirroring the backend
+ * {@code MetadataResponse.ReferenceInfo} record. Emitted for
+ * `@ManyToOne`/`@OneToOne` fields and used to render a reference filter.
+ */
+export interface ReferenceInfo {
+  /** Target resource code / API path segment (e.g. "roles") */
+  targetResource: string
+  /** Options list endpoint (e.g. "/api/roles") */
+  optionsPath: string
+  /** Display label field on the target entity (e.g. "name") */
+  labelField: string
+  /** Whether the label field is localized (nameRU/namePL) */
+  labelI18n: boolean
+  /** Id filter path composed with the query grammar (e.g. "role.id") */
+  idPath: string
+}
+
 /** Single column configuration */
 export interface ColumnConfig<T = unknown> {
   /** Field identifier (dot-notation for nested, e.g. "role.name") */
@@ -24,6 +42,12 @@ export interface ColumnConfig<T = unknown> {
   render?: (value: unknown, row: T) => React.ReactNode
   /** Minimum column width (CSS) */
   minWidth?: string
+  /**
+   * Reference descriptor, present when this column maps to a
+   * `@ManyToOne`/`@OneToOne` field. When set, the DataTable renders a
+   * reference filter instead of the default filter for the column.
+   */
+  reference?: ReferenceInfo
 }
 
 /** Active sort state */
@@ -63,12 +87,38 @@ export interface BooleanFilterState {
   value: true | false | null  // null means "is null / not assigned"
 }
 
+/**
+ * Active filter for a reference (association) column.
+ *
+ * The DataTable owns the per-column selected ids here so they participate in
+ * the table's filter/URL/localStorage state (Req 5.1) and survive a
+ * reload/restore. It is plain JSON, so it round-trips through the localStorage
+ * persistence layer without special handling.
+ *
+ * There is no explicit single/multi mode: the selection is just a set of ids.
+ * Clicking an option's name replaces the selection with that one id; clicking
+ * its checkbox toggles membership. So the state carries only `ids`.
+ *
+ * - `ids`: selected target-entity ids. An empty array means the filter is
+ *   inactive — {@link buildQueryString} emits no fragment for it.
+ * - `idPath`: the reference field's id filter path (e.g. `role.id`), copied
+ *   from the column's {@link ReferenceInfo} so the query builder can compose
+ *   the fragment without re-reading column metadata.
+ */
+export interface ReferenceFilterState {
+  type: 'reference'
+  field: string
+  ids: number[]
+  idPath: string
+}
+
 /** Union type for all filters */
 export type ColumnFilterState =
   | StringFilterState
   | NumberFilterState
   | DateFilterState
   | BooleanFilterState
+  | ReferenceFilterState
 
 /** Full table state */
 export interface TableState {
@@ -136,4 +186,10 @@ export interface FieldMetadata {
   dataType: 'STRING' | 'NUMBER' | 'DATE' | 'BOOLEAN' | 'ENUM'
   i18n: boolean
   nested?: FieldMetadata[]
+  /**
+   * Reference descriptor, present (non-null) for `@ManyToOne`/`@OneToOne`
+   * fields; absent for scalar fields. Mirrors the backend
+   * {@code FieldInfo.reference} component.
+   */
+  reference?: ReferenceInfo
 }

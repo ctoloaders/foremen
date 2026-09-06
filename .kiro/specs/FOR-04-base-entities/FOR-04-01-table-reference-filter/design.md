@@ -86,6 +86,21 @@ No new endpoint. The dropdown calls the **target resource's existing list endpoi
 
 Design decision (Req 2.6): reuse the list endpoint. A dedicated `/options` projection is only introduced if profiling shows the full DTO is too heavy; not required for FOR-04-01.
 
+**Verified (Task 3.1) — reuse the full list DTO, no options projection.** The existing guarded list endpoint (`AdminReadOnlyController.find` → `ReadOnlyAdminService.find(pageable, query)`) already returns name-ordered, name-filtered, paginated options with no new code:
+
+- **Ordering:** `processSort` resolves an i18n `name` sort to the locale column via `getI18nSupportedProperties()` (`RoleServiceMapper` declares `name`), so `sort=name,asc` orders ascending by `nameRU`/`namePL` per `Accept-Language` (Req 2.1, 2.3).
+- **Search:** `parseSpecification` → `QueryParser.parse` resolves the i18n field the same way, so the contains filter matches the locale name case-insensitively, preserving the sort (Req 2.2).
+- **Pagination / more-pages:** the returned Spring `Page<ServiceModel>` carries `totalPages`/`last`/`number`, which drive infinite scroll (Req 2.4).
+- **Authorization:** the endpoint resolves to `<TARGET>`/`READ` via `@PermissionResource` + `@PermissionOperation("READ")` (FOR-03-08), so a caller without READ gets 403 (Req 2.5).
+- **DTO weight:** the list DTO is lightweight (e.g. `RoleDtoModel` = `id, code, name, description, system`; `name` already locale-resolved by the mapper). A dropdown-options payload is small, so **no lightweight projection is added** — the full list DTO is reused (Req 2.6).
+
+> **Operator-symbol correction (applies to Tasks 3.2, 3.3, 5.2, 6.1).** The implemented query grammar (`QueryOperator` / `QueryTokenizer`) uses **tilde-wrapped** operators, not the RSQL-style `=ct=`/`=in=` used illustratively in the requirements/tasks text. The real symbols are:
+> - equality: `==` (e.g. `role.id==5`) — matches the spec text.
+> - contains (case-insensitive): `~ct~` (e.g. `name~ct~<term>`) — the spec's `name=ct=` should be read as `name~ct~`.
+> - set membership: `~in~` with comma-joined values, **no parentheses** (e.g. `role.id~in~5,7`) — the spec's `role.id=in=(5,7)` should be read as `role.id~in~5,7`.
+>
+> Downstream option requests and the frontend filter-fragment emitter (Task 5.2) MUST emit these tilde-wrapped symbols. The options request is therefore `GET /api/{target}?sort=name,asc&query=name~ct~<term>&page&size`.
+
 ### 3. Frontend — `ReferenceFilter` component
 
 A single reusable component under the data-table feature, consumed by the DataTable when a column's metadata has a `reference` descriptor.

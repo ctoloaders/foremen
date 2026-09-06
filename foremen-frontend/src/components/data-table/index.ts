@@ -1,12 +1,14 @@
 export type {
   ColumnDataType,
   SortDirection,
+  ReferenceInfo,
   ColumnConfig,
   SortState,
   StringFilterState,
   NumberFilterState,
   DateFilterState,
   BooleanFilterState,
+  ReferenceFilterState,
   ColumnFilterState,
   TableState,
   DataTableProps,
@@ -18,7 +20,13 @@ export type {
 
 export { AuditModal } from './AuditModal'
 export { DataTable } from './DataTable'
+export { ReferenceFilter } from './ReferenceFilter'
+export type {
+  ReferenceFilterProps,
+  ReferenceOption,
+} from './ReferenceFilter'
 export { useDataTable } from './hooks/useDataTable'
+export { buildFetchQuery } from './utils/buildFetchQuery'
 export { DataTableSkeleton } from './DataTableSkeleton'
 export { DataTableEmpty } from './DataTableEmpty'
 export { DataTableHeader } from './DataTableHeader'

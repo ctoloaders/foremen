@@ -59,6 +59,16 @@ const columns: ColumnConfig<UserDto>[] = [
     filterable: true,
     searchable: true,
     minWidth: '120px',
+    // Reference-entity filter (FOR-04-01, Req 5.3/5.4): the column keeps its
+    // `roleName` display/sort, but the header filter renders a ReferenceFilter
+    // that emits `role.id==<id>` / `role.id=in=(<id1>,<id2>)` fragments.
+    reference: {
+      targetResource: 'ROLES',
+      optionsPath: '/api/roles',
+      labelField: 'name',
+      labelI18n: true,
+      idPath: 'role.id',
+    },
   },
   {
     field: 'active',

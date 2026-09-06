@@ -85,6 +85,7 @@ export function RolesListTab({
       page: params.page,
       size: params.size,
       query: params.query || undefined,
+      sort: params.sort,
     })
 
     return {

@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/api-client'
+import { buildFetchQuery } from '@/components/data-table'
 import type {
   FetchParams,
   PaginatedResponse,
@@ -27,15 +28,9 @@ export { ApiError } from '@/lib/api-client'
  * `401` via single-flight refresh/retry and forced logout + redirect.
  */
 export async function fetchUsers(params: FetchParams): Promise<PaginatedResponse<UserDto>> {
-  const searchParams = new URLSearchParams()
-  searchParams.set('page', String(params.page))
-  searchParams.set('size', String(params.size))
-  if (params.query) searchParams.set('query', params.query)
-  for (const sortEntry of params.sort) {
-    searchParams.append('sort', sortEntry)
-  }
-
-  const data = await apiRequest<PaginatedResponse<UserDto>>(`${BASE_URL}/users?${searchParams}`)
+  const data = await apiRequest<PaginatedResponse<UserDto>>(
+    `${BASE_URL}/users?${buildFetchQuery(params)}`,
+  )
 
   return {
     ...data,

@@ -49,12 +49,17 @@ export function fetchRoles(params: {
   page?: number
   size?: number
   query?: string
+  sort?: string[]
 }): Promise<PaginatedResponse<RoleDto>> {
   const searchParams = new URLSearchParams()
   if (params.page != null) searchParams.set('page', String(params.page))
   if (params.size != null) searchParams.set('size', String(params.size))
   if (params.query) searchParams.set('query', params.query)
-  return apiRequest<PaginatedResponse<RoleDto>>(`${BASE_URL}/roles?${searchParams}`)
+  for (const sortEntry of params.sort ?? []) {
+    searchParams.append('sort', sortEntry)
+  }
+  const qs = searchParams.toString().replace(/%7E/gi, '~')
+  return apiRequest<PaginatedResponse<RoleDto>>(`${BASE_URL}/roles?${qs}`)
 }
 
 export function fetchRolesExtended(params: {

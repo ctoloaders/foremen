@@ -3,10 +3,13 @@ package com.foremen.util;
 import com.foremen.controller.model.MetadataResponse;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.RoleResourceEntity;
+import com.foremen.dao.model.UserEntity;
 import net.jqwik.api.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -245,6 +248,140 @@ class EntityMetadataResolverTest {
                 }
             }
         }
+    }
+
+    // --- Reference Descriptor Tests (FOR-04-01) ---
+
+    /**
+     * Resets the static reference registry after each test so tests that inject a stub registry
+     * (which also clears the metadata cache) do not leak state into other tests. Passing null both
+     * restores the pre-feature "no reference descriptors" behavior and clears the cache.
+     */
+    @AfterEach
+    void resetReferenceRegistry() {
+        EntityMetadataResolver.setReferenceRegistry(null);
+    }
+
+    /**
+     * Stub registry that resolves {@link RoleEntity} to the ROLES resource at {@code /api/roles}
+     * without booting Spring. {@code afterSingletonsInstantiated()} is never invoked, so only the
+     * overridden {@link #lookup(Class)} drives resolution.
+     */
+    private static ReferenceResourceRegistry roleStubRegistry() {
+        return new ReferenceResourceRegistry(null) {
+            @Override
+            public Optional<Reference> lookup(Class<?> entityType) {
+                if (entityType == RoleEntity.class) {
+                    return Optional.of(new Reference("ROLES", "/api/roles"));
+                }
+                return Optional.empty();
+            }
+        };
+    }
+
+    /**
+     * Validates: Requirements 1.1, 1.2, 1.3
+     * A @ManyToOne field (UserEntity.role) yields a ReferenceInfo with idPath=role.id,
+     * targetResource=ROLES / optionsPath=/api/roles (from the injected registry), and an i18n
+     * label field of "name" (RoleEntity has nameRU/namePL).
+     */
+    @Test
+    void resolveUserEntity_emitsReferenceInfoForRoleManyToOne() {
+        EntityMetadataResolver.setReferenceRegistry(roleStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(UserEntity.class);
+
+        var roleField = result.fields().stream()
+                .filter(f -> f.name().equals("role"))
+                .findFirst();
+        assertThat(roleField).isPresent();
+
+        MetadataResponse.ReferenceInfo reference = roleField.get().reference();
+        assertThat(reference).isNotNull();
+        assertThat(reference.idPath()).isEqualTo("role.id");
+        assertThat(reference.targetResource()).isEqualTo("ROLES");
+        assertThat(reference.optionsPath()).isEqualTo("/api/roles");
+        assertThat(reference.labelField()).isEqualTo("name");
+        assertThat(reference.labelI18n()).isTrue();
+    }
+
+    /**
+     * Validates: Requirements 1.4
+     * A scalar field (UserEntity.email) yields no reference descriptor (reference == null).
+     */
+    @Test
+    void resolveUserEntity_scalarFieldHasNoReference() {
+        EntityMetadataResolver.setReferenceRegistry(roleStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(UserEntity.class);
+
+        var emailField = result.fields().stream()
+                .filter(f -> f.name().equals("email"))
+                .findFirst();
+        assertThat(emailField).isPresent();
+        assertThat(emailField.get().reference()).isNull();
+    }
+
+    /**
+     * Validates: Requirements 1.4, 1.5
+     * Backward compatibility: existing FieldInfo shape (name/dataType/i18n) is unchanged for both
+     * scalar and reference fields; scalar fields keep reference == null. The reference field still
+     * carries its dataType and its nested metadata alongside the new descriptor.
+     */
+    @Test
+    void resolveUserEntity_preservesExistingFieldInfoShape() {
+        EntityMetadataResolver.setReferenceRegistry(roleStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(UserEntity.class);
+
+        // Scalar STRING field unchanged
+        var nameField = result.fields().stream()
+                .filter(f -> f.name().equals("name"))
+                .findFirst();
+        assertThat(nameField).isPresent();
+        assertThat(nameField.get().dataType()).isEqualTo(MetadataResponse.DataType.STRING);
+        assertThat(nameField.get().i18n()).isFalse();
+        assertThat(nameField.get().nested()).isNull();
+        assertThat(nameField.get().reference()).isNull();
+
+        // Enum field unchanged
+        var statusField = result.fields().stream()
+                .filter(f -> f.name().equals("status"))
+                .findFirst();
+        assertThat(statusField).isPresent();
+        assertThat(statusField.get().dataType()).isEqualTo(MetadataResponse.DataType.ENUM);
+        assertThat(statusField.get().reference()).isNull();
+
+        // Reference field still exposes its nested metadata (existing behavior) plus the descriptor
+        var roleField = result.fields().stream()
+                .filter(f -> f.name().equals("role"))
+                .findFirst();
+        assertThat(roleField).isPresent();
+        assertThat(roleField.get().nested()).isNotNull().isNotEmpty();
+    }
+
+    /**
+     * Validates: Requirements 1.1
+     * Without a registry (plain unit context), a reference field still emits a descriptor with the
+     * id path and label field, but targetResource/optionsPath are null (no options endpoint known).
+     */
+    @Test
+    void resolveUserEntity_withoutRegistry_emitsReferenceWithoutTargetResource() {
+        // No registry set (reset in @AfterEach guarantees null baseline)
+        MetadataResponse result = EntityMetadataResolver.resolve(UserEntity.class);
+
+        var roleField = result.fields().stream()
+                .filter(f -> f.name().equals("role"))
+                .findFirst();
+        assertThat(roleField).isPresent();
+
+        MetadataResponse.ReferenceInfo reference = roleField.get().reference();
+        assertThat(reference).isNotNull();
+        assertThat(reference.idPath()).isEqualTo("role.id");
+        assertThat(reference.labelField()).isEqualTo("name");
+        assertThat(reference.labelI18n()).isTrue();
+        assertThat(reference.targetResource()).isNull();
+        assertThat(reference.optionsPath()).isNull();
     }
 
     // --- Providers ---

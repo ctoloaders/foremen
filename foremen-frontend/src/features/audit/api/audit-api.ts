@@ -1,4 +1,5 @@
 import { apiRequest } from '@/lib/api-client'
+import { buildFetchQuery } from '@/components/data-table'
 import type { FetchParams, PaginatedResponse } from '@/components/data-table/types'
 import type { AuditRecord } from '../types'
 
@@ -12,13 +13,7 @@ const BASE_URL = '/api'
 export async function fetchAuditRecords(
   params: FetchParams,
 ): Promise<PaginatedResponse<AuditRecord>> {
-  const searchParams = new URLSearchParams()
-  if (params.page != null) searchParams.set('page', String(params.page))
-  if (params.size != null) searchParams.set('size', String(params.size))
-  if (params.query) searchParams.set('query', params.query)
-  for (const sortEntry of params.sort) {
-    searchParams.append('sort', sortEntry)
-  }
-
-  return apiRequest<PaginatedResponse<AuditRecord>>(`${BASE_URL}/audit?${searchParams}`)
+  return apiRequest<PaginatedResponse<AuditRecord>>(
+    `${BASE_URL}/audit?${buildFetchQuery(params)}`,
+  )
 }

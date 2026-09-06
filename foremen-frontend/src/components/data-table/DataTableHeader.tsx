@@ -44,14 +44,34 @@ export function DataTableHeader<T>({
           const isSortable = col.sortable !== false
           const isFilterable = col.filterable !== false
 
+          const ariaSort: 'ascending' | 'descending' | 'none' | undefined =
+            isSortable
+              ? sort
+                ? sort.direction === 'asc'
+                  ? 'ascending'
+                  : 'descending'
+                : 'none'
+              : undefined
+
           return (
-            <TableHead key={col.field} style={{ minWidth: col.minWidth }}>
+            <TableHead
+              key={col.field}
+              style={{ minWidth: col.minWidth }}
+              aria-sort={ariaSort}
+            >
               <div className="flex items-center gap-1">
                 {/* Sortable header */}
                 {isSortable ? (
                   <button
                     type="button"
-                    className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                    className="group flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors"
+                    title={
+                      sort
+                        ? sort.direction === 'asc'
+                          ? t('dataTable.sort.asc')
+                          : t('dataTable.sort.desc')
+                        : t('dataTable.sort.sortable')
+                    }
                     onClick={() =>
                       dispatch({
                         type: 'TOGGLE_SORT',
@@ -60,7 +80,7 @@ export function DataTableHeader<T>({
                     }
                   >
                     <span>{t(col.headerKey)}</span>
-                    {sort && (
+                    {sort ? (
                       <>
                         {sort.direction === 'asc' ? (
                           <ArrowUp className="h-3.5 w-3.5 text-foreground" />
@@ -73,6 +93,14 @@ export function DataTableHeader<T>({
                           </span>
                         )}
                       </>
+                    ) : (
+                      // Unsorted-but-sortable affordance: a faded up-arrow that
+                      // becomes visible on hover so the column reads as an
+                      // explicit ascending/descending sort control (Req 7.3).
+                      <ArrowUp
+                        aria-hidden="true"
+                        className="h-3.5 w-3.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
                     )}
                   </button>
                 ) : (

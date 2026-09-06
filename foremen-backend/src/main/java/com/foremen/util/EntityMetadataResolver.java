@@ -28,7 +28,26 @@ public class EntityMetadataResolver {
 
     private static final Set<String> LOCALE_SUFFIXES = Set.of("RU", "PL");
 
+    /**
+     * Registry resolving a target entity type to its API resource code and base path. Set once at
+     * startup by {@link ReferenceResourceRegistry} (a Spring bean) so this static utility can emit
+     * {@link MetadataResponse.ReferenceInfo} without becoming Spring-managed itself. When null
+     * (e.g. in plain unit tests that do not boot Spring), reference descriptors are simply not
+     * emitted and metadata behaves exactly as before this feature.
+     */
+    private static volatile ReferenceResourceRegistry referenceRegistry;
+
     private EntityMetadataResolver() {}
+
+    /**
+     * Wires the reference registry used to resolve reference descriptors. Called once at startup.
+     * Clears the metadata cache so any entries built before the registry was available are
+     * recomputed with reference descriptors.
+     */
+    static void setReferenceRegistry(ReferenceResourceRegistry registry) {
+        referenceRegistry = registry;
+        CACHE.clear();
+    }
 
     public static MetadataResponse resolve(Class<?> entityClass) {
         MetadataResponse cached = CACHE.get(entityClass);
@@ -90,17 +109,21 @@ public class EntityMetadataResolver {
             MetadataResponse.DataType dataType = mapJavaType(field.getType());
             boolean isI18n = i18nBaseFields.contains(name);
             List<MetadataResponse.FieldInfo> nested = null;
+            MetadataResponse.ReferenceInfo reference = null;
 
             if (isNestedEntity(field)) {
                 MetadataResponse nestedMeta = resolve(field.getType());
                 nested = nestedMeta.fields();
+                if (isReferenceAssociation(field)) {
+                    reference = buildReferenceInfo(field.getName(), field.getType(), nestedMeta);
+                }
             }
 
             if (isI18n) {
                 emittedI18nBases.add(name);
             }
 
-            fields.add(new MetadataResponse.FieldInfo(name, dataType, isI18n, nested));
+            fields.add(new MetadataResponse.FieldInfo(name, dataType, isI18n, nested, reference));
         }
 
         // Third pass: emit synthetic i18n base fields that don't exist as real fields
@@ -129,6 +152,70 @@ public class EntityMetadataResolver {
         return field.isAnnotationPresent(Embedded.class) ||
                field.isAnnotationPresent(ManyToOne.class) ||
                field.isAnnotationPresent(OneToOne.class);
+    }
+
+    /**
+     * A reference association is a {@code @ManyToOne}/{@code @OneToOne} to another managed entity.
+     * {@code @Embedded} value objects are nested but are not references (no target resource / id).
+     */
+    private static boolean isReferenceAssociation(Field field) {
+        return field.isAnnotationPresent(ManyToOne.class) ||
+               field.isAnnotationPresent(OneToOne.class);
+    }
+
+    /**
+     * Builds the reference descriptor for a {@code @ManyToOne}/{@code @OneToOne} field.
+     *
+     * <ul>
+     *   <li>{@code idPath} = {@code fieldName + ".id"} so it composes with the query grammar.</li>
+     *   <li>{@code targetResource}/{@code optionsPath} come from the {@link #referenceRegistry}
+     *       when it knows the target type; otherwise they are left null (reference still emitted
+     *       so the frontend gets the id path and label, but with no options endpoint).</li>
+     *   <li>{@code labelField}/{@code labelI18n} are resolved from the target entity's already
+     *       computed metadata: prefer a {@code name} field that is i18n; else the first STRING
+     *       field; else {@code id}.</li>
+     * </ul>
+     */
+    private static MetadataResponse.ReferenceInfo buildReferenceInfo(
+            String fieldName, Class<?> targetType, MetadataResponse targetMeta) {
+
+        String idPath = fieldName + ".id";
+
+        String targetResource = null;
+        String optionsPath = null;
+        ReferenceResourceRegistry registry = referenceRegistry;
+        if (registry != null) {
+            var ref = registry.lookup(targetType);
+            if (ref.isPresent()) {
+                targetResource = ref.get().resourceCode();
+                optionsPath = ref.get().basePath();
+            }
+        }
+
+        LabelField label = resolveLabelField(targetMeta);
+
+        return new MetadataResponse.ReferenceInfo(
+                targetResource, optionsPath, label.name(), label.i18n(), idPath);
+    }
+
+    private record LabelField(String name, boolean i18n) {}
+
+    /**
+     * Resolves the display label field of a target entity from its resolved metadata:
+     * an i18n {@code name} field wins; otherwise the first STRING field; otherwise {@code id}.
+     */
+    private static LabelField resolveLabelField(MetadataResponse targetMeta) {
+        for (MetadataResponse.FieldInfo f : targetMeta.fields()) {
+            if (f.name().equals("name") && f.i18n()) {
+                return new LabelField("name", true);
+            }
+        }
+        for (MetadataResponse.FieldInfo f : targetMeta.fields()) {
+            if (f.dataType() == MetadataResponse.DataType.STRING) {
+                return new LabelField(f.name(), f.i18n());
+            }
+        }
+        return new LabelField("id", false);
     }
 
     private static List<Field> getAllFields(Class<?> clazz) {
