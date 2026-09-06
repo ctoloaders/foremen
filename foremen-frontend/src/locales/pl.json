@@ -23,6 +23,7 @@
     "workCategories": "Kategorie prac",
     "deliveryCategories": "Kategorie dostaw",
     "deliveryStatuses": "Statusy dostaw",
+    "materialCategories": "Kategorie materiałów",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -459,6 +460,60 @@
       "createSuccess": "Kategoria dostawy została utworzona",
       "updateSuccess": "Kategoria dostawy została zaktualizowana",
       "deleteSuccess": "Kategoria dostawy została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko małe litery, cyfry i podkreślenia (maks. 50 znaków)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "materialCategories": {
+    "pageTitle": "Kategorie materiałów",
+    "search": {
+      "placeholder": "Szukaj kategorii materiałów..."
+    },
+    "actions": {
+      "create": "Utwórz kategorię materiału",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono kategorii materiałów"
+    },
+    "table": {
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "form": {
+      "titleCreate": "Utwórz kategorię materiału",
+      "titleEdit": "Edytuj kategorię materiału",
+      "descriptionCreate": "Wypełnij dane nowej kategorii materiału",
+      "descriptionEdit": "Zmień dane kategorii materiału",
+      "code": "Kod",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywna",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć kategorię materiału?",
+      "description": "Czy na pewno chcesz usunąć kategorię materiału \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Kategoria materiału została utworzona",
+      "updateSuccess": "Kategoria materiału została zaktualizowana",
+      "deleteSuccess": "Kategoria materiału została usunięta"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować danych",

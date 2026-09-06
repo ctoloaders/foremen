@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed MATERIAL_CATEGORIES resource into resources table -->
+    <changeSet id="033-seed-material-categories-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'MATERIAL_CATEGORIES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="MATERIAL_CATEGORIES"/>
+            <column name="name_ru" value="Категории материалов"/>
+            <column name="name_pl" value="Kategorie materiałów"/>
+            <column name="description_ru" value="Справочник категорий материалов"/>
+            <column name="description_pl" value="Katalog kategorii materiałów"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on MATERIAL_CATEGORIES resource -->
+    <changeSet id="033-seed-material-categories-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on MATERIAL_CATEGORIES resource -->
+    <changeSet id="033-seed-material-categories-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on MATERIAL_CATEGORIES resource -->
+    <changeSet id="033-seed-material-categories-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on MATERIAL_CATEGORIES resource -->
+    <changeSet id="033-seed-material-categories-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on MATERIAL_CATEGORIES resource -->
+    <changeSet id="033-seed-material-categories-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the MATERIAL_CATEGORIES grants
+        (deny-by-default). Like WORK_CATEGORIES / MEASUREMENT_UNITS, FINANCIER
+        receives a READ grant here. Custom (non-system) roles likewise receive
+        no grant.
+    -->
+
+    <!-- Seed the two default material categories -->
+    <changeSet id="033-seed-material-categories-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_categories</sqlCheck>
+        </preConditions>
+
+        <insert tableName="material_categories">
+            <column name="code" value="construction"/>
+            <column name="name_ru" value="Строительные"/>
+            <column name="name_pl" value="Construction"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="material_categories">
+            <column name="code" value="finishing"/>
+            <column name="name_ru" value="Отделочные"/>
+            <column name="name_pl" value="Finishing"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

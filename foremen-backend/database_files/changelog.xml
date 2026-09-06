@@ -36,5 +36,7 @@
     <include file="database_files/changesets/029-seed-delivery-categories-resource.xml"/>
     <include file="database_files/changesets/030-create-delivery-statuses.xml"/>
     <include file="database_files/changesets/031-seed-delivery-statuses-resource.xml"/>
+    <include file="database_files/changesets/032-create-material-categories.xml"/>
+    <include file="database_files/changesets/033-seed-material-categories-resource.xml"/>
 
 </databaseChangeLog>
