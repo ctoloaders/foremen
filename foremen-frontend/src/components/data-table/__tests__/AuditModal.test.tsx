@@ -11,6 +11,9 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => key,
     i18n: { language: 'ru' },
   }),
+  // Provided so `@/lib/i18n` (imported transitively via the shared Api_Client)
+  // can call `i18n.use(initReactI18next)` under this partial mock.
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }))
 
 import { AuditModal } from '../AuditModal'

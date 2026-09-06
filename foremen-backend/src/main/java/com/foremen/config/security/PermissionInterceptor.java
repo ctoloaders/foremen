@@ -14,21 +14,24 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 /**
- * Enforces {@link RequiresPermission} on matched controller handler methods before the controller
+ * Enforces the ABAC permission matrix on matched controller handler methods before the controller
  * method executes.
  *
  * <p>In {@code preHandle}:
  * <ul>
- *   <li>Non-{@link HandlerMethod} handlers (static resources etc.) are skipped (Requirement 5.3).</li>
- *   <li>The method-level {@link RequiresPermission} is resolved via
- *       {@link HandlerMethod#getMethodAnnotation} — method-only, no type-level fallback
- *       (Requirements 4.3, 4.4). An unannotated handler proceeds without evaluation.</li>
+ *   <li>Non-{@link HandlerMethod} handlers (static resources etc.) are skipped (Requirement 5.2).</li>
+ *   <li>The {@code (resource, operation)} pair is derived by delegating to the
+ *       {@link PermissionResolver}, which applies the {@link RequiresPermission} precedence and the
+ *       {@link PermissionResource}/{@link PermissionOperation} combination. A {@code null} pair
+ *       means the handler is Unguarded and the request proceeds without a matrix check
+ *       (Requirement 5.1).</li>
  *   <li>The role code is read from the {@code ROLE_<code>} authority in the
- *       {@link org.springframework.security.core.context.SecurityContext} (Requirement 5.4).</li>
- *   <li>No authenticated principal on an annotated endpoint yields a defensive 401
- *       {@code error.auth.unauthorized} (Requirement 7.2).</li>
+ *       {@link org.springframework.security.core.context.SecurityContext}.</li>
+ *   <li>A resolved pair with no authenticated principal yields a defensive 401
+ *       {@code error.auth.unauthorized} (Requirement 7.1).</li>
  *   <li>A deny decision from the {@link ForemenPermissionEvaluator} yields 403
- *       {@code error.access.denied} (Requirements 5.1, 5.2, 6.1); otherwise the request proceeds.</li>
+ *       {@code error.access.denied} (Requirement 7.2); an allow decision (including the ADMIN
+ *       bypass) proceeds (Requirements 7.3, 7.4).</li>
  * </ul>
  */
 @Component
@@ -38,22 +41,23 @@ public class PermissionInterceptor implements HandlerInterceptor {
     private static final String ROLE_PREFIX = "ROLE_";
 
     private final ForemenPermissionEvaluator evaluator;
+    private final PermissionResolver resolver;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod handlerMethod)) {
-            return true; // static resources etc. — no annotation to enforce
+            return true; // static resources etc. — no annotation to enforce (Req 5.2)
         }
-        RequiresPermission required = handlerMethod.getMethodAnnotation(RequiresPermission.class);
-        if (required == null) {
-            return true; // unannotated endpoint -> no check (method-only, no type fallback)
+        PermissionResolver.ResolvedPair pair = resolver.resolve(handlerMethod);
+        if (pair == null) {
+            return true; // Unguarded endpoint -> no matrix check (Req 5.1)
         }
         String roleCode = currentRoleCode();
         if (roleCode == null) {
-            // Defensive 401: annotated endpoint reached without an authenticated principal
+            // Defensive 401: guarded endpoint reached without an authenticated principal
             throw new ForemenApiException(HttpStatus.UNAUTHORIZED, "error.auth.unauthorized");
         }
-        if (!evaluator.isAllowed(roleCode, required.resource(), required.operation())) {
+        if (!evaluator.isAllowed(roleCode, pair.resource(), pair.operation())) {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.access.denied");
         }
         return true;

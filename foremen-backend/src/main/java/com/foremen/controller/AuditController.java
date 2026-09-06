@@ -1,5 +1,6 @@
 package com.foremen.controller;
 
+import com.foremen.config.security.PermissionResource;
 import com.foremen.service.AuditService;
 import com.foremen.service.ReadOnlyAdminService;
 import com.foremen.service.audit.AuditLogEntity;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/audit")
 @RequiredArgsConstructor
+@PermissionResource("AUDIT")
 public class AuditController implements AdminReadOnlyController<
         AuditServiceModel, AuditServiceExtendedModel, AuditLogEntity, Long> {
 

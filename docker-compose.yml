@@ -44,6 +44,17 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-foremen}
       SPRING_LIQUIBASE_ENABLED: "false"
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      FOREMEN_JWT_SECRET: OCkzzat3me2NVZJAol9w19xSPmeJDJ1epy7xOpTxgiw=
+      MAIL_HOST: smtp-relay.gmail.com
+      MAIL_PORT: 587
+      MAIL_SMTP_AUTH: "false"
+      MAIL_SMTP_STARTTLS: "true"
+      MAIL_USERNAME:
+      MAIL_PASSWORD:
+      MAIL_FROM: info@foremen.eu
+      FOREMEN_ADMIN_CREATE: true
+      FOREMEN_ADMIN_EMAIL: cto+1@loaders.dev
+      FOREMEN_ADMIN_PASSWORD: alejano123
     depends_on:
       postgres:
         condition: service_healthy

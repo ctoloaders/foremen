@@ -113,6 +113,14 @@ compileTestJava {
 
 test {
     useJUnitPlatform()
+
+    // Integration tests use per-class Testcontainers Postgres instances, so each distinct
+    // datasource URL produces a distinct (cached) Spring context with its own Hikari pool.
+    // Left unbounded, dozens of contexts + pools accumulate in one JVM; when a class's
+    // container is reaped while its context lingers, the pool floods the log with
+    // "Connection refused" and delays shutdown. Bounding the Spring test context cache to 1
+    // evicts and closes each prior context (and its Hikari pool) before the next starts.
+    systemProperty 'spring.test.context.cache.maxSize', '1'
 }
 
 liquibase {

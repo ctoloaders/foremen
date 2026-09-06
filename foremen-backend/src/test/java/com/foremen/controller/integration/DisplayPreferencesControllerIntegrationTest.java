@@ -3,6 +3,7 @@ package com.foremen.controller.integration;
 import com.foremen.config.i18n.MessageResolver;
 import com.foremen.config.security.JwtAuthenticationEntryPoint;
 import com.foremen.config.security.JwtTokenProvider;
+import com.foremen.config.security.PermissionResolver;
 import com.foremen.config.security.SecurityConfig;
 import com.foremen.controller.DisplayPreferencesController;
 import com.foremen.controller.advice.ForemenControllerAdvice;
@@ -36,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @WebMvcTest(controllers = DisplayPreferencesController.class)
 @Import({SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationEntryPoint.class,
-        ForemenControllerAdvice.class})
+        PermissionResolver.class, ForemenControllerAdvice.class})
 class DisplayPreferencesControllerIntegrationTest {
 
     @Autowired

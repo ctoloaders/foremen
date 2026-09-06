@@ -3,6 +3,18 @@ spring:
     exclude: []
   liquibase:
     enabled: false
+  datasource:
+    hikari:
+      # Keep test connection pools small and non-persistent so their background
+      # housekeeper/connection-adder threads do not keep probing Testcontainers
+      # instances that have already been stopped (which otherwise floods the log with
+      # "Connection refused" and delays JVM shutdown between test classes).
+      maximum-pool-size: 4
+      minimum-idle: 0
+      idle-timeout: 10000
+      keepalive-time: 0
+      max-lifetime: 60000
+      initialization-fail-timeout: -1
   jpa:
     open-in-view: false
     hibernate:

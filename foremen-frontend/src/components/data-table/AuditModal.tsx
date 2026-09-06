@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 
+import { apiRequest } from '@/lib/api-client'
 import {
   Dialog,
   DialogContent,
@@ -39,11 +40,7 @@ export function AuditModal({ open, onClose, entityKey, entityId }: AuditModalPro
 
   const { data, isLoading } = useQuery({
     queryKey: ['audit', entityKey, entityId],
-    queryFn: async () => {
-      const response = await fetch(`/api/${entityKey}/audit/${entityId}`)
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      return response.json() as Promise<AuditRecord[]>
-    },
+    queryFn: () => apiRequest<AuditRecord[]>(`/api/${entityKey}/audit/${entityId}`),
     enabled: open,
   })
 

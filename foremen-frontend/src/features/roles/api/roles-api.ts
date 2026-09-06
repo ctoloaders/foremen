@@ -1,3 +1,4 @@
+import { apiRequest } from '@/lib/api-client'
 import type {
   PaginatedResponse,
   RoleDto,
@@ -13,21 +14,12 @@ import type {
 
 const BASE_URL = '/api'
 
-function getAcceptLanguage(): string {
-  try {
-    const locale = localStorage.getItem('foremen-locale')
-    if (locale === 'ru') return 'ru'
-  } catch {}
-  return 'pl'
-}
-
-function getHeaders(extra?: Record<string, string>): Record<string, string> {
-  return {
-    'Accept-Language': getAcceptLanguage(),
-    ...extra,
-  }
-}
-
+/**
+ * Local error type kept for backward compatibility with callers that import
+ * `ApiError` from this module. Network calls below go through the shared
+ * {@link apiRequest} client, which throws its own (structurally identical)
+ * `ApiError`; both carry `status` and `message`.
+ */
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -38,6 +30,12 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Standalone response handler retained for the unit tests and any direct
+ * callers. New network functions delegate to {@link apiRequest} instead, which
+ * attaches the `Authorization: Bearer` header and performs the `401`
+ * refresh/retry + forced-logout redirect.
+ */
 export async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const body = await response.json().catch(() => ({}))
@@ -56,9 +54,7 @@ export function fetchRoles(params: {
   if (params.page != null) searchParams.set('page', String(params.page))
   if (params.size != null) searchParams.set('size', String(params.size))
   if (params.query) searchParams.set('query', params.query)
-  return fetch(`${BASE_URL}/roles?${searchParams}`, { headers: getHeaders() }).then((r) =>
-    handleResponse<PaginatedResponse<RoleDto>>(r),
-  )
+  return apiRequest<PaginatedResponse<RoleDto>>(`${BASE_URL}/roles?${searchParams}`)
 }
 
 export function fetchRolesExtended(params: {
@@ -70,37 +66,31 @@ export function fetchRolesExtended(params: {
   if (params.page != null) searchParams.set('page', String(params.page))
   if (params.size != null) searchParams.set('size', String(params.size))
   if (params.query) searchParams.set('query', params.query)
-  return fetch(`${BASE_URL}/roles/extended?${searchParams}`, { headers: getHeaders() }).then((r) =>
-    handleResponse<PaginatedResponse<RoleExtendedDto>>(r),
+  return apiRequest<PaginatedResponse<RoleExtendedDto>>(
+    `${BASE_URL}/roles/extended?${searchParams}`,
   )
 }
 
 export function fetchRole(id: number): Promise<RoleExtendedDto> {
-  return fetch(`${BASE_URL}/roles/${id}`, { headers: getHeaders() }).then((r) =>
-    handleResponse<RoleExtendedDto>(r),
-  )
+  return apiRequest<RoleExtendedDto>(`${BASE_URL}/roles/${id}`)
 }
 
 export function createRole(data: RoleCreateRequest): Promise<RoleExtendedDto> {
-  return fetch(`${BASE_URL}/roles`, {
+  return apiRequest<RoleExtendedDto>(`${BASE_URL}/roles`, {
     method: 'POST',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(data),
-  }).then((r) => handleResponse<RoleExtendedDto>(r))
+    body: data,
+  })
 }
 
 export function updateRole(id: number, data: RoleUpdateRequest): Promise<RoleExtendedDto> {
-  return fetch(`${BASE_URL}/roles/${id}`, {
+  return apiRequest<RoleExtendedDto>(`${BASE_URL}/roles/${id}`, {
     method: 'PUT',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(data),
-  }).then((r) => handleResponse<RoleExtendedDto>(r))
+    body: data,
+  })
 }
 
-export function deleteRole(id: number): Promise<void> {
-  return fetch(`${BASE_URL}/roles/${id}`, { method: 'DELETE', headers: getHeaders() }).then((r) => {
-    if (!r.ok) return handleResponse<void>(r)
-  })
+export async function deleteRole(id: number): Promise<void> {
+  await apiRequest<void>(`${BASE_URL}/roles/${id}`, { method: 'DELETE' })
 }
 
 export function fetchResources(params: {
@@ -110,9 +100,7 @@ export function fetchResources(params: {
   const searchParams = new URLSearchParams()
   if (params.page != null) searchParams.set('page', String(params.page))
   if (params.size != null) searchParams.set('size', String(params.size))
-  return fetch(`${BASE_URL}/resources?${searchParams}`, { headers: getHeaders() }).then((r) =>
-    handleResponse<PaginatedResponse<ResourceDto>>(r),
-  )
+  return apiRequest<PaginatedResponse<ResourceDto>>(`${BASE_URL}/resources?${searchParams}`)
 }
 
 export function fetchOperations(params: {
@@ -122,23 +110,18 @@ export function fetchOperations(params: {
   const searchParams = new URLSearchParams()
   if (params.page != null) searchParams.set('page', String(params.page))
   if (params.size != null) searchParams.set('size', String(params.size))
-  return fetch(`${BASE_URL}/operations?${searchParams}`, { headers: getHeaders() }).then((r) =>
-    handleResponse<PaginatedResponse<OperationDto>>(r),
-  )
+  return apiRequest<PaginatedResponse<OperationDto>>(`${BASE_URL}/operations?${searchParams}`)
 }
 
 export function fetchRolePermissions(roleId: number): Promise<RolePermissionResponse> {
-  return fetch(`${BASE_URL}/roles/${roleId}/permissions`, { headers: getHeaders() }).then((r) =>
-    handleResponse<RolePermissionResponse>(r),
-  )
+  return apiRequest<RolePermissionResponse>(`${BASE_URL}/roles/${roleId}/permissions`)
 }
 
 export function batchUpdatePermissions(
   data: BatchRolePermissionRequest,
 ): Promise<BatchRolePermissionResponse> {
-  return fetch(`${BASE_URL}/roles/permissions/batch`, {
+  return apiRequest<BatchRolePermissionResponse>(`${BASE_URL}/roles/permissions/batch`, {
     method: 'PUT',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(data),
-  }).then((r) => handleResponse<BatchRolePermissionResponse>(r))
+    body: data,
+  })
 }

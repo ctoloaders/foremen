@@ -2,16 +2,12 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { useThemeStore } from '@/stores/theme-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { ThemeModeSelector } from './components/ThemeModeSelector'
 import { ColorSchemeSelector } from './components/ColorSchemeSelector'
 import { FontSizeSelector } from './components/FontSizeSelector'
 import { useSavePreferences } from './api/mutation-hooks'
 
-/**
- * Placeholder user ID used until authentication is implemented.
- * Once a real auth provider is added, replace this with the actual session user ID.
- */
-const USER_ID = 1
 
 /**
  * Settings > Appearance page.
@@ -19,7 +15,8 @@ const USER_ID = 1
  */
 export default function SettingsAppearancePage() {
   const { t } = useTranslation()
-  const { mutate, isPending } = useSavePreferences(USER_ID)
+  const userId = useAuthStore((s) => s.user?.id)
+  const { mutate, isPending } = useSavePreferences(userId)
 
   const themeMode = useThemeStore((s) => s.themeMode)
   const colorScheme = useThemeStore((s) => s.colorScheme)
@@ -95,7 +92,7 @@ export default function SettingsAppearancePage() {
         <button
           type="button"
           onClick={handleSave}
-          disabled={!unsaved || isPending}
+          disabled={!unsaved || isPending || userId == null}
           className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
         >
           {isPending && (

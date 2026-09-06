@@ -1,5 +1,6 @@
 package com.foremen.controller;
 
+import com.foremen.config.security.PermissionOperation;
 import com.foremen.controller.model.MetadataResponse;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
@@ -62,6 +63,7 @@ public interface AdminController<
     // --- CREATE ---
 
     @PostMapping
+    @PermissionOperation("CREATE")
     default ResponseEntity<CreateResponseModel> create(@Valid @RequestBody CreateRequestModel request) {
         ServiceExtendedModel serviceModel = getMapper().toServiceExtendedModel(request);
         ServiceExtendedModel created = getService().create(serviceModel);
@@ -70,6 +72,7 @@ public interface AdminController<
     }
 
     @PostMapping("/bulk")
+    @PermissionOperation("CREATE")
     default ResponseEntity<List<CreateResponseModel>> createBulk(
             @Valid @RequestBody List<CreateRequestModel> requests) {
         List<ServiceExtendedModel> serviceModels = requests.stream()
@@ -85,6 +88,7 @@ public interface AdminController<
     // --- UPDATE ---
 
     @PutMapping("/{id}")
+    @PermissionOperation("UPDATE")
     default ResponseEntity<UpdateResponseModel> update(
             @PathVariable ID id,
             @Valid @RequestBody UpdateRequestModel request) {
@@ -97,6 +101,7 @@ public interface AdminController<
     // --- READ (paginated) ---
 
     @GetMapping
+    @PermissionOperation("READ")
     default ResponseEntity<Page<DtoModel>> find(
             Pageable pageable,
             @RequestParam(name = "query", required = false) String query) {
@@ -107,6 +112,7 @@ public interface AdminController<
     }
 
     @GetMapping("/extended")
+    @PermissionOperation("READ")
     default ResponseEntity<Page<DtoExtendedModel>> findExtended(
             Pageable pageable,
             @RequestParam(name = "query", required = false) String query) {
@@ -119,6 +125,7 @@ public interface AdminController<
     // --- READ (single) ---
 
     @GetMapping("/{id}")
+    @PermissionOperation("READ")
     default ResponseEntity<DtoExtendedModel> findById(@PathVariable ID id) {
         ServiceExtendedModel model = getService().findById(id);
         DtoExtendedModel dto = getMapper().toExtendedDto(model);
@@ -128,6 +135,7 @@ public interface AdminController<
     // --- COUNT ---
 
     @GetMapping("/count")
+    @PermissionOperation("READ")
     default ResponseEntity<Long> getCount(
             @RequestParam(name = "query", required = false) String query) {
         String processedQuery = addCustomQueryCondition(query);
@@ -138,6 +146,7 @@ public interface AdminController<
     // --- AUDIT ---
 
     @GetMapping("/audit/{id}")
+    @PermissionOperation("READ")
     default ResponseEntity<List<AuditLogEntity>> getAudit(@PathVariable ID id) {
         List<AuditLogEntity> auditRecords = getService().getAuditLogDao()
                 .findByEntityClassAndEntityIdOrderByPerformedAtAsc(
@@ -148,6 +157,7 @@ public interface AdminController<
     // --- DELETE ---
 
     @DeleteMapping("/{id}")
+    @PermissionOperation("DELETE")
     default ResponseEntity<Void> deleteById(@PathVariable ID id) {
         getService().deleteById(id);
         return ResponseEntity.ok().build();
@@ -156,6 +166,7 @@ public interface AdminController<
     // --- SET PROPERTIES TO NULL ---
 
     @DeleteMapping("/{id}/property")
+    @PermissionOperation("DELETE")
     default ResponseEntity<Void> setPropertiesToNull(
             @PathVariable ID id,
             @RequestParam(name = "properties") Set<String> properties) {
@@ -166,6 +177,7 @@ public interface AdminController<
     // --- I18N DISCOVERY ---
 
     @GetMapping("/i18n")
+    @PermissionOperation("READ")
     default ResponseEntity<Collection<String>> getI18nProperties() {
         Collection<String> properties = getService().getMapper().getI18nSupportedProperties();
         return ResponseEntity.ok(properties);
@@ -174,6 +186,7 @@ public interface AdminController<
     // --- METADATA ---
 
     @GetMapping("/metadata")
+    @PermissionOperation("READ")
     default ResponseEntity<MetadataResponse> getMetadata() {
         Class<?> daoClass = getService().getDaoModelClass();
         MetadataResponse metadata = EntityMetadataResolver.resolve(daoClass);

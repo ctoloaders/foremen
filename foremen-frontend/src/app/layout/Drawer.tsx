@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG, isNavItemVisible } from '@/config/navigation'
 import { NavItem } from '@/app/layout/NavItem'
+import { UserFooter } from '@/app/layout/UserFooter'
 import { usePermission } from '@/hooks/usePermission'
 
 /**
@@ -105,6 +106,11 @@ export function Drawer({ open, onClose }: DrawerProps) {
             )
           })}
         </nav>
+
+        {/* User footer with log-out menu */}
+        <div className="border-t border-border">
+          <UserFooter />
+        </div>
       </aside>
     </div>
   )

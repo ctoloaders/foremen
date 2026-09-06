@@ -1,5 +1,6 @@
 package com.foremen.controller;
 
+import com.foremen.config.security.PermissionResource;
 import com.foremen.dao.model.OperationEntity;
 import com.foremen.service.OperationService;
 import com.foremen.service.ReadOnlyAdminService;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/operations")
 @RequiredArgsConstructor
+@PermissionResource("OPERATIONS")
 public class OperationController implements AdminReadOnlyController<
         OperationServiceModel, OperationServiceExtendedModel, OperationEntity, Long> {
 

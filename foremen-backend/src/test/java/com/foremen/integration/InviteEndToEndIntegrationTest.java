@@ -285,7 +285,12 @@ class InviteEndToEndIntegrationTest {
 
     private long createUser(String email, Long roleId) throws Exception {
         UserCreateBody body = new UserCreateBody("Invite E2E User", email, roleId, "ru");
+        // Creating a user is an ADMIN action; the migrated filter chain requires an authenticated
+        // principal (ADMIN bypasses the permission matrix in the interceptor).
+        String adminAccessToken = jwtTokenProvider.generateAccessToken(
+                999_999L, "ADMIN", "admin+" + runId + "@example.com");
         MvcResult result = mockMvc.perform(post(USERS_PATH)
+                        .header("Authorization", "Bearer " + adminAccessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andReturn();

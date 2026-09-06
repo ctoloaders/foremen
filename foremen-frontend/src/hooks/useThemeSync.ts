@@ -2,36 +2,25 @@ import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 
 import { useThemeStore } from '@/stores/theme-store'
+import { useAuthStore } from '@/stores/auth-store'
 import { useDisplayPreferences } from '@/features/settings/api/query-hooks'
 import { mergePreferences } from '@/lib/theme-applicator'
 
 /**
- * Placeholder user ID used until authentication is implemented.
- * Once a real auth provider is added, replace this with the actual session user ID.
- */
-const PLACEHOLDER_USER_ID: number | undefined = 1
-
-/**
- * useThemeSync — Handles two concerns:
- *
- * 1. On app startup (when a user session exists): fetches display preferences
- *    from the backend, merges with localStorage (backend wins), and updates the
- *    theme store's savedPreferences.
- *
- * 2. On navigate away from `/settings/appearance`: if the user has unsaved
- *    theme changes (live preview), reverts to the last saved preferences.
- *
- * Requirements: 5.5, 8.1, 8.2, 8.3, 8.7
+ * useThemeSync syncs backend display preferences for the authenticated user
+ * on startup and reverts unsaved live-preview changes when leaving the
+ * appearance settings page. The preferences fetch is scoped to the current
+ * session user id (from the Auth_Store); while no user is loaded the query
+ * stays disabled, so we never request another user's display-preferences.
  */
 export function useThemeSync(): void {
   const location = useLocation()
   const prevPathRef = useRef(location.pathname)
 
-  // --- 1. Fetch + merge backend preferences on startup ---
-  const { data: backendPrefs } = useDisplayPreferences(PLACEHOLDER_USER_ID)
+  const userId = useAuthStore((s) => s.user?.id)
+  const { data: backendPrefs } = useDisplayPreferences(userId)
 
   const mergedOnce = useRef(false)
-
   useEffect(() => {
     if (backendPrefs && !mergedOnce.current) {
       mergedOnce.current = true
@@ -46,7 +35,6 @@ export function useThemeSync(): void {
     }
   }, [backendPrefs])
 
-  // --- 2. Revert on navigate away from settings/appearance ---
   useEffect(() => {
     const prevPath = prevPathRef.current
     prevPathRef.current = location.pathname

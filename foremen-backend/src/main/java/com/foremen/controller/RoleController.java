@@ -1,5 +1,7 @@
 package com.foremen.controller;
 
+import com.foremen.config.security.PermissionOperation;
+import com.foremen.config.security.PermissionResource;
 import com.foremen.controller.model.*;
 import com.foremen.controller.model.mapper.RoleControllerMapper;
 import com.foremen.dao.model.RoleEntity;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/roles")
 @RequiredArgsConstructor
+@PermissionResource("ROLES")
 public class RoleController implements AdminController<
         RoleServiceModel,
         RoleServiceExtendedModel,
@@ -45,12 +48,14 @@ public class RoleController implements AdminController<
     }
 
     @GetMapping("/{id}/permissions")
+    @PermissionOperation("READ")
     public ResponseEntity<RolePermissionResponse> getPermissions(@PathVariable Long id) {
         RolePermissionResponse response = roleService.getPermissions(id);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/{id}/permissions")
+    @PermissionOperation("UPDATE")
     public ResponseEntity<RolePermissionResponse> replacePermissions(
             @PathVariable Long id,
             @Valid @RequestBody RolePermissionRequest request) {
@@ -59,6 +64,7 @@ public class RoleController implements AdminController<
     }
 
     @PutMapping("/permissions/batch")
+    @PermissionOperation("UPDATE")
     public ResponseEntity<BatchRolePermissionResponse> batchReplacePermissions(
             @Valid @RequestBody BatchRolePermissionRequest request) {
         BatchRolePermissionResponse response = roleService.batchReplacePermissions(request);

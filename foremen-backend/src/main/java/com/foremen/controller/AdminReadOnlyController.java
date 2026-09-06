@@ -1,5 +1,6 @@
 package com.foremen.controller;
 
+import com.foremen.config.security.PermissionOperation;
 import com.foremen.controller.model.MetadataResponse;
 import com.foremen.service.ReadOnlyAdminService;
 import com.foremen.util.EntityMetadataResolver;
@@ -16,6 +17,7 @@ public interface AdminReadOnlyController<ServiceModel, ServiceExtendedModel, Dao
     ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID> getService();
 
     @GetMapping
+    @PermissionOperation("READ")
     default ResponseEntity<Page<ServiceModel>> find(
             Pageable pageable,
             @RequestParam(name = "query", required = false) String query) {
@@ -24,12 +26,14 @@ public interface AdminReadOnlyController<ServiceModel, ServiceExtendedModel, Dao
     }
 
     @GetMapping("/{id}")
+    @PermissionOperation("READ")
     default ResponseEntity<ServiceModel> findById(@PathVariable ID id) {
         ServiceModel model = getService().findByIdLocalized(id);
         return ResponseEntity.ok(model);
     }
 
     @GetMapping("/metadata")
+    @PermissionOperation("READ")
     default ResponseEntity<MetadataResponse> getMetadata() {
         Class<?> daoClass = getService().getDaoModelClass();
         MetadataResponse metadata = EntityMetadataResolver.resolve(daoClass);

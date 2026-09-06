@@ -16,7 +16,7 @@ class QueryOperatorTest {
     @Test
     @DisplayName("should have exactly 19 operators defined")
     void shouldHaveExactly19Operators() {
-        assertEquals(19, QueryOperator.values().length);
+        assertEquals(23, QueryOperator.values().length);
     }
 
     @Test

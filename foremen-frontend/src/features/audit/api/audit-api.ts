@@ -1,22 +1,14 @@
+import { apiRequest } from '@/lib/api-client'
 import type { FetchParams, PaginatedResponse } from '@/components/data-table/types'
 import type { AuditRecord } from '../types'
 
 const BASE_URL = '/api'
 
-function getAcceptLanguage(): string {
-  try {
-    const locale = localStorage.getItem('foremen-locale')
-    if (locale === 'ru') return 'ru'
-  } catch {}
-  return 'pl'
-}
-
-function getHeaders(): Record<string, string> {
-  return {
-    'Accept-Language': getAcceptLanguage(),
-  }
-}
-
+/**
+ * Fetches a page of audit records. Goes through the shared {@link apiRequest}
+ * client so the `Authorization: Bearer` header is attached and a `401` is
+ * handled via refresh/retry + forced logout redirect.
+ */
 export async function fetchAuditRecords(
   params: FetchParams,
 ): Promise<PaginatedResponse<AuditRecord>> {
@@ -28,10 +20,5 @@ export async function fetchAuditRecords(
     searchParams.append('sort', sortEntry)
   }
 
-  const response = await fetch(`${BASE_URL}/audit?${searchParams}`, { headers: getHeaders() })
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}))
-    throw new Error(body.message || body.error || `HTTP ${response.status}`)
-  }
-  return response.json()
+  return apiRequest<PaginatedResponse<AuditRecord>>(`${BASE_URL}/audit?${searchParams}`)
 }

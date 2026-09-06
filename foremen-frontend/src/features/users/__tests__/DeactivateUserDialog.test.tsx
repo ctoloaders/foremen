@@ -20,6 +20,10 @@ vi.mock('react-i18next', () => ({
       return translations[key] ?? key
     },
   }),
+  // `users-api` now transitively imports `@/lib/i18n` (via the shared Api_Client),
+  // which calls `i18n.use(initReactI18next)`. Provide a passthrough plugin so the
+  // i18n module initializes under this partial mock.
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }))
 
 const mockMutate = vi.fn()

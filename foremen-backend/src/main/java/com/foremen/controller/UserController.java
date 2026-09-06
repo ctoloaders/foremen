@@ -1,5 +1,6 @@
 package com.foremen.controller;
 
+import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.*;
 import com.foremen.controller.model.mapper.UserControllerMapper;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
+@PermissionResource("USERS")
 public class UserController implements AdminController<
         UserServiceModel,
         UserServiceExtendedModel,

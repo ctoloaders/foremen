@@ -1,6 +1,7 @@
 package com.foremen.config.security.property;
 
 import com.foremen.config.security.PermissionInterceptor;
+import com.foremen.config.security.PermissionResolver;
 import com.foremen.config.security.RequiresPermission;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
 import jakarta.servlet.http.HttpServletRequest;
@@ -56,7 +57,8 @@ class PermissionInterceptorPropertyTest {
     @Property(tries = 100)
     void roleCodeExtractedFromRoleAuthority(@ForAll("roleCodes") String roleCode) {
         AtomicReference<String> observedRoleCode = new AtomicReference<>();
-        PermissionInterceptor interceptor = new PermissionInterceptor(capturingEvaluator(observedRoleCode));
+        PermissionInterceptor interceptor =
+                new PermissionInterceptor(capturingEvaluator(observedRoleCode), new PermissionResolver());
 
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(

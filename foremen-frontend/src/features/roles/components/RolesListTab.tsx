@@ -6,6 +6,7 @@ import { DataTable } from '@/components/data-table'
 import type { ColumnConfig, FetchParams, PaginatedResponse as DTPaginatedResponse } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { usePermission } from '@/hooks/usePermission'
+import { fetchRoles } from '../api/roles-api'
 import type { RoleDto } from '../types'
 
 interface RolesListTabProps {
@@ -76,29 +77,16 @@ export function RolesListTab({
   const canUpdate = hasPermission('ROLES', 'UPDATE')
   const canDelete = hasPermission('ROLES', 'DELETE')
 
-  // Adapter: bridges DataTable's FetchParams to the roles API
+  // Adapter: bridges DataTable's FetchParams to the roles API. Delegates to the
+  // shared roles API (which goes through the authenticated apiRequest client),
+  // then adds the first/last fields DataTable expects.
   const fetchFn = useCallback(async (params: FetchParams): Promise<DTPaginatedResponse<RoleDto>> => {
-    const searchParams = new URLSearchParams()
-    searchParams.set('page', String(params.page))
-    searchParams.set('size', String(params.size))
-    if (params.query) searchParams.set('query', params.query)
-    for (const sortEntry of params.sort) {
-      searchParams.append('sort', sortEntry)
-    }
-
-    const locale = (() => {
-      try { return localStorage.getItem('foremen-locale') || 'pl' } catch { return 'pl' }
-    })()
-
-    const response = await fetch(`/api/roles?${searchParams}`, {
-      headers: { 'Accept-Language': locale },
+    const data = await fetchRoles({
+      page: params.page,
+      size: params.size,
+      query: params.query || undefined,
     })
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-    const data = await response.json()
 
-    // Bridge: add first/last fields that DataTable expects
     return {
       ...data,
       first: data.number === 0,

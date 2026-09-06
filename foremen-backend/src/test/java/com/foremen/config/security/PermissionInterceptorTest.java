@@ -1,13 +1,7 @@
 package com.foremen.config.security;
 
-import com.foremen.dao.RoleDao;
-import com.foremen.dao.model.OperationEntity;
-import com.foremen.dao.model.ResourceEntity;
-import com.foremen.dao.model.RoleEntity;
-import com.foremen.dao.model.RoleResourceEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
-import com.foremen.service.permission.PermissionCache;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.AfterEach;
@@ -24,35 +18,33 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * Example tests for {@link PermissionInterceptor} (task 5.2).
+ * Branch unit tests for {@link PermissionInterceptor#preHandle} (task 4.3).
  *
- * <p>Exercises the interceptor with {@link MockHttpServletRequest}/{@link HandlerMethod} handlers
- * and a Mockito-mocked {@link ForemenPermissionEvaluator} (except the cache-miss case, which uses a
- * real evaluator + real {@link PermissionCache} over a counting {@link RoleDao}). Covers:</p>
+ * <p>The interceptor now delegates {@code (resource, operation)} derivation to the
+ * {@link PermissionResolver}; both the resolver and the {@link ForemenPermissionEvaluator} are
+ * stubbed with Mockito so each {@code preHandle} branch is exercised in isolation:</p>
  * <ul>
- *   <li>Method-level annotation is used (Requirement 4.3).</li>
- *   <li>A handler without the method annotation is treated as unannotated and proceeds without
- *       evaluation, with no type-level fallback (Requirement 4.4).</li>
- *   <li>A non-{@link HandlerMethod} handler proceeds without evaluation (Requirement 5.3).</li>
- *   <li>A cleared context on an annotated handler yields 401 {@code error.auth.unauthorized}
+ *   <li>A non-{@link HandlerMethod} handler proceeds without touching the resolver or evaluator
+ *       (Requirement 5.2).</li>
+ *   <li>An Unguarded handler ({@code resolve} returns {@code null}) proceeds without evaluation
+ *       (Requirement 5.2 / 5.1).</li>
+ *   <li>A resolved pair with no authenticated principal yields 401 {@code error.auth.unauthorized}
+ *       (Requirement 7.1).</li>
+ *   <li>A resolved pair the evaluator denies yields 403 {@code error.access.denied}
  *       (Requirement 7.2).</li>
- *   <li>A deny decision yields 403 {@code error.access.denied} (Requirement 6.1).</li>
- *   <li>A cache miss triggers exactly one database load (Requirement 8.1).</li>
+ *   <li>A resolved pair the evaluator allows proceeds (Requirement 7.3).</li>
  * </ul>
  */
 class PermissionInterceptorTest {
@@ -60,9 +52,16 @@ class PermissionInterceptorTest {
     private final HttpServletRequest request = new MockHttpServletRequest();
     private final HttpServletResponse response = new MockHttpServletResponse();
 
+    private ForemenPermissionEvaluator evaluator;
+    private PermissionResolver resolver;
+    private PermissionInterceptor interceptor;
+
     @BeforeEach
-    void clearBefore() {
+    void setUp() {
         SecurityContextHolder.clearContext();
+        evaluator = mock(ForemenPermissionEvaluator.class);
+        resolver = mock(PermissionResolver.class);
+        interceptor = new PermissionInterceptor(evaluator, resolver);
     }
 
     @AfterEach
@@ -71,84 +70,51 @@ class PermissionInterceptorTest {
     }
 
     // ------------------------------------------------------------------
-    // Requirement 4.3 — the method-level annotation is used
+    // Requirement 5.2 — non-HandlerMethod handler proceeds
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("uses the method-level @RequiresPermission to evaluate the required permission (4.3)")
-    void usesMethodLevelAnnotation() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        when(evaluator.isAllowed("MANAGER", "PROJECTS", "READ")).thenReturn(true);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
-        authenticateAs("MANAGER");
-
-        boolean proceed = interceptor.preHandle(request, response, annotatedHandler());
-
-        assertThat(proceed).isTrue();
-        // The resource/operation came from the method-level annotation (PROJECTS/READ).
-        verify(evaluator).isAllowed("MANAGER", "PROJECTS", "READ");
-    }
-
-    // ------------------------------------------------------------------
-    // Requirement 4.4 — handler without a method annotation is unannotated (no type fallback)
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("treats a handler whose method carries no @RequiresPermission as unannotated - proceeds, no type fallback (4.4)")
-    void unannotatedMethodProceedsWithoutEvaluationEvenIfTypeAnnotated() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
-        authenticateAs("MANAGER");
-
-        // The declaring type carries @RequiresPermission but the method does not: no type-level fallback.
-        boolean proceed = interceptor.preHandle(request, response, unannotatedMethodOnAnnotatedType());
-
-        assertThat(proceed).isTrue();
-        verify(evaluator, never()).isAllowed(anyString(), anyString(), anyString());
-    }
-
-    // ------------------------------------------------------------------
-    // Requirement 5.3 — no annotation -> proceed without evaluation
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("proceeds without evaluation when the handler method carries no annotation (5.3)")
-    void plainUnannotatedHandlerProceedsWithoutEvaluation() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
-        authenticateAs("WORKER");
-
-        boolean proceed = interceptor.preHandle(request, response, plainHandler());
-
-        assertThat(proceed).isTrue();
-        verify(evaluator, never()).isAllowed(anyString(), anyString(), anyString());
-    }
-
-    @Test
-    @DisplayName("proceeds without evaluation for a non-HandlerMethod handler such as a static resource (5.3)")
-    void nonHandlerMethodProceedsWithoutEvaluation() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
+    @DisplayName("proceeds without resolution or evaluation for a non-HandlerMethod handler (5.2)")
+    void nonHandlerMethodProceeds() {
         authenticateAs("WORKER");
 
         boolean proceed = interceptor.preHandle(request, response, new Object());
 
         assertThat(proceed).isTrue();
+        verifyNoInteractions(resolver);
+        verifyNoInteractions(evaluator);
+    }
+
+    // ------------------------------------------------------------------
+    // Requirement 5.2 / 5.1 — Unguarded (resolve returns null) proceeds
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("proceeds without evaluation when the resolver classifies the handler as Unguarded (5.2)")
+    void unguardedHandlerProceeds() {
+        HandlerMethod handler = handler();
+        when(resolver.resolve(handler)).thenReturn(null);
+        authenticateAs("WORKER");
+
+        boolean proceed = interceptor.preHandle(request, response, handler);
+
+        assertThat(proceed).isTrue();
+        verify(resolver).resolve(handler);
         verify(evaluator, never()).isAllowed(anyString(), anyString(), anyString());
     }
 
     // ------------------------------------------------------------------
-    // Requirement 7.2 — cleared context on annotated handler -> 401
+    // Requirement 7.1 — resolved pair + no principal -> 401
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("raises 401 error.auth.unauthorized when the context holds no authenticated principal (7.2)")
-    void clearedContextOnAnnotatedHandlerYields401() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
-        // Context intentionally cleared (no authentication).
+    @DisplayName("raises 401 error.auth.unauthorized when a pair resolves but no principal is present (7.1)")
+    void resolvedPairWithNoPrincipalYields401() {
+        HandlerMethod handler = handler();
+        when(resolver.resolve(handler)).thenReturn(new PermissionResolver.ResolvedPair("USERS", "READ"));
+        // Context intentionally left cleared (no authentication).
 
-        assertThatThrownBy(() -> interceptor.preHandle(request, response, annotatedHandler()))
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler))
                 .isInstanceOfSatisfying(ForemenApiException.class, ex -> {
                     assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
                     assertThat(ex.getMessageCode()).isEqualTo("error.auth.unauthorized");
@@ -157,15 +123,15 @@ class PermissionInterceptorTest {
     }
 
     @Test
-    @DisplayName("raises 401 for an anonymous authentication token on an annotated handler (7.2)")
-    void anonymousTokenOnAnnotatedHandlerYields401() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
+    @DisplayName("raises 401 for an anonymous authentication token when a pair resolves (7.1)")
+    void resolvedPairWithAnonymousTokenYields401() {
+        HandlerMethod handler = handler();
+        when(resolver.resolve(handler)).thenReturn(new PermissionResolver.ResolvedPair("USERS", "READ"));
         SecurityContextHolder.getContext().setAuthentication(
                 new AnonymousAuthenticationToken("key", "anonymousUser",
                         List.of(new SimpleGrantedAuthority("ROLE_ANONYMOUS"))));
 
-        assertThatThrownBy(() -> interceptor.preHandle(request, response, annotatedHandler()))
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler))
                 .isInstanceOfSatisfying(ForemenApiException.class, ex -> {
                     assertThat(ex.getStatus()).isEqualTo(HttpStatus.UNAUTHORIZED);
                     assertThat(ex.getMessageCode()).isEqualTo("error.auth.unauthorized");
@@ -174,49 +140,41 @@ class PermissionInterceptorTest {
     }
 
     // ------------------------------------------------------------------
-    // Requirement 6.1 — deny -> 403 error.access.denied
+    // Requirement 7.2 — resolved pair + deny -> 403
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("raises 403 error.access.denied when the evaluator denies an authenticated request (6.1)")
-    void denyYields403() {
-        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
-        when(evaluator.isAllowed("WORKER", "PROJECTS", "READ")).thenReturn(false);
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
+    @DisplayName("raises 403 error.access.denied when the evaluator denies the resolved pair (7.2)")
+    void resolvedPairDeniedYields403() {
+        HandlerMethod handler = handler();
+        when(resolver.resolve(handler)).thenReturn(new PermissionResolver.ResolvedPair("USERS", "READ"));
+        when(evaluator.isAllowed("WORKER", "USERS", "READ")).thenReturn(false);
         authenticateAs("WORKER");
 
-        assertThatThrownBy(() -> interceptor.preHandle(request, response, annotatedHandler()))
+        assertThatThrownBy(() -> interceptor.preHandle(request, response, handler))
                 .isInstanceOfSatisfying(ForemenApiException.class, ex -> {
                     assertThat(ex.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
                     assertThat(ex.getMessageCode()).isEqualTo("error.access.denied");
                 });
+        verify(evaluator).isAllowed("WORKER", "USERS", "READ");
     }
 
     // ------------------------------------------------------------------
-    // Requirement 8.1 — cache miss triggers exactly one load
+    // Requirement 7.3 — resolved pair + allow -> proceed
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("a cache miss on an annotated handler triggers exactly one database load (8.1)")
-    void cacheMissTriggersExactlyOneLoad() {
-        AtomicInteger loads = new AtomicInteger();
-        RoleDao roleDao = mock(RoleDao.class);
-        when(roleDao.findByCode(eq("MANAGER"))).thenAnswer(inv -> {
-            loads.incrementAndGet();
-            return Optional.of(roleWith("MANAGER", "PROJECTS", List.of("READ")));
-        });
-        // Real evaluator + real dedicated cache: the first evaluation misses and loads once.
-        ForemenPermissionEvaluator evaluator =
-                new ForemenPermissionEvaluator(roleDao, new PermissionCache(new PermissionProperties(null)));
-        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator);
+    @DisplayName("proceeds when the evaluator allows the resolved pair (7.3)")
+    void resolvedPairAllowedProceeds() {
+        HandlerMethod handler = handler();
+        when(resolver.resolve(handler)).thenReturn(new PermissionResolver.ResolvedPair("USERS", "READ"));
+        when(evaluator.isAllowed("MANAGER", "USERS", "READ")).thenReturn(true);
         authenticateAs("MANAGER");
 
-        boolean proceed = interceptor.preHandle(request, response, annotatedHandler());
+        boolean proceed = interceptor.preHandle(request, response, handler);
 
         assertThat(proceed).isTrue();
-        assertThat(loads.get())
-                .as("a cache miss for role 'MANAGER' must load from the database exactly once")
-                .isEqualTo(1);
+        verify(evaluator).isAllowed("MANAGER", "USERS", "READ");
     }
 
     // ------------------------------------------------------------------
@@ -229,72 +187,18 @@ class PermissionInterceptorTest {
                         "42", "n/a", List.of(new SimpleGrantedAuthority("ROLE_" + roleCode))));
     }
 
-    private HandlerMethod annotatedHandler() {
-        return handlerFor(AnnotatedController.class, "secured");
-    }
-
-    private HandlerMethod plainHandler() {
-        return handlerFor(PlainController.class, "open");
-    }
-
-    private HandlerMethod unannotatedMethodOnAnnotatedType() {
-        return handlerFor(TypeAnnotatedController.class, "notAnnotated");
-    }
-
-    private HandlerMethod handlerFor(Class<?> type, String methodName) {
+    private HandlerMethod handler() {
         try {
-            Object bean = type.getDeclaredConstructor().newInstance();
-            Method method = type.getMethod(methodName);
-            return new HandlerMethod(bean, method);
-        } catch (ReflectiveOperationException e) {
+            Method method = SampleController.class.getMethod("handle");
+            return new HandlerMethod(new SampleController(), method);
+        } catch (NoSuchMethodException e) {
             throw new IllegalStateException(e);
         }
     }
 
-    private RoleEntity roleWith(String code, String resourceCode, List<String> operations) {
-        RoleEntity role = new RoleEntity();
-        role.setCode(code);
-
-        ResourceEntity resource = new ResourceEntity();
-        resource.setCode(resourceCode);
-
-        List<OperationEntity> ops = new ArrayList<>();
-        for (String opCode : operations) {
-            OperationEntity op = new OperationEntity();
-            op.setCode(opCode);
-            ops.add(op);
-        }
-
-        RoleResourceEntity rr = new RoleResourceEntity();
-        rr.setResource(resource);
-        rr.setOperations(ops);
-
-        role.getRoleResources().add(rr);
-        return role;
-    }
-
-    // --- Test controllers ---
-
-    static class AnnotatedController {
-        @RequiresPermission(resource = "PROJECTS", operation = "READ")
-        public void secured() {
-            // no-op
-        }
-    }
-
-    static class PlainController {
-        public void open() {
-            // no-op; no annotation anywhere
-        }
-    }
-
-    /**
-     * A controller whose method carries no {@code @RequiresPermission}. {@code @RequiresPermission}
-     * targets methods only, so there is no type-level annotation possible; this handler exercises
-     * the "method carries no annotation -> unannotated, no fallback" path (4.4).
-     */
-    static class TypeAnnotatedController {
-        public void notAnnotated() {
+    /** Minimal handler bean; the resolver is stubbed, so no real annotations are needed. */
+    static class SampleController {
+        public void handle() {
             // no-op
         }
     }

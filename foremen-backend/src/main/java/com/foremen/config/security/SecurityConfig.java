@@ -26,8 +26,13 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * {@code POST /api/auth/resend-invite} requires {@code ROLE_ADMIN} and is matched BEFORE the
  * broad {@code /api/auth/**} {@code permitAll} rule so that an unauthenticated caller gets 401
  * and a non-ADMIN caller gets 403, while {@code /api/auth/set-password} stays public under the
- * broad rule (FOR-03-02: 5.2, 6.2, 6.4, 6.5). All other paths remain {@code permitAll}
- * for now; the wholesale tightening is deferred to FOR-03-08.
+ * broad rule (FOR-03-02: 5.2, 6.2, 6.4, 6.5).
+ *
+ * <p>FOR-03-08: the catch-all is {@code anyRequest().authenticated()} — every path outside the
+ * public {@code /api/auth/**} matchers now requires an authenticated principal (unauthenticated
+ * access yields 401 via {@link JwtAuthenticationEntryPoint}). CORS preflight ({@code OPTIONS})
+ * requests are permitted first via {@link org.springframework.web.cors.CorsUtils#isPreFlightRequest}
+ * so the browser preflight is never rejected with 401.
  */
 @Configuration
 @EnableWebSecurity
@@ -58,6 +63,7 @@ public class SecurityConfig {
                                                    JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         return http
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(org.springframework.web.cors.CorsUtils::isPreFlightRequest).permitAll()
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/auth/resend-invite").hasRole("ADMIN")
                         // FOR-03-05 (8.1, 8.2): the OTP client-auth endpoints POST /api/auth/otp/request
@@ -68,7 +74,7 @@ public class SecurityConfig {
                         // /api/auth/resend-invite matchers declared above. Verified: no new matcher is
                         // needed for the OTP endpoints.
                         .requestMatchers("/api/auth/**").permitAll()
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session

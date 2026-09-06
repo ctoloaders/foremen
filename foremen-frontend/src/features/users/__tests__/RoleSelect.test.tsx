@@ -9,6 +9,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => key,
   }),
+  // Provided so `@/lib/i18n` (imported transitively via the shared Api_Client)
+  // can call `i18n.use(initReactI18next)` under this partial mock.
+  initReactI18next: { type: '3rdParty', init: () => {} },
 }))
 
 // --- useDebounce mock: pass the value straight through (no timers) ---

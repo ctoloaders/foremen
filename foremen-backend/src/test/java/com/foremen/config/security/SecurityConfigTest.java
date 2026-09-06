@@ -2,12 +2,14 @@ package com.foremen.config.security;
 
 import com.foremen.config.i18n.MessageResolver;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
+import com.foremen.testsupport.MockMvcSecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.*;
@@ -16,15 +18,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Tests for SecurityConfig — verifies the security filter chain behavior:
- * - All HTTP methods are permitted without authentication (Requirement 1.3)
- * - CSRF protection is disabled (Requirement 1.4)
- * - Sessions are stateless — no Set-Cookie header (Requirement 1.5)
- * - X-Frame-Options header is disabled (Requirement 1.6)
+ * Tests for SecurityConfig after the FOR-03-08 catch-all migration
+ * ({@code anyRequest().authenticated()}).
+ *
+ * <ul>
+ *   <li>Unauthenticated requests to a non-public endpoint are rejected with 401 via the
+ *       {@link JwtAuthenticationEntryPoint}.</li>
+ *   <li>An authenticated principal reaches the controller (CSRF disabled, stateless session,
+ *       frame options disabled).</li>
+ * </ul>
  */
 @WebMvcTest(controllers = SecurityConfigTest.TestController.class)
 @Import({SecurityConfig.class, JwtTokenProvider.class, JwtAuthenticationEntryPoint.class,
-        SecurityConfigTest.TestController.class})
+        PermissionResolver.class, MockMvcSecurityConfig.class, SecurityConfigTest.TestController.class})
 class SecurityConfigTest {
 
     @MockitoBean
@@ -61,37 +67,47 @@ class SecurityConfigTest {
     @Autowired
     private MockMvc mockMvc;
 
-    // --- Requirement 1.3: All requests permitted without authentication ---
+    // --- FOR-03-08: catch-all requires authentication; unauthenticated -> 401 ---
 
     @Test
-    @DisplayName("GET request without credentials returns non-401/403")
-    void getRequestPermittedWithoutAuth() throws Exception {
+    @DisplayName("GET request without credentials returns 401")
+    void getRequestWithoutAuthReturns401() throws Exception {
         mockMvc.perform(get("/security-test"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("POST request without credentials returns non-401/403")
-    void postRequestPermittedWithoutAuth() throws Exception {
+    @DisplayName("POST request without credentials returns 401")
+    void postRequestWithoutAuthReturns401() throws Exception {
         mockMvc.perform(post("/security-test")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("PUT request without credentials returns non-401/403")
-    void putRequestPermittedWithoutAuth() throws Exception {
+    @DisplayName("PUT request without credentials returns 401")
+    void putRequestWithoutAuthReturns401() throws Exception {
         mockMvc.perform(put("/security-test")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    @DisplayName("DELETE request without credentials returns non-401/403")
-    void deleteRequestPermittedWithoutAuth() throws Exception {
+    @DisplayName("DELETE request without credentials returns 401")
+    void deleteRequestWithoutAuthReturns401() throws Exception {
         mockMvc.perform(delete("/security-test"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    // --- Authenticated principal reaches the controller ---
+
+    @Test
+    @DisplayName("GET with an authenticated principal reaches the controller")
+    @WithMockUser(roles = "ADMIN")
+    void getRequestAuthenticatedReachesController() throws Exception {
+        mockMvc.perform(get("/security-test"))
                 .andExpect(status().isOk());
     }
 
@@ -99,6 +115,7 @@ class SecurityConfigTest {
 
     @Test
     @DisplayName("POST without CSRF token is not rejected (CSRF disabled)")
+    @WithMockUser(roles = "ADMIN")
     void postWithoutCsrfTokenNotRejected() throws Exception {
         mockMvc.perform(post("/security-test")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -110,6 +127,7 @@ class SecurityConfigTest {
 
     @Test
     @DisplayName("Response does not contain Set-Cookie header (stateless session)")
+    @WithMockUser(roles = "ADMIN")
     void responseDoesNotContainSetCookie() throws Exception {
         mockMvc.perform(get("/security-test"))
                 .andExpect(header().doesNotExist("Set-Cookie"));
@@ -119,6 +137,7 @@ class SecurityConfigTest {
 
     @Test
     @DisplayName("Response does not contain X-Frame-Options header (frameOptions disabled)")
+    @WithMockUser(roles = "ADMIN")
     void responseDoesNotContainXFrameOptions() throws Exception {
         mockMvc.perform(get("/security-test"))
                 .andExpect(header().doesNotExist("X-Frame-Options"));

@@ -269,3 +269,10 @@ describe('SettingsAppearancePage', () => {
     })
   })
 })
+
+// --- auth-store mock (hoisted): prevents the real store from pulling the
+//     api-client/i18n chain, which would break the react-i18next mock. ---
+vi.mock('@/stores/auth-store', () => ({
+  useAuthStore: (selector: (state: { user: { id: number } }) => unknown) =>
+    selector({ user: { id: 1 } }),
+}))

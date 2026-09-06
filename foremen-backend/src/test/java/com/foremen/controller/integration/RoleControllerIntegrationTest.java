@@ -3,10 +3,12 @@ package com.foremen.controller.integration;
 import com.foremen.controller.model.*;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.model.RoleEntity;
+import com.foremen.testsupport.MockMvcSecurityConfig;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -32,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(MockMvcSecurityConfig.class)
 @Testcontainers
 @ActiveProfiles("integration-test")
 @WithMockUser(username = "admin@foremen.com", roles = "ADMIN")

@@ -1,62 +1,30 @@
+import { apiRequest } from '@/lib/api-client'
 import type { DisplayPreferencesRequest, DisplayPreferencesResponse } from '../types'
 
-const BASE_URL = '/api'
-
-function getAcceptLanguage(): string {
-  try {
-    const locale = localStorage.getItem('foremen-locale')
-    if (locale === 'ru') return 'ru'
-  } catch {}
-  return 'pl'
-}
-
-function getHeaders(extra?: Record<string, string>): Record<string, string> {
-  return {
-    'Accept-Language': getAcceptLanguage(),
-    ...extra,
-  }
-}
-
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}))
-    const message = body.message || body.error || `HTTP ${response.status}`
-    throw new ApiError(response.status, message)
-  }
-  return response.json()
-}
-
 /**
- * Fetch display preferences for a user.
- * GET /api/users/{id}/display-preferences
+ * Fetch display preferences for a user (GET /api/users/{id}/display-preferences).
+ *
+ * Routed through the shared Api_Client so the request carries the Authorization
+ * bearer token (plus Accept-Language and 401 refresh/retry). The previous bespoke
+ * fetch wrapper sent no Authorization header, so the backend treated the caller
+ * as unauthenticated and returned 403.
  */
-export function fetchDisplayPreferences(userId: number): Promise<DisplayPreferencesResponse> {
-  return fetch(`${BASE_URL}/users/${userId}/display-preferences`, {
-    headers: getHeaders(),
-  }).then((r) => handleResponse<DisplayPreferencesResponse>(r))
+export function fetchDisplayPreferences(
+  userId: number,
+): Promise<DisplayPreferencesResponse> {
+  return apiRequest<DisplayPreferencesResponse>(`/api/users/${userId}/display-preferences`)
 }
 
 /**
- * Patch (update) display preferences for a user.
- * PATCH /api/users/{id}/display-preferences
+ * Patch (update) display preferences for a user
+ * (PATCH /api/users/{id}/display-preferences).
  */
 export function patchDisplayPreferences(
   userId: number,
   body: DisplayPreferencesRequest,
 ): Promise<DisplayPreferencesResponse> {
-  return fetch(`${BASE_URL}/users/${userId}/display-preferences`, {
-    method: 'PATCH',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(body),
-  }).then((r) => handleResponse<DisplayPreferencesResponse>(r))
+  return apiRequest<DisplayPreferencesResponse>(
+    `/api/users/${userId}/display-preferences`,
+    { method: 'PATCH', body },
+  )
 }

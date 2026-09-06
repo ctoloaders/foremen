@@ -4,6 +4,10 @@
 
 FOR-03 — система аутентификации и авторизации Foremen. Включает регистрацию по приглашению, JWT-логин, OTP для клиентов, проектные роли, фильтрацию данных по правам (RBAC + project ownership), видимость меню на фронтенде и runtime-валидацию доступа на бекенде.
 
+## Статус
+
+✅ **Завершено** (94%). Реализованы все дочерние спеки: JWT-аутентификация, регистрация по приглашению, permission evaluator, project ownership + валидация проектных действий, OTP для клиентов, фронтенд-аутентификация, видимость меню и защита API (миграция на `anyRequest().authenticated()` + декларативное гардирование контроллеров). Единственный незакрытый пункт — автоматизация API-тестов в FOR-03-01 (задача 17), которая не блокирует функциональность.
+
 ## Контекст
 
 ### Что уже реализовано (в FOR-01 и FOR-02)
@@ -122,16 +126,17 @@ project_members
 
 Спеки выстроены в порядке зависимостей. Каждая следующая опирается на совокупность предыдущих.
 
-| # | Спека | Описание | Зависит от |
-|---|-------|----------|------------|
-| 01 | FOR-03-01-jwt-auth | JWT аутентификация: login endpoint, access/refresh tokens, Spring Security filter chain, password hashing (bcrypt), token refresh endpoint | — |
-| 02 | FOR-03-02-user-invitation | Регистрация по приглашению: админ создаёт пользователя → invite email (зависит от роли) → страница установки пароля по токену | 01 |
-| 03 | FOR-03-03-permission-evaluator | Permission evaluator: загрузка прав из БД по роли, аннотация `@RequiresPermission(resource, operation)`, интеграция с SecurityContext | 01 |
-| 04 | FOR-03-04-project-ownership | Project membership: таблица `project_members`, сервис назначения, автоматическая фильтрация в CRUD-фреймворке через `addPermissionConditions` | 03 |
-| 05 | FOR-03-05-otp-client-auth | OTP аутентификация для клиентов: генерация 6-значного кода, отправка по email, верификация, выдача долгоживущего JWT (access 2ч / refresh 30д) | 01 |
-| 06 | FOR-03-06-frontend-auth | Фронтенд: auth store (Zustand), login page, set-password page, token storage, API client (attach JWT + auto-refresh), logout, protected routes | 01, 02 |
-| 07 | FOR-03-07-menu-visibility | Фронтенд: загрузка прав текущего пользователя, route guards по ресурсу/операции, скрытие пунктов меню без доступа, redirect на /403 | 06, 03 |
-| 08 | FOR-03-08-api-protection | Миграция существующих контроллеров: замена `permitAll()` на реальные правила, добавление `@RequiresPermission` ко всем CRUD-эндпоинтам, интеграционные тесты | 03, 04 |
+| # | Спека | Описание | Зависит от | Статус |
+|---|-------|----------|------------|--------|
+| 01 | FOR-03-01-jwt-auth | JWT аутентификация: login endpoint, access/refresh tokens, Spring Security filter chain, password hashing (bcrypt), token refresh endpoint | — | 🟨 Функционал завершён (осталась автоматизация API-тестов) |
+| 02 | FOR-03-02-user-invitation | Регистрация по приглашению: админ создаёт пользователя → invite email (зависит от роли) → страница установки пароля по токену | 01 | ✅ Завершено |
+| 03 | FOR-03-03-permission-evaluator | Permission evaluator: загрузка прав из БД по роли, аннотация `@RequiresPermission(resource, operation)`, интеграция с SecurityContext | 01 | ✅ Завершено |
+| 04 | FOR-03-04-project-ownership | Project membership: таблица `project_members`, сервис назначения, автоматическая фильтрация в CRUD-фреймворке через `addPermissionConditions` | 03 | ✅ Завершено |
+| 04a | FOR-03-04a-project-actions-validation | Валидация проектных действий (project-scoped actions) поверх project ownership | 04 | ✅ Завершено |
+| 05 | FOR-03-05-otp-client-auth | OTP аутентификация для клиентов: генерация 6-значного кода, отправка по email, верификация, выдача долгоживущего JWT (access 2ч / refresh 30д) | 01 | ✅ Завершено |
+| 06 | FOR-03-06-frontend-auth | Фронтенд: auth store (Zustand), login page, set-password page, token storage, API client (attach JWT + auto-refresh), logout, protected routes | 01, 02 | ✅ Завершено |
+| 07 | FOR-03-07-menu-visibility | Фронтенд: загрузка прав текущего пользователя, route guards по ресурсу/операции, скрытие пунктов меню без доступа, redirect на /403 | 06, 03 | ✅ Завершено |
+| 08 | FOR-03-08-api-protection | Миграция существующих контроллеров: `anyRequest().authenticated()` + декларативное `@PermissionResource`/`@PermissionOperation`-гардирование через `PermissionResolver`, startup-валидация полноты аннотаций, seed ресурса `USERS`, интеграционные тесты | 03, 04 | ✅ Завершено |
 
 ### Граф зависимостей
 

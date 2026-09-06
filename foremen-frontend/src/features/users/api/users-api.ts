@@ -1,3 +1,4 @@
+import { apiRequest } from '@/lib/api-client'
 import type {
   FetchParams,
   PaginatedResponse,
@@ -10,43 +11,20 @@ import type {
 
 const BASE_URL = '/api'
 
-function getAcceptLanguage(): string {
-  try {
-    const locale = localStorage.getItem('foremen-locale')
-    if (locale === 'ru') return 'ru'
-  } catch {}
-  return 'pl'
-}
-
-function getHeaders(extra?: Record<string, string>): Record<string, string> {
-  return {
-    'Accept-Language': getAcceptLanguage(),
-    ...extra,
-  }
-}
-
-export class ApiError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
-
-export async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}))
-    const message = body.message || body.error || `HTTP ${response.status}`
-    throw new ApiError(response.status, message)
-  }
-  return response.json()
-}
+/**
+ * Re-exported from the shared Api_Client so existing imports
+ * (`import { ApiError } from '../api/users-api'`) keep working. The shared
+ * error carries the HTTP status and the backend's verbatim message.
+ */
+export { ApiError } from '@/lib/api-client'
 
 /**
  * Adapter for DataTable's FetchParams — fetches paginated users list.
  * GET /api/users with page, size, sort[], and query params.
+ *
+ * All requests go through the shared {@link apiRequest} client, which attaches
+ * the `Authorization: Bearer <token>` header from the Auth_Store and handles a
+ * `401` via single-flight refresh/retry and forced logout + redirect.
  */
 export async function fetchUsers(params: FetchParams): Promise<PaginatedResponse<UserDto>> {
   const searchParams = new URLSearchParams()
@@ -57,10 +35,7 @@ export async function fetchUsers(params: FetchParams): Promise<PaginatedResponse
     searchParams.append('sort', sortEntry)
   }
 
-  const response = await fetch(`${BASE_URL}/users?${searchParams}`, {
-    headers: getHeaders(),
-  })
-  const data = await handleResponse<PaginatedResponse<UserDto>>(response)
+  const data = await apiRequest<PaginatedResponse<UserDto>>(`${BASE_URL}/users?${searchParams}`)
 
   return {
     ...data,
@@ -74,9 +49,7 @@ export async function fetchUsers(params: FetchParams): Promise<PaginatedResponse
  * GET /api/users/{id}
  */
 export function fetchUser(id: number): Promise<UserExtendedDto> {
-  return fetch(`${BASE_URL}/users/${id}`, { headers: getHeaders() }).then((r) =>
-    handleResponse<UserExtendedDto>(r),
-  )
+  return apiRequest<UserExtendedDto>(`${BASE_URL}/users/${id}`)
 }
 
 /**
@@ -84,11 +57,10 @@ export function fetchUser(id: number): Promise<UserExtendedDto> {
  * POST /api/users
  */
 export function createUser(data: UserCreateRequest): Promise<UserExtendedDto> {
-  return fetch(`${BASE_URL}/users`, {
+  return apiRequest<UserExtendedDto>(`${BASE_URL}/users`, {
     method: 'POST',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(data),
-  }).then((r) => handleResponse<UserExtendedDto>(r))
+    body: data,
+  })
 }
 
 /**
@@ -96,21 +68,18 @@ export function createUser(data: UserCreateRequest): Promise<UserExtendedDto> {
  * PUT /api/users/{id}
  */
 export function updateUser(id: number, data: UserUpdateRequest): Promise<UserExtendedDto> {
-  return fetch(`${BASE_URL}/users/${id}`, {
+  return apiRequest<UserExtendedDto>(`${BASE_URL}/users/${id}`, {
     method: 'PUT',
-    headers: getHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify(data),
-  }).then((r) => handleResponse<UserExtendedDto>(r))
+    body: data,
+  })
 }
 
 /**
  * Deactivate (soft-delete) a user.
  * DELETE /api/users/{id}
  */
-export function deactivateUser(id: number): Promise<void> {
-  return fetch(`${BASE_URL}/users/${id}`, { method: 'DELETE', headers: getHeaders() }).then((r) => {
-    if (!r.ok) return handleResponse<void>(r)
-  })
+export async function deactivateUser(id: number): Promise<void> {
+  await apiRequest<void>(`${BASE_URL}/users/${id}`, { method: 'DELETE' })
 }
 
 /**
@@ -121,7 +90,7 @@ export function deactivateUser(id: number): Promise<void> {
  * Returns the raw Spring Data page so callers (e.g. useInfiniteQuery) can
  * paginate via `last` / `number` and lazily load subsequent pages.
  */
-export async function fetchRolesPage(params: {
+export function fetchRolesPage(params: {
   page: number
   size: number
   query?: string
@@ -139,10 +108,7 @@ export async function fetchRolesPage(params: {
     url += `&query=${encodeURIComponent(params.query).replace(/%7E/gi, '~')}`
   }
 
-  const response = await fetch(url, {
-    headers: getHeaders(),
-  })
-  return handleResponse<PaginatedResponse<RoleOption>>(response)
+  return apiRequest<PaginatedResponse<RoleOption>>(url)
 }
 
 /**
