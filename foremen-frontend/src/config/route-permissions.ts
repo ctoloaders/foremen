@@ -50,6 +50,9 @@ const extra: Record<string, PermissionRequirement> = {
   // FOR-04-11: interim guard for the Work Catalog page until the FOR-04-15
   // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
   '/catalog/works': { resource: 'WORK_CATALOG', operation: 'READ' },
+  // FOR-04-12: interim guard for the Work Prices page until the FOR-04-15
+  // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
+  '/catalog/prices': { resource: 'WORK_PRICES', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {

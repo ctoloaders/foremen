@@ -42,5 +42,7 @@
     <include file="database_files/changesets/035-seed-offer-packages-resource.xml"/>
     <include file="database_files/changesets/036-create-work-items.xml"/>
     <include file="database_files/changesets/037-seed-work-catalog-resource.xml"/>
+    <include file="database_files/changesets/038-create-work-prices.xml"/>
+    <include file="database_files/changesets/039-seed-work-prices-resource.xml"/>
 
 </databaseChangeLog>

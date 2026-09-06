@@ -26,6 +26,7 @@
     "materialCategories": "Категории материалов",
     "offerPackages": "Пакеты предложений",
     "workCatalog": "Каталог работ",
+    "workPrices": "Цены работ",
     "audit": "Аудит",
     "sections": {
       "warehouse": "Склад",
@@ -698,6 +699,67 @@
       "unitRequired": "Единица измерения обязательна",
       "nameMin": "Название обязательно",
       "nameMax": "Максимум 255 символов"
+    }
+  },
+  "workPrices": {
+    "pageTitle": "Цены работ",
+    "search": {
+      "placeholder": "Поиск цены..."
+    },
+    "actions": {
+      "create": "Создать цену",
+      "retry": "Повторить"
+    },
+    "list": {
+      "empty": "Цены не найдены"
+    },
+    "table": {
+      "workItem": "Позиция каталога",
+      "currency": "Валюта",
+      "netPrice": "Цена нетто",
+      "validFrom": "Действует с",
+      "validTo": "Действует по",
+      "current": "Актуальная",
+      "actions": "Действия"
+    },
+    "badge": {
+      "current": "Актуальная",
+      "historic": "Историческая"
+    },
+    "form": {
+      "titleCreate": "Создать цену",
+      "titleEdit": "Редактировать цену",
+      "descriptionCreate": "Заполните данные новой цены работы",
+      "descriptionEdit": "Измените данные цены работы",
+      "workItem": "Позиция каталога",
+      "currency": "Валюта",
+      "netPrice": "Цена нетто",
+      "validFrom": "Действует с",
+      "validTo": "Действует по",
+      "submitCreate": "Создать",
+      "submitEdit": "Сохранить",
+      "selectWorkItem": "Выберите позицию каталога",
+      "selectCurrency": "Выберите валюту"
+    },
+    "delete": {
+      "title": "Удалить цену?",
+      "description": "Вы уверены, что хотите удалить цену позиции \"{{name}}\"? Это действие нельзя отменить."
+    },
+    "toast": {
+      "createSuccess": "Цена создана",
+      "updateSuccess": "Цена обновлена",
+      "deleteSuccess": "Цена удалена"
+    },
+    "errors": {
+      "loadFailed": "Не удалось загрузить данные",
+      "network": "Ошибка соединения с сервером"
+    },
+    "validation": {
+      "workItemRequired": "Позиция каталога обязательна",
+      "currencyRequired": "Валюта обязательна",
+      "netPriceRequired": "Цена нетто обязательна",
+      "netPricePositive": "Цена должна быть больше нуля",
+      "validFromRequired": "Дата начала обязательна"
     }
   },
   "offerPackages": {

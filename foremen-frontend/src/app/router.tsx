@@ -41,6 +41,9 @@ const OfferPackagesPage = React.lazy(
 const WorkCatalogPage = React.lazy(
   () => import('@/features/work-catalog/WorkCatalogPage')
 )
+const WorkPricesPage = React.lazy(
+  () => import('@/features/work-prices/WorkPricesPage')
+)
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
@@ -192,6 +195,10 @@ export const router = createBrowserRouter([
               {
                 path: 'catalog/works',
                 element: <SuspenseWrapper><WorkCatalogPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'catalog/prices',
+                element: <SuspenseWrapper><WorkPricesPage /></SuspenseWrapper>,
               },
               {
                 path: 'audit',

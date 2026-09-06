@@ -26,6 +26,7 @@
     "materialCategories": "Kategorie materiałów",
     "offerPackages": "Pakiety ofert",
     "workCatalog": "Katalog prac",
+    "workPrices": "Ceny prac",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -698,6 +699,67 @@
       "unitRequired": "Jednostka jest wymagana",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 255 znaków"
+    }
+  },
+  "workPrices": {
+    "pageTitle": "Ceny prac",
+    "search": {
+      "placeholder": "Szukaj ceny..."
+    },
+    "actions": {
+      "create": "Utwórz cenę",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono cen"
+    },
+    "table": {
+      "workItem": "Pozycja katalogu",
+      "currency": "Waluta",
+      "netPrice": "Cena netto",
+      "validFrom": "Obowiązuje od",
+      "validTo": "Obowiązuje do",
+      "current": "Aktualna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "current": "Aktualna",
+      "historic": "Historyczna"
+    },
+    "form": {
+      "titleCreate": "Utwórz cenę",
+      "titleEdit": "Edytuj cenę",
+      "descriptionCreate": "Wypełnij dane nowej ceny pracy",
+      "descriptionEdit": "Zmień dane ceny pracy",
+      "workItem": "Pozycja katalogu",
+      "currency": "Waluta",
+      "netPrice": "Cena netto",
+      "validFrom": "Obowiązuje od",
+      "validTo": "Obowiązuje do",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz",
+      "selectWorkItem": "Wybierz pozycję katalogu",
+      "selectCurrency": "Wybierz walutę"
+    },
+    "delete": {
+      "title": "Usunąć cenę?",
+      "description": "Czy na pewno chcesz usunąć cenę pozycji \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Cena została utworzona",
+      "updateSuccess": "Cena została zaktualizowana",
+      "deleteSuccess": "Cena została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "workItemRequired": "Pozycja katalogu jest wymagana",
+      "currencyRequired": "Waluta jest wymagana",
+      "netPriceRequired": "Cena netto jest wymagana",
+      "netPricePositive": "Cena musi być większa od zera",
+      "validFromRequired": "Data początkowa jest wymagana"
     }
   },
   "offerPackages": {
