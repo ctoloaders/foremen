@@ -61,6 +61,27 @@
 | 07 | FOR-03-07-menu-visibility | ✅ Завершено |
 | 08 | FOR-03-08-api-protection | ✅ Завершено |
 
+### FOR-04 — Детализация
+
+| # | Подспека | Статус |
+|---|----------|--------|
+| — | OVERVIEW + скаффолдинг дочерних спек | ✅ Завершено |
+| 01 | FOR-04-01-table-reference-filter | 🟨 Спека готова (requirements/design/tasks/test-cases), реализация не начата |
+| 02 | FOR-04-02-measurement-units | ⬜ Не начато |
+| 03 | FOR-04-03-currencies | ⬜ Не начато |
+| 04 | FOR-04-04-vat-rates | ⬜ Не начато |
+| 05 | FOR-04-05-room-types | ⬜ Не начато |
+| 06 | FOR-04-06-work-categories | ⬜ Не начато |
+| 07 | FOR-04-07-delivery-categories | ⬜ Не начато |
+| 08 | FOR-04-08-delivery-statuses | ⬜ Не начато |
+| 09 | FOR-04-09-material-categories | ⬜ Не начато |
+| 10 | FOR-04-10-offer-packages | ⬜ Не начато |
+| 11 | FOR-04-11-work-catalog | ⬜ Не начато |
+| 12 | FOR-04-12-work-prices | ⬜ Не начато |
+| 13 | FOR-04-13-project | ⬜ Не начато |
+| 14 | FOR-04-14-room | ⬜ Не начато |
+| 15 | FOR-04-15-menu-grouping | ⬜ Не начато |
+
 ---
 
 *Обновляется при добавлении/изменении/завершении спек.*
