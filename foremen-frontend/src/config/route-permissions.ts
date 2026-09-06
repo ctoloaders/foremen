@@ -23,6 +23,9 @@ const fromNav: Record<string, PermissionRequirement> = Object.fromEntries(
 // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
 const extra: Record<string, PermissionRequirement> = {
   '/measurement-units': { resource: 'MEASUREMENT_UNITS', operation: 'READ' },
+  // FOR-04-03: interim guard for the Currencies page until the FOR-04-15
+  // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
+  '/currencies': { resource: 'CURRENCIES', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {

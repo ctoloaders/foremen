@@ -24,5 +24,7 @@
     <include file="database_files/changesets/017-seed-users-resource.xml"/>
     <include file="database_files/changesets/018-create-measurement-units.xml"/>
     <include file="database_files/changesets/019-seed-measurement-units-resource.xml"/>
+    <include file="database_files/changesets/020-create-currencies.xml"/>
+    <include file="database_files/changesets/021-seed-currencies-resource.xml"/>
 
 </databaseChangeLog>

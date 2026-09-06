@@ -20,6 +20,7 @@ const RolesPage = React.lazy(() => import('@/features/roles/RolesPage'))
 const MeasurementUnitsPage = React.lazy(
   () => import('@/features/measurement-units/MeasurementUnitsPage')
 )
+const CurrenciesPage = React.lazy(() => import('@/features/currencies/CurrenciesPage'))
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
@@ -135,6 +136,10 @@ export const router = createBrowserRouter([
               {
                 path: 'measurement-units',
                 element: <SuspenseWrapper><MeasurementUnitsPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'currencies',
+                element: <SuspenseWrapper><CurrenciesPage /></SuspenseWrapper>,
               },
               {
                 path: 'audit',

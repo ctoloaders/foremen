@@ -17,6 +17,7 @@
     "users": "Użytkownicy",
     "roles": "Role",
     "measurementUnits": "Jednostki miary",
+    "currencies": "Waluty",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -353,6 +354,63 @@
     "validation": {
       "codeRequired": "Kod jest wymagany",
       "codePattern": "Kod może zawierać tylko małe litery i cyfry (maks. 50 znaków)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "currencies": {
+    "pageTitle": "Waluty",
+    "search": {
+      "placeholder": "Szukaj waluty..."
+    },
+    "actions": {
+      "create": "Utwórz walutę",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono walut"
+    },
+    "table": {
+      "code": "Kod",
+      "symbol": "Symbol",
+      "name": "Nazwa",
+      "active": "Aktywna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "form": {
+      "titleCreate": "Utwórz walutę",
+      "titleEdit": "Edytuj walutę",
+      "descriptionCreate": "Wypełnij dane nowej waluty",
+      "descriptionEdit": "Zmień dane waluty",
+      "code": "Kod",
+      "symbol": "Symbol",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywna",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć walutę?",
+      "description": "Czy na pewno chcesz usunąć walutę \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Waluta została utworzona",
+      "updateSuccess": "Waluta została zaktualizowana",
+      "deleteSuccess": "Waluta została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko litery (od 2 do 10 znaków)",
+      "symbolRequired": "Symbol jest wymagany",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 100 znaków"
     }
