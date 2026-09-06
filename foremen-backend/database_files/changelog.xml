@@ -22,5 +22,7 @@
     <include file="database_files/changesets/015-seed-project-members-resource.xml"/>
     <include file="database_files/changesets/016-create-otp-tokens.xml"/>
     <include file="database_files/changesets/017-seed-users-resource.xml"/>
+    <include file="database_files/changesets/018-create-measurement-units.xml"/>
+    <include file="database_files/changesets/019-seed-measurement-units-resource.xml"/>
 
 </databaseChangeLog>

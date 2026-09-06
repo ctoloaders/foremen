@@ -19,7 +19,11 @@ const fromNav: Record<string, PermissionRequirement> = Object.fromEntries(
 )
 
 // Extra non-menu guarded routes can be added here later (e.g. detail routes).
-const extra: Record<string, PermissionRequirement> = {}
+// FOR-04-02: interim guard for the Measurement Units page until the FOR-04-15
+// "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
+const extra: Record<string, PermissionRequirement> = {
+  '/measurement-units': { resource: 'MEASUREMENT_UNITS', operation: 'READ' },
+}
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {
   ...fromNav,

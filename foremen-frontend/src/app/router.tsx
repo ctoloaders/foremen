@@ -17,6 +17,9 @@ const FinancesPage = React.lazy(() => import('@/app/pages/FinancesPage'))
 const DeliveriesPage = React.lazy(() => import('@/app/pages/DeliveriesPage'))
 const UsersPage = React.lazy(() => import('@/features/users/UsersPage'))
 const RolesPage = React.lazy(() => import('@/features/roles/RolesPage'))
+const MeasurementUnitsPage = React.lazy(
+  () => import('@/features/measurement-units/MeasurementUnitsPage')
+)
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
@@ -128,6 +131,10 @@ export const router = createBrowserRouter([
               {
                 path: 'roles',
                 element: <SuspenseWrapper><RolesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'measurement-units',
+                element: <SuspenseWrapper><MeasurementUnitsPage /></SuspenseWrapper>,
               },
               {
                 path: 'audit',

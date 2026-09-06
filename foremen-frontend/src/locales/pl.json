@@ -16,6 +16,7 @@
     "deliveries": "Dostawy",
     "users": "Użytkownicy",
     "roles": "Role",
+    "measurementUnits": "Jednostki miary",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -300,6 +301,60 @@
       "nameMin": "Minimum 2 znaki",
       "nameMax": "Maksimum 100 znaków",
       "descriptionMax": "Maksimum 500 znaków"
+    }
+  },
+  "measurementUnits": {
+    "pageTitle": "Jednostki miary",
+    "search": {
+      "placeholder": "Szukaj jednostki..."
+    },
+    "actions": {
+      "create": "Utwórz jednostkę",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono jednostek miary"
+    },
+    "table": {
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "form": {
+      "titleCreate": "Utwórz jednostkę miary",
+      "titleEdit": "Edytuj jednostkę miary",
+      "descriptionCreate": "Wypełnij dane nowej jednostki miary",
+      "descriptionEdit": "Zmień dane jednostki miary",
+      "code": "Kod",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywna",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć jednostkę miary?",
+      "description": "Czy na pewno chcesz usunąć jednostkę \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Jednostka miary została utworzona",
+      "updateSuccess": "Jednostka miary została zaktualizowana",
+      "deleteSuccess": "Jednostka miary została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko małe litery i cyfry (maks. 50 znaków)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
     }
   },
   "settings": {
