@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed DELIVERY_STATUSES resource into resources table -->
+    <changeSet id="031-seed-delivery-statuses-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'DELIVERY_STATUSES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="DELIVERY_STATUSES"/>
+            <column name="name_ru" value="Статусы доставок"/>
+            <column name="name_pl" value="Statusy dostaw"/>
+            <column name="description_ru" value="Справочник статусов доставок"/>
+            <column name="description_pl" value="Katalog statusów dostaw"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on DELIVERY_STATUSES resource -->
+    <changeSet id="031-seed-delivery-statuses-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'DELIVERY_STATUSES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on DELIVERY_STATUSES resource -->
+    <changeSet id="031-seed-delivery-statuses-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'DELIVERY_STATUSES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on DELIVERY_STATUSES resource -->
+    <changeSet id="031-seed-delivery-statuses-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'DELIVERY_STATUSES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on DELIVERY_STATUSES resource -->
+    <changeSet id="031-seed-delivery-statuses-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'DELIVERY_STATUSES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'DELIVERY_STATUSES';
+        </sql>
+    </changeSet>
+
+    <!--
+        FINANCIER and CLIENT are intentionally omitted from the DELIVERY_STATUSES grants
+        (deny-by-default). Unlike MEASUREMENT_UNITS, FINANCIER receives NO grant here.
+        Custom (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- Seed the four default delivery statuses -->
+    <changeSet id="031-seed-delivery-statuses-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM delivery_statuses</sqlCheck>
+        </preConditions>
+
+        <insert tableName="delivery_statuses">
+            <column name="order_no" valueNumeric="1"/>
+            <column name="code" value="new"/>
+            <column name="name_ru" value="Новый"/>
+            <column name="name_pl" value="Nowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_statuses">
+            <column name="order_no" valueNumeric="2"/>
+            <column name="code" value="ordered"/>
+            <column name="name_ru" value="Заказан"/>
+            <column name="name_pl" value="Zamówione"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_statuses">
+            <column name="order_no" valueNumeric="3"/>
+            <column name="code" value="delivered"/>
+            <column name="name_ru" value="Доставлен"/>
+            <column name="name_pl" value="Dostarczone"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="delivery_statuses">
+            <column name="order_no" valueNumeric="4"/>
+            <column name="code" value="cancelled"/>
+            <column name="name_ru" value="Отменён"/>
+            <column name="name_pl" value="Anulowane"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

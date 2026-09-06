@@ -38,6 +38,9 @@ const extra: Record<string, PermissionRequirement> = {
   // FOR-04-07: interim guard for the Delivery Categories page until the FOR-04-15
   // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
   '/delivery-categories': { resource: 'DELIVERY_CATEGORIES', operation: 'READ' },
+  // FOR-04-08: interim guard for the Delivery Statuses page until the FOR-04-15
+  // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
+  '/delivery-statuses': { resource: 'DELIVERY_STATUSES', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {

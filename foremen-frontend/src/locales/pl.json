@@ -22,6 +22,7 @@
     "roomTypes": "Typy pomieszczeń",
     "workCategories": "Kategorie prac",
     "deliveryCategories": "Kategorie dostaw",
+    "deliveryStatuses": "Statusy dostaw",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -522,6 +523,63 @@
     "validation": {
       "codeRequired": "Kod jest wymagany",
       "codePattern": "Kod może zawierać tylko wielkie litery, cyfry i podkreślenia (maks. 50 znaków)",
+      "orderNoRequired": "Kolejność jest wymagana (liczba całkowita ≥ 0)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "deliveryStatuses": {
+    "pageTitle": "Statusy dostaw",
+    "search": {
+      "placeholder": "Szukaj statusu dostawy..."
+    },
+    "actions": {
+      "create": "Utwórz status dostawy",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono statusów dostaw"
+    },
+    "table": {
+      "orderNo": "Kolejność",
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywny",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "form": {
+      "titleCreate": "Utwórz status dostawy",
+      "titleEdit": "Edytuj status dostawy",
+      "descriptionCreate": "Wypełnij dane nowego statusu dostawy",
+      "descriptionEdit": "Zmień dane statusu dostawy",
+      "code": "Kod",
+      "orderNo": "Kolejność",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywny",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć status dostawy?",
+      "description": "Czy na pewno chcesz usunąć status dostawy \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Status dostawy został utworzony",
+      "updateSuccess": "Status dostawy został zaktualizowany",
+      "deleteSuccess": "Status dostawy został usunięty"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko małe litery, cyfry i podkreślenia (maks. 50 znaków)",
       "orderNoRequired": "Kolejność jest wymagana (liczba całkowita ≥ 0)",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 100 znaków"
