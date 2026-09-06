@@ -24,6 +24,7 @@
     "deliveryCategories": "Kategorie dostaw",
     "deliveryStatuses": "Statusy dostaw",
     "materialCategories": "Kategorie materiałów",
+    "offerPackages": "Pakiety ofert",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -627,6 +628,63 @@
       "createSuccess": "Status dostawy został utworzony",
       "updateSuccess": "Status dostawy został zaktualizowany",
       "deleteSuccess": "Status dostawy został usunięty"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko małe litery, cyfry i podkreślenia (maks. 50 znaków)",
+      "orderNoRequired": "Kolejność jest wymagana (liczba całkowita ≥ 0)",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "offerPackages": {
+    "pageTitle": "Pakiety ofert",
+    "search": {
+      "placeholder": "Szukaj pakietu oferty..."
+    },
+    "actions": {
+      "create": "Utwórz pakiet oferty",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono pakietów ofert"
+    },
+    "table": {
+      "orderNo": "Kolejność",
+      "code": "Kod",
+      "name": "Nazwa",
+      "active": "Aktywny",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "form": {
+      "titleCreate": "Utwórz pakiet oferty",
+      "titleEdit": "Edytuj pakiet oferty",
+      "descriptionCreate": "Wypełnij dane nowego pakietu oferty",
+      "descriptionEdit": "Zmień dane pakietu oferty",
+      "code": "Kod",
+      "orderNo": "Kolejność",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywny",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć pakiet oferty?",
+      "description": "Czy na pewno chcesz usunąć pakiet oferty \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Pakiet oferty został utworzony",
+      "updateSuccess": "Pakiet oferty został zaktualizowany",
+      "deleteSuccess": "Pakiet oferty został usunięty"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować danych",

@@ -35,6 +35,9 @@ const DeliveryStatusesPage = React.lazy(
 const MaterialCategoriesPage = React.lazy(
   () => import('@/features/material-categories/MaterialCategoriesPage')
 )
+const OfferPackagesPage = React.lazy(
+  () => import('@/features/offer-packages/OfferPackagesPage')
+)
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
@@ -178,6 +181,10 @@ export const router = createBrowserRouter([
               {
                 path: 'material-categories',
                 element: <SuspenseWrapper><MaterialCategoriesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'offer-packages',
+                element: <SuspenseWrapper><OfferPackagesPage /></SuspenseWrapper>,
               },
               {
                 path: 'audit',

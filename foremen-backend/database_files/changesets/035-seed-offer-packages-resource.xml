@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed OFFER_PACKAGES resource into resources table -->
+    <changeSet id="035-seed-offer-packages-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'OFFER_PACKAGES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="OFFER_PACKAGES"/>
+            <column name="name_ru" value="Пакеты предложений"/>
+            <column name="name_pl" value="Pakiety ofert"/>
+            <column name="description_ru" value="Справочник пакетов предложений"/>
+            <column name="description_pl" value="Katalog pakietów ofert"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on OFFER_PACKAGES resource -->
+    <changeSet id="035-seed-offer-packages-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'OFFER_PACKAGES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on OFFER_PACKAGES resource -->
+    <changeSet id="035-seed-offer-packages-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'OFFER_PACKAGES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on OFFER_PACKAGES resource -->
+    <changeSet id="035-seed-offer-packages-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'OFFER_PACKAGES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on OFFER_PACKAGES resource -->
+    <changeSet id="035-seed-offer-packages-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'OFFER_PACKAGES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on OFFER_PACKAGES resource -->
+    <changeSet id="035-seed-offer-packages-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'OFFER_PACKAGES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'OFFER_PACKAGES';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the OFFER_PACKAGES grants
+        (deny-by-default). Like MATERIAL_CATEGORIES / WORK_CATEGORIES /
+        MEASUREMENT_UNITS, FINANCIER receives a READ grant here. Custom
+        (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- Seed the three default offer packages -->
+    <changeSet id="035-seed-offer-packages-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM offer_packages</sqlCheck>
+        </preConditions>
+
+        <insert tableName="offer_packages">
+            <column name="order_no" valueNumeric="1"/>
+            <column name="code" value="budget"/>
+            <column name="name_ru" value="Бюджет (START)"/>
+            <column name="name_pl" value="Budżet (START)"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="offer_packages">
+            <column name="order_no" valueNumeric="2"/>
+            <column name="code" value="norm"/>
+            <column name="name_ru" value="Норма (COMFORT)"/>
+            <column name="name_pl" value="Norma (COMFORT)"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="offer_packages">
+            <column name="order_no" valueNumeric="3"/>
+            <column name="code" value="lux"/>
+            <column name="name_ru" value="Люкс (PRESTIGE)"/>
+            <column name="name_pl" value="Lux (PRESTIGE)"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
