@@ -21,6 +21,7 @@ const MeasurementUnitsPage = React.lazy(
   () => import('@/features/measurement-units/MeasurementUnitsPage')
 )
 const CurrenciesPage = React.lazy(() => import('@/features/currencies/CurrenciesPage'))
+const VatRatesPage = React.lazy(() => import('@/features/vat-rates/VatRatesPage'))
 const AuditPage = React.lazy(() => import('@/features/audit/AuditPage'))
 const SettingsAppearancePage = React.lazy(
   () => import('@/features/settings/SettingsAppearancePage')
@@ -140,6 +141,10 @@ export const router = createBrowserRouter([
               {
                 path: 'currencies',
                 element: <SuspenseWrapper><CurrenciesPage /></SuspenseWrapper>,
+              },
+              {
+                path: 'vat-rates',
+                element: <SuspenseWrapper><VatRatesPage /></SuspenseWrapper>,
               },
               {
                 path: 'audit',

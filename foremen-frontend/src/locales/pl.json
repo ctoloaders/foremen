@@ -18,6 +18,7 @@
     "roles": "Role",
     "measurementUnits": "Jednostki miary",
     "currencies": "Waluty",
+    "vatRates": "Stawki VAT",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -411,6 +412,67 @@
       "codeRequired": "Kod jest wymagany",
       "codePattern": "Kod może zawierać tylko litery (od 2 do 10 znaków)",
       "symbolRequired": "Symbol jest wymagany",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "vatRates": {
+    "pageTitle": "Stawki VAT",
+    "search": {
+      "placeholder": "Szukaj stawki VAT..."
+    },
+    "actions": {
+      "create": "Utwórz stawkę VAT",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono stawek VAT"
+    },
+    "table": {
+      "code": "Kod",
+      "rate": "Stawka",
+      "name": "Nazwa",
+      "isDefault": "Domyślna",
+      "active": "Aktywna",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna",
+      "default": "Domyślna",
+      "notDefault": "Nie"
+    },
+    "form": {
+      "titleCreate": "Utwórz stawkę VAT",
+      "titleEdit": "Edytuj stawkę VAT",
+      "descriptionCreate": "Wypełnij dane nowej stawki VAT",
+      "descriptionEdit": "Zmień dane stawki VAT",
+      "code": "Kod",
+      "rate": "Stawka (%)",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "isDefault": "Stawka domyślna",
+      "active": "Aktywna",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz"
+    },
+    "delete": {
+      "title": "Usunąć stawkę VAT?",
+      "description": "Czy na pewno chcesz usunąć stawkę VAT \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Stawka VAT została utworzona",
+      "updateSuccess": "Stawka VAT została zaktualizowana",
+      "deleteSuccess": "Stawka VAT została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "codeRequired": "Kod jest wymagany",
+      "codePattern": "Kod może zawierać tylko litery i cyfry (od 1 do 20 znaków)",
+      "rateRequired": "Stawka jest wymagana i nie może być ujemna",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 100 znaków"
     }

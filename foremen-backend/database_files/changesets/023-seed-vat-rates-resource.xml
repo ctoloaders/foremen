@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed VAT_RATES resource into resources table -->
+    <changeSet id="023-seed-vat-rates-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'VAT_RATES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="VAT_RATES"/>
+            <column name="name_ru" value="Ставки НДС"/>
+            <column name="name_pl" value="Stawki VAT"/>
+            <column name="description_ru" value="Справочник ставок НДС"/>
+            <column name="description_pl" value="Katalog stawek VAT"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on VAT_RATES resource -->
+    <changeSet id="023-seed-vat-rates-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'VAT_RATES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'VAT_RATES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'VAT_RATES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on VAT_RATES resource -->
+    <changeSet id="023-seed-vat-rates-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'VAT_RATES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'VAT_RATES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'VAT_RATES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on VAT_RATES resource -->
+    <changeSet id="023-seed-vat-rates-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'VAT_RATES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'VAT_RATES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'VAT_RATES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on VAT_RATES resource -->
+    <changeSet id="023-seed-vat-rates-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'VAT_RATES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'VAT_RATES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'VAT_RATES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on VAT_RATES resource -->
+    <changeSet id="023-seed-vat-rates-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'VAT_RATES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'VAT_RATES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'VAT_RATES';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the VAT_RATES grants
+        (deny-by-default). Custom (non-system) roles likewise receive no grant here.
+    -->
+
+    <!-- Seed the four default VAT rates -->
+    <changeSet id="023-seed-vat-rates-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM vat_rates</sqlCheck>
+        </preConditions>
+
+        <insert tableName="vat_rates">
+            <column name="code" value="23"/>
+            <column name="rate" valueNumeric="23.00"/>
+            <column name="name_ru" value="23%"/>
+            <column name="name_pl" value="23%"/>
+            <column name="is_default" valueBoolean="true"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="vat_rates">
+            <column name="code" value="8"/>
+            <column name="rate" valueNumeric="8.00"/>
+            <column name="name_ru" value="8%"/>
+            <column name="name_pl" value="8%"/>
+            <column name="is_default" valueBoolean="false"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="vat_rates">
+            <column name="code" value="5"/>
+            <column name="rate" valueNumeric="5.00"/>
+            <column name="name_ru" value="5%"/>
+            <column name="name_pl" value="5%"/>
+            <column name="is_default" valueBoolean="false"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="vat_rates">
+            <column name="code" value="0"/>
+            <column name="rate" valueNumeric="0.00"/>
+            <column name="name_ru" value="0%"/>
+            <column name="name_pl" value="0%"/>
+            <column name="is_default" valueBoolean="false"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
