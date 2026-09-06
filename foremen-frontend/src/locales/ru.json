@@ -25,6 +25,7 @@
     "deliveryStatuses": "Статусы доставок",
     "materialCategories": "Категории материалов",
     "offerPackages": "Пакеты предложений",
+    "workCatalog": "Каталог работ",
     "audit": "Аудит",
     "sections": {
       "warehouse": "Склад",
@@ -639,6 +640,64 @@
       "orderNoRequired": "Порядок обязателен (целое число ≥ 0)",
       "nameMin": "Название обязательно",
       "nameMax": "Максимум 100 символов"
+    }
+  },
+  "workCatalog": {
+    "pageTitle": "Каталог работ",
+    "search": {
+      "placeholder": "Поиск позиции..."
+    },
+    "actions": {
+      "create": "Создать позицию",
+      "retry": "Повторить"
+    },
+    "list": {
+      "empty": "Позиции не найдены"
+    },
+    "table": {
+      "name": "Название",
+      "workCategory": "Категория работ",
+      "unit": "Единица измерения",
+      "active": "Активна",
+      "actions": "Действия"
+    },
+    "badge": {
+      "active": "Активна",
+      "inactive": "Неактивна"
+    },
+    "form": {
+      "titleCreate": "Создать позицию",
+      "titleEdit": "Редактировать позицию",
+      "descriptionCreate": "Заполните данные новой позиции каталога",
+      "descriptionEdit": "Измените данные позиции каталога",
+      "workCategory": "Категория работ",
+      "unit": "Единица измерения",
+      "nameRU": "Название (RU)",
+      "namePL": "Название (PL)",
+      "active": "Активна",
+      "submitCreate": "Создать",
+      "submitEdit": "Сохранить",
+      "selectWorkCategory": "Выберите категорию работ",
+      "selectUnit": "Выберите единицу измерения"
+    },
+    "delete": {
+      "title": "Удалить позицию?",
+      "description": "Вы уверены, что хотите удалить позицию \"{{name}}\"? Это действие нельзя отменить."
+    },
+    "toast": {
+      "createSuccess": "Позиция создана",
+      "updateSuccess": "Позиция обновлена",
+      "deleteSuccess": "Позиция удалена"
+    },
+    "errors": {
+      "loadFailed": "Не удалось загрузить данные",
+      "network": "Ошибка соединения с сервером"
+    },
+    "validation": {
+      "workCategoryRequired": "Категория работ обязательна",
+      "unitRequired": "Единица измерения обязательна",
+      "nameMin": "Название обязательно",
+      "nameMax": "Максимум 255 символов"
     }
   },
   "offerPackages": {

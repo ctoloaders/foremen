@@ -25,6 +25,7 @@
     "deliveryStatuses": "Statusy dostaw",
     "materialCategories": "Kategorie materiałów",
     "offerPackages": "Pakiety ofert",
+    "workCatalog": "Katalog prac",
     "audit": "Audyt",
     "sections": {
       "warehouse": "Magazyn",
@@ -639,6 +640,64 @@
       "orderNoRequired": "Kolejność jest wymagana (liczba całkowita ≥ 0)",
       "nameMin": "Nazwa jest wymagana",
       "nameMax": "Maksimum 100 znaków"
+    }
+  },
+  "workCatalog": {
+    "pageTitle": "Katalog prac",
+    "search": {
+      "placeholder": "Szukaj pozycji..."
+    },
+    "actions": {
+      "create": "Utwórz pozycję",
+      "retry": "Spróbuj ponownie"
+    },
+    "list": {
+      "empty": "Nie znaleziono pozycji"
+    },
+    "table": {
+      "name": "Nazwa",
+      "workCategory": "Kategoria prac",
+      "unit": "Jednostka",
+      "active": "Aktywny",
+      "actions": "Akcje"
+    },
+    "badge": {
+      "active": "Aktywny",
+      "inactive": "Nieaktywny"
+    },
+    "form": {
+      "titleCreate": "Utwórz pozycję",
+      "titleEdit": "Edytuj pozycję",
+      "descriptionCreate": "Wypełnij dane nowej pozycji katalogu",
+      "descriptionEdit": "Zmień dane pozycji katalogu",
+      "workCategory": "Kategoria prac",
+      "unit": "Jednostka",
+      "nameRU": "Nazwa (RU)",
+      "namePL": "Nazwa (PL)",
+      "active": "Aktywny",
+      "submitCreate": "Utwórz",
+      "submitEdit": "Zapisz",
+      "selectWorkCategory": "Wybierz kategorię prac",
+      "selectUnit": "Wybierz jednostkę"
+    },
+    "delete": {
+      "title": "Usunąć pozycję?",
+      "description": "Czy na pewno chcesz usunąć pozycję \"{{name}}\"? Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Pozycja została utworzona",
+      "updateSuccess": "Pozycja została zaktualizowana",
+      "deleteSuccess": "Pozycja została usunięta"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować danych",
+      "network": "Błąd połączenia z serwerem"
+    },
+    "validation": {
+      "workCategoryRequired": "Kategoria prac jest wymagana",
+      "unitRequired": "Jednostka jest wymagana",
+      "nameMin": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 255 znaków"
     }
   },
   "offerPackages": {
