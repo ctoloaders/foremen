@@ -937,6 +937,104 @@
       "nameMax": "Maksimum 100 znaków"
     }
   },
+  "projects": {
+    "pageTitle": "Projekty",
+    "list": {
+      "title": "Projekty",
+      "description": "Zarządzanie projektami",
+      "empty": "Nie znaleziono projektów"
+    },
+    "columns": {
+      "name": "Nazwa",
+      "address": "Adres",
+      "area": "Powierzchnia",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "status": "Status",
+      "members": "Zespół",
+      "client": "Klient"
+    },
+    "actions": {
+      "create": "Nowy projekt",
+      "edit": "Edytuj",
+      "delete": "Usuń"
+    },
+    "status": {
+      "DRAFT": "Szkic",
+      "ACTIVE": "Aktywny",
+      "ON_HOLD": "Wstrzymany",
+      "COMPLETED": "Zakończony",
+      "CANCELLED": "Anulowany"
+    },
+    "filters": {
+      "members": "Zespół",
+      "client": "Klient"
+    },
+    "members": {
+      "empty": "Brak członków zespołu"
+    },
+    "client": {
+      "empty": "Brak klienta"
+    },
+    "form": {
+      "titleCreate": "Nowy projekt",
+      "titleEdit": "Edycja projektu",
+      "descriptionCreate": "Utwórz nowy projekt z zespołem i klientem",
+      "descriptionEdit": "Zaktualizuj podstawowe dane projektu",
+      "name": "Nazwa",
+      "namePlaceholder": "Nazwa projektu",
+      "area": "Powierzchnia (m²)",
+      "startDate": "Data rozpoczęcia",
+      "endDate": "Data zakończenia",
+      "status": "Status",
+      "members": "Zespół",
+      "membersPlaceholder": "Wybierz członków zespołu",
+      "submitCreate": "Utwórz projekt",
+      "submitEdit": "Zapisz zmiany",
+      "addressLabel": "Adres",
+      "addressPlaceholder": "Zacznij wpisywać adres...",
+      "addressSearching": "Wyszukiwanie adresów...",
+      "addressEmpty": "Nie znaleziono dopasowań",
+      "addressError": "Nie udało się załadować adresów",
+      "client": {
+        "title": "Klient",
+        "description": "Wybierz istniejącego klienta lub dodaj nowego",
+        "existingTab": "Istniejący klient",
+        "newTab": "Nowy klient",
+        "existingLabel": "Klient",
+        "existingPlaceholder": "Wybierz klienta",
+        "existingSearch": "Szukaj klienta...",
+        "existingEmpty": "Nie znaleziono klientów",
+        "name": "Imię",
+        "email": "E-mail",
+        "phone": "Telefon"
+      }
+    },
+    "validation": {
+      "nameRequired": "Nazwa jest wymagana",
+      "nameMax": "Maksimum 255 znaków",
+      "addressMax": "Maksimum 500 znaków",
+      "formattedAddressMax": "Maksimum 500 znaków",
+      "areaInvalid": "Powierzchnia musi być liczbą",
+      "areaRange": "Powierzchnia musi mieścić się w zakresie od 0,01 do 999999999,99",
+      "statusInvalid": "Nieprawidłowy status",
+      "endBeforeStart": "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia"
+    },
+    "delete": {
+      "title": "Usunąć projekt?",
+      "description": "Projekt „{{name}}” zostanie usunięty. Tej operacji nie można cofnąć.",
+      "confirm": "Usuń",
+      "cancel": "Anuluj"
+    },
+    "toast": {
+      "createSuccess": "Projekt utworzony",
+      "updateSuccess": "Projekt zaktualizowany",
+      "deleteSuccess": "Projekt usunięty"
+    },
+    "errors": {
+      "network": "Wystąpił błąd sieci. Spróbuj ponownie."
+    }
+  },
   "settings": {
     "appearance": {
       "title": "Wygląd",

@@ -9,7 +9,10 @@ import { registerNavigate } from '@/lib/api-client'
 
 // Lazy-loaded page components
 const DashboardPage = React.lazy(() => import('@/app/pages/DashboardPage'))
-const ProjectsPage = React.lazy(() => import('@/app/pages/ProjectsPage'))
+// FOR-04-13 task 11.7: the `/projects` route renders the projects feature page
+// (created by task 11.6 at `@/features/projects/pages/ProjectsPage`). This import
+// resolves once 11.6 lands; until then it is the expected wiring target.
+const ProjectsPage = React.lazy(() => import('@/features/projects/pages/ProjectsPage'))
 const RoomsPage = React.lazy(() => import('@/app/pages/RoomsPage'))
 const EstimatePage = React.lazy(() => import('@/app/pages/EstimatePage'))
 const MaterialsPage = React.lazy(() => import('@/app/pages/MaterialsPage'))

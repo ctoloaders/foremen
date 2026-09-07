@@ -30,6 +30,10 @@ foremen:
     allowed-origins: "http://localhost:3000"
   google:
     client-id: ${FOREMEN_GOOGLE_CLIENT_ID:}
+  google-places:
+    # When enabled, api-key must be set or application startup fails fast.
+    enabled: ${GOOGLE_PLACES_ENABLED:false}
+    api-key: ${GOOGLE_PLACES_API_KEY:}
   jwt:
     access-ttl-minutes: ${FOREMEN_JWT_ACCESS_TTL_MINUTES:30}
     refresh-ttl-days: ${FOREMEN_JWT_REFRESH_TTL_DAYS:7}

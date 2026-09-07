@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed PROJECTS resource into resources table -->
+    <changeSet id="041-seed-projects-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PROJECTS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="PROJECTS"/>
+            <column name="name_ru" value="Проекты"/>
+            <column name="name_pl" value="Projekty"/>
+            <column name="description_ru" value="Проекты"/>
+            <column name="description_pl" value="Projekty"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on PROJECTS resource -->
+    <changeSet id="041-seed-projects-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'PROJECTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'PROJECTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'PROJECTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER CREATE/READ/UPDATE (NO DELETE) on PROJECTS resource -->
+    <changeSet id="041-seed-projects-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'PROJECTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'PROJECTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE')
+            WHERE r.code = 'MANAGER' AND res.code = 'PROJECTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on PROJECTS resource -->
+    <changeSet id="041-seed-projects-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'PROJECTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'PROJECTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'PROJECTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on PROJECTS resource -->
+    <changeSet id="041-seed-projects-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'PROJECTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'PROJECTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'PROJECTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on PROJECTS resource -->
+    <changeSet id="041-seed-projects-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'PROJECTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'PROJECTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'PROJECTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant CLIENT READ on PROJECTS resource -->
+    <changeSet id="041-seed-projects-permissions-client" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'CLIENT' AND res.code = 'PROJECTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'CLIENT' AND res.code = 'PROJECTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'CLIENT' AND res.code = 'PROJECTS';
+        </sql>
+    </changeSet>
+
+    <!--
+        DELETE is ADMIN-only: only the ADMIN grant above includes DELETE.
+        MANAGER (no DELETE) and FOREMAN/WORKER/FINANCIER/CLIENT (READ only)
+        never receive DELETE. Custom (non-system) roles receive no grant here.
+    -->
+
+</databaseChangeLog>

@@ -81,14 +81,42 @@ public class SpecificationBuilder {
         return currentPath;
     }
 
-    @SuppressWarnings("unchecked")
     private static Attribute<?, ?> getAttribute(From<?, ?> from, String attributeName) {
         try {
-            ManagedType<?> model = (ManagedType<?>) from.getModel();
-            return model.getAttribute(attributeName);
+            ManagedType<?> model = managedTypeOf(from);
+            return model != null ? model.getAttribute(attributeName) : null;
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    /**
+     * Resolves the {@link ManagedType} a {@link From} navigates from.
+     *
+     * <p>A {@link Root} exposes its {@link jakarta.persistence.metamodel.EntityType} directly via
+     * {@code getModel()}, which is a {@link ManagedType}. A {@link Join}, however, returns its
+     * <em>attribute</em> from {@code getModel()} (e.g. a {@code ListAttributeImpl} for a
+     * {@code @OneToMany} collection), not a managed type — so casting it to {@link ManagedType}
+     * throws (the cause of the failure on nested collection paths such as
+     * {@code members.user.id}). For a {@link Join} we therefore take the target managed type from
+     * the attribute's element type ({@code PluralAttribute#getElementType()} for a collection join,
+     * or {@code SingularAttribute#getType()} for a to-one join). Only managed (entity/embeddable)
+     * targets are navigable further; a basic-typed leaf yields {@code null} so the caller falls
+     * back to plain {@code get()} navigation.
+     */
+    private static ManagedType<?> managedTypeOf(From<?, ?> from) {
+        if (from instanceof Root<?> root) {
+            return root.getModel();
+        }
+        if (from instanceof Join<?, ?> join) {
+            Attribute<?, ?> joinAttribute = join.getAttribute();
+            jakarta.persistence.metamodel.Type<?> targetType =
+                    joinAttribute instanceof jakarta.persistence.metamodel.PluralAttribute<?, ?, ?> plural
+                            ? plural.getElementType()
+                            : ((jakarta.persistence.metamodel.SingularAttribute<?, ?>) joinAttribute).getType();
+            return targetType instanceof ManagedType<?> managed ? managed : null;
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")

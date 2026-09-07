@@ -3,9 +3,12 @@ package com.foremen.util;
 import com.foremen.controller.model.MetadataResponse;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -117,6 +120,16 @@ public class EntityMetadataResolver {
                 if (isReferenceAssociation(field)) {
                     reference = buildReferenceInfo(field.getName(), field.getType(), nestedMeta);
                 }
+            } else if (isEntityCollection(field)) {
+                // @OneToMany to a managed entity: advertise the collection's element metadata with
+                // its reference leaves qualified by the collection name (e.g. members.user.id,
+                // members.projectRole.code) so the frontend can build nested-collection filters.
+                // SpecificationBuilder already turns such a collection segment into a JOIN + distinct.
+                Class<?> elementType = collectionElementType(field);
+                if (elementType != null) {
+                    nested = buildCollectionElementFields(elementType, field.getName());
+                    dataType = MetadataResponse.DataType.STRING; // collection has no scalar type
+                }
             }
 
             if (isI18n) {
@@ -152,6 +165,111 @@ public class EntityMetadataResolver {
         return field.isAnnotationPresent(Embedded.class) ||
                field.isAnnotationPresent(ManyToOne.class) ||
                field.isAnnotationPresent(OneToOne.class);
+    }
+
+    /**
+     * A {@code @OneToMany} collection whose element type is itself a managed entity (i.e. carries
+     * its own {@code @ManyToOne}/{@code @OneToOne} reference leaves worth advertising). Collections
+     * of scalars/embeddables are not treated as reference-bearing collections.
+     */
+    private static boolean isEntityCollection(Field field) {
+        if (!field.isAnnotationPresent(OneToMany.class)) {
+            return false;
+        }
+        Class<?> element = collectionElementType(field);
+        return element != null && element.isAnnotationPresent(jakarta.persistence.Entity.class);
+    }
+
+    /**
+     * Resolves the element type of a {@code List<X>}/{@code Set<X>} collection field from its
+     * generic type parameter. Returns null when the type argument is not a concrete class
+     * (e.g. a raw collection or a wildcard/parameterized type argument).
+     */
+    private static Class<?> collectionElementType(Field field) {
+        Type generic = field.getGenericType();
+        if (generic instanceof ParameterizedType parameterized) {
+            Type[] args = parameterized.getActualTypeArguments();
+            if (args.length == 1 && args[0] instanceof Class<?> element) {
+                return element;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Builds the advertised nested fields for a {@code @OneToMany} collection element, emitting a
+     * reference descriptor for each of the element's {@code @ManyToOne}/{@code @OneToOne} leaves
+     * with a <em>collection-qualified</em> {@code idPath}. For a {@code members} collection of
+     * {@code ProjectMemberEntity} this yields {@code members.user.id} (target {@code users}) and
+     * {@code members.projectRole.code} (target {@code roles}). The leaf key segment is a unique
+     * {@code code} natural key when the target entity has one, otherwise {@code id}; this composes
+     * with the {@link com.foremen.service.query.SpecificationBuilder} nested-collection join
+     * (collection segment → JOIN + {@code distinct}, then {@code .user.id}/{@code .projectRole.code}).
+     */
+    private static List<MetadataResponse.FieldInfo> buildCollectionElementFields(
+            Class<?> elementType, String collectionName) {
+        List<MetadataResponse.FieldInfo> result = new ArrayList<>();
+        for (Field leaf : getAllFields(elementType)) {
+            String leafName = leaf.getName();
+            if (leafName.startsWith("$$") || leafName.equals("serialVersionUID")) {
+                continue;
+            }
+            MetadataResponse.DataType leafType = mapJavaType(leaf.getType());
+            MetadataResponse.ReferenceInfo reference = null;
+            if (isReferenceAssociation(leaf)) {
+                Class<?> targetType = leaf.getType();
+                MetadataResponse targetMeta = resolve(targetType);
+                String keySegment = referenceKeySegment(targetType);
+                String idPath = collectionName + "." + leafName + "." + keySegment;
+                reference = new MetadataResponse.ReferenceInfo(
+                        resolveTargetResource(targetType), resolveOptionsPath(targetType),
+                        resolveLabelField(targetMeta).name(), resolveLabelField(targetMeta).i18n(),
+                        idPath);
+            }
+            result.add(new MetadataResponse.FieldInfo(leafName, leafType, false, null, reference));
+        }
+        return result;
+    }
+
+    /**
+     * The filter key segment for a reference target: a unique {@code code} natural key when the
+     * target entity declares one (e.g. {@code RoleEntity.code} → {@code roles} filtered by code),
+     * otherwise the primary-key {@code id}.
+     */
+    private static String referenceKeySegment(Class<?> targetType) {
+        return hasUniqueCodeField(targetType) ? "code" : "id";
+    }
+
+    private static boolean hasUniqueCodeField(Class<?> targetType) {
+        for (Field f : getAllFields(targetType)) {
+            if (f.getName().equals("code")) {
+                jakarta.persistence.Column column = f.getAnnotation(jakarta.persistence.Column.class);
+                return column != null && column.unique();
+            }
+        }
+        return false;
+    }
+
+    private static String resolveTargetResource(Class<?> targetType) {
+        ReferenceResourceRegistry registry = referenceRegistry;
+        if (registry != null) {
+            var ref = registry.lookup(targetType);
+            if (ref.isPresent()) {
+                return ref.get().resourceCode();
+            }
+        }
+        return null;
+    }
+
+    private static String resolveOptionsPath(Class<?> targetType) {
+        ReferenceResourceRegistry registry = referenceRegistry;
+        if (registry != null) {
+            var ref = registry.lookup(targetType);
+            if (ref.isPresent()) {
+                return ref.get().basePath();
+            }
+        }
+        return null;
     }
 
     /**

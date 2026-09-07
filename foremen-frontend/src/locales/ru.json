@@ -937,6 +937,104 @@
       "nameMax": "Максимум 100 символов"
     }
   },
+  "projects": {
+    "pageTitle": "Проекты",
+    "list": {
+      "title": "Проекты",
+      "description": "Управление проектами",
+      "empty": "Проекты не найдены"
+    },
+    "columns": {
+      "name": "Название",
+      "address": "Адрес",
+      "area": "Площадь",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "status": "Статус",
+      "members": "Команда",
+      "client": "Клиент"
+    },
+    "actions": {
+      "create": "Новый проект",
+      "edit": "Редактировать",
+      "delete": "Удалить"
+    },
+    "status": {
+      "DRAFT": "Черновик",
+      "ACTIVE": "Активный",
+      "ON_HOLD": "Приостановлен",
+      "COMPLETED": "Завершён",
+      "CANCELLED": "Отменён"
+    },
+    "filters": {
+      "members": "Команда",
+      "client": "Клиент"
+    },
+    "members": {
+      "empty": "Нет участников команды"
+    },
+    "client": {
+      "empty": "Клиент не указан"
+    },
+    "form": {
+      "titleCreate": "Новый проект",
+      "titleEdit": "Редактирование проекта",
+      "descriptionCreate": "Создайте новый проект с командой и клиентом",
+      "descriptionEdit": "Обновите основные данные проекта",
+      "name": "Название",
+      "namePlaceholder": "Название проекта",
+      "area": "Площадь (м²)",
+      "startDate": "Дата начала",
+      "endDate": "Дата окончания",
+      "status": "Статус",
+      "members": "Команда",
+      "membersPlaceholder": "Выберите участников команды",
+      "submitCreate": "Создать проект",
+      "submitEdit": "Сохранить изменения",
+      "addressLabel": "Адрес",
+      "addressPlaceholder": "Начните вводить адрес...",
+      "addressSearching": "Поиск адресов...",
+      "addressEmpty": "Совпадений не найдено",
+      "addressError": "Не удалось загрузить адреса",
+      "client": {
+        "title": "Клиент",
+        "description": "Выберите существующего клиента или добавьте нового",
+        "existingTab": "Существующий клиент",
+        "newTab": "Новый клиент",
+        "existingLabel": "Клиент",
+        "existingPlaceholder": "Выберите клиента",
+        "existingSearch": "Поиск клиента...",
+        "existingEmpty": "Клиенты не найдены",
+        "name": "Имя",
+        "email": "Эл. почта",
+        "phone": "Телефон"
+      }
+    },
+    "validation": {
+      "nameRequired": "Название обязательно",
+      "nameMax": "Максимум 255 символов",
+      "addressMax": "Максимум 500 символов",
+      "formattedAddressMax": "Максимум 500 символов",
+      "areaInvalid": "Площадь должна быть числом",
+      "areaRange": "Площадь должна быть в диапазоне от 0,01 до 999999999,99",
+      "statusInvalid": "Недопустимый статус",
+      "endBeforeStart": "Дата окончания не может быть раньше даты начала"
+    },
+    "delete": {
+      "title": "Удалить проект?",
+      "description": "Проект «{{name}}» будет удалён. Это действие нельзя отменить.",
+      "confirm": "Удалить",
+      "cancel": "Отмена"
+    },
+    "toast": {
+      "createSuccess": "Проект создан",
+      "updateSuccess": "Проект обновлён",
+      "deleteSuccess": "Проект удалён"
+    },
+    "errors": {
+      "network": "Произошла сетевая ошибка. Попробуйте ещё раз."
+    }
+  },
   "settings": {
     "appearance": {
       "title": "Оформление",

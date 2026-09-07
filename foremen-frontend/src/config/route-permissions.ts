@@ -53,6 +53,11 @@ const extra: Record<string, PermissionRequirement> = {
   // FOR-04-12: interim guard for the Work Prices page until the FOR-04-15
   // "Dictionaries" menu entry provides its requirement from NAV_CONFIG.
   '/catalog/prices': { resource: 'WORK_PRICES', operation: 'READ' },
+  // FOR-04-13: guard for the Projects page. `/projects` is already a NAV_CONFIG
+  // menu item (so this requirement also derives from `fromNav`); it is declared
+  // here explicitly for self-description and to keep the guard stable even if the
+  // menu entry changes. `extra` overrides carry the identical requirement.
+  '/projects': { resource: 'PROJECTS', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {

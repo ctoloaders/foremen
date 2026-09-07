@@ -1,6 +1,7 @@
 package com.foremen.util;
 
 import com.foremen.controller.model.MetadataResponse;
+import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.RoleResourceEntity;
 import com.foremen.dao.model.UserEntity;
@@ -382,6 +383,93 @@ class EntityMetadataResolverTest {
         assertThat(reference.labelI18n()).isTrue();
         assertThat(reference.targetResource()).isNull();
         assertThat(reference.optionsPath()).isNull();
+    }
+
+    // --- @OneToMany collection reference descriptor tests (FOR-04-13, Change 2/3) ---
+
+    /**
+     * Stub registry resolving {@link UserEntity} → USERS (/api/users) and {@link RoleEntity} → ROLES
+     * (/api/roles) without booting Spring, so the collection reference leaves get target
+     * resource/options endpoints.
+     */
+    private static ReferenceResourceRegistry userAndRoleStubRegistry() {
+        return new ReferenceResourceRegistry(null) {
+            @Override
+            public Optional<Reference> lookup(Class<?> entityType) {
+                if (entityType == UserEntity.class) {
+                    return Optional.of(new Reference("USERS", "/api/users"));
+                }
+                if (entityType == RoleEntity.class) {
+                    return Optional.of(new Reference("ROLES", "/api/roles"));
+                }
+                return Optional.empty();
+            }
+        };
+    }
+
+    /**
+     * Validates: Requirements 3.4, 8.2
+     * The ProjectEntity {@code members} @OneToMany collection advertises its element's reference
+     * leaves with collection-qualified idPaths: {@code members.user.id} (target USERS, /api/users)
+     * and {@code members.projectRole.code} (target ROLES). The user label is the user display name
+     * (UserEntity.name, non-i18n).
+     */
+    @Test
+    void resolveProjectEntity_emitsCollectionQualifiedMemberReferenceLeaves() {
+        EntityMetadataResolver.setReferenceRegistry(userAndRoleStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(ProjectEntity.class);
+
+        var membersField = result.fields().stream()
+                .filter(f -> f.name().equals("members"))
+                .findFirst();
+        assertThat(membersField).isPresent();
+        assertThat(membersField.get().nested()).isNotNull().isNotEmpty();
+
+        var userLeaf = membersField.get().nested().stream()
+                .filter(f -> f.name().equals("user"))
+                .findFirst();
+        assertThat(userLeaf).isPresent();
+        MetadataResponse.ReferenceInfo userRef = userLeaf.get().reference();
+        assertThat(userRef).isNotNull();
+        assertThat(userRef.idPath()).isEqualTo("members.user.id");
+        assertThat(userRef.targetResource()).isEqualTo("USERS");
+        assertThat(userRef.optionsPath()).isEqualTo("/api/users");
+        assertThat(userRef.labelField()).isEqualTo("name");
+        assertThat(userRef.labelI18n()).isFalse();
+
+        var roleLeaf = membersField.get().nested().stream()
+                .filter(f -> f.name().equals("projectRole"))
+                .findFirst();
+        assertThat(roleLeaf).isPresent();
+        MetadataResponse.ReferenceInfo roleRef = roleLeaf.get().reference();
+        assertThat(roleRef).isNotNull();
+        assertThat(roleRef.idPath()).isEqualTo("members.projectRole.code");
+        assertThat(roleRef.targetResource()).isEqualTo("ROLES");
+        assertThat(roleRef.optionsPath()).isEqualTo("/api/roles");
+    }
+
+    /**
+     * Validates: Requirements 3.4
+     * Non-reference leaves of a collection element (e.g. the plain {@code projectId} column) carry
+     * no reference descriptor.
+     */
+    @Test
+    void resolveProjectEntity_collectionScalarLeafHasNoReference() {
+        EntityMetadataResolver.setReferenceRegistry(userAndRoleStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(ProjectEntity.class);
+
+        var membersField = result.fields().stream()
+                .filter(f -> f.name().equals("members"))
+                .findFirst();
+        assertThat(membersField).isPresent();
+
+        var projectIdLeaf = membersField.get().nested().stream()
+                .filter(f -> f.name().equals("projectId"))
+                .findFirst();
+        assertThat(projectIdLeaf).isPresent();
+        assertThat(projectIdLeaf.get().reference()).isNull();
     }
 
     // --- Providers ---

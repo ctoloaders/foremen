@@ -16,3 +16,6 @@ foremen:
     allowed-origins: "http://localhost:3000"
   google:
     client-id: ${FOREMEN_GOOGLE_CLIENT_ID:}
+  google-places:
+    enabled: ${GOOGLE_PLACES_ENABLED:false}
+    api-key: ${GOOGLE_PLACES_API_KEY:}

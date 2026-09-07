@@ -36,7 +36,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  */
 @Configuration
 @EnableWebSecurity
-@EnableConfigurationProperties({JwtProperties.class, GoogleProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, GoogleProperties.class, GooglePlacesProperties.class})
 public class SecurityConfig {
 
     private final JwtTokenProvider jwtTokenProvider;
@@ -74,6 +74,14 @@ public class SecurityConfig {
                         // /api/auth/resend-invite matchers declared above. Verified: no new matcher is
                         // needed for the OTP endpoints.
                         .requestMatchers("/api/auth/**").permitAll()
+                        // FOR-04-13 (5.6): the standalone Google Places proxy AddressController is
+                        // cross-cutting and intentionally NOT tied to the PROJECTS ABAC resource. It
+                        // carries none of the three permission annotations (authenticated-any-user),
+                        // so /api/addresses/** is guarded here purely by authentication: any
+                        // authenticated principal may reach it, while an anonymous caller gets 401.
+                        // This is redundant with the anyRequest().authenticated() catch-all below but
+                        // stated explicitly to document the intended guard.
+                        .requestMatchers("/api/addresses/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable())
