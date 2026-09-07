@@ -29,7 +29,9 @@
     "workPrices": "Цены работ",
     "audit": "Аудит",
     "sections": {
+      "catalog": "Каталог",
       "warehouse": "Склад",
+      "dictionaries": "Справочники",
       "system": "Система",
       "settings": "Настройки"
     },

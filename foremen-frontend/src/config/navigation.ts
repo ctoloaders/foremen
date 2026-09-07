@@ -53,6 +53,25 @@ export const NAV_CONFIG: NavSectionConfig[] = [
     ],
   },
   {
+    titleKey: 'nav.sections.catalog',
+    items: [
+      {
+        path: '/catalog/works',
+        labelKey: 'nav.workCatalog',
+        icon: 'book-open',
+        bottomNav: false,
+        requiredPermission: { resource: 'WORK_CATALOG', operation: 'READ' },
+      },
+      {
+        path: '/catalog/prices',
+        labelKey: 'nav.workPrices',
+        icon: 'tag',
+        bottomNav: false,
+        requiredPermission: { resource: 'WORK_PRICES', operation: 'READ' },
+      },
+    ],
+  },
+  {
     titleKey: 'nav.sections.warehouse',
     items: [
       {
@@ -75,6 +94,74 @@ export const NAV_CONFIG: NavSectionConfig[] = [
         icon: 'truck',
         bottomNav: false,
         requiredPermission: { resource: 'DELIVERIES', operation: 'READ' },
+      },
+    ],
+  },
+  {
+    titleKey: 'nav.sections.dictionaries',
+    items: [
+      {
+        path: '/measurement-units',
+        labelKey: 'nav.measurementUnits',
+        icon: 'ruler',
+        bottomNav: false,
+        requiredPermission: { resource: 'MEASUREMENT_UNITS', operation: 'READ' },
+      },
+      {
+        path: '/currencies',
+        labelKey: 'nav.currencies',
+        icon: 'coins',
+        bottomNav: false,
+        requiredPermission: { resource: 'CURRENCIES', operation: 'READ' },
+      },
+      {
+        path: '/vat-rates',
+        labelKey: 'nav.vatRates',
+        icon: 'percent',
+        bottomNav: false,
+        requiredPermission: { resource: 'VAT_RATES', operation: 'READ' },
+      },
+      {
+        path: '/room-types',
+        labelKey: 'nav.roomTypes',
+        icon: 'layout-grid',
+        bottomNav: false,
+        requiredPermission: { resource: 'ROOM_TYPES', operation: 'READ' },
+      },
+      {
+        path: '/work-categories',
+        labelKey: 'nav.workCategories',
+        icon: 'list-tree',
+        bottomNav: false,
+        requiredPermission: { resource: 'WORK_CATEGORIES', operation: 'READ' },
+      },
+      {
+        path: '/delivery-categories',
+        labelKey: 'nav.deliveryCategories',
+        icon: 'boxes',
+        bottomNav: false,
+        requiredPermission: { resource: 'DELIVERY_CATEGORIES', operation: 'READ' },
+      },
+      {
+        path: '/delivery-statuses',
+        labelKey: 'nav.deliveryStatuses',
+        icon: 'list-checks',
+        bottomNav: false,
+        requiredPermission: { resource: 'DELIVERY_STATUSES', operation: 'READ' },
+      },
+      {
+        path: '/material-categories',
+        labelKey: 'nav.materialCategories',
+        icon: 'layers',
+        bottomNav: false,
+        requiredPermission: { resource: 'MATERIAL_CATEGORIES', operation: 'READ' },
+      },
+      {
+        path: '/offer-packages',
+        labelKey: 'nav.offerPackages',
+        icon: 'package-2',
+        bottomNav: false,
+        requiredPermission: { resource: 'OFFER_PACKAGES', operation: 'READ' },
       },
     ],
   },

@@ -29,7 +29,9 @@
     "workPrices": "Ceny prac",
     "audit": "Audyt",
     "sections": {
+      "catalog": "Katalog",
       "warehouse": "Magazyn",
+      "dictionaries": "Słowniki",
       "system": "System",
       "settings": "Ustawienia"
     },

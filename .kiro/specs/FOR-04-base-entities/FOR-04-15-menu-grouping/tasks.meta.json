@@ -1,0 +1,165 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Navigation config: add Catalog and Dictionaries sections": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381698
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807393213
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807480361
+      }
+    ],
+    "2. i18n: add section-title keys": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381797
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807488633
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807572088
+      }
+    ],
+    "3. Collapsible Dictionaries section (Sidebar + Drawer)": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381830
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807576002
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807683405
+      }
+    ],
+    "4.1 `NAV_CONFIG` structure + Projects/Rooms binding": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381864
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807692818
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807787069
+      }
+    ],
+    "4.2 Permission filtering + section suppression": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381898
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807791523
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807917571
+      }
+    ],
+    "4.3 Collapsible behavior": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381930
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807921753
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808041786
+      }
+    ],
+    "4.4 Localization parity + route-map consistency + BottomNav non-regression": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381963
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808045537
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808179259
+      }
+    ],
+    "5. Author test-cases.md": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807381996
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808183386
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808191922
+      }
+    ],
+    "6. Verification": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788807382026
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808195733
+      },
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808261538
+      }
+    ],
+    "4. Tests": [
+      {
+        "executionId": "a2cfbf6b-d262-4a20-9734-6145816caaf4",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788808179305
+      }
+    ]
+  }
+}

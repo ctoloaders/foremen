@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { ChevronDown } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG, isNavItemVisible } from '@/config/navigation'
 import { NavItem } from '@/app/layout/NavItem'
 import { UserFooter } from '@/app/layout/UserFooter'
 import { usePermission } from '@/hooks/usePermission'
+
+/** The section rendered with a collapsible header on the Sidebar/Drawer. */
+const COLLAPSIBLE_SECTION_KEY = 'nav.sections.dictionaries'
 
 /**
  * Sidebar — Desktop/Tablet sidebar navigation panel.
@@ -24,6 +28,8 @@ export interface SidebarProps {
 
 export function Sidebar({ collapsed, visible }: SidebarProps) {
   const [hovered, setHovered] = useState(false)
+  // Dictionaries section is collapsible; default-expanded (Req 3.1, 3.2, 3.4).
+  const [dictionariesOpen, setDictionariesOpen] = useState(true)
   const { pathname } = useLocation()
   const { t } = useTranslation()
   const { hasPermission } = usePermission()
@@ -89,29 +95,55 @@ export function Sidebar({ collapsed, visible }: SidebarProps) {
               return null
             }
 
+            const showTitle = section.titleKey && (!collapsed || expanded)
+            const isCollapsible =
+              section.titleKey === COLLAPSIBLE_SECTION_KEY && showTitle
+            // Hide items only when the collapsible section is toggled closed.
+            const itemsHidden = isCollapsible && !dictionariesOpen
+
             return (
               <div key={sectionIndex} className="mb-4">
-                {/* Section title */}
-                {section.titleKey && (!collapsed || expanded) && (
-                  <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {t(section.titleKey)}
-                  </p>
+                {/* Section title — collapsible toggle for the Dictionaries section */}
+                {isCollapsible ? (
+                  <button
+                    type="button"
+                    onClick={() => setDictionariesOpen((open) => !open)}
+                    aria-expanded={dictionariesOpen}
+                    className="mb-1 flex w-full items-center justify-between px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    <span>{t(section.titleKey as string)}</span>
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 shrink-0 transition-transform',
+                        !dictionariesOpen && '-rotate-90'
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : (
+                  showTitle && (
+                    <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t(section.titleKey as string)}
+                    </p>
+                  )
                 )}
 
                 {/* Section items */}
-                <div className="flex flex-col gap-0.5">
-                  {visibleItems.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      icon={item.icon}
-                      labelKey={item.labelKey}
-                      path={item.path}
-                      active={pathname === item.path}
-                      collapsed={collapsed && !expanded}
-                      variant="sidebar"
-                    />
-                  ))}
-                </div>
+                {!itemsHidden && (
+                  <div className="flex flex-col gap-0.5">
+                    {visibleItems.map((item) => (
+                      <NavItem
+                        key={item.path}
+                        icon={item.icon}
+                        labelKey={item.labelKey}
+                        path={item.path}
+                        active={pathname === item.path}
+                        collapsed={collapsed && !expanded}
+                        variant="sidebar"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}

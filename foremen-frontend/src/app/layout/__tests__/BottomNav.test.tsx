@@ -107,4 +107,48 @@ describe('BottomNav', () => {
       expect(link.tagName).toBe('A')
     })
   })
+
+  // FOR-04-15 non-regression (Req 6.3): the two new sections (Catalog +
+  // Dictionaries) add eleven items, every one `bottomNav: false`, so the
+  // bottom-bar item set is identical before and after this change.
+  it('none of the eleven new FOR-04-15 paths appear in the bottom-nav set (Req 6.3)', () => {
+    const NEW_PATHS = [
+      '/catalog/works',
+      '/catalog/prices',
+      '/measurement-units',
+      '/currencies',
+      '/vat-rates',
+      '/room-types',
+      '/work-categories',
+      '/delivery-categories',
+      '/delivery-statuses',
+      '/material-categories',
+      '/offer-packages',
+    ]
+    const bottomNavPaths = ALL_BOTTOM_NAV_ITEMS.map((item) => item.path)
+    NEW_PATHS.forEach((path) => {
+      expect(bottomNavPaths, `${path} must not be a bottom-nav item`).not.toContain(path)
+    })
+  })
+
+  it('every new FOR-04-15 nav item sets bottomNav: false (Req 6.3)', () => {
+    const NEW_PATHS = new Set([
+      '/catalog/works',
+      '/catalog/prices',
+      '/measurement-units',
+      '/currencies',
+      '/vat-rates',
+      '/room-types',
+      '/work-categories',
+      '/delivery-categories',
+      '/delivery-statuses',
+      '/material-categories',
+      '/offer-packages',
+    ])
+    NAV_CONFIG.flatMap((section) => section.items)
+      .filter((item) => NEW_PATHS.has(item.path))
+      .forEach((item) => {
+        expect(item.bottomNav, `${item.path} must set bottomNav: false`).toBe(false)
+      })
+  })
 })

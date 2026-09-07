@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
+import { ChevronDown, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { NAV_CONFIG, isNavItemVisible } from '@/config/navigation'
 import { NavItem } from '@/app/layout/NavItem'
 import { UserFooter } from '@/app/layout/UserFooter'
 import { usePermission } from '@/hooks/usePermission'
+
+/** The section rendered with a collapsible header on the Sidebar/Drawer. */
+const COLLAPSIBLE_SECTION_KEY = 'nav.sections.dictionaries'
 
 /**
  * Drawer — Mobile slide-out navigation panel.
@@ -26,6 +30,8 @@ export function Drawer({ open, onClose }: DrawerProps) {
   const { pathname } = useLocation()
   const { t } = useTranslation()
   const { hasPermission } = usePermission()
+  // Dictionaries section is collapsible; default-expanded (Req 3.1, 3.2, 3.4).
+  const [dictionariesOpen, setDictionariesOpen] = useState(true)
 
   return (
     <div className={cn('fixed inset-0 z-50', open ? 'visible' : 'invisible')}>
@@ -80,28 +86,52 @@ export function Drawer({ open, onClose }: DrawerProps) {
               return null
             }
 
+            const isCollapsible = section.titleKey === COLLAPSIBLE_SECTION_KEY
+            // Hide items only when the collapsible section is toggled closed.
+            const itemsHidden = isCollapsible && !dictionariesOpen
+
             return (
               <div key={sectionIndex} className="mb-4">
-                {/* Section title */}
-                {section.titleKey && (
-                  <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {t(section.titleKey)}
-                  </p>
+                {/* Section title — collapsible toggle for the Dictionaries section */}
+                {isCollapsible ? (
+                  <button
+                    type="button"
+                    onClick={() => setDictionariesOpen((open) => !open)}
+                    aria-expanded={dictionariesOpen}
+                    className="mb-1 flex w-full items-center justify-between px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                  >
+                    <span>{t(section.titleKey as string)}</span>
+                    <ChevronDown
+                      className={cn(
+                        'h-4 w-4 shrink-0 transition-transform',
+                        !dictionariesOpen && '-rotate-90'
+                      )}
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : (
+                  section.titleKey && (
+                    <p className="mb-1 px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t(section.titleKey)}
+                    </p>
+                  )
                 )}
 
                 {/* Section items */}
-                <div className="flex flex-col gap-0.5">
-                  {visibleItems.map((item) => (
-                    <NavItem
-                      key={item.path}
-                      icon={item.icon}
-                      labelKey={item.labelKey}
-                      path={item.path}
-                      active={pathname === item.path}
-                      variant="drawer"
-                    />
-                  ))}
-                </div>
+                {!itemsHidden && (
+                  <div className="flex flex-col gap-0.5">
+                    {visibleItems.map((item) => (
+                      <NavItem
+                        key={item.path}
+                        icon={item.icon}
+                        labelKey={item.labelKey}
+                        path={item.path}
+                        active={pathname === item.path}
+                        variant="drawer"
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )
           })}
