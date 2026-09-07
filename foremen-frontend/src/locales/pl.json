@@ -1035,6 +1035,94 @@
       "network": "Wystąpił błąd sieci. Spróbuj ponownie."
     }
   },
+  "rooms": {
+    "pageTitle": "Pomieszczenia",
+    "actions": {
+      "create": "Nowe pomieszczenie"
+    },
+    "list": {
+      "empty": "Nie znaleziono pomieszczeń"
+    },
+    "table": {
+      "project": "Projekt",
+      "roomType": "Typ pomieszczenia",
+      "label": "Etykieta",
+      "floorArea": "Powierzchnia podłogi (m²)",
+      "wallArea": "Powierzchnia ścian (m²)",
+      "perimeter": "Obwód (mb)",
+      "ceilingHeight": "Wysokość (mb)"
+    },
+    "source": {
+      "calculated": "Obliczone",
+      "manual": "Ręcznie"
+    },
+    "openingType": {
+      "DOOR": "Drzwi",
+      "WINDOW": "Okno"
+    },
+    "plan": {
+      "title": "Plan pomieszczenia",
+      "empty": "Brak geometrii"
+    },
+    "form": {
+      "titleCreate": "Nowe pomieszczenie",
+      "titleEdit": "Edycja pomieszczenia",
+      "descriptionCreate": "Utwórz pomieszczenie z typem, geometrią i parametrami",
+      "descriptionEdit": "Zaktualizuj dane pomieszczenia",
+      "project": "Projekt",
+      "selectProject": "Wybierz projekt",
+      "roomType": "Typ pomieszczenia",
+      "selectRoomType": "Wybierz typ pomieszczenia",
+      "label": "Etykieta",
+      "ceilingHeight": "Wysokość (mb)",
+      "internalCorners": "Naroża wewnętrzne (szt)",
+      "metrics": "Metryki",
+      "floorArea": "Powierzchnia podłogi (m²)",
+      "wallArea": "Powierzchnia ścian (m²)",
+      "perimeter": "Obwód (mb)",
+      "doorArea": "Powierzchnia drzwi (m²)",
+      "windowArea": "Powierzchnia okien (m²)",
+      "openings": "Otwory",
+      "noWalls": "Nie dodano ścian",
+      "addWall": "Dodaj ścianę",
+      "wall": "Ściana {{index}}",
+      "removeWall": "Usuń ścianę",
+      "wallGap": "Brakująca ściana (mb)",
+      "finishGap": "Brakujące wykończenie (mb)",
+      "openingType": "Typ otworu",
+      "openingCount": "Ilość (szt)",
+      "openingHeight": "Wysokość (mb)",
+      "openingWidth": "Szerokość (mb)",
+      "addOpening": "Dodaj otwór",
+      "removeOpening": "Usuń otwór",
+      "submitCreate": "Utwórz pomieszczenie",
+      "submitEdit": "Zapisz zmiany"
+    },
+    "delete": {
+      "title": "Usunąć pomieszczenie?",
+      "description": "Pomieszczenie „{{name}}” zostanie usunięte. Tej operacji nie można cofnąć."
+    },
+    "toast": {
+      "createSuccess": "Pomieszczenie utworzone",
+      "updateSuccess": "Pomieszczenie zaktualizowane",
+      "deleteSuccess": "Pomieszczenie usunięte"
+    },
+    "errors": {
+      "network": "Wystąpił błąd sieci. Spróbuj ponownie."
+    },
+    "validation": {
+      "projectRequired": "Projekt jest wymagany",
+      "roomTypeRequired": "Typ pomieszczenia jest wymagany",
+      "labelTooLong": "Maksymalnie 255 znaków",
+      "geometryVertices": "Geometria musi zawierać co najmniej 3 wierzchołki",
+      "openingTypeRequired": "Typ otworu jest wymagany",
+      "openingCountPositive": "Ilość musi być większa od zera",
+      "openingHeightPositive": "Wysokość musi być większa od zera",
+      "openingWidthPositive": "Szerokość musi być większa od zera",
+      "metricRange": "Wartość musi mieścić się w zakresie od 0 do 9999999999,99",
+      "countNonNegative": "Ilość nie może być ujemna"
+    }
+  },
   "settings": {
     "appearance": {
       "title": "Wygląd",

@@ -1,0 +1,812 @@
+{
+  "pbtResults": {
+    "3.5 Write property test P4 — wall area formula": {
+      "status": "passed",
+      "lastRunTimestamp": 1788799930354
+    },
+    "3.4 Write property test P3 — opening totals": {
+      "status": "passed",
+      "lastRunTimestamp": 1788800035222
+    },
+    "4.6 Write property test P6 — manual source stamping": {
+      "status": "passed",
+      "lastRunTimestamp": 1788800584249
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `MeasureSource` enum": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311696
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799333028
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799428531
+      }
+    ],
+    "1.2 Write `MeasureSourceEnumTest`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311807
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799437513
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799733524
+      }
+    ],
+    "1.3 Create the `RoomGeometry` JSON-bound model": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311842
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799334438
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799429177
+      }
+    ],
+    "1.4 Create `RoomEntity extends BaseEntity`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311886
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799335727
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799430610
+      }
+    ],
+    "1.5 Create Liquibase `042-create-rooms.xml` and register it in `changelog.xml`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311922
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799337355
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799432082
+      }
+    ],
+    "2. Checkpoint — backend compiles": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311957
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804198231
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804250629
+      }
+    ],
+    "3.1 Create `RoomCalculationService` + `RoomMetrics` result": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799311993
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799439475
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799736027
+      }
+    ],
+    "3.2 Write property test P1 — shoelace floor area": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312091
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799741782
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799947140
+      }
+    ],
+    "3.3 Write property test P2 — perimeter": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312123
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799742965
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799949441
+      }
+    ],
+    "3.4 Write property test P3 — opening totals": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312160
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799744919
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800126233
+      }
+    ],
+    "3.5 Write property test P4 — wall area formula": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312190
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799745458
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799949672
+      }
+    ],
+    "3.6 Write property test P7 — determinism": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312223
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799746524
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799950779
+      }
+    ],
+    "4.1 Create `RoomDao extends AdminDao<RoomEntity, Long>`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312255
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799440293
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799732259
+      }
+    ],
+    "4.2 Define request/response/service/DTO models": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312296
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799441465
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799734450
+      }
+    ],
+    "4.3 Create `RoomService implements ProjectScopedService<...>`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312344
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799955722
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800188237
+      }
+    ],
+    "4.4 Implement pre-persist normalization (create + update)": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312377
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800189276
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800422168
+      }
+    ],
+    "4.5 Write property test P5 — geometry authoritative": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312412
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800438179
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800613939
+      }
+    ],
+    "4.6 Write property test P6 — manual source stamping": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312452
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800434428
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800615309
+      }
+    ],
+    "5.1 Create `RoomController implements AdminController<...>` at `/api/rooms`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312486
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800190436
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800423244
+      }
+    ],
+    "6. Checkpoint — backend compiles + startup annotations": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312519
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804260881
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804510931
+      }
+    ],
+    "7.1 Confirm/emit reference descriptors for `project.id` and `roomType.id`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312546
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800435751
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800616904
+      }
+    ],
+    "8.1 Create Liquibase `043-seed-rooms-resource.xml` and register it last in `changelog.xml`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312576
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800437155
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800617803
+      }
+    ],
+    "9.1 Write `RoomGeometryIT`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312604
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800623880
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802878111
+      }
+    ],
+    "9.2 Write `RoomManualMetricsIT`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312681
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800625145
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802880477
+      }
+    ],
+    "9.3 Write `RoomScopingIT`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312714
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800626220
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802875508
+      }
+    ],
+    "9.4 Write `RoomCrudIT`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312755
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800628095
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802879077
+      }
+    ],
+    "9.5 Write property test P8 — membership list filter": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312776
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800628503
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802877829
+      }
+    ],
+    "9.6 Write `RoomsSeedIT`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312809
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802882010
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803064330
+      }
+    ],
+    "9.7 Write clean-startup annotation-coverage smoke test": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312837
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788802882881
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803063155
+      }
+    ],
+    "10. Checkpoint — run only the affected backend test classes": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312864
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804519012
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804980435
+      }
+    ],
+    "11.1 Create types, zod schemas, and API module": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312893
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803073944
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803585733
+      }
+    ],
+    "11.2 Create `RoomSourceBadge` and `MeasureValueCell`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312924
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803072899
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803587279
+      }
+    ],
+    "11.3 Create `RoomPlanPreview` (read-only SVG)": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312958
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803071626
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803588141
+      }
+    ],
+    "11.4 Create `RoomOpeningsEditor` and `RoomFormSheet`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799312995
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803070194
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803589322
+      }
+    ],
+    "11.5 Create `RoomsList`, `DeleteRoomDialog`, and `RoomsPage`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313023
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803596783
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804017288
+      }
+    ],
+    "11.6 Register `/rooms` route + interim guard + i18n": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313057
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803595324
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804016265
+      }
+    ],
+    "12.1 Write `RoomsList.test.tsx`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313090
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804025563
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804176461
+      }
+    ],
+    "12.2 Write `RoomFormSheet.test.tsx`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313124
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804026916
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804174849
+      }
+    ],
+    "12.3 Write `RoomPlanPreview.test.tsx`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313156
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804027947
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804177207
+      }
+    ],
+    "12.4 Write `rooms.i18n.test.ts`": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313190
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804024441
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804173836
+      }
+    ],
+    "13. Checkpoint — frontend tsc + new UI test files": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313264
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804984897
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788805082765
+      }
+    ],
+    "14. Author test-cases.md": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313319
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804261834
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804513275
+      }
+    ],
+    "15. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799313347
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788805088110
+      },
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788805497609
+      }
+    ],
+    "1. Backend foundation: enum, geometry model, entity, table changeset": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788799733583
+      }
+    ],
+    "3. Calculation engine": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800126458
+      }
+    ],
+    "5. `RoomController` wiring": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800423331
+      }
+    ],
+    "4. DAO, models, service normalization": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800615347
+      }
+    ],
+    "7. Metadata reference descriptors": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800616944
+      }
+    ],
+    "8. ABAC seed": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788800617854
+      }
+    ],
+    "9. Backend integration + smoke tests (Testcontainers)": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788803064474
+      }
+    ],
+    "11. Frontend feature scaffolding (`features/rooms/`)": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804017326
+      }
+    ],
+    "12. Frontend tests (Vitest + RTL, run with `--run`)": [
+      {
+        "executionId": "31e91f75-bb38-4918-bdd5-5767b683a539",
+        "chatSessionId": "sess_9f27c1ca-4465-4091-82d8-eef1559febe6",
+        "timestamp": 1788804177250
+      }
+    ]
+  }
+}

@@ -1035,6 +1035,94 @@
       "network": "Произошла сетевая ошибка. Попробуйте ещё раз."
     }
   },
+  "rooms": {
+    "pageTitle": "Помещения",
+    "actions": {
+      "create": "Новое помещение"
+    },
+    "list": {
+      "empty": "Помещения не найдены"
+    },
+    "table": {
+      "project": "Проект",
+      "roomType": "Тип помещения",
+      "label": "Метка",
+      "floorArea": "Площадь пола (м²)",
+      "wallArea": "Площадь стен (м²)",
+      "perimeter": "Периметр (мб)",
+      "ceilingHeight": "Высота (мб)"
+    },
+    "source": {
+      "calculated": "Рассчитано",
+      "manual": "Вручную"
+    },
+    "openingType": {
+      "DOOR": "Дверь",
+      "WINDOW": "Окно"
+    },
+    "plan": {
+      "title": "План помещения",
+      "empty": "Геометрия не задана"
+    },
+    "form": {
+      "titleCreate": "Новое помещение",
+      "titleEdit": "Редактирование помещения",
+      "descriptionCreate": "Создайте помещение с типом, геометрией и параметрами",
+      "descriptionEdit": "Обновите данные помещения",
+      "project": "Проект",
+      "selectProject": "Выберите проект",
+      "roomType": "Тип помещения",
+      "selectRoomType": "Выберите тип помещения",
+      "label": "Метка",
+      "ceilingHeight": "Высота (мб)",
+      "internalCorners": "Внутренние углы (шт)",
+      "metrics": "Метрики",
+      "floorArea": "Площадь пола (м²)",
+      "wallArea": "Площадь стен (м²)",
+      "perimeter": "Периметр (мб)",
+      "doorArea": "Площадь дверей (м²)",
+      "windowArea": "Площадь окон (м²)",
+      "openings": "Проёмы",
+      "noWalls": "Стены не добавлены",
+      "addWall": "Добавить стену",
+      "wall": "Стена {{index}}",
+      "removeWall": "Удалить стену",
+      "wallGap": "Отсутствующая стена (мб)",
+      "finishGap": "Отсутствующая отделка (мб)",
+      "openingType": "Тип проёма",
+      "openingCount": "Кол-во (шт)",
+      "openingHeight": "Высота (мб)",
+      "openingWidth": "Ширина (мб)",
+      "addOpening": "Добавить проём",
+      "removeOpening": "Удалить проём",
+      "submitCreate": "Создать помещение",
+      "submitEdit": "Сохранить изменения"
+    },
+    "delete": {
+      "title": "Удалить помещение?",
+      "description": "Помещение «{{name}}» будет удалено. Это действие нельзя отменить."
+    },
+    "toast": {
+      "createSuccess": "Помещение создано",
+      "updateSuccess": "Помещение обновлено",
+      "deleteSuccess": "Помещение удалено"
+    },
+    "errors": {
+      "network": "Произошла сетевая ошибка. Попробуйте ещё раз."
+    },
+    "validation": {
+      "projectRequired": "Проект обязателен",
+      "roomTypeRequired": "Тип помещения обязателен",
+      "labelTooLong": "Максимум 255 символов",
+      "geometryVertices": "Геометрия должна содержать не менее 3 вершин",
+      "openingTypeRequired": "Тип проёма обязателен",
+      "openingCountPositive": "Количество должно быть больше нуля",
+      "openingHeightPositive": "Высота должна быть больше нуля",
+      "openingWidthPositive": "Ширина должна быть больше нуля",
+      "metricRange": "Значение должно быть в диапазоне от 0 до 9999999999,99",
+      "countNonNegative": "Количество не может быть отрицательным"
+    }
+  },
   "settings": {
     "appearance": {
       "title": "Оформление",

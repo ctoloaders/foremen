@@ -46,5 +46,7 @@
     <include file="database_files/changesets/039-seed-work-prices-resource.xml"/>
     <include file="database_files/changesets/040-create-projects.xml"/>
     <include file="database_files/changesets/041-seed-projects-resource.xml"/>
+    <include file="database_files/changesets/042-create-rooms.xml"/>
+    <include file="database_files/changesets/043-seed-rooms-resource.xml"/>
 
 </databaseChangeLog>

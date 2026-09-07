@@ -58,6 +58,10 @@ const extra: Record<string, PermissionRequirement> = {
   // here explicitly for self-description and to keep the guard stable even if the
   // menu entry changes. `extra` overrides carry the identical requirement.
   '/projects': { resource: 'PROJECTS', operation: 'READ' },
+  // FOR-04-14: interim guard for the Rooms page until the FOR-04-15 menu entry
+  // provides its requirement from NAV_CONFIG. Denies access to callers without
+  // ROOMS READ permission (Req 8.13).
+  '/rooms': { resource: 'ROOMS', operation: 'READ' },
 }
 
 const ROUTE_REQUIREMENTS: Record<string, PermissionRequirement> = {

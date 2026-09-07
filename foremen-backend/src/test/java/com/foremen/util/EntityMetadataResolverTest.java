@@ -4,6 +4,8 @@ import com.foremen.controller.model.MetadataResponse;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.RoleResourceEntity;
+import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.UserEntity;
 import net.jqwik.api.*;
 import org.junit.jupiter.api.AfterEach;
@@ -470,6 +472,99 @@ class EntityMetadataResolverTest {
                 .findFirst();
         assertThat(projectIdLeaf).isPresent();
         assertThat(projectIdLeaf.get().reference()).isNull();
+    }
+
+    // --- RoomEntity reference descriptor tests (FOR-04-14, Task 7.1) ---
+
+    /**
+     * Stub registry resolving {@link ProjectEntity} → PROJECTS (/api/projects) and
+     * {@link RoomTypeEntity} → ROOM_TYPES (/api/room-types) without booting Spring, so the
+     * RoomEntity @ManyToOne reference leaves get their target resource/options endpoints.
+     */
+    private static ReferenceResourceRegistry projectAndRoomTypeStubRegistry() {
+        return new ReferenceResourceRegistry(null) {
+            @Override
+            public Optional<Reference> lookup(Class<?> entityType) {
+                if (entityType == ProjectEntity.class) {
+                    return Optional.of(new Reference("PROJECTS", "/api/projects"));
+                }
+                if (entityType == RoomTypeEntity.class) {
+                    return Optional.of(new Reference("ROOM_TYPES", "/api/room-types"));
+                }
+                return Optional.empty();
+            }
+        };
+    }
+
+    /**
+     * Validates: Requirements 5.7, 8.2
+     * The RoomEntity {@code project} @ManyToOne field yields a ReferenceInfo with idPath=project.id,
+     * targetResource=PROJECTS / optionsPath=/api/projects (from the injected registry). ProjectEntity
+     * carries a plain (non-i18n) {@code name} column, so the label field is "name" with labelI18n=false.
+     */
+    @Test
+    void resolveRoomEntity_emitsReferenceInfoForProjectManyToOne() {
+        EntityMetadataResolver.setReferenceRegistry(projectAndRoomTypeStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(RoomEntity.class);
+
+        var projectField = result.fields().stream()
+                .filter(f -> f.name().equals("project"))
+                .findFirst();
+        assertThat(projectField).isPresent();
+
+        MetadataResponse.ReferenceInfo reference = projectField.get().reference();
+        assertThat(reference).isNotNull();
+        assertThat(reference.idPath()).isEqualTo("project.id");
+        assertThat(reference.targetResource()).isEqualTo("PROJECTS");
+        assertThat(reference.optionsPath()).isEqualTo("/api/projects");
+        assertThat(reference.labelField()).isEqualTo("name");
+        assertThat(reference.labelI18n()).isFalse();
+    }
+
+    /**
+     * Validates: Requirements 5.7, 8.2
+     * The RoomEntity {@code roomType} @ManyToOne field yields a ReferenceInfo with idPath=roomType.id,
+     * targetResource=ROOM_TYPES / optionsPath=/api/room-types (from the injected registry).
+     * RoomTypeEntity carries nameRU/namePL, so the label field is the localized "name" with
+     * labelI18n=true.
+     */
+    @Test
+    void resolveRoomEntity_emitsReferenceInfoForRoomTypeManyToOne() {
+        EntityMetadataResolver.setReferenceRegistry(projectAndRoomTypeStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(RoomEntity.class);
+
+        var roomTypeField = result.fields().stream()
+                .filter(f -> f.name().equals("roomType"))
+                .findFirst();
+        assertThat(roomTypeField).isPresent();
+
+        MetadataResponse.ReferenceInfo reference = roomTypeField.get().reference();
+        assertThat(reference).isNotNull();
+        assertThat(reference.idPath()).isEqualTo("roomType.id");
+        assertThat(reference.targetResource()).isEqualTo("ROOM_TYPES");
+        assertThat(reference.optionsPath()).isEqualTo("/api/room-types");
+        assertThat(reference.labelField()).isEqualTo("name");
+        assertThat(reference.labelI18n()).isTrue();
+    }
+
+    /**
+     * Validates: Requirements 5.7, 8.2
+     * A scalar RoomEntity field (label) yields no reference descriptor, confirming reference
+     * emission is confined to the @ManyToOne association fields.
+     */
+    @Test
+    void resolveRoomEntity_scalarLabelHasNoReference() {
+        EntityMetadataResolver.setReferenceRegistry(projectAndRoomTypeStubRegistry());
+
+        MetadataResponse result = EntityMetadataResolver.resolve(RoomEntity.class);
+
+        var labelField = result.fields().stream()
+                .filter(f -> f.name().equals("label"))
+                .findFirst();
+        assertThat(labelField).isPresent();
+        assertThat(labelField.get().reference()).isNull();
     }
 
     // --- Providers ---

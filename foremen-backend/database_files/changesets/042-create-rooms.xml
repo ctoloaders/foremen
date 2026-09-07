@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="042-create-rooms" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rooms"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="rooms">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="fk_rooms_project"
+                    references="projects(id)"/>
+            </column>
+            <column name="room_type_id" type="BIGINT">
+                <constraints nullable="false"
+                    foreignKeyName="fk_rooms_room_type"
+                    references="room_types(id)"/>
+            </column>
+            <column name="label" type="VARCHAR(255)"/>
+            <column name="geometry" type="jsonb"/>
+            <column name="ceiling_height" type="NUMERIC(12,2)"/>
+            <column name="internal_corners" type="INTEGER"/>
+            <column name="door_count" type="INTEGER"/>
+            <column name="window_count" type="INTEGER"/>
+            <column name="door_height" type="NUMERIC(12,2)"/>
+            <column name="door_width" type="NUMERIC(12,2)"/>
+            <column name="window_height" type="NUMERIC(12,2)"/>
+            <column name="window_width" type="NUMERIC(12,2)"/>
+            <column name="wall_gap" type="NUMERIC(12,2)"/>
+            <column name="finish_gap" type="NUMERIC(12,2)"/>
+            <column name="floor_area" type="NUMERIC(12,2)"/>
+            <column name="floor_area_source" type="VARCHAR(20)"/>
+            <column name="wall_area" type="NUMERIC(12,2)"/>
+            <column name="wall_area_source" type="VARCHAR(20)"/>
+            <column name="perimeter" type="NUMERIC(12,2)"/>
+            <column name="perimeter_source" type="VARCHAR(20)"/>
+            <column name="door_area" type="NUMERIC(12,2)"/>
+            <column name="door_area_source" type="VARCHAR(20)"/>
+            <column name="window_area" type="NUMERIC(12,2)"/>
+            <column name="window_area_source" type="VARCHAR(20)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>
