@@ -4,6 +4,7 @@
     "cancel": "Anuluj",
     "delete": "Usuń",
     "edit": "Edytuj",
+    "clear": "Wyczyść",
     "loading": "Ładowanie..."
   },
   "nav": {
@@ -105,10 +106,12 @@
       "apply": "Zastosuj",
       "clearAll": "Wyczyść filtry",
       "activeCount": "Aktywne filtry: {{count}}",
+      "summaryFilters": "{{count}} filtra",
       "summaryFilters_one": "{{count}} filtr",
       "summaryFilters_few": "{{count}} filtry",
       "summaryFilters_many": "{{count}} filtrów",
       "summaryFilters_other": "{{count}} filtra",
+      "summarySorts": "{{count}} sortowania",
       "summarySorts_one": "{{count}} sortowanie",
       "summarySorts_few": "{{count}} sortowania",
       "summarySorts_many": "{{count}} sortowań",
@@ -998,6 +1001,15 @@
       "addressSearching": "Wyszukiwanie adresów...",
       "addressEmpty": "Nie znaleziono dopasowań",
       "addressError": "Nie udało się załadować adresów",
+      "address": "Adres",
+      "team": {
+        "label": "Zespół",
+        "hint": "Wybierz członków zespołu przypisanych do projektu",
+        "empty": "Nie znaleziono użytkowników",
+        "placeholder": "Wybierz członków zespołu",
+        "search": "Szukaj użytkownika...",
+        "selectedCount": "Wybrano: {{count}}"
+      },
       "client": {
         "title": "Klient",
         "description": "Wybierz istniejącego klienta lub dodaj nowego",
@@ -1031,7 +1043,10 @@
     "toast": {
       "createSuccess": "Projekt utworzony",
       "updateSuccess": "Projekt zaktualizowany",
-      "deleteSuccess": "Projekt usunięty"
+      "deleteSuccess": "Projekt usunięty",
+      "createError": "Nie udało się utworzyć projektu",
+      "updateError": "Nie udało się zaktualizować projektu",
+      "deleteError": "Nie udało się usunąć projektu"
     },
     "errors": {
       "network": "Wystąpił błąd sieci. Spróbuj ponownie."
@@ -1079,6 +1094,7 @@
       "ceilingHeight": "Wysokość (mb)",
       "internalCorners": "Naroża wewnętrzne (szt)",
       "metrics": "Metryki",
+      "manualOverride": "Wprowadź powierzchnie ręcznie",
       "floorArea": "Powierzchnia podłogi (m²)",
       "wallArea": "Powierzchnia ścian (m²)",
       "perimeter": "Obwód (mb)",

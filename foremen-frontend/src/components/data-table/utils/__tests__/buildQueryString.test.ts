@@ -404,3 +404,103 @@ function splitTopLevelAnd(query: string): string[] {
   if (current) parts.push(current)
   return parts
 }
+
+// =============================================================================
+// Compound reference filter (extraPredicate) — FOR-04-bugs Bug 11 / Change F7
+// =============================================================================
+
+/**
+ * A reference filter that carries an `extraPredicate` (e.g. the projects-list
+ * CLIENT column) SHALL emit `<idFragment> AND <extraPredicate>`, reproducing
+ * the compound `members.user.id~in~<ids> AND members.projectRole.code==CLIENT`
+ * semantics the old bespoke ProjectClientFilter composed by hand. A reference
+ * filter WITHOUT an extraPredicate SHALL emit the plain id fragment, unchanged.
+ *
+ * **Validates: Requirements 2.11, 3.5**
+ */
+describe('buildQueryString — compound reference filter (extraPredicate)', () => {
+  const emptyState = (
+    filters: ColumnFilterState[],
+  ): TableState => ({
+    page: 0,
+    size: 25,
+    sorts: [],
+    filters,
+    search: '',
+  })
+
+  const columns: ColumnConfig[] = [
+    {
+      field: 'client',
+      headerKey: 'projects.columns.client',
+      dataType: 'string',
+    },
+  ]
+
+  it('single id + extraPredicate → `idPath==id AND <extraPredicate>`', () => {
+    const result = buildQueryString(
+      emptyState([
+        {
+          type: 'reference',
+          field: 'client',
+          ids: [7],
+          idPath: 'members.user.id',
+          extraPredicate: 'members.projectRole.code==CLIENT',
+        },
+      ]),
+      columns,
+    )
+    expect(result).toBe(
+      'members.user.id==7 AND members.projectRole.code==CLIENT',
+    )
+  })
+
+  it('multiple ids + extraPredicate → `idPath~in~ids AND <extraPredicate>`', () => {
+    const result = buildQueryString(
+      emptyState([
+        {
+          type: 'reference',
+          field: 'client',
+          ids: [7, 9, 11],
+          idPath: 'members.user.id',
+          extraPredicate: 'members.projectRole.code==CLIENT',
+        },
+      ]),
+      columns,
+    )
+    expect(result).toBe(
+      'members.user.id~in~7,9,11 AND members.projectRole.code==CLIENT',
+    )
+  })
+
+  it('empty ids + extraPredicate → no fragment (extraPredicate is not emitted alone)', () => {
+    const result = buildQueryString(
+      emptyState([
+        {
+          type: 'reference',
+          field: 'client',
+          ids: [],
+          idPath: 'members.user.id',
+          extraPredicate: 'members.projectRole.code==CLIENT',
+        },
+      ]),
+      columns,
+    )
+    expect(result).toBe('')
+  })
+
+  it('reference filter without extraPredicate emits the plain id fragment (unchanged)', () => {
+    const result = buildQueryString(
+      emptyState([
+        {
+          type: 'reference',
+          field: 'members',
+          ids: [7, 9],
+          idPath: 'members.user.id',
+        },
+      ]),
+      columns,
+    )
+    expect(result).toBe('members.user.id~in~7,9')
+  })
+})

@@ -5,6 +5,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import static org.mockito.Mockito.verifyNoInteractions;
+
+import com.foremen.config.security.GooglePlacesProperties;
 import com.foremen.controller.model.PlaceDetailsDto;
 import com.foremen.controller.model.PlacePredictionDto;
 import com.foremen.service.google.GooglePlacesClient.AutocompleteResponse;
@@ -14,10 +17,10 @@ import com.foremen.service.google.GooglePlacesClient.DetailsResponse.Result;
 import com.foremen.service.google.GooglePlacesClient.Prediction;
 import java.math.BigDecimal;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -43,8 +46,14 @@ class GooglePlacesServiceTest {
     @Mock
     private GooglePlacesClient client;
 
-    @InjectMocks
     private GooglePlacesService service;
+
+    @BeforeEach
+    void setUp() {
+        // Feature enabled with a (dummy) key so the enabled-guard is a no-op and the normalization
+        // paths under test run against the mocked client.
+        service = new GooglePlacesService(client, new GooglePlacesProperties(true, API_KEY));
+    }
 
     // --- autocomplete: normalization (Req 5.1) ---
 
@@ -167,5 +176,31 @@ class GooglePlacesServiceTest {
                 });
         // The full serialized DTO shape carries no trace of the key.
         assertThat(dto.toString()).doesNotContain(API_KEY);
+    }
+
+    // --- enabled guard: disabled feature never calls Google (FOR-04-bugs Bug 4, Req 2.4) ---
+
+    @Test
+    @DisplayName("autocomplete returns an empty list and never calls the client when the feature is disabled")
+    void autocompleteReturnsEmptyAndSkipsClientWhenDisabled() {
+        GooglePlacesService disabled =
+                new GooglePlacesService(client, new GooglePlacesProperties(false, ""));
+
+        List<PlacePredictionDto> result = disabled.autocomplete("warsaw");
+
+        assertThat(result).isEmpty();
+        verifyNoInteractions(client);
+    }
+
+    @Test
+    @DisplayName("resolveDetails returns null and never calls the client when the feature is disabled")
+    void resolveDetailsReturnsNullAndSkipsClientWhenDisabled() {
+        GooglePlacesService disabled =
+                new GooglePlacesService(client, new GooglePlacesProperties(false, ""));
+
+        PlaceDetailsDto dto = disabled.resolveDetails("place-1");
+
+        assertThat(dto).isNull();
+        verifyNoInteractions(client);
     }
 }

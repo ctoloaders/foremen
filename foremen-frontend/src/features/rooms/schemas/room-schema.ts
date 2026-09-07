@@ -2,26 +2,49 @@ import { z } from 'zod'
 
 const MAX_METRIC = 9_999_999_999.99
 
+/**
+ * Normalize a comma decimal separator to a dot before numeric coercion (FOR-04-bugs
+ * Bug 8 / Req 2.8). Users typing `12,5` (RU/PL locale) must coerce to `12.5` rather
+ * than `NaN`. Non-string inputs (numbers, null, undefined) pass through untouched, so
+ * dot-based and already-numeric values behave exactly as before.
+ */
+const normalizeComma = (v: unknown): unknown =>
+  typeof v === 'string' ? v.replace(/,/g, '.') : v
+
+/** Wrap a numeric coercion schema with comma-normalization preprocessing. */
+const commaAware = <T extends z.ZodTypeAny>(schema: T) =>
+  z.preprocess(normalizeComma, schema)
+
 /** A per-wall opening entry. type/count/height/width must all be positive. */
 export const openingSchema = z.object({
   type: z.enum(['DOOR', 'WINDOW'], {
     message: 'rooms.validation.openingTypeRequired',
   }),
-  count: z.coerce
-    .number({ message: 'rooms.validation.openingCountPositive' })
-    .int('rooms.validation.openingCountPositive')
-    .positive('rooms.validation.openingCountPositive'),
-  height: z.coerce
-    .number({ message: 'rooms.validation.openingHeightPositive' })
-    .positive('rooms.validation.openingHeightPositive'),
-  width: z.coerce
-    .number({ message: 'rooms.validation.openingWidthPositive' })
-    .positive('rooms.validation.openingWidthPositive'),
+  count: commaAware(
+    z.coerce
+      .number({ message: 'rooms.validation.openingCountPositive' })
+      .int('rooms.validation.openingCountPositive')
+      .positive('rooms.validation.openingCountPositive'),
+  ),
+  height: commaAware(
+    z.coerce
+      .number({ message: 'rooms.validation.openingHeightPositive' })
+      .positive('rooms.validation.openingHeightPositive'),
+  ),
+  width: commaAware(
+    z.coerce
+      .number({ message: 'rooms.validation.openingWidthPositive' })
+      .positive('rooms.validation.openingWidthPositive'),
+  ),
 })
 
 export const wallSchema = z.object({
-  wallGap: z.coerce.number().nonnegative('rooms.validation.metricRange').optional().nullable(),
-  finishGap: z.coerce.number().nonnegative('rooms.validation.metricRange').optional().nullable(),
+  wallGap: commaAware(
+    z.coerce.number().nonnegative('rooms.validation.metricRange').optional().nullable(),
+  ),
+  finishGap: commaAware(
+    z.coerce.number().nonnegative('rooms.validation.metricRange').optional().nullable(),
+  ),
   openings: z.array(openingSchema),
 })
 
@@ -39,12 +62,14 @@ export const geometrySchema = z
   .optional()
   .nullable()
 
-const optionalMetric = z.coerce
-  .number({ message: 'rooms.validation.metricRange' })
-  .min(0, 'rooms.validation.metricRange')
-  .max(MAX_METRIC, 'rooms.validation.metricRange')
-  .optional()
-  .nullable()
+const optionalMetric = commaAware(
+  z.coerce
+    .number({ message: 'rooms.validation.metricRange' })
+    .min(0, 'rooms.validation.metricRange')
+    .max(MAX_METRIC, 'rooms.validation.metricRange')
+    .optional()
+    .nullable(),
+)
 
 export const roomCreateSchema = z.object({
   projectId: z.coerce
@@ -57,12 +82,14 @@ export const roomCreateSchema = z.object({
     .min(1, 'rooms.validation.roomTypeRequired'),
   label: z.string().max(255, 'rooms.validation.labelTooLong').optional().nullable(),
   ceilingHeight: optionalMetric,
-  internalCorners: z.coerce
-    .number({ message: 'rooms.validation.countNonNegative' })
-    .int('rooms.validation.countNonNegative')
-    .min(0, 'rooms.validation.countNonNegative')
-    .optional()
-    .nullable(),
+  internalCorners: commaAware(
+    z.coerce
+      .number({ message: 'rooms.validation.countNonNegative' })
+      .int('rooms.validation.countNonNegative')
+      .min(0, 'rooms.validation.countNonNegative')
+      .optional()
+      .nullable(),
+  ),
   geometry: geometrySchema,
   // Manual metrics — ignored server-side when geometry is present.
   floorArea: optionalMetric,

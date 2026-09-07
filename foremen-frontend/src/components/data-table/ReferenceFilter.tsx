@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useInfiniteQuery } from '@tanstack/react-query'
 import { AlertTriangle, Check, Loader2, Lock, RotateCw, X } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
@@ -11,22 +10,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { ApiError, apiRequest } from '@/lib/api-client'
-import type { PaginatedResponse, ReferenceInfo } from './types'
+import type { ReferenceInfo } from './types'
+import {
+  useInfiniteScrollSentinel,
+  useReferenceOptions,
+} from './use-reference-options'
 
-/** Page size for each options page fetched by the infinite query. */
-const PAGE_SIZE = 20
-
-/**
- * A single option row returned by the target resource's list endpoint. The
- * backend i18n mapping already resolves the localized display name into the
- * `name` field, so the component renders `name` directly (no client-side
- * locale resolution needed). Only `id` and `name` are consumed here.
- */
-export interface ReferenceOption {
-  id: number
-  name: string
-}
+// Re-exported so existing importers (`import { buildOptionsUrl, ReferenceOption }
+// from '../ReferenceFilter'`) keep working after the shared logic was extracted
+// into `./use-reference-options`. Behavior is unchanged: `buildOptionsUrl`
+// defaults to `sort=name,asc`.
+export { buildOptionsUrl } from './use-reference-options'
+export type { ReferenceOption } from './use-reference-options'
 
 export interface ReferenceFilterProps {
   /** Reference descriptor from the column metadata. */
@@ -55,47 +50,6 @@ export interface ReferenceFilterProps {
    * localized "no access" hint), so wiring this is optional.
    */
   onForbiddenChange?: (isForbidden: boolean) => void
-}
-
-/**
- * True when an error thrown by {@link apiRequest} is an {@link ApiError}
- * carrying HTTP `403 Forbidden` — the caller lacks the target resource's READ
- * grant. Used to branch the options failure into the degraded "no access"
- * state (Req 5.5) rather than the retryable network/5xx error state (Req 6.2).
- */
-function isForbiddenError(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 403
-}
-
-/**
- * Build the options request URL for a given page and search term.
- *
- * Shape (per design.md "Operator-symbol correction" — TILDE-WRAPPED grammar):
- *   `${optionsPath}?page=${page}&size=${PAGE_SIZE}&sort=name,asc&query=name~ct~<search>`
- *
- * The `query` param is only included when `search` is non-empty. The tilde
- * operator is kept literal on the wire (`~` is an RFC 3986 unreserved
- * character): we percent-encode the search term but restore any `~` that
- * `encodeURIComponent` produced, matching the existing `fetchRolesPage`
- * convention.
- */
-export function buildOptionsUrl(
-  optionsPath: string,
-  page: number,
-  search: string,
-): string {
-  const params = new URLSearchParams()
-  params.set('page', String(page))
-  params.set('size', String(PAGE_SIZE))
-  params.set('sort', 'name,asc')
-
-  let url = `${optionsPath}?${params}`
-  const term = search.trim()
-  if (term) {
-    const query = `name~ct~${term}`
-    url += `&query=${encodeURIComponent(query).replace(/%7E/gi, '~')}`
-  }
-  return url
 }
 
 /**
@@ -131,28 +85,23 @@ export function ReferenceFilter({
 
   const { optionsPath, targetResource } = reference
 
+  // Shared infinite-scroll + backend-searched options loading (extracted into
+  // `use-reference-options` so this filter and the form-control AsyncEntitySelect
+  // share one implementation). Behavior here is unchanged: keyed by the target
+  // resource + search, `sort=name,asc`, 403 not retried.
   const {
-    data,
     isLoading,
     isError,
-    error,
     refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useInfiniteQuery({
-    queryKey: ['reference-options', targetResource, debouncedSearch.trim()],
-    queryFn: ({ pageParam }) =>
-      apiRequest<PaginatedResponse<ReferenceOption>>(
-        buildOptionsUrl(optionsPath, pageParam, debouncedSearch),
-      ),
-    initialPageParam: 0,
-    getNextPageParam: (lastPage) => (lastPage.last ? undefined : lastPage.number + 1),
-    staleTime: 60_000,
-    // A missing READ grant (403) will never succeed on retry, so do not retry
-    // it; genuine network/5xx failures get React Query's default retry and can
-    // also be retried manually via the in-dropdown retry action.
-    retry: (failureCount, err) => !isForbiddenError(err) && failureCount < 3,
+    options,
+    isForbidden,
+  } = useReferenceOptions({
+    optionsPath,
+    cacheKey: targetResource,
+    debouncedSearch,
   })
 
   // A 403 on the options query means no READ grant on the target resource:
@@ -160,18 +109,12 @@ export function ReferenceFilter({
   // itself still loads — this is a degraded control, not a thrown error). Any
   // other failure (network / 5xx) is a retryable error shown inside the
   // dropdown, and MUST NOT surface the "no access" state.
-  const isForbidden = isError && isForbiddenError(error)
 
   // Surface the forbidden state to the owning DataTable so it can degrade the
   // whole control if it wishes (Req 5.5). Fires on transitions only.
   useEffect(() => {
     onForbiddenChange?.(isForbidden)
   }, [isForbidden, onForbiddenChange])
-
-  const options = useMemo<ReferenceOption[]>(
-    () => data?.pages.flatMap((page) => page.content) ?? [],
-    [data],
-  )
 
   /**
    * Map of loaded option id → localized name, used to render selected-value
@@ -207,26 +150,13 @@ export function ReferenceFilter({
   const handleClear = () => onChange?.([])
 
   // --- Infinite scroll: observe a sentinel at the bottom of the list ---
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
-    if (!hasNextPage) return
-    if (typeof IntersectionObserver === 'undefined') return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage()
-        }
-      },
-      { threshold: 0.1 },
-    )
-    observer.observe(sentinel)
-
-    return () => observer.disconnect()
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, options.length])
+  // (shared IntersectionObserver logic; behavior unchanged).
+  const sentinelRef = useInfiniteScrollSentinel({
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+    optionCount: options.length,
+  })
 
   // --- 403: no READ grant on the target resource (Req 5.5) ---
   // Render a disabled control with a localized "no access" hint. The control

@@ -13,6 +13,7 @@
 import { useTranslation } from 'react-i18next'
 import { Plus, Trash2 } from 'lucide-react'
 
+import { NumberInput } from '@/components/ui/number-input'
 import type { OpeningType } from '../types'
 
 /** A wall as edited in the form: gaps + a list of openings (values as strings). */
@@ -141,13 +142,10 @@ export function RoomOpeningsEditor({
                   <label className="text-xs text-muted-foreground">
                     {t('rooms.form.wallGap')}
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <NumberInput
                     value={wall.wallGap}
                     disabled={disabled}
-                    onChange={(e) => updateWall(wallIndex, { wallGap: e.target.value })}
+                    onChange={(next) => updateWall(wallIndex, { wallGap: next })}
                     className={inputClass}
                   />
                 </div>
@@ -155,13 +153,10 @@ export function RoomOpeningsEditor({
                   <label className="text-xs text-muted-foreground">
                     {t('rooms.form.finishGap')}
                   </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <NumberInput
                     value={wall.finishGap}
                     disabled={disabled}
-                    onChange={(e) => updateWall(wallIndex, { finishGap: e.target.value })}
+                    onChange={(next) => updateWall(wallIndex, { finishGap: next })}
                     className={inputClass}
                   />
                 </div>
@@ -205,29 +200,23 @@ export function RoomOpeningsEditor({
                         }
                         className={inputClass}
                       />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                      <NumberInput
                         aria-label={t('rooms.form.openingHeight')}
                         placeholder={t('rooms.form.openingHeight')}
                         value={opening.height}
                         disabled={disabled}
-                        onChange={(e) =>
-                          updateOpening(wallIndex, openingIndex, { height: e.target.value })
+                        onChange={(next) =>
+                          updateOpening(wallIndex, openingIndex, { height: next })
                         }
                         className={inputClass}
                       />
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
+                      <NumberInput
                         aria-label={t('rooms.form.openingWidth')}
                         placeholder={t('rooms.form.openingWidth')}
                         value={opening.width}
                         disabled={disabled}
-                        onChange={(e) =>
-                          updateOpening(wallIndex, openingIndex, { width: e.target.value })
+                        onChange={(next) =>
+                          updateOpening(wallIndex, openingIndex, { width: next })
                         }
                         className={inputClass}
                       />

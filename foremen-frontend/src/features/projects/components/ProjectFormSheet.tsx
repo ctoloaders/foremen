@@ -46,6 +46,7 @@ import type {
   ProjectStatus,
   ProjectUpdateRequest,
 } from '../types'
+import { DatePicker } from '@/components/ui/date-picker'
 import { GoogleAddressAutocomplete } from './GoogleAddressAutocomplete'
 import { ClientBlock } from './ClientBlock'
 import { TeamMemberSelect, type SelectedTeamMember } from './TeamMemberSelect'
@@ -104,6 +105,7 @@ export function ProjectFormSheet({
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<ProjectCreateFormValues | ProjectUpdateFormValues>({
     resolver: zodResolver(schema),
@@ -297,17 +299,31 @@ export function ProjectFormSheet({
                 )}
               </div>
 
-              {/* Start / End date — two columns on desktop */}
+              {/*
+                Start / End date — shared Calendar-based DatePicker (FOR-04-bugs Bug 5 / Req 2.5),
+                replacing the previous native browser date inputs. The values are read/written
+                through react-hook-form (watch/setValue) so the existing zod validation and the
+                endDate >= startDate refinement keep working and edit-mode prefill still loads. The
+                DatePicker emits the same 'YYYY-MM-DD' ISO string the payload + schema expect, so the
+                submitted wire format is unchanged.
+
+                NOTE: the project form is the only base-entity form with date fields — the room form
+                (RoomFormSheet) and the work-catalog forms (WorkItemFormSheet) have no date inputs,
+                so no other form needs the shared DatePicker.
+              */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <label htmlFor="project-start" className="text-sm font-medium text-foreground">
                     {t('projects.form.startDate')}
                   </label>
-                  <input
+                  <DatePicker
                     id="project-start"
-                    type="date"
-                    {...register('startDate')}
-                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={t('projects.form.startDate')}
+                    value={watch('startDate')}
+                    onChange={(next) =>
+                      setValue('startDate', next, { shouldValidate: true, shouldDirty: true })
+                    }
+                    disabled={isPending}
                   />
                   {errors.startDate && (
                     <p className="text-xs text-destructive">{t(errors.startDate.message ?? '')}</p>
@@ -318,11 +334,14 @@ export function ProjectFormSheet({
                   <label htmlFor="project-end" className="text-sm font-medium text-foreground">
                     {t('projects.form.endDate')}
                   </label>
-                  <input
+                  <DatePicker
                     id="project-end"
-                    type="date"
-                    {...register('endDate')}
-                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={t('projects.form.endDate')}
+                    value={watch('endDate')}
+                    onChange={(next) =>
+                      setValue('endDate', next, { shouldValidate: true, shouldDirty: true })
+                    }
+                    disabled={isPending}
                   />
                   {errors.endDate && (
                     <p className="text-xs text-destructive">{t(errors.endDate.message ?? '')}</p>

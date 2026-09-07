@@ -13,10 +13,9 @@
  * inline error messages below invalid fields (localized via i18n).
  */
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 
 import {
@@ -27,7 +26,7 @@ import {
   SheetDescription,
   SheetFooter,
 } from '@/components/ui/sheet'
-import { apiRequest } from '@/lib/api-client'
+import { AsyncEntitySelect } from '@/components/ui/async-entity-select'
 import { useWorkItem } from '../api/query-hooks'
 import { useCreateWorkItem, useUpdateWorkItem } from '../api/mutation-hooks'
 import { workItemCreateSchema, workItemUpdateSchema } from '../schemas/work-item-schema'
@@ -35,7 +34,7 @@ import type {
   WorkItemCreateFormValues,
   WorkItemUpdateFormValues,
 } from '../schemas/work-item-schema'
-import type { PaginatedResponse, WorkItemFormMode } from '../types'
+import type { WorkItemFormMode } from '../types'
 
 interface WorkItemFormSheetProps {
   open: boolean
@@ -43,24 +42,6 @@ interface WorkItemFormSheetProps {
   itemId: number | null
   onClose: () => void
   onSuccess: () => void
-}
-
-/** Minimal option row from a dictionary list endpoint (`name` is locale-resolved). */
-interface ReferenceOption {
-  id: number
-  name: string
-}
-
-function useReferenceOptions(path: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ['work-catalog-options', path],
-    queryFn: () =>
-      apiRequest<PaginatedResponse<ReferenceOption>>(
-        `${path}?page=0&size=200&sort=name,asc`,
-      ),
-    enabled,
-    staleTime: 60_000,
-  })
 }
 
 export function WorkItemFormSheet({
@@ -76,9 +57,6 @@ export function WorkItemFormSheet({
     mode === 'edit' ? itemId : null,
   )
 
-  const { data: categories } = useReferenceOptions('/api/work-categories', open)
-  const { data: units } = useReferenceOptions('/api/measurement-units', open)
-
   const createMutation = useCreateWorkItem()
   const updateMutation = useUpdateWorkItem()
 
@@ -90,6 +68,7 @@ export function WorkItemFormSheet({
     register,
     handleSubmit,
     reset,
+    control,
     formState: { errors },
   } = useForm<WorkItemCreateFormValues | WorkItemUpdateFormValues>({
     resolver: zodResolver(schema),
@@ -171,23 +150,32 @@ export function WorkItemFormSheet({
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-1 flex-col gap-5 py-4">
             <div className="flex-1 space-y-5">
-              {/* Work category select */}
+              {/* Work category selector — async search + infinite-scroll combobox
+                  (Bug 7). Options are sorted by `orderNo,asc` so the dropdown
+                  follows the catalog's intended order rather than the entity
+                  name (Bug 10). RHF value stays a number; `0` maps to the
+                  select's "unselected" (null), preserving min(1) validation and
+                  the submit payload. */}
               <div className="space-y-2">
                 <label htmlFor="work-item-category" className="text-sm font-medium text-foreground">
                   {t('workCatalog.form.workCategory')}
                 </label>
-                <select
-                  id="work-item-category"
-                  {...register('workCategoryId')}
-                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value={0}>{t('workCatalog.form.selectWorkCategory')}</option>
-                  {categories?.content.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  control={control}
+                  name="workCategoryId"
+                  render={({ field }) => (
+                    <AsyncEntitySelect
+                      id="work-item-category"
+                      aria-label={t('workCatalog.form.workCategory')}
+                      optionsPath="/api/work-categories"
+                      sort="orderNo,asc"
+                      disabled={isPending}
+                      placeholder={t('workCatalog.form.selectWorkCategory')}
+                      value={field.value ? Number(field.value) : null}
+                      onChange={(nextId) => field.onChange(nextId ?? 0)}
+                    />
+                  )}
+                />
                 {errors.workCategoryId && (
                   <p className="text-xs text-destructive">
                     {t(errors.workCategoryId.message ?? '')}
@@ -195,23 +183,26 @@ export function WorkItemFormSheet({
                 )}
               </div>
 
-              {/* Unit select */}
+              {/* Unit selector — async combobox (Bug 7). */}
               <div className="space-y-2">
                 <label htmlFor="work-item-unit" className="text-sm font-medium text-foreground">
                   {t('workCatalog.form.unit')}
                 </label>
-                <select
-                  id="work-item-unit"
-                  {...register('unitId')}
-                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <option value={0}>{t('workCatalog.form.selectUnit')}</option>
-                  {units?.content.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </select>
+                <Controller
+                  control={control}
+                  name="unitId"
+                  render={({ field }) => (
+                    <AsyncEntitySelect
+                      id="work-item-unit"
+                      aria-label={t('workCatalog.form.unit')}
+                      optionsPath="/api/measurement-units"
+                      disabled={isPending}
+                      placeholder={t('workCatalog.form.selectUnit')}
+                      value={field.value ? Number(field.value) : null}
+                      onChange={(nextId) => field.onChange(nextId ?? 0)}
+                    />
+                  )}
+                />
                 {errors.unitId && (
                   <p className="text-xs text-destructive">{t(errors.unitId.message ?? '')}</p>
                 )}

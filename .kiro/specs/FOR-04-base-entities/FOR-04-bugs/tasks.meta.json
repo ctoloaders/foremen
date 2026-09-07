@@ -1,0 +1,427 @@
+{
+  "pbtResults": {
+    "1. Write bug condition exploration tests (frontend) — BEFORE any fix": {
+      "status": "passed",
+      "failingExample": "Exploration tests correctly FAIL on unfixed code (38 failed | 1 passed). Counterexamples per bug:\n- Bugs 1,2 (transparent popovers): index.css has no `--popover`/`--popover-foreground` in :root/.dark and no `--color-popover*` in @theme (only --card* exists); select.tsx & popover.tsx use `bg-popover`.\n- Bug 3 (missing i18n): all 12 keys undefined in pl.json AND ru.json: projects.form.address, projects.form.team.{label,hint,empty,placeholder,search,selectedCount}, projects.toast.{createError,updateError,deleteError}, dataTable.filters.{summaryFilters,summarySorts}. Generic scan of ProjectFormSheet/ProjectsList also surfaces missing: projects.form.address, projects.form.team.hint, projects.form.team.label, projects.toast.createError, projects.toast.updateError.\n- Bug 5 (date picker): ProjectFormSheet.tsx uses `type=\"date\"` native inputs; no DatePicker/Calendar.\n- Bug 7 (async combobox): RoomFormSheet.tsx & WorkItemFormSheet.tsx render native `<select>`; no AsyncEntitySelect.\n- Bug 8 (decimal comma): src/components/ui/number-input.tsx does not exist; room-schema.ts has no comma-normalization; Number(\"12,5\") === NaN.\n- Bug 9 (wall-delete + manual area): RoomFormSheet.tsx has `walls.length > 0` coupling and `floorArea: geometry ? null : ...` forcing manual metrics to null.\n- Bug 10 (category order): WorkItemFormSheet.tsx fetches with `sort=name,asc`; no orderNo.\n- Bug 11 (project column filters): ProjectsList.tsx members/client columns are `filterable: false` with no `reference:` descriptor; toolbar `<ProjectMembersFilter>`/`<ProjectClientFilter>` and `composeQuery(` still present.\nThe single passing test is the intentional precondition (select/popover consume bg-popover), confirming the affected surfaces genuinely rely on the undefined token.",
+      "lastRunTimestamp": 1788816773256
+    }
+  },
+  "executionHistory": {
+    "1. Write bug condition exploration tests (frontend) — BEFORE any fix": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479626
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816491861
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816805127
+      }
+    ],
+    "2. Write preservation property tests (frontend) — BEFORE any fix": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479656
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816809802
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816983230
+      }
+    ],
+    "3.1 Define popover theme variables in `src/index.css`": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479682
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816996570
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817082497
+      }
+    ],
+    "3.2 Verify popover opacity exploration test now passes": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479706
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817088855
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817093730
+      }
+    ],
+    "4.1 Add missing keys to both catalogs and add the used-key existence guard": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479729
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817098421
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817452498
+      }
+    ],
+    "4.2 Verify i18n exploration + preservation tests pass": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479791
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817458334
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817465905
+      }
+    ],
+    "5.1 Create shared `DatePicker` (Popover + `Calendar`) and use in project form": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479823
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817471404
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817699779
+      }
+    ],
+    "5.2 Extract shared `AsyncEntitySelect` from `ReferenceFilter` and use in forms": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479845
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817704699
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818109294
+      }
+    ],
+    "5.3 Create shared decimal `NumberInput` and apply": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479872
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818114349
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818398649
+      }
+    ],
+    "5.4 Manual-override mode decoupled from wall count + category order": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479897
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818403258
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818634217
+      }
+    ],
+    "5.5 Verify control exploration + preservation tests pass": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479916
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818640251
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818645686
+      }
+    ],
+    "6.1 Convert members/client to `ColumnConfig.reference` column filters": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479938
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818651063
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819002012
+      }
+    ],
+    "6.2 Verify project-list filter exploration + preservation tests pass": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479958
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819006860
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819011930
+      }
+    ],
+    "7. Write bug condition exploration tests (backend) — BEFORE any fix": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816479978
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819018047
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819208657
+      }
+    ],
+    "8. Write preservation property tests (backend) — BEFORE any fix": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480013
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819212984
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819824701
+      }
+    ],
+    "9.1 Migrate client to Places API (New) and add enabled guard": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480039
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819829347
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820031084
+      }
+    ],
+    "9.2 Add gitignored local compose override and update `.gitignore`": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480060
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820037123
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820098137
+      }
+    ],
+    "9.3 Verify Places exploration test passes and end-to-end works": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480082
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820104470
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820111979
+      }
+    ],
+    "10.1 Call `saveAudit(null, saved, \"CREATE\")` in `createProject`": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480101
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820118179
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820198120
+      }
+    ],
+    "10.2 Verify audit exploration + preservation tests pass": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480120
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820203123
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820207579
+      }
+    ],
+    "11. Author test-cases.md": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480138
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820213933
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820219965
+      }
+    ],
+    "12. Checkpoint — Ensure all tests pass": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788816480157
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820225793
+      },
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820362448
+      }
+    ],
+    "3. Fix transparent popovers (Bugs 1, 2)": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817093757
+      }
+    ],
+    "4. Fix missing i18n keys + add guard test (Bug 3)": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788817465931
+      }
+    ],
+    "5. Fix form controls: DatePicker, AsyncEntitySelect, NumberInput, manual-override, category order (Bugs 5, 7, 8, 9, 10)": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788818645740
+      }
+    ],
+    "6. Fix project list team/client column filters (Bug 11)": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788819011961
+      }
+    ],
+    "9. Fix Google Places: migrate to Places API (New) + enabled guard + local override (Bug 4)": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820112016
+      }
+    ],
+    "10. Fix project CREATE audit (Bug 6)": [
+      {
+        "executionId": "117bfe74-77ce-4662-a31d-934d0d21f14b",
+        "chatSessionId": "sess_3469b93b-166b-4084-bf1e-243a812efe13",
+        "timestamp": 1788820207619
+      }
+    ]
+  }
+}

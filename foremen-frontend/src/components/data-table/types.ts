@@ -22,6 +22,16 @@ export interface ReferenceInfo {
   labelI18n: boolean
   /** Id filter path composed with the query grammar (e.g. "role.id") */
   idPath: string
+  /**
+   * Optional constant query fragment AND-appended to the emitted id fragment
+   * for this reference filter. When present, a non-empty selection emits
+   * `<idFragment> AND <extraPredicate>` (e.g. the projects-list CLIENT column
+   * pins the same `members` join to the CLIENT project role via
+   * `members.projectRole.code==CLIENT`, reproducing the compound semantics the
+   * old standalone `ProjectClientFilter` composed by hand). Omitted for plain
+   * single-path reference columns, so those emit exactly as before.
+   */
+  extraPredicate?: string
 }
 
 /** Single column configuration */
@@ -110,6 +120,14 @@ export interface ReferenceFilterState {
   field: string
   ids: number[]
   idPath: string
+  /**
+   * Optional constant predicate copied from the column's
+   * {@link ReferenceInfo.extraPredicate}. When set, {@link buildQueryString}
+   * AND-appends it to the emitted id fragment so a compound nested filter
+   * (e.g. `members.user.id~in~<ids> AND members.projectRole.code==CLIENT`) is
+   * expressed through the standard column-filter mechanism.
+   */
+  extraPredicate?: string
 }
 
 /** Union type for all filters */

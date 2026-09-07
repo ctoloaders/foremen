@@ -78,15 +78,14 @@ vi.mock('../api/projects-api', () => ({
   }) => mockFetchProjects(params),
 }))
 
-// The two nested filter controls fetch `/api/users` through ReferenceFilter.
-// Stub them so the list test stays isolated from the users options endpoint —
-// they are covered by their own dedicated tests (task 12.4).
-vi.mock('../components/ProjectMembersFilter', () => ({
-  ProjectMembersFilter: () => <div data-testid="project-members-filter" />,
-}))
-vi.mock('../components/ProjectClientFilter', () => ({
-  ProjectClientFilter: () => <div data-testid="project-client-filter" />,
-}))
+// The team members and client filters are now nested-entity column filters
+// (FOR-04-bugs Bug 11): they live on the members/client columns as
+// ColumnConfig.reference descriptors and only fetch `/api/users` when their
+// column filter popover is opened. These list tests never open those popovers,
+// so no stubbing of the users options endpoint is needed. ProjectsList imports
+// only the pure `MEMBERS_USER_ID_PATH` / `CLIENT_ROLE_PREDICATE` constants from
+// those modules, so they are left un-mocked. (The filter components' own
+// behavior is covered by ProjectMembersFilter/ProjectClientFilter tests.)
 
 // Import the component AFTER mocks are set up
 import { ProjectsList } from '../components/ProjectsList'

@@ -4,6 +4,7 @@
     "cancel": "Отмена",
     "delete": "Удалить",
     "edit": "Редактировать",
+    "clear": "Очистить",
     "loading": "Загрузка..."
   },
   "nav": {
@@ -105,10 +106,12 @@
       "apply": "Применить",
       "clearAll": "Сбросить фильтры",
       "activeCount": "Активных фильтров: {{count}}",
+      "summaryFilters": "{{count}} фильтра",
       "summaryFilters_one": "{{count}} фильтр",
       "summaryFilters_few": "{{count}} фильтра",
       "summaryFilters_many": "{{count}} фильтров",
       "summaryFilters_other": "{{count}} фильтра",
+      "summarySorts": "{{count}} сортировки",
       "summarySorts_one": "{{count}} сортировка",
       "summarySorts_few": "{{count}} сортировки",
       "summarySorts_many": "{{count}} сортировок",
@@ -998,6 +1001,15 @@
       "addressSearching": "Поиск адресов...",
       "addressEmpty": "Совпадений не найдено",
       "addressError": "Не удалось загрузить адреса",
+      "address": "Адрес",
+      "team": {
+        "label": "Команда",
+        "hint": "Выберите участников команды, назначенных на проект",
+        "empty": "Пользователи не найдены",
+        "placeholder": "Выберите участников команды",
+        "search": "Поиск пользователя...",
+        "selectedCount": "Выбрано: {{count}}"
+      },
       "client": {
         "title": "Клиент",
         "description": "Выберите существующего клиента или добавьте нового",
@@ -1031,7 +1043,10 @@
     "toast": {
       "createSuccess": "Проект создан",
       "updateSuccess": "Проект обновлён",
-      "deleteSuccess": "Проект удалён"
+      "deleteSuccess": "Проект удалён",
+      "createError": "Не удалось создать проект",
+      "updateError": "Не удалось обновить проект",
+      "deleteError": "Не удалось удалить проект"
     },
     "errors": {
       "network": "Произошла сетевая ошибка. Попробуйте ещё раз."
@@ -1079,6 +1094,7 @@
       "ceilingHeight": "Высота (мб)",
       "internalCorners": "Внутренние углы (шт)",
       "metrics": "Метрики",
+      "manualOverride": "Ввести площади вручную",
       "floorArea": "Площадь пола (м²)",
       "wallArea": "Площадь стен (м²)",
       "perimeter": "Периметр (мб)",

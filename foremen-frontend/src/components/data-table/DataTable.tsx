@@ -160,6 +160,10 @@ export function DataTable<T>(props: DataTableProps<T>) {
         currentFilter?.type === 'reference' ? currentFilter : undefined
       const ids = referenceFilter?.ids ?? []
       const idPath = column.reference.idPath
+      // Carry the column's optional compound predicate through into filter
+      // state so buildQueryString can AND-append it to the emitted id fragment
+      // (e.g. the projects-list CLIENT column).
+      const extraPredicate = column.reference.extraPredicate
 
       const commit = (nextIds: number[]) => {
         // Empty selection → clear the filter entirely so it contributes no
@@ -170,7 +174,7 @@ export function DataTable<T>(props: DataTableProps<T>) {
         } else {
           dispatch({
             type: 'SET_FILTER',
-            payload: { type: 'reference', field, ids: nextIds, idPath },
+            payload: { type: 'reference', field, ids: nextIds, idPath, extraPredicate },
           })
         }
       }

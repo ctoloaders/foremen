@@ -50,10 +50,20 @@ function buildFilterCondition(filter: ColumnFilterState): string | null {
       if (filter.value === null) return `${filter.field}~null~true`
       return `${filter.field}==${filter.value}`
     }
-    case 'reference':
+    case 'reference': {
       // Empty ids → null (no fragment); one id → `idPath==id`; many →
       // `idPath~in~id1,id2,...`. Returning null composes with the existing
       // ' AND ' joiner automatically (Req 5.2, 3.4, 4.2).
-      return emitReferenceFragment(filter.idPath, filter.ids)
+      const idFragment = emitReferenceFragment(filter.idPath, filter.ids)
+      if (idFragment === null) return null
+      // A compound reference column (e.g. the projects-list CLIENT column) pins
+      // the same nested join to a constant predicate. When present, AND-append
+      // it so the emitted fragment is `<idFragment> AND <extraPredicate>` —
+      // reproducing the exact semantics the old bespoke ProjectClientFilter
+      // composed by hand (members.user.id~in~<ids> AND members.projectRole.code==CLIENT).
+      return filter.extraPredicate
+        ? `${idFragment} AND ${filter.extraPredicate}`
+        : idFragment
+    }
   }
 }

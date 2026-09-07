@@ -1,5 +1,6 @@
 package com.foremen.service.google;
 
+import com.foremen.config.security.GooglePlacesProperties;
 import com.foremen.controller.model.PlaceDetailsDto;
 import com.foremen.controller.model.PlaceDetailsDto.PlaceComponentDto;
 import com.foremen.controller.model.PlacePredictionDto;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 public class GooglePlacesService {
 
     private final GooglePlacesClient client;
+    private final GooglePlacesProperties properties;
 
     /**
      * Returns autocomplete predictions for a free-text address query, normalized to
@@ -32,6 +34,9 @@ public class GooglePlacesService {
      * @return the predictions (never {@code null}; may be empty)
      */
     public List<PlacePredictionDto> autocomplete(String query) {
+        if (!properties.enabled()) {
+            return List.of();
+        }
         return client.autocomplete(query).predictions().stream()
                 .map(p -> new PlacePredictionDto(p.description(), p.placeId()))
                 .toList();
@@ -47,6 +52,9 @@ public class GooglePlacesService {
      * @return the normalized details, or {@code null} when the place has no result
      */
     public PlaceDetailsDto resolveDetails(String placeId) {
+        if (!properties.enabled()) {
+            return null;
+        }
         GooglePlacesClient.DetailsResponse.Result result = client.details(placeId).result();
         if (result == null) {
             return null;

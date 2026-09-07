@@ -287,6 +287,15 @@ public class ProjectService
         ProjectEntity saved = projectDao.save(project);
         Long projectId = saved.getId();
 
+        // 3a. Write the CREATE audit row within the same @Transactional boundary (FOR-04-bugs Bug 6,
+        //     Requirement 2.6). The custom create orchestrator bypasses AdminService.create, so it
+        //     must invoke the inherited saveAudit contract itself — otherwise no CREATE audit row is
+        //     written (unlike generic entities and rooms, which AdminService audits). The base
+        //     project entity is the audited subject (entityClass "ProjectEntity", the generated
+        //     entityId, performedBy, snapshotAfter); members/client assignment produce their own
+        //     audit rows via their services and are out of scope for this row (Requirement 3.7).
+        saveAudit(null, saved, "CREATE");
+
         // 4. Assign each team member (Requirement 2.6). Failures (unknown user/role, duplicate
         //    membership) propagate and roll back the whole transaction (Requirement 2.9).
         List<ProjectMemberSummaryDto> memberSummaries = new ArrayList<>();
