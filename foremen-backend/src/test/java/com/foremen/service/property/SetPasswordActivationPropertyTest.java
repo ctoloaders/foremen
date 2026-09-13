@@ -109,9 +109,10 @@ class SetPasswordActivationPropertyTest {
 
         InviteProperties inviteProperties = new InviteProperties(TTL_HOURS);
         MailInviteProperties mailInviteProperties = new MailInviteProperties(BASE_URL);
+        // The set-password/consume path never publishes an invitation event; a no-op publisher is fine.
         InviteService inviteService = new InviteService(
                 inviteTokenDao, userDao, invitationMailSender,
-                inviteProperties, mailInviteProperties);
+                inviteProperties, mailInviteProperties, event -> { });
 
         JwtProperties props = new JwtProperties(30, 7, "unused-secret-for-mocked-provider-0123456789");
         AuthService service = new AuthService(

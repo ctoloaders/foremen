@@ -9,8 +9,10 @@ import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.mail.InvitationEmailEvent;
 import com.foremen.service.mail.InvitationMailSender;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,9 +27,11 @@ import java.util.UUID;
  * Requirements 3 and 4).
  *
  * <p>The service is {@code @Transactional}: when {@link #issueInvite(UserEntity)} runs inside the
- * user-creation transaction (via the {@code UserService} create hook), a token-persist or mail
+ * user-creation transaction (via the {@code UserService} create hook), a <em>token-persist</em>
  * failure propagates and rolls back the enclosing transaction so neither the user nor the token is
- * retained (Requirements 3.6, 4.8).
+ * retained (Requirement 3.6). Email dispatch, by contrast, is not part of the transaction: an
+ * {@code InvitationEmailEvent} is published and delivered asynchronously after commit, so a mail
+ * failure never rolls back user creation.
  *
  * <p>Beyond issuance, this service also validates/consumes tokens for the set-password flow
  * ({@link #consume(String)}) and handles admin resend ({@link #resend(Long)}).
@@ -45,13 +49,15 @@ public class InviteService {
     private final InvitationMailSender invitationMailSender;
     private final InviteProperties inviteProperties;
     private final MailInviteProperties mailInviteProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Issues exactly one invite token for a freshly created user and dispatches the role-dependent
      * invitation email (Requirements 3.1&ndash;3.3, 3.5, 3.6, 3.8, 4.1, 4.2, 4.8).
      *
      * <p>Called immediately after the user is persisted, within the same transaction, so a
-     * token-persist or mail failure rolls back the user insert.
+     * token-persist failure rolls back the user insert. Email dispatch is deferred to an
+     * asynchronous after-commit listener and its failure does not affect the transaction.
      *
      * @param user the newly created (INVITED) user to invite
      */
@@ -181,8 +187,13 @@ public class InviteService {
      *
      * <p>Email variant: a {@code CLIENT} role receives the client-portal invitation
      * (Requirement 4.2); any other (employee) role receives the set-password invitation with the
-     * invite link (Requirement 4.1). A token-persist or mail failure propagates so the enclosing
-     * transaction rolls back (Requirements 3.6, 4.8).
+     * invite link (Requirement 4.1).
+     *
+     * <p><b>Transactionality:</b> only token persistence is transactional. Rather than sending the
+     * email inline, this method publishes an {@link InvitationEmailEvent}; the actual dispatch runs
+     * asynchronously <em>after the transaction commits</em> (see {@code InvitationEmailDispatcher}).
+     * A mail-transport failure therefore does <b>not</b> roll back the enclosing transaction &mdash;
+     * a token-persist failure still propagates and rolls it back (Requirement 3.6).
      *
      * @param user the user to issue the token for
      * @return the persisted invite token
@@ -191,11 +202,11 @@ public class InviteService {
         InviteTokenEntity saved = generateToken(user);
 
         if (isClient(user)) {
-            invitationMailSender.sendClientPortalInvitation(user);
+            eventPublisher.publishEvent(new InvitationEmailEvent(user, true, null));
         } else {
             String inviteLink = InviteLinkBuilder.buildInviteLink(
                     mailInviteProperties.inviteBaseUrl(), saved.getToken());
-            invitationMailSender.sendSetPasswordInvitation(user, inviteLink);
+            eventPublisher.publishEvent(new InvitationEmailEvent(user, false, inviteLink));
         }
 
         return saved;

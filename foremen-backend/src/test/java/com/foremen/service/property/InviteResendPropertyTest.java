@@ -14,6 +14,8 @@ import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.InviteService;
+import com.foremen.service.mail.InvitationEmailDispatcher;
+import com.foremen.service.mail.InvitationEmailEvent;
 import com.foremen.service.mail.InvitationMailSender;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
@@ -25,6 +27,7 @@ import net.jqwik.api.constraints.IntRange;
 import net.jqwik.api.constraints.LongRange;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 
 import java.time.Instant;
@@ -184,9 +187,15 @@ class InviteResendPropertyTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
             InviteProperties inviteProperties = new InviteProperties(ttlHours);
             MailInviteProperties mailInviteProperties = new MailInviteProperties(BASE_URL);
+            // Wire the publisher to synchronously drive a dispatcher over the mocked mail sender so
+            // the "exactly one email on resend" assertions remain meaningful without async timing.
+            InvitationEmailDispatcher dispatcher =
+                    new InvitationEmailDispatcher(invitationMailSender);
+            ApplicationEventPublisher publisher =
+                    event -> dispatcher.onInvitationEmail((InvitationEmailEvent) event);
             service = new InviteService(
                     inviteTokenDao, userDao, invitationMailSender,
-                    inviteProperties, mailInviteProperties);
+                    inviteProperties, mailInviteProperties, publisher);
         }
     }
 

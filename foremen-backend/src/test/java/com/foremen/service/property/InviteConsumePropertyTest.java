@@ -191,9 +191,10 @@ class InviteConsumePropertyTest {
         Fixture() {
             InviteProperties inviteProperties = new InviteProperties(TTL_HOURS);
             MailInviteProperties mailInviteProperties = new MailInviteProperties(BASE_URL);
+            // consume() never publishes an invitation event, so a no-op publisher is sufficient.
             service = new InviteService(
                     inviteTokenDao, userDao, invitationMailSender,
-                    inviteProperties, mailInviteProperties);
+                    inviteProperties, mailInviteProperties, event -> { });
         }
     }
 

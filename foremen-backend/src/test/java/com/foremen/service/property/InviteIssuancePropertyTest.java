@@ -15,6 +15,8 @@ import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
 import com.foremen.service.InviteService;
+import com.foremen.service.mail.InvitationEmailDispatcher;
+import com.foremen.service.mail.InvitationEmailEvent;
 import com.foremen.service.mail.InvitationMailSender;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
@@ -24,6 +26,7 @@ import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -202,9 +205,16 @@ class InviteIssuancePropertyTest {
                     .thenAnswer(invocation -> invocation.getArgument(0));
             InviteProperties inviteProperties = new InviteProperties(ttlHours);
             MailInviteProperties mailInviteProperties = new MailInviteProperties(BASE_URL);
+            // Wire the event publisher so a published InvitationEmailEvent synchronously drives an
+            // InvitationEmailDispatcher built over the mocked mail sender. This preserves the
+            // "exactly one email + link" assertions (Properties 5 & 6) without async timing.
+            InvitationEmailDispatcher dispatcher =
+                    new InvitationEmailDispatcher(invitationMailSender);
+            ApplicationEventPublisher publisher =
+                    event -> dispatcher.onInvitationEmail((InvitationEmailEvent) event);
             service = new InviteService(
                     inviteTokenDao, userDao, invitationMailSender,
-                    inviteProperties, mailInviteProperties);
+                    inviteProperties, mailInviteProperties, publisher);
         }
     }
 
