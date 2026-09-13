@@ -35,8 +35,26 @@ public final class ForbiddenPage {
         return TestConfig.frontendUrl() + ROUTE;
     }
 
-    /** {@code true} when the browser is on {@code /403} and the forbidden heading has rendered. */
+    /**
+     * {@code true} when the browser is on {@code /403} and the forbidden heading has rendered.
+     *
+     * <p>The route change to {@code /403} can complete a beat before the AppShell finishes mounting
+     * the ForbiddenPage {@code <h1>} (the shell shows loading skeletons in between), so this waits for
+     * the localized heading (PL/RU) to become visible rather than taking an instantaneous
+     * {@code count()} snapshot. The durable, locale-independent signal is the URL; the heading is the
+     * content confirmation.
+     */
     public boolean isShown() {
+        if (!page.url().contains(ROUTE)) {
+            return false;
+        }
+        try {
+            heading().first().waitFor(new Locator.WaitForOptions()
+                    .setState(com.microsoft.playwright.options.WaitForSelectorState.VISIBLE)
+                    .setTimeout(10_000));
+        } catch (com.microsoft.playwright.TimeoutError e) {
+            return false;
+        }
         return page.url().contains(ROUTE) && heading().count() > 0;
     }
 
@@ -48,7 +66,8 @@ public final class ForbiddenPage {
     public Locator heading() {
         return page.getByRole(AriaRole.HEADING,
                 new Page.GetByRoleOptions().setName(
-                        java.util.regex.Pattern.compile("Brak dostępu", java.util.regex.Pattern.CASE_INSENSITIVE)));
+                        java.util.regex.Pattern.compile("Brak dostępu|Нет доступа",
+                                java.util.regex.Pattern.CASE_INSENSITIVE)));
     }
 
     /**
@@ -59,7 +78,8 @@ public final class ForbiddenPage {
     public Locator goBackButton() {
         return page.getByRole(AriaRole.BUTTON,
                 new Page.GetByRoleOptions().setName(
-                        java.util.regex.Pattern.compile("Wróć", java.util.regex.Pattern.CASE_INSENSITIVE)));
+                        java.util.regex.Pattern.compile("Wróć|Вернуться назад",
+                                java.util.regex.Pattern.CASE_INSENSITIVE)));
     }
 
     /** Click Go_Back, returning the user to their Last_Allowed_Location (or {@code /}). */

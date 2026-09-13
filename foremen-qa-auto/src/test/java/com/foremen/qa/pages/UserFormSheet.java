@@ -70,11 +70,15 @@ public final class UserFormSheet {
         page.locator("#user-locale").click();
         // Radix Select options render as role=option; match the one whose value matches (pl/ru).
         // The visible labels are "Polski (PL)" / "Русский (RU)"; select by the parenthesized code.
+        // Wait for the option to become actionable before clicking so the locale is reliably set
+        // (otherwise "Język jest wymagany" can block submit).
         String code = value.equalsIgnoreCase("pl") ? "PL" : "RU";
-        page.getByRole(AriaRole.OPTION,
+        Locator option = page.getByRole(AriaRole.OPTION,
                 new Page.GetByRoleOptions().setName(
                         java.util.regex.Pattern.compile(code, java.util.regex.Pattern.CASE_INSENSITIVE)))
-                .first().click();
+                .first();
+        option.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        option.click();
         return this;
     }
 
