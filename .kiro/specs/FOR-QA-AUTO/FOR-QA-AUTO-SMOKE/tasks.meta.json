@@ -1,0 +1,233 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Scaffold the `foremen-qa-auto` Gradle module": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883420
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291891725
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292076279
+      }
+    ],
+    "2. Implement configuration and browser lifecycle": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883477
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292082464
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292238218
+      }
+    ],
+    "3. Implement the API helper for setup/teardown": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883535
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292242572
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292497648
+      }
+    ],
+    "3a. Implement the reusable test-user provisioning module (direct DB, bcrypt)": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883576
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292501884
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292761547
+      }
+    ],
+    "4. Implement core page objects (shell, table, login)": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883609
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789292769252
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789293248505
+      }
+    ],
+    "5. FOR-03 auth smoke slice": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883643
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789293257800
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789293442546
+      }
+    ],
+    "6. FOR-03 menu-visibility smoke slice": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883676
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789293446510
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789293679529
+      }
+    ],
+    "7. FOR-02 admin-panel smoke slice": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883754
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789293683647
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789294152908
+      }
+    ],
+    "8. FOR-04 base-entities smoke slice": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883801
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789294157222
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789294694945
+      }
+    ],
+    "9. Reporting — client-facing demo report with per-step screenshots": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883830
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789294699247
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789295114815
+      }
+    ],
+    "10. Growing-scope wiring and verification": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883863
+      },
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789295119570
+      }
+    ],
+    "11. Documentation": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883916
+      },
+      {
+        "executionId": "424289ce-6513-479f-af52-4158c311b867",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789297366461
+      },
+      {
+        "executionId": "424289ce-6513-479f-af52-4158c311b867",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789302460472
+      }
+    ],
+    "12. Author test-cases.md": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883942
+      },
+      {
+        "executionId": "424289ce-6513-479f-af52-4158c311b867",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789302480595
+      },
+      {
+        "executionId": "424289ce-6513-479f-af52-4158c311b867",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789302484812
+      }
+    ],
+    "13. Final checkpoint": [
+      {
+        "executionId": "2e55fea7-eb68-4ac1-9f22-e70e85166b07",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789291883971
+      },
+      {
+        "executionId": "424289ce-6513-479f-af52-4158c311b867",
+        "chatSessionId": "sess_8566f580-8174-4cfa-ac63-992b6771ae44",
+        "timestamp": 1789302499531
+      }
+    ]
+  }
+}

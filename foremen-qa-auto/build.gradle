@@ -1,0 +1,140 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.foremen.qa'
+version = '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+// Versions are pinned explicitly via gradle.properties (no Spring dependency-management
+// plugin) so this module stays fully independent of the backend build.
+dependencies {
+    // ---- BDD: Cucumber-JVM on the JUnit 5 platform (Requirement 1.2) ----
+    testImplementation "io.cucumber:cucumber-java:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-junit-platform-engine:${cucumberVersion}"
+    testImplementation "io.cucumber:cucumber-picocontainer:${cucumberVersion}"
+
+    // ---- JUnit 5 platform + suite engine (declarative @Suite runner) ----
+    testImplementation "org.junit.platform:junit-platform-suite:${junitPlatformVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter:${junitJupiterVersion}"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher:${junitPlatformVersion}"
+
+    // ---- Browser automation: Playwright-for-Java (Requirement 1.2) ----
+    testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+
+    // ---- Assertions (Requirement design: AssertJ) ----
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+
+    // ---- JSON (de)serialization for the API helper setup/teardown bodies ----
+    // Same coordinate Playwright already brings transitively; pinned for stability.
+    testImplementation "com.google.code.gson:gson:${gsonVersion}"
+
+    // ---- Direct test-DB provisioning: PostgreSQL JDBC + HikariCP (Requirement 12) ----
+    testImplementation "org.postgresql:postgresql:${postgresqlVersion}"
+    testImplementation "com.zaxxer:HikariCP:${hikariVersion}"
+
+    // ---- bcrypt hashing compatible with the backend (Requirement 12.3) ----
+    testImplementation "org.springframework.security:spring-security-crypto:${springSecurityCryptoVersion}"
+    // commons-logging is an optional transitive of spring-security-crypto; BCryptPasswordEncoder's
+    // constructor builds a LogFactory, so it must be on the runtime classpath explicitly.
+    testImplementation "commons-logging:commons-logging:${commonsLoggingVersion}"
+
+    // ---- Logging backend for Playwright/HikariCP SLF4J calls ----
+    testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
+}
+
+test {
+    // Fully JUnit-5-platform based; there is no production main source set.
+    useJUnitPlatform()
+
+    // The Cucumber smoke scenarios require a LIVE Docker stack (frontend :3000 / backend :8080),
+    // so they must NEVER run during an ordinary `./gradlew test` / `build` / `check`. They are
+    // instead run explicitly via `./gradlew smokeTest` (the intended entry point).
+    //
+    // Two complementary guards keep the default `test` task free of smoke:
+    //   1. exclude the declarative @Suite descriptor so JUnit does not select it, and
+    //   2. disable Cucumber's own execution so direct engine autodiscovery (driven by
+    //      junit-platform.properties) skips every scenario too.
+    // Together these leave the plain `test` task with 0 Cucumber scenarios (and it succeeds with
+    // no Docker stack), while any future non-Cucumber unit tests still run normally.
+    exclude '**/RunSmokeTest*'
+    systemProperty 'cucumber.execution.enabled', 'false'
+
+    // With the smoke suite excluded/disabled and no non-Cucumber unit tests present yet, the
+    // default `test` task legitimately discovers 0 tests. Gradle 9 fails such a run by default
+    // (failOnNoDiscoveredTests); relax it here so a plain `./gradlew test`/`build`/`check`
+    // succeeds without a Docker stack. Future non-Cucumber unit tests still run normally.
+    failOnNoDiscoveredTests = false
+
+    // Surface the QA config knobs (system property -> env var -> default resolution
+    // happens in TestConfig). Any -DQA_* or -Dcucumber.* passed on the CLI is forwarded.
+    systemProperties System.getProperties().findAll { k, v ->
+        k.toString().startsWith('QA_') ||
+        k.toString().startsWith('cucumber.') ||
+        k.toString().startsWith('FOREMEN_')
+    }
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
+// Primary entry point for CI / QA engineers (Requirement 1.4).
+// Runs every scenario tagged @smoke; the tag filter is overridable via -DQA_TAGS=...
+// (mapped to cucumber.filter.tags below), so `-DQA_TAGS="@smoke and @FOR-03"` slices a spec.
+tasks.register('smokeTest', Test) {
+    group = 'verification'
+    description = 'Runs all @smoke Cucumber scenarios against the live Docker stack.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    // Default tag filter is @smoke; override with -DQA_TAGS (e.g. "@smoke and @FOR-04").
+    def tags = System.getProperty('QA_TAGS', System.getenv('QA_TAGS') ?: '@smoke')
+    systemProperty 'cucumber.filter.tags', tags
+
+    // This is the intended smoke entry point: Cucumber execution MUST be enabled here (the default
+    // `test` task disables it; this task is independent and explicitly re-enables it so it can never
+    // inherit that `false`).
+    systemProperty 'cucumber.execution.enabled', 'true'
+
+    // Forward QA_* / FOREMEN_* runtime configuration.
+    systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
+// Downloads the Playwright browser binaries so a clean checkout can run the suite
+// after the documented setup step (Requirement 1.5). Uses Playwright's own CLI
+// entry point off the test classpath, so no extra tooling is required.
+tasks.register('installBrowsers', JavaExec) {
+    group = 'setup'
+    description = 'Installs Playwright browser binaries (chromium by default).'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.microsoft.playwright.CLI'
+    // Install chromium plus its OS dependencies where supported.
+    args = ['install', '--with-deps', 'chromium']
+}
+
+// Make the smoke run depend on browsers being present is intentionally NOT wired
+// automatically: installBrowsers is a one-time setup step (documented in the README),
+// and coupling it to every run would re-download on CI caches. Run it once:
+//   ./gradlew installBrowsers
+// then:
+//   ./gradlew smokeTest
+
+wrapper {
+    gradleVersion = '9.1.0'
+}

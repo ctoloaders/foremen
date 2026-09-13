@@ -1,0 +1,11 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+
+// Standalone build: foremen-qa-auto is intentionally NOT a subproject of foremen-backend.
+// This guarantees its tasks never trigger the backend Testcontainers integration suite
+// (FOR-QA-AUTO-SMOKE Requirement 1.1). The module builds and runs on its own wrapper.
+rootProject.name = 'foremen-qa-auto'

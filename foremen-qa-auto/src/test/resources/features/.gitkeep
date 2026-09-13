@@ -1,0 +1,3 @@
+# Feature files (*.feature) live here, grouped by source spec: for02/, for03/, for04/.
+# Added in later tasks (5-8). This placeholder keeps the classpath resource directory present
+# so the RunSmokeTest suite resolves it during scaffolding.
