@@ -63,6 +63,7 @@ export function login(email: string, password: string): Promise<TokenResponse> {
   return apiRequest<TokenResponse>('/api/auth/login', {
     method: 'POST',
     body: { email, password },
+    skipAuthRefresh: true,
   })
 }
 
