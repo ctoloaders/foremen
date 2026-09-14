@@ -129,10 +129,19 @@ public final class ReportWriter {
                 .append("</header>\n");
         sb.append("<main class=\"container\">\n");
 
+        if (feature.description != null && !feature.description.isBlank()) {
+            sb.append("<p class=\"feature-intro\">").append(esc(feature.description)).append("</p>\n");
+        }
+
         for (ReportModel.Scenario scenario : feature.scenarios) {
             sb.append("<section class=\"card scenario\">\n");
             sb.append("<h2>").append(statusChipInline(scenario.status)).append(" ")
                     .append(esc(scenario.name)).append("</h2>\n");
+            if (scenario.intent != null && !scenario.intent.isBlank()
+                    && !scenario.intent.equals(scenario.name)) {
+                sb.append("<p class=\"scenario-intent\"><b>Что проверяем:</b> ")
+                        .append(esc(scenario.intent)).append("</p>\n");
+            }
             if (!scenario.tags.isEmpty()) {
                 sb.append("<div class=\"tags\">");
                 for (String tag : scenario.tags) {
@@ -153,14 +162,24 @@ public final class ReportWriter {
                 if (step.demoFrame) {
                     sb.append("<span class=\"demo-badge\">demo</span> ");
                 }
-                sb.append("<b>").append(esc(step.keyword == null ? "" : step.keyword)).append("</b>")
-                        .append(esc(step.text))
-                        .append("</span>")
+                // Primary human-readable line: the description. Fall back to the Gherkin text.
+                String primary = step.description != null && !step.description.isBlank()
+                        ? step.description
+                        : (step.keyword == null ? "" : step.keyword) + step.text;
+                sb.append("<span class=\"step-desc\">").append(esc(primary)).append("</span>");
+                // Secondary muted line: the raw Gherkin keyword + text (skipped for demo frames).
+                if (!step.demoFrame) {
+                    sb.append("<span class=\"step-gherkin\">")
+                            .append("<b>").append(esc(step.keyword == null ? "" : step.keyword)).append("</b>")
+                            .append(esc(step.text))
+                            .append("</span>");
+                }
+                sb.append("</span>")
                         .append("</div>\n");
                 if (!step.demoFrame) {
                     sb.append("<div class=\"expected-actual\">")
-                            .append("<span class=\"ea\"><b>Expected:</b> ").append(esc(step.expected)).append("</span>")
-                            .append("<span class=\"ea\"><b>Actual:</b> ").append(esc(step.actual)).append("</span>")
+                            .append("<span class=\"ea\"><b>Ожидаемый результат:</b> ").append(esc(step.expected)).append("</span>")
+                            .append("<span class=\"ea\"><b>Факт:</b> ").append(esc(step.actual)).append("</span>")
                             .append("</div>\n");
                 }
                 if (step.error != null) {
@@ -208,19 +227,27 @@ public final class ReportWriter {
 
         for (ReportModel.Feature feature : run.features) {
             md.append("## ").append(feature.sourceTag).append(" — ").append(feature.name).append("\n\n");
+            if (feature.description != null && !feature.description.isBlank()) {
+                md.append(feature.description).append("\n\n");
+            }
             for (ReportModel.Scenario scenario : feature.scenarios) {
                 md.append("### ").append(scenario.name)
                         .append(" — ").append(statusText(scenario.status)).append("\n\n");
-                md.append("| # | Шаг | Ожидание | Факт | Статус |\n");
-                md.append("|---|-----|----------|------|--------|\n");
+                if (scenario.intent != null && !scenario.intent.isBlank()
+                        && !scenario.intent.equals(scenario.name)) {
+                    md.append("**Что проверяем:** ").append(scenario.intent).append("\n\n");
+                }
+                md.append("| # | Шаг | Что делаем | Ожидаемый результат | Факт | Статус |\n");
+                md.append("|---|-----|------------|---------------------|------|--------|\n");
                 int i = 0;
                 for (ReportModel.Step step : scenario.steps) {
                     i++;
                     String text = (step.keyword == null ? "" : step.keyword) + step.text;
                     md.append("| ").append(i)
                             .append(" | ").append(mdCell(text))
+                            .append(" | ").append(mdCell(step.demoFrame ? "—" : step.description))
                             .append(" | ").append(mdCell(step.demoFrame ? "—" : step.expected))
-                            .append(" | ").append(mdCell(step.demoFrame ? "(demo frame)" : step.actual))
+                            .append(" | ").append(mdCell(step.demoFrame ? "(демо-кадр)" : step.actual))
                             .append(" | ").append(statusEmoji(step.status))
                             .append(" |\n");
                 }
@@ -275,7 +302,13 @@ public final class ReportWriter {
                 .step-fail{background:rgba(229,72,77,.06);border-radius:8px;padding:1rem;margin:.4rem 0}
                 .step-head{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
                 .num{color:var(--muted);font-variant-numeric:tabular-nums;min-width:1.4rem}
-                .step-text{flex:1}
+                .step-text{flex:1;display:flex;flex-direction:column;gap:.15rem}
+                .step-desc{color:var(--ink)}
+                .step-gherkin{color:var(--muted);font-size:.82rem}
+                .step-gherkin b{color:var(--muted)}
+                p.feature-intro{color:var(--ink);margin:.2rem 0 1.2rem;font-size:.95rem}
+                p.scenario-intent{color:var(--muted);font-size:.9rem;margin:-.6rem 0 .8rem}
+                p.scenario-intent b{color:var(--ink)}
                 .status{font-size:.72rem;font-weight:700;border-radius:6px;padding:.1rem .45rem;text-transform:uppercase}
                 .status.pass{background:rgba(46,194,106,.15);color:var(--pass)}
                 .status.fail{background:rgba(229,72,77,.16);color:var(--fail)}

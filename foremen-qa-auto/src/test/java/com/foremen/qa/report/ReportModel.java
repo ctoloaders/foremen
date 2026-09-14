@@ -75,6 +75,7 @@ public final class ReportModel {
         public String uri;           // classpath URI of the .feature file
         public String sourceTag;     // e.g. "@FOR-02" (best-effort from feature/scenario tags)
         public String slug;          // filesystem/anchor-safe id, e.g. "FOR-02-roles_admin"
+        public String description;   // short RU sentence: what this feature verifies (or null)
         public final List<Scenario> scenarios = new ArrayList<>();
     }
 
@@ -82,6 +83,7 @@ public final class ReportModel {
     public static final class Scenario {
         public String name;
         public String slug;          // scenario-scoped folder/anchor id
+        public String intent;        // short RU summary of what the scenario verifies (or name)
         public final List<String> tags = new ArrayList<>();
         public final List<Step> steps = new ArrayList<>();
         public Status status = Status.UNKNOWN;
