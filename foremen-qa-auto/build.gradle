@@ -116,6 +116,58 @@ tasks.register('smokeTest', Test) {
     }
 }
 
+// Detailed (non-smoke) feature runner (Requirement 4 / QA-AUTO detailed slices).
+// Mirrors `smokeTest` but defaults the tag filter to @detailed. Detailed feature files live under
+// src/test/resources/features/detailed/<feature-id>/... and are tagged `@detailed @FOR-QA-AUTO-0N`;
+// they are discovered by the SAME classpath-resource selection as smoke (RunSmokeTest selects the
+// `features` resource and filters by tag), so no runner change is needed. Slice a single feature by
+// id with -DQA_TAGS, e.g. -DQA_TAGS="@detailed and @FOR-QA-AUTO-05".
+tasks.register('featureTest', Test) {
+    group = 'verification'
+    description = 'Runs detailed (@detailed) Cucumber scenarios; slice by feature id via -DQA_TAGS.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    // Default tag filter is @detailed; override with -DQA_TAGS (e.g. "@detailed and @FOR-QA-AUTO-05").
+    def tags = System.getProperty('QA_TAGS', System.getenv('QA_TAGS') ?: '@detailed')
+    systemProperty 'cucumber.filter.tags', tags
+
+    // Independent entry point: Cucumber execution MUST be enabled here (the default `test` task
+    // disables it; this task explicitly re-enables it so it can never inherit that `false`).
+    systemProperty 'cucumber.execution.enabled', 'true'
+
+    // Forward QA_* / FOREMEN_* runtime configuration.
+    systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
+// Example thin alias showing the per-feature-id slicing pattern: a fixed tag filter delegating to
+// the same discovery/config as `featureTest`. Copy this block per detailed feature id (change the
+// task name + the "@FOR-QA-AUTO-0N" tag). Uses -DQA_TAGS ONLY as an override; the alias's own
+// default is the pinned slice.
+tasks.register('featureTestForQaAuto05', Test) {
+    group = 'verification'
+    description = 'Runs the @detailed @FOR-QA-AUTO-05 detailed feature slice.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    def tags = System.getProperty('QA_TAGS', System.getenv('QA_TAGS') ?: '@detailed and @FOR-QA-AUTO-05')
+    systemProperty 'cucumber.filter.tags', tags
+    systemProperty 'cucumber.execution.enabled', 'true'
+    systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
 // Downloads the Playwright browser binaries so a clean checkout can run the suite
 // after the documented setup step (Requirement 1.5). Uses Playwright's own CLI
 // entry point off the test classpath, so no extra tooling is required.

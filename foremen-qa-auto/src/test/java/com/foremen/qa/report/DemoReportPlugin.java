@@ -70,6 +70,8 @@ public class DemoReportPlugin implements ConcurrentEventListener {
     private ReportModel.Feature currentFeature;
     private String currentScenarioSlug;
     private int scenarioSeq;
+    /** Per-scenario step-annotation matcher over the current feature's parsed narration. */
+    private FeatureNarration.StepMatcher currentNarration;
 
     /** Public no-arg constructor required by Cucumber's plugin loader. */
     public DemoReportPlugin() {
@@ -127,8 +129,14 @@ public class DemoReportPlugin implements ConcurrentEventListener {
         currentFeature = featureFor(tc);
         currentScenario = new ReportModel.Scenario();
         currentScenario.name = tc.getName();
-        // The scenario names are already human-readable; use them as the "what we verify" intent.
-        currentScenario.intent = tc.getName();
+        // Prefer the scenario's intent block from the .feature source; fall back to the scenario
+        // name (the names are already human-readable) when the author wrote no intent block.
+        FeatureNarration.Parsed narration = narrationFor(tc);
+        String intent = narration.scenarioIntent(tc.getName());
+        currentScenario.intent = (intent == null || intent.isBlank()) ? tc.getName() : intent;
+        // Fresh per-scenario matcher: Background steps replay per scenario, so first-unused matching
+        // must reset each time.
+        currentNarration = narration.stepMatcher();
         scenarioSeq++;
         currentScenarioSlug = String.format("%03d-%s", scenarioSeq, slug(tc.getName()));
         currentScenario.slug = currentScenarioSlug;
@@ -166,8 +174,13 @@ public class DemoReportPlugin implements ConcurrentEventListener {
         // Redaction only masks secrets (never step wording), so the narration reads naturally.
         String rawText = pickleStep.getStep().getText();
         step.text = Secrets.redact(rawText);
-        step.description = Secrets.redact(StepNarrator.describe(step.keyword, rawText));
-        step.expected = Secrets.redact(StepNarrator.expected(step.keyword, rawText));
+        // Prefer inline "# что:" / "# ожидание:" narration authored in the .feature source; fall
+        // back to the humanized StepNarrator narration only when a step has no annotation.
+        String[] ann = currentNarration == null ? null : currentNarration.stepAnnotation(step.keyword, rawText);
+        String desc = ann != null && ann[0] != null ? ann[0] : StepNarrator.describe(step.keyword, rawText);
+        String exp = ann != null && ann[1] != null ? ann[1] : StepNarrator.expected(step.keyword, rawText);
+        step.description = Secrets.redact(desc);
+        step.expected = Secrets.redact(exp);
         step.actual = actualFor(status, result);
         step.status = status;
         step.durationMs = result.getDuration() == null ? 0L : result.getDuration().toMillis();
@@ -283,37 +296,16 @@ public class DemoReportPlugin implements ConcurrentEventListener {
         feature.name = featureNameFromUri(uri);
         feature.sourceTag = sourceTag(tc.getTags());
         feature.slug = featureSlug(feature.sourceTag, feature.name, uri);
-        feature.description = FEATURE_DESCRIPTIONS.get(featureNameFromUri(uri));
+        // Feature intro is sourced from the .feature file itself (Gherkin description block, or a
+        // fallback to the leading "#"-comment lines under the Feature: line). No hardcoded table.
+        feature.description = narrationFor(tc).featureDescription();
         run.features.add(feature);
         return feature;
     }
 
-    /**
-     * Short RU intro per feature file, keyed by the {@code .feature} base name (without extension).
-     * One line per the 14 smoke feature files; an unmapped feature leaves {@code description} null.
-     */
-    private static final java.util.Map<String, String> FEATURE_DESCRIPTIONS = buildFeatureDescriptions();
-
-    private static java.util.Map<String, String> buildFeatureDescriptions() {
-        java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
-        // FOR-02 admin panel
-        m.put("app_shell", "Оболочка приложения (сайдбар + топбар) и работоспособность основной навигации.");
-        m.put("users_admin", "Список пользователей и создание пользователя с уникальным e-mail (с самоочисткой).");
-        m.put("roles_admin", "Список ролей и отображение матрицы доступов.");
-        m.put("theme_settings", "Переключение темы оформления и её сохранение после перезагрузки.");
-        // FOR-03 authentication & authorization
-        m.put("auth_login", "Вход по e-mail и паролю: успешный логин, клиентская валидация и ошибка неверных данных.");
-        m.put("auth_logout", "Выход очищает сессию и токены.");
-        m.put("auth_guard", "Гард защищённых диплинков: редирект на вход и возврат на исходный маршрут после логина.");
-        m.put("menu_visibility", "Фильтрация навигации по правам роли и запрет доступа к чужим маршрутам (страница /403).");
-        // FOR-04 base entities
-        m.put("dictionaries", "Загрузка страниц справочников и отрисовка их таблиц.");
-        m.put("work_catalog", "Каталог работ: список и создание позиции с выбором связей через reference-селекты.");
-        m.put("work_prices", "Цены работ: список и наличие текущей цены.");
-        m.put("projects", "Проекты: список и создание проекта по основному сценарию.");
-        m.put("reference_filter", "Фильтр по reference-колонке сужает список позиций.");
-        m.put("menu_grouping", "Навигационные группы «Каталог» и «Справочники» и корректная маршрутизация их пунктов.");
-        return m;
+    /** Parse (or return the cached) narration for the feature file backing this test case. */
+    private static FeatureNarration.Parsed narrationFor(TestCase tc) {
+        return FeatureNarration.forUri(tc.getUri() == null ? null : tc.getUri().toString());
     }
 
     private static String featureNameFromUri(String uri) {
