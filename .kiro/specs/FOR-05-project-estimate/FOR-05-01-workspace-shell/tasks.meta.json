@@ -1,0 +1,665 @@
+{
+  "pbtResults": {
+    "2.2 Write property test for `stageOf`": {
+      "status": "passed",
+      "lastRunTimestamp": 1789580149311
+    },
+    "4.2 Write property test for per-project tab memory": {
+      "status": "passed",
+      "lastRunTimestamp": 1789580296274
+    }
+  },
+  "executionHistory": {
+    "1.1 Define workspace types in `src/features/project-workspace/types.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579669751
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579682324
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579886719
+      }
+    ],
+    "1.2 Declare `WORKSPACE_TABS` in `src/features/project-workspace/workspaceTabs.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579669792
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579892857
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580066720
+      }
+    ],
+    "2.1 Implement `stageOf` in `src/features/project-workspace/state/stageOf.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579669827
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579895303
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580067919
+      }
+    ],
+    "2.2 Write property test for `stageOf`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579669857
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580073335
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580167756
+      }
+    ],
+    "2.3 Implement `resolveWorkspaceTabs` in `src/features/project-workspace/state/resolveWorkspaceTabs.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579669946
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580074657
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580169257
+      }
+    ],
+    "2.4 Write property test for `resolveWorkspaceTabs`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579669974
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580178304
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580371141
+      }
+    ],
+    "2.5 Implement `resolveActiveTab` in `src/features/project-workspace/state/resolveActiveTab.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670036
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580175565
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580372268
+      }
+    ],
+    "2.6 Write property tests for `resolveActiveTab`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670060
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580410714
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580665505
+      }
+    ],
+    "3. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670085
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580384385
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580399456
+      }
+    ],
+    "4.1 Implement per-project tab memory in `src/features/project-workspace/state/projectTabMemory.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670118
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580075748
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580170588
+      }
+    ],
+    "4.2 Write property test for per-project tab memory": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670149
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580179234
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580368347
+      }
+    ],
+    "4.3 Implement working-project state + hook in `src/features/project-workspace/state/workingProject.ts`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670183
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580176924
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580369739
+      }
+    ],
+    "4.4 Write unit tests for working-project state and hook": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670209
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580674315
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580902956
+      }
+    ],
+    "5.1 Implement `PlaceholderTab` and `OverviewTab` in `src/features/project-workspace/components/tabs/`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670241
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580400835
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580659708
+      }
+    ],
+    "5.2 Implement `ProjectUnavailable` in `src/features/project-workspace/components/ProjectUnavailable.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670276
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580402234
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580661083
+      }
+    ],
+    "5.3 Implement `ReadinessWidget` shell in `src/features/project-workspace/components/ReadinessWidget.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670306
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580403672
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580662510
+      }
+    ],
+    "5.4 Write unit tests for `ReadinessWidget`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670361
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580927134
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581216341
+      }
+    ],
+    "5.5 Implement `WorkspaceHeader` + mode caption in `src/features/project-workspace/components/WorkspaceHeader.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670384
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580405013
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580664224
+      }
+    ],
+    "5.6 Implement `WorkspaceTabs` tab host in `src/features/project-workspace/components/WorkspaceTabs.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670406
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580921974
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581213746
+      }
+    ],
+    "5.7 Write unit tests for `WorkspaceTabs`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670429
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581510900
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581757202
+      }
+    ],
+    "6.1 Implement `ProjectWorkspacePage` in `src/features/project-workspace/pages/ProjectWorkspacePage.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670459
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581251957
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581501806
+      }
+    ],
+    "6.2 Write unit tests for `ProjectWorkspacePage`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670493
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581763434
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582039550
+      }
+    ],
+    "7. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670526
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582285456
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582314339
+      }
+    ],
+    "8.1 Implement `WorkingProjectButton` in `src/components/shell/WorkingProjectButton.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670566
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580670701
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580901734
+      }
+    ],
+    "8.2 Implement `WorkingProjectChip` in `src/components/shell/WorkingProjectChip.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670595
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580672178
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580900314
+      }
+    ],
+    "8.3 Wire the surfaces into `Sidebar` and `TopBar` with breakpoint mutual exclusivity": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670626
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580923237
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581214914
+      }
+    ],
+    "8.4 Write unit tests for the working-project surfaces": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670652
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581253392
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581503265
+      }
+    ],
+    "9.1 Add the workspace routes in `src/app/router.tsx` with `PROJECTS`/`READ` gating": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670681
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581250650
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581505787
+      }
+    ],
+    "9.2 Override the projects-list row-click in `src/features/projects/.../ProjectsList.tsx`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670737
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580924699
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581219178
+      }
+    ],
+    "9.3 Write tests for the router gating and the row-click override": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670762
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581764268
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582040578
+      }
+    ],
+    "10.1 Add `workspace.*` and `workspace.tab.*` keys to `pl.json` and `ru.json`": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670790
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580926020
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581217749
+      }
+    ],
+    "10.2 Write the i18n parity test": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670816
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581254448
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581504919
+      }
+    ],
+    "11. Track sibling-spec seeding of workspace tab resources (TODO)": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670853
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582046260
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582279228
+      }
+    ],
+    "12. Author test-cases.md": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670885
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582047410
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582278212
+      }
+    ],
+    "13. Final checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789579670915
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582320834
+      },
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582327795
+      }
+    ],
+    "1. Establish the workspace tab contract and types": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580066789
+      }
+    ],
+    "2. Implement the pure resolver layer": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580665547
+      }
+    ],
+    "4. Implement client-only state modules (localStorage)": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789580903003
+      }
+    ],
+    "8. Implement and wire the always-visible working-project surfaces": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581503303
+      }
+    ],
+    "10. Add `workspace.*` i18n keys with a parity test": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581504951
+      }
+    ],
+    "5. Implement workspace panels and presentational components": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789581757310
+      }
+    ],
+    "6. Implement the workspace page and wire the panels + resolvers together": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582039610
+      }
+    ],
+    "9. Add the router changes and the projects-list row-click override": [
+      {
+        "executionId": "d18ef588-85ee-4d62-8a8a-45577a57e07a",
+        "chatSessionId": "sess_53ef584c-a03a-4147-8fa1-a29a8e7186eb",
+        "timestamp": 1789582040612
+      }
+    ]
+  }
+}

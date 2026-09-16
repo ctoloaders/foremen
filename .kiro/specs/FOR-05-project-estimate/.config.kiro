@@ -1,3 +1,1 @@
-specType=feature
-workflowType=requirements-first
-featureName=FOR-05-project-estimate
+{"specId": "66914442-4074-44b3-a630-98accd3b7410", "workflowType": "design-first", "specType": "feature"}
