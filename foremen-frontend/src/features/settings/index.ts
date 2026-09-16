@@ -1,5 +1,0 @@
-export { default as SettingsAppearancePage } from './SettingsAppearancePage'
-export { ThemeModeSelector } from './components/ThemeModeSelector'
-export { ColorSchemeSelector } from './components/ColorSchemeSelector'
-export { FontSizeSelector } from './components/FontSizeSelector'
-export type * from './types'

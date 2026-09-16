@@ -8,6 +8,8 @@ dist/
 # Secrets - NEVER commit these
 .env
 .env.production
+# MCP config contains Figma personal access token - NEVER commit
+.kiro/settings/mcp.json
 телеграм-бот/forementest-2064c9f53f45.json
 телеграм-бот/starry-tracker-505110-s3-326364be8f95.json
 телеграм-бот/telegram-bot/bun.lock
@@ -44,8 +46,10 @@ foremen-backend/src/main/resources/application-local.yml
 
 # Test/build caches (local artifacts)
 foremen-backend/.jqwik-database
-foremen-frontend/tsconfig.app.tsbuildinfo
-foremen-frontend/test-results/
+
+# Frontend lives in its own git repository (github.com/ctoloaders/foremen-frontend);
+# ignore the whole folder in this repo so it is not tracked here.
+foremen-frontend/
 
 # Local env / compose secrets (contain local secrets like GOOGLE_PLACES_API_KEY) - NEVER commit
 docker-compose.*.local.yml
