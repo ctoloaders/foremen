@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Foremen — Project Workspace (prototype)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* ===== Design tokens: exact from foremen-frontend/src/index.css (light theme) ===== */
+:root{
+  --background:#ffffff;
+  --foreground:#09090b;
+  --card:#ffffff;
+  --card-foreground:#09090b;
+  --popover:#ffffff;
+  --popover-foreground:#09090b;
+  --border:#e4e4e7;
+  --secondary:#f4f4f5;
+  --secondary-foreground:#18181b;
+  --muted:#f4f4f5;
+  --muted-foreground:#71717a;
+  --accent:#f4f4f5;
+  --accent-foreground:#18181b;
+  --destructive:#dc2626;
+  --success:#16a34a;
+  --warning:#ca8a04;
+  --info:#2563eb;
+  --primary:#18181b;
+  --primary-foreground:#fafafa;
+  --input:#e4e4e7;
+  --ring:#a1a1aa;
+  --radius:8px;
+  --sidebar:240px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
+  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  background:var(--background);color:var(--foreground);
+}
+button{font-family:inherit}
+
+/* ===== SIDEBAR ===== */
+.sidebar{
+  position:fixed;left:0;top:0;z-index:40;height:100vh;width:var(--sidebar);
+  border-right:1px solid var(--border);background:var(--background);
+  display:flex;flex-direction:column;
+}
+.sb-header{display:flex;align-items:center;gap:12px;padding:16px}
+.sb-brand-mark{
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;
+  height:28px;width:28px;border-radius:6px;background:#ffffff;border:1px solid var(--border);
+  color:#000;font-size:14px;font-weight:700;
+}
+.sb-brand-text{font-size:18px;font-weight:600;color:var(--foreground)}
+
+/* Working-project card */
+.wp-card{
+  margin:0 8px 12px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;
+  background:var(--secondary);cursor:pointer;text-align:left;width:calc(100% - 16px);display:block;
+}
+.wp-card:hover{border-color:var(--ring)}
+.wp-card .wp-caption{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted-foreground)}
+.wp-card .wp-name{font-size:13px;font-weight:600;color:var(--foreground);margin-top:3px;line-height:1.25}
+.wp-card .wp-foot{margin-top:8px}
+.sb-switcher{display:flex;gap:6px;margin:0 8px 12px}
+.sb-switcher button{
+  flex:1;border:1px solid var(--border);background:var(--card);border-radius:8px;padding:6px 4px;
+  font-size:12px;font-weight:500;cursor:pointer;color:var(--muted-foreground);
+}
+.sb-switcher button:hover{background:var(--secondary);color:var(--foreground)}
+.sb-switcher button.on{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+
+/* nav */
+.sb-nav{flex:1;overflow-y:auto;padding:8px}
+.nav-section{margin-bottom:16px}
+.nav-section-title{
+  font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--muted-foreground);padding:0 12px;margin-bottom:4px;
+}
+.nav-items{display:flex;flex-direction:column;gap:2px}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;font-size:14px;
+  color:var(--muted-foreground);cursor:pointer;transition:background .12s,color .12s;
+}
+.nav-item:hover{background:var(--secondary);color:var(--foreground)}
+.nav-item.active{background:var(--secondary);color:var(--foreground);font-weight:500}
+.nav-item .ic{width:16px;text-align:center;flex:0 0 auto;font-size:14px}
+
+/* user footer */
+.sb-footer{border-top:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;gap:10px}
+.sb-avatar{width:28px;height:28px;border-radius:50%;background:var(--secondary);display:grid;place-items:center;font-size:12px;color:var(--muted-foreground);flex:0 0 auto}
+.sb-user-name{font-size:13px;color:var(--foreground);line-height:1.2}
+.sb-user-role{font-size:11px;color:var(--muted-foreground);line-height:1.2}
+
+/* ===== TOPBAR ===== */
+.topbar{
+  height:56px;border-bottom:1px solid var(--border);padding:0 16px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:sticky;top:0;background:var(--background);z-index:30;
+}
+.tb-left{display:flex;align-items:center;gap:12px;min-width:0}
+.hamburger{display:none;border:none;background:none;color:var(--muted-foreground);font-size:20px;cursor:pointer;padding:6px}
+.hamburger:hover{color:var(--foreground)}
+.tb-title{font-size:14px;font-weight:500;color:var(--foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-right{display:flex;align-items:center;gap:8px}
+.wp-chip{
+  display:flex;align-items:center;gap:6px;background:var(--secondary);border:1px solid var(--border);
+  border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--foreground);
+}
+.wp-chip .dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.wp-chip b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.role-pill{background:var(--secondary);border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-weight:500;font-size:12px;color:var(--foreground)}
+.lang-toggle{
+  border:none;background:none;border-radius:6px;padding:4px 8px;font-size:14px;font-weight:500;
+  color:var(--muted-foreground);cursor:pointer;
+}
+.lang-toggle:hover{background:var(--secondary);color:var(--foreground)}
+.preview-tag{font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--muted-foreground);text-transform:uppercase;border:1px solid var(--border);border-radius:4px;padding:2px 6px}
+
+/* ===== MAIN ===== */
+.shell{}
+.main{margin-left:var(--sidebar);display:flex;flex-direction:column;min-height:100vh}
+.content{padding:24px;flex:1}
+
+/* Workspace header */
+.ws-head{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.ws-head-left{min-width:0}
+.ws-title{font-size:20px;font-weight:600;line-height:1.25}
+.ws-sub{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.status-pill{border-radius:999px;padding:3px 10px;font-weight:600;font-size:12px}
+.status-pill.offered{background:#dbeafe;color:#1e40af}
+.status-pill.active{background:#dcfce7;color:#166534}
+.mode-caption{font-size:13px;color:var(--muted-foreground)}
+.ws-head-right{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+
+/* readiness donut */
+.donut-wrap{display:flex;align-items:center;gap:12px}
+.donut{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;position:relative}
+.donut::after{content:"";position:absolute;inset:8px;border-radius:50%;background:var(--background)}
+.donut .val{position:relative;z-index:1;font-size:14px;font-weight:600}
+.gate-chips{display:flex;gap:6px;flex-wrap:wrap;max-width:360px}
+.gate-chip{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:3px 10px;font-size:12px;background:var(--card)}
+.gate-chip .gd{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.gd.done{background:var(--success)}
+.gd.partial{background:var(--warning)}
+.gd.blocked{background:var(--destructive)}
+
+/* tabs */
+.tabstrip{display:flex;gap:2px;border-bottom:1px solid var(--border);overflow-x:auto;margin-bottom:20px}
+.tabstrip::-webkit-scrollbar{height:0}
+.tab{
+  padding:10px 14px;background:none;border:none;color:var(--muted-foreground);font-weight:500;font-size:14px;
+  cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px;
+}
+.tab:hover{color:var(--foreground)}
+.tab.active{color:var(--foreground);font-weight:600;border-bottom:2px solid var(--primary)}
+
+/* cards / generic */
+.card{border:1px solid var(--border);border-radius:var(--radius);background:var(--card);padding:16px}
+.section-h{font-size:15px;font-weight:600;margin-bottom:12px}
+.muted{color:var(--muted-foreground)}
+.grid{display:grid;gap:12px}
+.kpi-grid{grid-template-columns:repeat(4,1fr)}
+.kpi{border:1px solid var(--border);border-radius:var(--radius);padding:14px;background:var(--card)}
+.kpi .k-label{font-size:12px;color:var(--muted-foreground)}
+.kpi .k-value{font-size:20px;font-weight:600;margin-top:4px}
+.kpi .k-hint{font-size:11px;color:var(--muted-foreground);margin-top:2px}
+.two-col{grid-template-columns:1.4fr 1fr}
+.btn{border:1px solid var(--border);background:var(--card);border-radius:6px;padding:8px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--foreground)}
+.btn:hover{background:var(--secondary)}
+.btn-primary{background:var(--primary);color:var(--primary-foreground);border-color:var(--primary)}
+.btn-primary:hover{background:#000}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted-foreground);font-weight:600}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.cat-row td{background:var(--secondary);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+.exp-toggle{cursor:pointer;user-select:none}
+.exp-toggle .caret{display:inline-block;width:14px;color:var(--muted-foreground);transition:transform .15s}
+.exp-toggle.open .caret{transform:rotate(90deg)}
+.exp-detail{display:none}
+.exp-detail.open{display:table-row}
+.exp-detail td{background:#fafafa;font-size:12px;color:var(--muted-foreground)}
+.totals td{font-weight:600;border-top:2px solid var(--border)}
+.src-tag{font-size:11px;background:var(--secondary);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--muted-foreground)}
+
+/* rooms */
+.room-grid{grid-template-columns:repeat(4,1fr)}
+.room{border:1px solid var(--border);border-radius:var(--radius);padding:14px;background:var(--card)}
+.room .r-name{font-weight:600}
+.room .r-area{font-size:22px;font-weight:600;margin-top:6px}
+.room .r-unit{font-size:12px;color:var(--muted-foreground)}
+
+/* checklist */
+.check-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.check-list li{display:flex;align-items:center;gap:10px;font-size:13px}
+.check-box{width:18px;height:18px;border-radius:5px;display:grid;place-items:center;font-size:11px;color:#fff;flex:0 0 auto}
+.check-box.done{background:var(--success)}
+.check-box.partial{background:var(--warning)}
+.check-box.blocked{background:var(--destructive)}
+
+/* gantt */
+.gantt{display:flex;flex-direction:column;gap:10px}
+.gantt-row{display:grid;grid-template-columns:150px 1fr;align-items:center;gap:12px}
+.gantt-row .g-label{font-size:13px}
+.gantt-track{position:relative;height:22px;background:var(--secondary);border-radius:6px;overflow:hidden}
+.gantt-bar{position:absolute;top:0;height:100%;border-radius:6px;background:#cbd5e1}
+.gantt-bar.plan{background:#d4d4d8}
+.gantt-actual{position:absolute;top:4px;height:14px;border-radius:5px;background:var(--success);display:flex;align-items:center;justify-content:flex-end;padding-right:6px;color:#fff;font-size:10px;font-weight:600}
+.gantt-pct{position:absolute;right:6px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:600;color:var(--muted-foreground)}
+
+/* signers / docs */
+.doc-box{border:1px dashed var(--border);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:12px;background:var(--secondary)}
+.doc-ic{font-size:22px}
+.signer-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.signer-row:last-child{border-bottom:none}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin:12px 0}
+.seg button{border:none;background:var(--card);padding:6px 14px;font-size:12px;font-weight:500;cursor:pointer;color:var(--muted-foreground);border-right:1px solid var(--border)}
+.seg button:last-child{border-right:none}
+.seg button.on{background:var(--primary);color:var(--primary-foreground)}
+.sign-pill{border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600}
+.sign-pill.pending{background:var(--secondary);color:var(--muted-foreground)}
+.sign-pill.signed{background:#dcfce7;color:#166534}
+.diff-old{color:var(--muted-foreground);text-decoration:line-through}
+.diff-new{color:var(--success);font-weight:600}
+.badge-admin{font-size:10px;font-weight:700;letter-spacing:.5px;background:var(--primary);color:var(--primary-foreground);border-radius:4px;padding:2px 6px}
+.embed-note{border-left:3px solid var(--info);background:#eff6ff;padding:8px 12px;border-radius:0 6px 6px 0;font-size:12px;color:#1e3a5f;margin-top:12px}
+.mt12{margin-top:12px}
+.mt16{margin-top:16px}
+
+/* signable documents */
+.doc-list-row{cursor:pointer}
+.doc-list-row:hover td{background:var(--secondary)}
+.doc-list-row.sel td{background:#eff6ff}
+.sign-pill.draft{background:var(--secondary);color:var(--muted-foreground)}
+.sign-pill.awaiting{background:#fef9c3;color:#854d0e}
+.method-panel{border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-top:12px;background:var(--card)}
+.upload-drop{border:1px dashed var(--ring);border-radius:var(--radius);padding:20px;text-align:center;color:var(--muted-foreground);font-size:13px;cursor:pointer;background:var(--secondary)}
+.upload-drop:hover{background:#eef0f2}
+.parafka-box{width:220px;height:96px;border:1px solid var(--foreground);border-radius:6px;background:#fff;position:relative;cursor:crosshair}
+.parafka-box .cap{position:absolute;left:6px;bottom:4px;font-size:10px;color:var(--muted-foreground);text-transform:uppercase;letter-spacing:.5px}
+.parafka-box svg{position:absolute;inset:0;width:100%;height:100%}
+
+/* clients block */
+.client-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.client-row:last-child{border-bottom:none}
+.client-ava{width:28px;height:28px;border-radius:50%;background:var(--secondary);display:grid;place-items:center;font-size:12px;color:var(--muted-foreground)}
+.client-left{display:flex;align-items:center;gap:10px}
+
+/* ===== bottom nav (mobile) ===== */
+.bottom-nav{display:none}
+
+/* ===== mobile mode ===== */
+.mobile .sidebar{display:none}
+.mobile .main{margin-left:0}
+.mobile .content{padding-bottom:64px}
+.mobile .hamburger{display:block}
+.mobile .kpi-grid{grid-template-columns:repeat(2,1fr)}
+.mobile .room-grid{grid-template-columns:repeat(2,1fr)}
+.mobile .two-col{grid-template-columns:1fr}
+.mobile .bottom-nav{
+  display:flex;position:fixed;bottom:0;left:0;right:0;height:56px;background:var(--background);
+  border-top:1px solid var(--border);z-index:50;
+}
+.mobile .bn-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--muted-foreground);cursor:pointer}
+.mobile .bn-item .ic{font-size:16px}
+.mobile .bn-item.active{color:var(--foreground)}
+
+/* floating mobile toggle */
+.mtoggle{position:fixed;right:16px;bottom:16px;z-index:60;width:44px;height:44px;border-radius:50%;background:var(--primary);color:var(--primary-foreground);border:none;font-size:18px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.mobile .mtoggle{bottom:72px}
+
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.two-col{grid-template-columns:1fr}.room-grid{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="shell" id="root">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sb-header">
+      <div class="sb-brand-mark">F</div>
+      <span class="sb-brand-text">Foremen</span>
+    </div>
+
+    <button class="wp-card" id="wpCard" onclick="cycleProject()">
+      <div class="wp-caption" data-i18n="wp.label"></div>
+      <div class="wp-name" id="wpCardName"></div>
+      <div class="wp-foot"><span class="status-pill" id="wpCardStatus"></span></div>
+    </button>
+    <div class="sb-switcher">
+      <button id="switchA" onclick="setProject('A')" data-i18n="wp.projA"></button>
+      <button id="switchB" onclick="setProject('B')" data-i18n="wp.projB"></button>
+    </div>
+
+    <nav class="sb-nav">
+      <div class="nav-section">
+        <div class="nav-items">
+          <div class="nav-item active"><span class="ic">▤</span><span data-i18n="nav.dashboard"></span></div>
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-title" data-i18n="nav.section.main"></div>
+        <div class="nav-items">
+          <div class="nav-item"><span class="ic">▦</span><span data-i18n="nav.projects"></span></div>
+          <div class="nav-item"><span class="ic">▧</span><span data-i18n="nav.estimates"></span></div>
+          <div class="nav-item"><span class="ic">▨</span><span data-i18n="nav.procurement"></span></div>
+          <div class="nav-item"><span class="ic">▩</span><span data-i18n="nav.workcatalog"></span></div>
+          <div class="nav-item"><span class="ic">₴</span><span data-i18n="nav.pricelist"></span></div>
+          <div class="nav-item"><span class="ic">◍</span><span data-i18n="nav.users"></span></div>
+          <div class="nav-item"><span class="ic">◈</span><span data-i18n="nav.roles"></span></div>
+          <div class="nav-item"><span class="ic">◷</span><span data-i18n="nav.audit"></span></div>
+          <div class="nav-item"><span class="ic">⚙</span><span data-i18n="nav.settings"></span></div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="sb-footer">
+      <div class="sb-avatar">AK</div>
+      <div>
+        <div class="sb-user-name">Anna Kowalska</div>
+        <div class="sb-user-role" data-i18n="role.manager"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <header class="topbar">
+      <div class="tb-left">
+        <button class="hamburger" onclick="toggleMobileMenu()">☰</button>
+        <h1 class="tb-title" id="tbTitle"></h1>
+      </div>
+      <div class="tb-right">
+        <button class="wp-chip" onclick="cycleProject()">
+          <span class="dot" id="tbChipDot"></span>
+          <b id="tbChipName"></b>
+        </button>
+        <span class="role-pill" data-i18n="role.manager"></span>
+        <button class="lang-toggle" id="langToggle" onclick="toggleLang()"></button>
+        <span class="preview-tag">PREVIEW</span>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- workspace header -->
+      <div class="ws-head">
+        <div class="ws-head-left">
+          <div class="ws-title" id="wsTitle"></div>
+          <div class="ws-sub">
+            <span class="status-pill" id="wsStatus"></span>
+            <span class="mode-caption" id="wsMode"></span>
+          </div>
+        </div>
+        <div class="ws-head-right">
+          <div class="donut-wrap">
+            <div class="donut" id="donut"><span class="val" id="donutVal"></span></div>
+            <div>
+              <div class="muted" style="font-size:12px" data-i18n="ws.readiness"></div>
+              <div style="font-weight:600" id="readyText"></div>
+            </div>
+          </div>
+          <div class="gate-chips" id="gateChips"></div>
+        </div>
+      </div>
+
+      <!-- tabs -->
+      <div class="tabstrip" id="tabstrip"></div>
+
+      <!-- panels -->
+      <div id="panels"></div>
+    </main>
+
+    <!-- bottom nav (mobile) -->
+    <nav class="bottom-nav">
+      <div class="bn-item active"><span class="ic">▤</span><span data-i18n="nav.dashboard"></span></div>
+      <div class="bn-item"><span class="ic">▦</span><span data-i18n="nav.projects"></span></div>
+      <div class="bn-item"><span class="ic">▧</span><span data-i18n="nav.estimates"></span></div>
+      <div class="bn-item"><span class="ic">▨</span><span data-i18n="nav.procurement"></span></div>
+      <div class="bn-item"><span class="ic">⚙</span><span data-i18n="nav.settings"></span></div>
+    </nav>
+  </div>
+</div>
+
+<button class="mtoggle" onclick="toggleMobile()" title="Toggle mobile">📱</button>
+
+<script>
+/* =========================================================================
+   I18N — single active language, never both on one element
+   ========================================================================= */
+const I18N = {
+  'brand': {pl:'Foremen', ru:'Foremen'},
+  'wp.label': {pl:'Projekt roboczy', ru:'Рабочий проект'},
+  'wp.projA': {pl:'Projekt A', ru:'Проект A'},
+  'wp.projB': {pl:'Projekt B', ru:'Проект B'},
+  'wp.choose': {pl:'Wybierz projekt', ru:'Выбрать проект'},
+
+  'nav.section.main': {pl:'Główne', ru:'Основное'},
+  'nav.dashboard': {pl:'Pulpit', ru:'Панель'},
+  'nav.projects': {pl:'Projekty', ru:'Проекты'},
+  'nav.estimates': {pl:'Kosztorysy', ru:'Сметы'},
+  'nav.procurement': {pl:'Zakupy', ru:'Закупки'},
+  'nav.workcatalog': {pl:'Katalog prac', ru:'Каталог работ'},
+  'nav.pricelist': {pl:'Cennik', ru:'Прайс-лист'},
+  'nav.users': {pl:'Użytkownicy', ru:'Пользователи'},
+  'nav.roles': {pl:'Role', ru:'Роли'},
+  'nav.audit': {pl:'Audyt', ru:'Аудит'},
+  'nav.settings': {pl:'Ustawienia', ru:'Настройки'},
+
+  'role.manager': {pl:'Menedżer', ru:'Менеджер'},
+  'mode.design': {pl:'Projektowanie', ru:'Проектирование'},
+  'mode.execution': {pl:'W realizacji', ru:'В реализации'},
+  'ws.readiness': {pl:'Gotowość', ru:'Готовность'},
+  'tb.title.default': {pl:'Panel projektu', ru:'Панель проекта'},
+
+  'status.offered': {pl:'OFERTA', ru:'ОФЕРТА'},
+  'status.active': {pl:'AKTYWNY', ru:'АКТИВНЫЙ'},
+
+  /* tabs */
+  'tab.overview': {pl:'Przegląd', ru:'Обзор'},
+  'tab.gates': {pl:'Gotowość', ru:'Готовность'},
+  'tab.pricelist': {pl:'Cennik', ru:'Прайс-лист'},
+  'tab.rooms': {pl:'Pomieszczenia', ru:'Помещения'},
+  'tab.estimate': {pl:'Kosztorys', ru:'Смета'},
+  'tab.schedule': {pl:'Harmonogram', ru:'График'},
+  'tab.contract': {pl:'Umowa', ru:'Договор'},
+  'tab.procurement': {pl:'Zakupy', ru:'Закупки'},
+  'tab.documents': {pl:'Dokumenty', ru:'Документы'},
+  'tab.planactual': {pl:'Plan/wykonanie', ru:'План/факт'},
+  'tab.payroll': {pl:'Wynagrodzenia', ru:'Зарплаты'},
+  'tab.amendments': {pl:'Aneksy', ru:'Доп. соглашения'},
+  'tab.pricehistory': {pl:'Historia cen', ru:'История цен'},
+
+  /* KPI + panels */
+  'kpi.netto': {pl:'Kosztorys NETTO', ru:'Смета НЕТТО'},
+  'kpi.brutto': {pl:'z VAT', ru:'с НДС'},
+  'kpi.marginplan': {pl:'Marża plan', ru:'Маржа план'},
+  'kpi.readiness': {pl:'Gotowość', ru:'Готовность'},
+  'kpi.fixed': {pl:'Kosztorys zafiksowany', ru:'Смета зафиксирована'},
+  'kpi.revenue': {pl:'Przychód fakt.', ru:'Выручка факт'},
+  'kpi.cost': {pl:'Koszt fakt.', ru:'Затраты факт'},
+  'kpi.marginfact': {pl:'Marża fakt %', ru:'Маржа факт %'},
+
+  'p.checklist': {pl:'Lista gotowości', ru:'Чек-лист готовности'},
+  'p.editproject': {pl:'Edytuj projekt', ru:'Редактировать проект'},
+  'p.gatelist': {pl:'Bramki gotowości', ru:'Ворота готовности'},
+
+  'gate.pricelist': {pl:'Cennik ustalony', ru:'Прайс-лист задан'},
+  'gate.rooms': {pl:'Pomieszczenia dodane', ru:'Помещения добавлены'},
+  'gate.estimate': {pl:'Kosztorys policzony', ru:'Смета рассчитана'},
+  'gate.contract': {pl:'Umowa podpisana', ru:'Договор подписан'},
+  'gate.materials': {pl:'Materiały zamówione', ru:'Материалы заказаны'},
+  'gate.docs': {pl:'Dokumenty źródłowe', ru:'Исходные документы'},
+
+  'tbl.work': {pl:'Praca', ru:'Работа'},
+  'tbl.clientprice': {pl:'Cena klienta', ru:'Цена клиента'},
+  'tbl.unit': {pl:'Jm', ru:'Ед.'},
+  'tbl.source': {pl:'Źródło', ru:'Источник'},
+  'tbl.qty': {pl:'Ilość', ru:'Кол-во'},
+  'tbl.netto': {pl:'NETTO', ru:'НЕТТО'},
+  'tbl.vat': {pl:'VAT', ru:'НДС'},
+  'tbl.brutto': {pl:'BRUTTO', ru:'БРУТТО'},
+  'tbl.total': {pl:'Razem', ru:'Итого'},
+  'tbl.material': {pl:'Materiał', ru:'Материал'},
+  'tbl.need': {pl:'Potrzeba', ru:'Потребность'},
+  'tbl.status': {pl:'Status', ru:'Статус'},
+  'tbl.delivery': {pl:'Dostawa', ru:'Доставка'},
+  'tbl.doc': {pl:'Dokument', ru:'Документ'},
+  'tbl.date': {pl:'Data', ru:'Дата'},
+  'tbl.amount': {pl:'Kwota', ru:'Сумма'},
+  'tbl.worker': {pl:'Pracownik', ru:'Работник'},
+  'tbl.rate': {pl:'Stawka', ru:'Ставка'},
+  'tbl.topay': {pl:'Do wypłaty', ru:'К выплате'},
+
+  'cat.prelim': {pl:'PRACE WSTĘPNE', ru:'ПОДГОТОВИТЕЛЬНЫЕ РАБОТЫ'},
+  'cat.construction': {pl:'KONSTRUKCJE', ru:'КОНСТРУКЦИИ'},
+  'cat.plumbing': {pl:'HYDRAULIKA', ru:'САНТЕХНИКА'},
+
+  'ct.docs': {pl:'Dokument umowy', ru:'Документ договора'},
+  'ct.siglevel': {pl:'Poziom podpisu', ru:'Уровень подписи'},
+  'ct.sign': {pl:'Podpisz', ru:'Подписать'},
+  'sig.pending': {pl:'Oczekuje', ru:'Ожидает'},
+  'sig.signed': {pl:'Podpisano', ru:'Подписано'},
+
+  'proc.ordered': {pl:'Zamówione', ru:'Заказано'},
+  'proc.delivered': {pl:'Dostarczone', ru:'Доставлено'},
+  'proc.pending': {pl:'Oczekuje', ru:'Ожидает'},
+
+  'ph.catalog': {pl:'Katalog', ru:'Каталог'},
+  'ph.project': {pl:'Projekt', ru:'Проект'},
+  'ph.workers': {pl:'Pracownicy', ru:'Работники'},
+
+  'am.title': {pl:'Aneks nr 2', ru:'Доп. соглашение №2'},
+  'am.desc': {pl:'Tynk gipsowy: 100 → 120 m²', ru:'Гипсовая штукатурка: 100 → 120 м²'},
+  'note.finance': {pl:'Notatka z finansów: faktura zweryfikowana, kwota zgodna z umową.', ru:'Заметка из финансов: счёт проверен, сумма соответствует договору.'},
+  'note.payroll': {pl:'Notatka z ROZLICZEŃ: stawki potwierdzone przez kierownika budowy.', ru:'Заметка из РАСЧЁТОВ: ставки подтверждены прорабом.'},
+
+  'sched.demolition': {pl:'Rozbiórka', ru:'Демонтаж'},
+  'sched.walls': {pl:'Ścianki działowe', ru:'Перегородки'},
+  'sched.plumbing': {pl:'Instalacja hydrauliczna', ru:'Сантехника'},
+  'sched.finishing': {pl:'Wykończenie', ru:'Отделка'},
+
+  /* ===== NEW: signable documents ===== */
+  'tab.signdocs': {pl:'Dokumenty do podpisu', ru:'Документы на подпись'},
+  'sd.title': {pl:'Dokumenty do podpisu', ru:'Документы на подпись'},
+  'sd.col.type': {pl:'Typ', ru:'Тип'},
+  'sd.col.status': {pl:'Status', ru:'Статус'},
+  'sd.col.date': {pl:'Data', ru:'Дата'},
+  'sd.type.contract': {pl:'Umowa', ru:'Договор'},
+  'sd.type.amendment': {pl:'Aneks', ru:'Анекс'},
+  'sd.type.roomacceptance': {pl:'Protokół odbioru pomieszczenia', ru:'Протокол приёмки помещения'},
+  'sd.type.keys': {pl:'Przekazanie kluczy', ru:'Передача ключей'},
+  'sd.type.worksacceptance': {pl:'Odbiór robót', ru:'Приёмка работ'},
+  'sd.st.draft': {pl:'Szkic', ru:'Черновик'},
+  'sd.st.awaiting': {pl:'Oczekuje podpisów', ru:'Ожидает подписей'},
+  'sd.st.signed': {pl:'Podpisano', ru:'Подписано'},
+  'sd.method': {pl:'Sposób podpisu', ru:'Способ подписи'},
+  'sd.m.print': {pl:'Wydrukuj i podpisz (skan)', ru:'Распечатать и подписать (скан)'},
+  'sd.m.online': {pl:'Podpisz online', ru:'Подписать онлайн'},
+  'sd.m.govpl': {pl:'podpis.gov.pl', ru:'podpis.gov.pl'},
+  'sd.m.tablet': {pl:'Podpisz na tablecie (parafka)', ru:'Подписать на планшете (парафка)'},
+  'sd.upload': {pl:'Wgraj skan', ru:'Загрузить скан'},
+  'sd.upload.hint': {pl:'Przeciągnij plik PDF/JPG lub kliknij, aby wybrać', ru:'Перетащите PDF/JPG или нажмите, чтобы выбрать'},
+  'sd.parafka': {pl:'parafka', ru:'парафка'},
+  'sd.parafka.hint': {pl:'Kliknij, aby złożyć parafkę', ru:'Нажмите, чтобы поставить парафку'},
+  'sd.online.level': {pl:'Poziom podpisu', ru:'Уровень подписи'},
+  'sd.govpl.note': {pl:'podpis.gov.pl = Profil Zaufany (PL)', ru:'podpis.gov.pl = Profil Zaufany (PL)'},
+  'sd.signers': {pl:'Sygnatariusze', ru:'Подписанты'},
+  'sd.selecthint': {pl:'Wybierz dokument, aby zobaczyć opcje podpisu', ru:'Выберите документ, чтобы увидеть опции подписи'},
+  'role.client': {pl:'Klient', ru:'Клиент'},
+  'role.foreman': {pl:'Brygadzista', ru:'Прораб'},
+
+  /* ===== NEW: estimate groupings ===== */
+  'est.group.works': {pl:'Wg rodzaju prac', ru:'По видам работ'},
+  'est.group.rooms': {pl:'Wg pomieszczeń', ru:'По помещениям'},
+  'est.group.categories': {pl:'Wg kategorii', ru:'По категориям'},
+  'est.group.hybrid': {pl:'Tabela hybrydowa', ru:'Гибридная таблица'},
+  'est.room.hall': {pl:'Przedpokój', ru:'Прихожая'},
+  'est.room.living': {pl:'Salon', ru:'Гостиная'},
+  'est.room.kitchen': {pl:'Kuchnia', ru:'Кухня'},
+  'est.room.bath': {pl:'Łazienka', ru:'Ванная'},
+  'est.work.demolition': {pl:'Demontaż ścianek', ru:'Демонтаж перегородок'},
+  'est.work.gk': {pl:'Ścianka GK', ru:'Перегородка ГК'},
+  'est.work.plumbing': {pl:'Instalacja hydrauliczna', ru:'Сантехника'},
+  'est.work.plaster': {pl:'Szpachlowanie', ru:'Шпатлёвка'},
+
+  /* ===== NEW: work reports (plan/actual) ===== */
+  'wr.title': {pl:'Raporty prac', ru:'Отчёты о работах'},
+  'wr.col.worker': {pl:'Pracownik', ru:'Работник'},
+  'wr.col.worktype': {pl:'Rodzaj prac', ru:'Вид работ'},
+  'wr.col.rooms': {pl:'Pomieszczenia', ru:'Помещения'},
+  'wr.col.qty': {pl:'Ilość', ru:'Объём'},
+  'wr.col.date': {pl:'Data', ru:'Дата'},
+  'wr.col.approval': {pl:'Zatwierdzenie', ru:'Подтверждение'},
+  'wr.approved': {pl:'Zatwierdzone przez brygadzistę', ru:'Подтверждено прорабом'},
+  'wr.awaiting': {pl:'Oczekuje', ru:'Ожидает'},
+  'wr.work.plaster': {pl:'Szpachlowanie', ru:'Шпатлёвка'},
+  'wr.work.gk': {pl:'Montaż GK', ru:'Монтаж ГК'},
+  'wr.work.plumbing': {pl:'Instalacja hydrauliczna', ru:'Сантехника'},
+  'wr.work.painting': {pl:'Malowanie', ru:'Покраска'},
+
+  /* ===== NEW: multi-client team ===== */
+  'cl.title': {pl:'Klienci', ru:'Клиенты'},
+  'cl.add': {pl:'+ Dodaj klienta', ru:'+ Добавить клиента'},
+  'cl.note': {pl:'klientów może być wielu, można dodać w trakcie', ru:'клиентов может быть несколько, можно добавлять по ходу'},
+
+  /* ===== NEW: projects-list computed metrics ===== */
+  'pl.title': {pl:'Lista projektów — kolumny wyliczane', ru:'Список проектов — вычисляемые столбцы'},
+  'pl.note': {pl:'Widok wielu projektów (brygadzista) pokazuje teraz kolumny wyliczane.', ru:'Мультипроектный вид (прораб) теперь показывает вычисляемые столбцы.'},
+  'pl.col.project': {pl:'Projekt', ru:'Проект'},
+  'pl.col.planfact': {pl:'Plan/wykonanie prac', ru:'План-факт работ'},
+  'pl.col.costs': {pl:'Koszty plan/fakt', ru:'Затраты план/факт'},
+  'pl.col.revenue': {pl:'Przychód', ru:'Выручка'},
+  'pl.col.delay': {pl:'Opóźnienie/wyprzedzenie', ru:'Опоздание/опережение'},
+  'pl.col.satisfaction': {pl:'Zadowolenie klienta', ru:'Удовлетворённость клиента'},
+  'pl.backlog': {pl:'(backlog)', ru:'(backlog)'},
+};
+let lang = 'pl';
+function t(key){ const e = I18N[key]; return e ? (e[lang]||e.pl) : ('['+key+']'); }
+
+/* =========================================================================
+   DEMO PROJECTS
+   ========================================================================= */
+const PROJECTS = {
+  A: {
+    name: 'Mieszkanie ul. Przykładowa 12',
+    stage: 'design', statusKey:'status.offered', statusClass:'offered',
+    modeKey:'mode.design', readiness: 60,
+    gates: [
+      {labelKey:'gate.pricelist', state:'done'},
+      {labelKey:'gate.rooms', state:'done'},
+      {labelKey:'gate.estimate', state:'partial'},
+      {labelKey:'gate.contract', state:'blocked'},
+    ],
+    tabs: ['tab.overview','tab.gates','tab.pricelist','tab.rooms','tab.estimate','tab.schedule','tab.signdocs'],
+  },
+  B: {
+    name: 'Dom ul. Lawendowa 3',
+    stage: 'execution', statusKey:'status.active', statusClass:'active',
+    modeKey:'mode.execution', readiness: 100,
+    gates: [
+      {labelKey:'gate.contract', state:'done'},
+      {labelKey:'gate.materials', state:'partial'},
+      {labelKey:'gate.docs', state:'done'},
+    ],
+    tabs: ['tab.overview','tab.procurement','tab.signdocs','tab.documents','tab.planactual','tab.payroll','tab.amendments','tab.pricehistory'],
+  }
+};
+let current = 'A';
+let activeTab = PROJECTS.A.tabs[0];
+
+/* =========================================================================
+   PANEL RENDERERS
+   ========================================================================= */
+/* ---- shared Overview blocks ---- */
+function clientsBlock(){
+  const clients = [{name:'Jan Kowalski', ini:'JK'},{name:'Anna Kowalska', ini:'AK'}];
+  const rows = clients.map(c=>`
+    <div class="client-row">
+      <div class="client-left"><span class="client-ava">${c.ini}</span><span>${c.name}</span></div>
+      <span class="role-pill">${t('role.client')}</span>
+    </div>`).join('');
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="section-h" style="margin:0">${t('cl.title')}</div>
+      <button class="btn" onclick="alert('${t('cl.add')}')">${t('cl.add')}</button>
+    </div>
+    <div class="mt12">${rows}</div>
+    <div class="embed-note">${t('cl.note')}</div>
+  </div>`;
+}
+function projectsMetricsBlock(){
+  const rows = [
+    {p:'Mieszkanie ul. Przykładowa 12', planfact:'60% / 55%', costs:'34,8k / 32,1k zł', revenue:'55,2k zł', delay:'−2 dni'},
+    {p:'Dom ul. Lawendowa 3', planfact:'100% / 92%', costs:'56,0k / 58,4k zł', revenue:'92,0k zł', delay:'+4 dni'},
+  ];
+  const body = rows.map(r=>`
+    <tr>
+      <td>${r.p}</td>
+      <td>${r.planfact}</td>
+      <td>${r.costs}</td>
+      <td class="num">${r.revenue}</td>
+      <td>${r.delay}</td>
+      <td><span class="muted">${t('pl.backlog')}</span></td>
+    </tr>`).join('');
+  return `<div class="card">
+    <div class="section-h">${t('pl.title')}</div>
+    <div class="embed-note" style="margin-top:0;margin-bottom:12px">${t('pl.note')}</div>
+    <table>
+      <thead><tr>
+        <th>${t('pl.col.project')}</th><th>${t('pl.col.planfact')}</th><th>${t('pl.col.costs')}</th>
+        <th class="num">${t('pl.col.revenue')}</th><th>${t('pl.col.delay')}</th><th>${t('pl.col.satisfaction')}</th>
+      </tr></thead>
+      <tbody>${body}</tbody>
+    </table>
+  </div>`;
+}
+function panelOverviewDesign(){
+  return `
+  <div class="grid kpi-grid mt16">
+    <div class="kpi"><div class="k-label">${t('kpi.netto')}</div><div class="k-value">48 250 zł</div></div>
+    <div class="kpi"><div class="k-label">${t('kpi.brutto')}</div><div class="k-value">59 348 zł</div><div class="k-hint">VAT 23%</div></div>
+    <div class="kpi"><div class="k-label">${t('kpi.marginplan')}</div><div class="k-value">36%</div></div>
+    <div class="kpi"><div class="k-label">${t('kpi.readiness')}</div><div class="k-value">60%</div></div>
+  </div>
+  <div class="grid two-col mt16">
+    <div class="card">
+      <div class="section-h">${t('p.checklist')}</div>
+      <ul class="check-list">
+        <li><span class="check-box done">✓</span> ${t('gate.pricelist')}</li>
+        <li><span class="check-box done">✓</span> ${t('gate.rooms')}</li>
+        <li><span class="check-box partial">~</span> ${t('gate.estimate')}</li>
+        <li><span class="check-box blocked">✕</span> ${t('gate.contract')}</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="section-h">${t('mode.design')}</div>
+      <p class="muted" style="font-size:13px">${t('tab.overview')} · ${PROJECTS.A.name}</p>
+      <div class="mt16"><button class="btn">${t('p.editproject')}</button></div>
+    </div>
+  </div>
+  <div class="grid two-col mt16">
+    ${clientsBlock()}
+    ${projectsMetricsBlock()}
+  </div>`;
+}
+function panelGates(){
+  const p = PROJECTS[current];
+  const rows = p.gates.map(g=>`
+    <div class="gate-chip" style="justify-content:space-between;max-width:none;margin-bottom:8px;padding:10px 12px">
+      <span>${t(g.labelKey)}</span><span class="gd ${g.state}"></span>
+    </div>`).join('');
+  return `<div class="card"><div class="section-h">${t('p.gatelist')}</div>${rows}</div>`;
+}
+function panelPricelist(){
+  return `
+  <div class="card">
+    <div class="section-h">${t('tab.pricelist')}</div>
+    <table>
+      <thead><tr><th>${t('tbl.work')}</th><th class="num">${t('tbl.clientprice')}</th><th>${t('tbl.unit')}</th><th>${t('tbl.source')}</th></tr></thead>
+      <tbody>
+        <tr><td>Demontaż ścianek</td><td class="num">9,90 zł</td><td>m²</td><td><span class="src-tag">OFFER_BASE</span></td></tr>
+        <tr><td>Ścianka GK</td><td class="num">196,90 zł</td><td>m²</td><td><span class="src-tag">OFFER_BASE</span></td></tr>
+        <tr><td>Instalacja hydrauliczna (punkt)</td><td class="num">242,00 zł</td><td>szt</td><td><span class="src-tag">OFFER_BASE</span></td></tr>
+      </tbody>
+    </table>
+  </div>`;
+}
+function panelRooms(){
+  const rooms = [['Przedpokój','6.2'],['Salon','24.0'],['Kuchnia','10.5'],['Łazienka','4.8']];
+  return `<div class="grid room-grid">${rooms.map(r=>`
+    <div class="room"><div class="r-name">${r[0]}</div><div class="r-area">${r[1]}<span class="r-unit"> m²</span></div></div>`).join('')}</div>`;
+}
+let estGroup = 'categories';   // works | rooms | categories | hybrid
+function estSegBtn(g, key){
+  return `<button class="${estGroup===g?'on':''}" onclick="setEstGroup('${g}')">${t(key)}</button>`;
+}
+function estTotalsRows(){
+  return `
+    <tr class="totals"><td>${t('tbl.total')} ${t('tbl.netto')}</td><td></td><td></td><td class="num">48 250 zł</td></tr>
+    <tr class="totals"><td>${t('tbl.vat')} 23%</td><td></td><td></td><td class="num">11 098 zł</td></tr>
+    <tr class="totals"><td>${t('tbl.brutto')}</td><td></td><td></td><td class="num">59 348 zł</td></tr>`;
+}
+function estBodyCategories(){
+  return `
+        <tr class="cat-row"><td colspan="4">${t('cat.prelim')}</td></tr>
+        <tr class="exp-toggle" onclick="toggleExp(this)"><td><span class="caret">▶</span> ${t('est.work.demolition')}</td><td class="num">40 m²</td><td class="num">9,90 zł</td><td class="num">396,00 zł</td></tr>
+        <tr class="exp-detail"><td colspan="4">${t('est.room.living')} 18 m² · ${t('est.room.kitchen')} 12 m² · ${t('est.room.hall')} 10 m² — worki 40 szt, marża 30%</td></tr>
+
+        <tr class="cat-row"><td colspan="4">${t('cat.construction')}</td></tr>
+        <tr class="exp-toggle" onclick="toggleExp(this)"><td><span class="caret">▶</span> ${t('est.work.gk')}</td><td class="num">100 m²</td><td class="num">196,90 zł</td><td class="num">19 690 zł</td></tr>
+        <tr class="exp-detail"><td colspan="4">${t('est.room.living')} 40 m² · ${t('est.room.kitchen')} 30 m² · ${t('est.room.bath')} 30 m² — płyty GK 210 szt, marża 34%</td></tr>
+
+        <tr class="cat-row"><td colspan="4">${t('cat.plumbing')}</td></tr>
+        <tr><td>${t('est.work.plumbing')}</td><td class="num">12 szt</td><td class="num">242,00 zł</td><td class="num">2 904 zł</td></tr>
+        ${estTotalsRows()}`;
+}
+function estBodyWorks(){
+  /* flat, grouped by work type (no category headers) */
+  return `
+        <tr><td>${t('est.work.demolition')}</td><td class="num">40 m²</td><td class="num">9,90 zł</td><td class="num">396,00 zł</td></tr>
+        <tr><td>${t('est.work.gk')}</td><td class="num">100 m²</td><td class="num">196,90 zł</td><td class="num">19 690 zł</td></tr>
+        <tr><td>${t('est.work.plaster')}</td><td class="num">120 m²</td><td class="num">42,00 zł</td><td class="num">5 040 zł</td></tr>
+        <tr><td>${t('est.work.plumbing')}</td><td class="num">12 szt</td><td class="num">242,00 zł</td><td class="num">2 904 zł</td></tr>
+        ${estTotalsRows()}`;
+}
+function estBodyRooms(){
+  /* grouped by room */
+  return `
+        <tr class="cat-row"><td colspan="4">${t('est.room.hall')}</td></tr>
+        <tr><td>${t('est.work.demolition')}</td><td class="num">10 m²</td><td class="num">9,90 zł</td><td class="num">99,00 zł</td></tr>
+        <tr class="cat-row"><td colspan="4">${t('est.room.living')}</td></tr>
+        <tr><td>${t('est.work.gk')}</td><td class="num">40 m²</td><td class="num">196,90 zł</td><td class="num">7 876 zł</td></tr>
+        <tr><td>${t('est.work.plaster')}</td><td class="num">55 m²</td><td class="num">42,00 zł</td><td class="num">2 310 zł</td></tr>
+        <tr class="cat-row"><td colspan="4">${t('est.room.kitchen')}</td></tr>
+        <tr><td>${t('est.work.gk')}</td><td class="num">30 m²</td><td class="num">196,90 zł</td><td class="num">5 907 zł</td></tr>
+        <tr class="cat-row"><td colspan="4">${t('est.room.bath')}</td></tr>
+        <tr><td>${t('est.work.plumbing')}</td><td class="num">12 szt</td><td class="num">242,00 zł</td><td class="num">2 904 zł</td></tr>
+        ${estTotalsRows()}`;
+}
+function estHybridTable(){
+  /* rooms × work pivot with per-cell quantities and row totals */
+  const rooms = [t('est.room.hall'), t('est.room.living'), t('est.room.kitchen'), t('est.room.bath')];
+  const rows = [
+    {work:t('est.work.demolition'), cells:['10','18','12','—'], total:'40 m²'},
+    {work:t('est.work.gk'), cells:['—','40','30','30'], total:'100 m²'},
+    {work:t('est.work.plaster'), cells:['—','55','35','30'], total:'120 m²'},
+    {work:t('est.work.plumbing'), cells:['—','—','4','8'], total:'12 szt'},
+  ];
+  const head = `<tr><th>${t('tbl.work')}</th>${rooms.map(r=>`<th class="num">${r}</th>`).join('')}<th class="num">${t('tbl.total')}</th></tr>`;
+  const body = rows.map(r=>`<tr><td>${r.work}</td>${r.cells.map(c=>`<td class="num">${c}</td>`).join('')}<td class="num">${r.total}</td></tr>`).join('');
+  return `<table><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+function panelEstimate(){
+  let inner;
+  if(estGroup==='hybrid'){
+    inner = estHybridTable();
+  } else {
+    let body;
+    if(estGroup==='works') body = estBodyWorks();
+    else if(estGroup==='rooms') body = estBodyRooms();
+    else body = estBodyCategories();
+    const firstColKey = estGroup==='rooms' ? 'est.room.living' : 'tbl.work';
+    inner = `<table>
+      <thead><tr><th>${t('tbl.work')}</th><th class="num">${t('tbl.qty')}</th><th class="num">${t('tbl.clientprice')}</th><th class="num">${t('tbl.netto')}</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+  }
+  return `
+  <div class="card">
+    <div class="section-h">${t('tab.estimate')}</div>
+    <div class="seg" style="flex-wrap:wrap">
+      ${estSegBtn('works','est.group.works')}
+      ${estSegBtn('rooms','est.group.rooms')}
+      ${estSegBtn('categories','est.group.categories')}
+      ${estSegBtn('hybrid','est.group.hybrid')}
+    </div>
+    ${inner}
+  </div>`;
+}
+function panelSchedulePlanning(){
+  const rows = [
+    ['sched.demolition', 2, 18],
+    ['sched.walls', 18, 34],
+    ['sched.plumbing', 34, 26],
+    ['sched.finishing', 58, 40],
+  ];
+  return `<div class="card"><div class="section-h">${t('tab.schedule')}</div><div class="gantt">${rows.map(r=>`
+    <div class="gantt-row"><div class="g-label">${t(r[0])}</div>
+      <div class="gantt-track"><div class="gantt-bar plan" style="left:${r[1]}%;width:${r[2]}%"></div></div></div>`).join('')}</div></div>`;
+}
+/* ---- Signable documents (both stages) ---- */
+/* documents per project stage */
+const SIGN_DOCS = {
+  A: [
+    {typeKey:'sd.type.contract', statusKey:'sd.st.awaiting', statusClass:'awaiting', date:'12.03.2024',
+     signers:[{name:'Anna Kowalska', roleKey:'role.manager'},{name:'Jan Kowalski', roleKey:'role.client'},{name:'Anna Kowalska (klient)', roleKey:'role.client'}]},
+    {typeKey:'sd.type.roomacceptance', statusKey:'sd.st.draft', statusClass:'draft', date:'—',
+     signers:[{name:'Piotr Nowak', roleKey:'role.foreman'},{name:'Jan Kowalski', roleKey:'role.client'}]},
+    {typeKey:'sd.type.keys', statusKey:'sd.st.draft', statusClass:'draft', date:'—',
+     signers:[{name:'Jan Kowalski', roleKey:'role.client'}]},
+  ],
+  B: [
+    {typeKey:'sd.type.amendment', statusKey:'sd.st.awaiting', statusClass:'awaiting', date:'20.04.2024',
+     signers:[{name:'Anna Kowalska', roleKey:'role.manager'},{name:'Jan Kowalski', roleKey:'role.client'}]},
+    {typeKey:'sd.type.worksacceptance', statusKey:'sd.st.awaiting', statusClass:'awaiting', date:'15.05.2024',
+     signers:[{name:'Piotr Nowak', roleKey:'role.foreman'},{name:'Jan Kowalski', roleKey:'role.client'}]},
+    {typeKey:'sd.type.roomacceptance', statusKey:'sd.st.signed', statusClass:'signed', date:'02.05.2024',
+     signers:[{name:'Piotr Nowak', roleKey:'role.foreman'},{name:'Jan Kowalski', roleKey:'role.client'}]},
+  ],
+};
+let sdSelected = 0;        // selected document index
+let sdMethod = 'print';    // print | online | govpl | tablet
+function sdMethodBtn(m, key){
+  return `<button class="${sdMethod===m?'on':''}" onclick="setSdMethod('${m}')">${t(key)}</button>`;
+}
+function sdMethodPanel(){
+  if(sdMethod==='print'){
+    return `<div class="method-panel">
+      <div class="upload-drop" onclick="alert('${t('sd.upload')}')">⬆ ${t('sd.upload')}<div style="margin-top:6px">${t('sd.upload.hint')}</div></div>
+    </div>`;
+  }
+  if(sdMethod==='online'){
+    return `<div class="method-panel">
+      <div class="muted" style="font-size:12px">${t('sd.online.level')}</div>
+      <div class="seg" style="margin:8px 0 0">
+        <button class="on" onclick="segPick(this)">SES</button>
+        <button onclick="segPick(this)">AdES</button>
+        <button onclick="segPick(this)">QES</button>
+      </div>
+    </div>`;
+  }
+  if(sdMethod==='govpl'){
+    return `<div class="method-panel">
+      <div class="doc-box"><span class="doc-ic">🇵🇱</span><div><div style="font-weight:600">podpis.gov.pl</div><div class="muted" style="font-size:12px">${t('sd.govpl.note')}</div></div></div>
+    </div>`;
+  }
+  /* tablet */
+  return `<div class="method-panel">
+    <div class="parafka-box" id="parafkaBox" onclick="drawParafka()"><span class="cap">${t('sd.parafka')}</span></div>
+    <div class="muted" style="font-size:12px;margin-top:8px">${t('sd.parafka.hint')}</div>
+  </div>`;
+}
+function panelSignDocs(){
+  const docs = SIGN_DOCS[current] || [];
+  if(sdSelected >= docs.length) sdSelected = 0;
+  const listRows = docs.map((d,i)=>`
+    <tr class="doc-list-row ${i===sdSelected?'sel':''}" onclick="selectSignDoc(${i})">
+      <td>${t(d.typeKey)}</td>
+      <td><span class="sign-pill ${d.statusClass}">${t(d.statusKey)}</span></td>
+      <td>${d.date}</td>
+    </tr>`).join('');
+  const sel = docs[sdSelected];
+  const signerRows = sel ? sel.signers.map(s=>`
+    <div class="signer-row"><span>${s.name} <span class="muted">(${t(s.roleKey)})</span></span><span class="sign-pill pending" data-sign>${t('sig.pending')}</span></div>`).join('') : '';
+  const detail = sel ? `
+    <div class="card mt16">
+      <div class="section-h">${t(sel.typeKey)}</div>
+      <div class="muted" style="font-size:12px">${t('sd.method')}</div>
+      <div class="seg" style="flex-wrap:wrap">
+        ${sdMethodBtn('print','sd.m.print')}
+        ${sdMethodBtn('online','sd.m.online')}
+        ${sdMethodBtn('govpl','sd.m.govpl')}
+        ${sdMethodBtn('tablet','sd.m.tablet')}
+      </div>
+      ${sdMethodPanel()}
+      <div class="mt16"><div class="muted" style="font-size:12px">${t('sd.signers')}</div>${signerRows}</div>
+      <div class="mt16"><button class="btn btn-primary" onclick="signAll()">${t('ct.sign')}</button></div>
+      <div class="embed-note">${t('sd.govpl.note')}</div>
+    </div>` : `<div class="card mt16"><p class="muted" style="font-size:13px">${t('sd.selecthint')}</p></div>`;
+  return `
+  <div class="card">
+    <div class="section-h">${t('sd.title')}</div>
+    <table>
+      <thead><tr><th>${t('sd.col.type')}</th><th>${t('sd.col.status')}</th><th>${t('sd.col.date')}</th></tr></thead>
+      <tbody>${listRows}</tbody>
+    </table>
+  </div>
+  ${detail}`;
+}
+
+/* ---- Execution (B) ---- */
+function panelOverviewExec(){
+  return `
+  <div class="grid kpi-grid mt16">
+    <div class="kpi"><div class="k-label">${t('kpi.fixed')}</div><div class="k-value">92 000 zł</div></div>
+    <div class="kpi"><div class="k-label">${t('kpi.revenue')}</div><div class="k-value">55 200 zł</div><div class="k-hint">60%</div></div>
+    <div class="kpi"><div class="k-label">${t('kpi.cost')}</div><div class="k-value">34 800 zł</div></div>
+    <div class="kpi"><div class="k-label">${t('kpi.marginfact')}</div><div class="k-value">37%</div></div>
+  </div>
+  <div class="card mt16"><div class="section-h">${t('mode.execution')}</div><p class="muted" style="font-size:13px">${PROJECTS.B.name}</p></div>
+  <div class="grid two-col mt16">
+    ${clientsBlock()}
+    ${projectsMetricsBlock()}
+  </div>`;
+}
+function panelProcurement(){
+  return `<div class="card"><div class="section-h">${t('tab.procurement')}</div>
+    <table>
+      <thead><tr><th>${t('tbl.material')}</th><th>${t('tbl.need')}</th><th>${t('tbl.status')}</th><th>${t('tbl.delivery')}</th></tr></thead>
+      <tbody>
+        <tr><td>Płyta GK 12,5mm</td><td>210 szt</td><td><span class="sign-pill signed">${t('proc.delivered')}</span></td><td>12.03</td></tr>
+        <tr><td>Profil CW50</td><td>80 szt</td><td><span class="sign-pill signed">${t('proc.ordered')}</span></td><td>15.03</td></tr>
+        <tr><td>Gładź szpachlowa</td><td>120 kg</td><td><span class="sign-pill pending">${t('proc.pending')}</span></td><td>—</td></tr>
+      </tbody>
+    </table></div>`;
+}
+function panelDocuments(){
+  return `<div class="card"><div class="section-h">${t('tab.documents')}</div>
+    <table>
+      <thead><tr><th>${t('tbl.doc')}</th><th>${t('tbl.date')}</th><th class="num">${t('tbl.amount')}</th></tr></thead>
+      <tbody>
+        <tr><td>📄 Faktura VAT 03/2024 (PDF)</td><td>08.03.2024</td><td class="num">12 300 zł</td></tr>
+        <tr><td>📄 Faktura VAT 04/2024 (PDF)</td><td>19.03.2024</td><td class="num">8 450 zł</td></tr>
+      </tbody>
+    </table>
+    <div class="embed-note">${t('note.finance')}</div>
+  </div>`;
+}
+function panelPlanActual(){
+  const rows = [
+    ['sched.walls', 2, 30, 100],
+    ['sched.plumbing', 30, 26, 60],
+    ['sched.finishing', 54, 40, 0],
+  ];
+  const gantt = `<div class="card"><div class="section-h">${t('tab.planactual')}</div><div class="gantt">${rows.map(r=>`
+    <div class="gantt-row"><div class="g-label">${t(r[0])}</div>
+      <div class="gantt-track">
+        <div class="gantt-bar plan" style="left:${r[1]}%;width:${r[2]}%"></div>
+        <div class="gantt-actual" style="left:${r[1]}%;width:${r[2]*r[3]/100}%">${r[3]}%</div>
+      </div></div>`).join('')}</div></div>`;
+
+  const reports = [
+    {worker:'Piotr Nowak', workKey:'wr.work.plaster', rooms:`${t('est.room.living')}, ${t('est.room.kitchen')}`, qty:'40 m²', date:'01–15.05', approved:true},
+    {worker:'Marek Wójcik', workKey:'wr.work.gk', rooms:`${t('est.room.living')}, ${t('est.room.bath')}`, qty:'70 m²', date:'20.04–02.05', approved:true},
+    {worker:'Piotr Zieliński', workKey:'wr.work.plumbing', rooms:`${t('est.room.bath')}`, qty:'8 szt', date:'05–09.05', approved:false},
+    {worker:'Anna Lis', workKey:'wr.work.painting', rooms:`${t('est.room.hall')}`, qty:'22 m²', date:'12–13.05', approved:false},
+  ];
+  const reportRows = reports.map(r=>`
+    <tr>
+      <td>${r.worker}</td>
+      <td>${t(r.workKey)}</td>
+      <td>${r.rooms}</td>
+      <td class="num">${r.qty}</td>
+      <td>${r.date}</td>
+      <td><span class="sign-pill ${r.approved?'signed':'awaiting'}">${r.approved?t('wr.approved'):t('wr.awaiting')}</span></td>
+    </tr>`).join('');
+  const reportCard = `<div class="card mt16"><div class="section-h">${t('wr.title')}</div>
+    <table>
+      <thead><tr>
+        <th>${t('wr.col.worker')}</th><th>${t('wr.col.worktype')}</th><th>${t('wr.col.rooms')}</th>
+        <th class="num">${t('wr.col.qty')}</th><th>${t('wr.col.date')}</th><th>${t('wr.col.approval')}</th>
+      </tr></thead>
+      <tbody>${reportRows}</tbody>
+    </table></div>`;
+
+  return gantt + reportCard;
+}
+function panelPayroll(){
+  return `<div class="card"><div class="section-h">${t('tab.payroll')}</div>
+    <table>
+      <thead><tr><th>${t('tbl.worker')}</th><th>${t('tbl.work')}</th><th class="num">${t('tbl.qty')}</th><th class="num">${t('tbl.rate')}</th><th class="num">${t('tbl.topay')}</th></tr></thead>
+      <tbody>
+        <tr><td>Piotr Zieliński</td><td>Ścianka GK</td><td class="num">100 m²</td><td class="num">48 zł</td><td class="num">4 800 zł</td></tr>
+        <tr><td>Marek Wójcik</td><td>Gładź</td><td class="num">120 m²</td><td class="num">18 zł</td><td class="num">2 160 zł</td></tr>
+      </tbody>
+    </table>
+    <div class="embed-note">${t('note.payroll')}</div>
+  </div>`;
+}
+function panelAmendments(){
+  return `<div class="card"><div class="section-h">${t('am.title')}</div>
+    <p style="font-size:13px">${t('am.desc')}</p>
+    <div class="mt12">
+      <div class="signer-row"><span>Jan Nowak <span class="muted">(Klient)</span></span><span class="sign-pill pending" data-sign>${t('sig.pending')}</span></div>
+    </div>
+    <div class="mt16"><button class="btn btn-primary" onclick="signAll()">${t('ct.sign')}</button></div>
+  </div>`;
+}
+let phSeg = 'catalog';
+function panelPriceHistory(){
+  const data = {
+    catalog: [['Ścianka GK','196,90','210,00','zł/m²']],
+    project: [['Szpachla (projekt)','100','120','m²']],
+    workers: [['Stawka montaż','45','48','zł/m²']],
+  };
+  const rows = data[phSeg].map(r=>`<tr><td>${r[0]}</td><td class="num"><span class="diff-old">${r[1]}</span> → <span class="diff-new">${r[2]}</span></td><td>${r[3]}</td></tr>`).join('');
+  return `<div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="section-h" style="margin:0">${t('tab.pricehistory')}</div>
+      <span class="badge-admin">ADMIN · FINANCIER</span>
+    </div>
+    <div class="seg">
+      <button class="${phSeg==='catalog'?'on':''}" onclick="setPh('catalog')">${t('ph.catalog')}</button>
+      <button class="${phSeg==='project'?'on':''}" onclick="setPh('project')">${t('ph.project')}</button>
+      <button class="${phSeg==='workers'?'on':''}" onclick="setPh('workers')">${t('ph.workers')}</button>
+    </div>
+    <table><thead><tr><th>${t('tbl.work')}</th><th class="num">${t('tbl.clientprice')}</th><th>${t('tbl.unit')}</th></tr></thead><tbody>${rows}</tbody></table>
+  </div>`;
+}
+
+const PANELS = {
+  'tab.overview': ()=> current==='A' ? panelOverviewDesign() : panelOverviewExec(),
+  'tab.gates': panelGates,
+  'tab.pricelist': panelPricelist,
+  'tab.rooms': panelRooms,
+  'tab.estimate': panelEstimate,
+  'tab.schedule': panelSchedulePlanning,
+  'tab.signdocs': panelSignDocs,
+  'tab.procurement': panelProcurement,
+  'tab.documents': panelDocuments,
+  'tab.planactual': panelPlanActual,
+  'tab.payroll': panelPayroll,
+  'tab.amendments': panelAmendments,
+  'tab.pricehistory': panelPriceHistory,
+};
+
+/* =========================================================================
+   RENDER
+   ========================================================================= */
+function applyStaticI18n(){
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent = t(el.getAttribute('data-i18n')); });
+  document.getElementById('langToggle').textContent = (lang==='pl')?'PL':'RU';
+  document.documentElement.lang = lang;
+}
+function statusColor(cls){ return cls==='offered' ? 'var(--info)' : 'var(--success)'; }
+
+function renderHeader(){
+  const p = PROJECTS[current];
+  document.getElementById('tbTitle').textContent = p.name;
+  document.getElementById('wpCardName').textContent = p.name;
+  document.getElementById('wsTitle').textContent = p.name;
+
+  const st = document.getElementById('wpCardStatus');
+  st.className = 'status-pill '+p.statusClass; st.textContent = t(p.statusKey);
+  const ws = document.getElementById('wsStatus');
+  ws.className = 'status-pill '+p.statusClass; ws.textContent = t(p.statusKey);
+  document.getElementById('wsMode').textContent = t(p.modeKey);
+
+  document.getElementById('tbChipName').textContent = p.name;
+  document.getElementById('tbChipDot').style.background = statusColor(p.statusClass);
+
+  // donut
+  document.getElementById('donut').style.background =
+    `conic-gradient(var(--success) ${p.readiness}%, var(--border) 0)`;
+  document.getElementById('donutVal').textContent = p.readiness+'%';
+  document.getElementById('readyText').textContent = p.readiness+'%';
+
+  // gates
+  document.getElementById('gateChips').innerHTML = p.gates.map(g=>
+    `<span class="gate-chip"><span class="gd ${g.state}"></span>${t(g.labelKey)}</span>`).join('');
+
+  // switcher on-state
+  document.getElementById('switchA').classList.toggle('on', current==='A');
+  document.getElementById('switchB').classList.toggle('on', current==='B');
+}
+function renderTabs(){
+  const p = PROJECTS[current];
+  document.getElementById('tabstrip').innerHTML = p.tabs.map(tab=>
+    `<button class="tab ${tab===activeTab?'active':''}" onclick="setTab('${tab}')">${t(tab)}</button>`).join('');
+}
+function renderPanel(){
+  document.getElementById('panels').innerHTML = (PANELS[activeTab]||(()=>''))();
+}
+function renderAll(){ applyStaticI18n(); renderHeader(); renderTabs(); renderPanel(); }
+
+/* =========================================================================
+   INTERACTIONS
+   ========================================================================= */
+function toggleLang(){ lang = (lang==='pl')?'ru':'pl'; renderAll(); }
+function setProject(id){ current = id; activeTab = PROJECTS[id].tabs[0]; sdSelected = 0; sdMethod = 'print'; estGroup = 'categories'; renderAll(); }
+function cycleProject(){ setProject(current==='A'?'B':'A'); }
+function setTab(tab){ activeTab = tab; renderTabs(); renderPanel(); }
+function toggleExp(row){ row.classList.toggle('open'); const d=row.nextElementSibling; if(d&&d.classList.contains('exp-detail')) d.classList.toggle('open'); }
+function segPick(btn){ btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('on')); btn.classList.add('on'); }
+function signAll(){ document.querySelectorAll('#panels [data-sign]').forEach(p=>{ p.className='sign-pill signed'; p.textContent=t('sig.signed'); }); }
+function setPh(seg){ phSeg = seg; renderPanel(); }
+function setEstGroup(g){ estGroup = g; renderPanel(); }
+function selectSignDoc(i){ sdSelected = i; renderPanel(); }
+function setSdMethod(m){ sdMethod = m; renderPanel(); }
+function drawParafka(){
+  const box = document.getElementById('parafkaBox');
+  if(!box || box.querySelector('svg')) return;
+  box.insertAdjacentHTML('afterbegin',
+    '<svg viewBox="0 0 220 96"><path d="M30 60 L60 78 L120 24" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M120 60 C150 30, 175 70, 200 40" fill="none" stroke="#18181b" stroke-width="3" stroke-linecap="round"/></svg>');
+}
+function toggleMobile(){ document.getElementById('root').classList.toggle('mobile'); }
+function toggleMobileMenu(){ /* placeholder: drawer not needed for preview */ }
+
+/* init */
+renderAll();
+</script>
+</body>
+</html>
