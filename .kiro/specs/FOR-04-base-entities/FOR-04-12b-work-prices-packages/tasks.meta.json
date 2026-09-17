@@ -1,0 +1,634 @@
+{
+  "pbtResults": {
+    "3.2 Write property test P1 — resolver case-correctness": {
+      "status": "not_run",
+      "lastRunTimestamp": 1789659015872
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `WorkPackagePriceEntity` (`dao/model`, `@Table(\"work_package_prices\")` extends `BaseEntity`)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541267
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658552994
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658681905
+      }
+    ],
+    "1.2 Re-shape `WorkPriceEntity` into the per-work-item aggregator": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541323
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658691370
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658855986
+      }
+    ],
+    "2. Checkpoint — backend compiles": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541395
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664276846
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664315505
+      }
+    ],
+    "3.1 Create `EffectivePriceResolver` (`service/pricing/EffectivePriceResolver`)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541426
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658693326
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658857197
+      }
+    ],
+    "3.2 Write property test P1 — resolver case-correctness": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541454
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658871336
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659076674
+      }
+    ],
+    "3.3 Write property test P2 — single-member uniform": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541488
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658872607
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659077941
+      }
+    ],
+    "3.4 Write property test P3 — never exceeds max": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541513
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658873889
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659079388
+      }
+    ],
+    "3.5 Write property test P4 — determinism": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541571
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658875295
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659080343
+      }
+    ],
+    "4.1 Create `044-migrate-work-prices-to-packages.xml` and register it in `changelog.xml`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541593
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658876854
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659073763
+      }
+    ],
+    "4.2 Create `045-seed-work-package-prices.xml` and register it after `044`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541622
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659086781
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659462310
+      }
+    ],
+    "5.1 Create `SeededOfferPackages` provider (id-keyed, cached)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541643
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658558161
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658686808
+      }
+    ],
+    "5.2 Define `CustomQueryResolver<T>` interface + tiny registry keyed by `(entityClass, leadingSegment)`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541670
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658694237
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658859745
+      }
+    ],
+    "5.3 Implement the unified `prices` `CustomQueryResolver` for `WorkPriceEntity` and register `(WorkPriceEntity, \"prices\")`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541692
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658878009
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659075141
+      }
+    ],
+    "5.4 Add the custom-predicate branch to `SpecificationBuilder.buildPredicate`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541745
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659087895
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659465047
+      }
+    ],
+    "5.5 Override `find`/`findExtended` on `WorkPriceService` for synthetic-sort wiring only": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541769
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659089306
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659460907
+      }
+    ],
+    "5.6 Write `WorkPricePivotQueryIntegrationTest`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541792
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659472942
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660601399
+      }
+    ],
+    "6.1 Update `WorkPriceServiceModel` + controller DTOs": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541821
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659090422
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659463755
+      }
+    ],
+    "6.2 Update `WorkPriceServiceMapper` to build the prices map": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541843
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659470559
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660243476
+      }
+    ],
+    "7.1 Override `getMetadata()` on `WorkPriceController` to append id-keyed per-package pivot descriptors": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541881
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659471957
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660242527
+      }
+    ],
+    "8. Checkpoint — backend compiles + startup annotations": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541927
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664319812
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664365763
+      }
+    ],
+    "9.1 Write `WorkPriceControllerIntegrationTest`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541951
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660609096
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661434572
+      }
+    ],
+    "9.2 Write `WorkPricePackagesMigrationIntegrationTest`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658541975
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660608111
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661435924
+      }
+    ],
+    "9.3 Write `WorkPriceCascadeDeleteIntegrationTest`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542001
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660606569
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661437025
+      }
+    ],
+    "10. Checkpoint — run only the affected backend test classes": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542027
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664369909
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664581140
+      }
+    ],
+    "11.1 Update types + API for the collection model": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542087
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661444152
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661898055
+      }
+    ],
+    "11.2 Rebuild `WorkPricesList` with dynamic pivot columns": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542109
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661903168
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789662108772
+      }
+    ],
+    "11.3 Rebuild `WorkPriceFormSheet` for per-package upserts": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542130
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661445452
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661897040
+      }
+    ],
+    "11.4 Update i18n (`workPrices.*`, PL+RU parity)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542154
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661443202
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661895702
+      }
+    ],
+    "12.1 Write `WorkPricesList.test.tsx`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542178
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789662114980
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664269409
+      }
+    ],
+    "12.2 Write `workPrices.i18n.test.ts`": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542206
+      },
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789662113963
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664270796
+      }
+    ],
+    "13. Checkpoint — frontend tsc + new UI test files": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542271
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664585556
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664648860
+      }
+    ],
+    "14. Author test-cases.md": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542294
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664657902
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664911786
+      }
+    ],
+    "15. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658542321
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664916636
+      },
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789668798190
+      }
+    ],
+    "1. Backend model: aggregator re-shape + WorkPackagePrice join entity": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789658856069
+      }
+    ],
+    "3. Effective price resolver (pure max-fallback function)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659080375
+      }
+    ],
+    "4. Liquibase migration + re-seed (registered LAST in `changelog.xml`, after `043`)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789659462345
+      }
+    ],
+    "7. Controller metadata pivot descriptors": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660242596
+      }
+    ],
+    "6. DTOs, service model, mapper (prices map)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660243513
+      }
+    ],
+    "5. Custom_Predicate_Flow — unified pivot filter/sort resolver": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789660601483
+      }
+    ],
+    "9. Backend integration tests (Testcontainers)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789661437059
+      }
+    ],
+    "11. Frontend pivot table (`foremen-frontend/src/features/work-prices/`)": [
+      {
+        "executionId": "1022fa15-ce13-44e2-8646-5078775969b9",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789662108828
+      }
+    ],
+    "12. Frontend tests (Vitest + RTL, run with `--run`)": [
+      {
+        "executionId": "2aaf96f7-a6bf-4314-980c-b8f22cbe0d03",
+        "chatSessionId": "sess_b8c281fa-4d4b-4e22-94d1-1f8a6a8a19ca",
+        "timestamp": 1789664270848
+      }
+    ]
+  }
+}

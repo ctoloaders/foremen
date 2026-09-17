@@ -5,6 +5,8 @@ import com.foremen.controller.model.MetadataResponse;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.audit.AuditLogEntity;
+import com.foremen.service.model.AuditServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import com.foremen.util.EntityMetadataResolver;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -50,6 +52,16 @@ public interface AdminController<
             CreateRequestModel, CreateResponseModel, UpdateRequestModel, UpdateResponseModel> getMapper();
 
     AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID> getService();
+
+    /**
+     * The shared audit mapper bean, used by {@link #getAudit(Object)} to convert raw
+     * {@link AuditLogEntity} rows into {@link AuditServiceModel} — the same shape the list
+     * endpoint {@code /api/audit} returns (performedBy resolved to the acting user's name,
+     * snapshots parsed to maps, no BaseEntity fields leaked). Concrete controllers already
+     * inject their collaborators via {@code @RequiredArgsConstructor}; they satisfy this by
+     * exposing the injected {@code AuditServiceMapper}.
+     */
+    AuditServiceMapper getAuditServiceMapper();
 
     /**
      * Hook for concrete controllers to append/prepend additional query conditions
@@ -147,11 +159,14 @@ public interface AdminController<
 
     @GetMapping("/audit/{id}")
     @PermissionOperation("READ")
-    default ResponseEntity<List<AuditLogEntity>> getAudit(@PathVariable ID id) {
+    default ResponseEntity<List<AuditServiceModel>> getAudit(@PathVariable ID id) {
         List<AuditLogEntity> auditRecords = getService().getAuditLogDao()
                 .findByEntityClassAndEntityIdOrderByPerformedAtAsc(
                         getService().getDaoModelClass().getSimpleName(), id instanceof Long l ? l : null);
-        return ResponseEntity.ok(auditRecords);
+        List<AuditServiceModel> models = auditRecords.stream()
+                .map(getAuditServiceMapper()::toServiceModel)
+                .toList();
+        return ResponseEntity.ok(models);
     }
 
     // --- DELETE ---

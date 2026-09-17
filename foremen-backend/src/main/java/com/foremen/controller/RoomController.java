@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.RoomService;
 import com.foremen.service.model.RoomServiceExtendedModel;
 import com.foremen.service.model.RoomServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +44,7 @@ public class RoomController implements AdminController<
 
     private final RoomService service;
     private final RoomControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<RoomServiceModel, RoomServiceExtendedModel,
@@ -56,5 +58,10 @@ public class RoomController implements AdminController<
     public AdminService<RoomServiceModel, RoomServiceExtendedModel,
             RoomEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

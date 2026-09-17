@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.CurrencyService;
 import com.foremen.service.model.CurrencyServiceExtendedModel;
 import com.foremen.service.model.CurrencyServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class CurrencyController implements AdminController<
 
     private final CurrencyService service;
     private final CurrencyControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<CurrencyServiceModel, CurrencyServiceExtendedModel,
@@ -44,5 +46,10 @@ public class CurrencyController implements AdminController<
     public AdminService<CurrencyServiceModel, CurrencyServiceExtendedModel,
             CurrencyEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

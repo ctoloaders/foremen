@@ -50,6 +50,11 @@ class AdminControllerErrorPropagationTest {
             public AdminService<String, String, Object, Long> getService() {
                 return service;
             }
+
+            @Override
+            public com.foremen.service.model.mapper.AuditServiceMapper getAuditServiceMapper() {
+                return null; // audit endpoint not exercised by this error-propagation test
+            }
         };
     }
 

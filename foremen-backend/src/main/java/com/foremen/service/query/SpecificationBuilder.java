@@ -15,11 +15,46 @@ import java.util.List;
 
 public class SpecificationBuilder {
 
+    /**
+     * Registry of {@link CustomQueryResolver}s consulted by {@link #buildPredicate} before the default
+     * single-column path resolution. Held statically because {@code SpecificationBuilder} is a static
+     * translator invoked from the static {@link QueryParser} pipeline, while the registry is a Spring
+     * bean; it is wired once at startup via {@link #setCustomQueryResolverRegistry}. Stays {@code null}
+     * outside a Spring context (e.g. in unit tests that call {@link #buildPredicate} directly), in
+     * which case {@link #buildPredicate} always takes the default path — this branch adds no hard-coded
+     * entity or segment knowledge to the translator.
+     */
+    private static volatile CustomQueryResolverRegistry customQueryResolverRegistry;
+
+    /** Wires the shared {@link CustomQueryResolverRegistry} into the static translator (called once at startup). */
+    static void setCustomQueryResolverRegistry(CustomQueryResolverRegistry registry) {
+        customQueryResolverRegistry = registry;
+    }
+
     public static <T> Specification<T> buildPredicate(QueryToken.Filter filter, Class<T> entityClass) {
+        // Custom-predicate branch: when the filter field's first path segment is registered as a
+        // synthetic (non-column) property for this entity, delegate to the registered resolver's
+        // toFilter instead of the default single-column path resolution. Kept generic — the registry,
+        // not this translator, holds any (entity, segment) knowledge (FOR-04-12b Custom_Predicate_Flow).
+        CustomQueryResolverRegistry registry = customQueryResolverRegistry;
+        if (registry != null) {
+            String leadingSegment = firstSegment(filter.field());
+            var resolver = registry.find(entityClass, leadingSegment);
+            if (resolver.isPresent()) {
+                return resolver.get().toFilter(filter);
+            }
+        }
+
         return (root, query, cb) -> {
             Path<?> path = resolvePath(root, filter.field(), query);
             return buildCriteriaPredicate(path, filter.operator(), filter.value(), cb);
         };
+    }
+
+    /** Returns the first dot-separated segment of {@code field} (the whole field when it has no dot). */
+    private static String firstSegment(String field) {
+        int dot = field.indexOf('.');
+        return dot < 0 ? field : field.substring(0, dot);
     }
 
     /**
@@ -130,8 +165,17 @@ public class SpecificationBuilder {
         return (Join<T, ?>) from.join(attributeName);
     }
 
+    /**
+     * Builds the JPA {@link Predicate} for a single {@code (path, operator, value)} triple, coercing
+     * the raw string {@code value} to the {@code path}'s Java type via {@link #convertValue(Path, String)}.
+     *
+     * <p>Package-visible so a {@link CustomQueryResolver} in this package can reuse the same operator
+     * switch and value coercion when it builds the value half of a synthetic pivot predicate
+     * (FOR-04-12b Custom_Predicate_Flow), keeping the comparison semantics identical to the default
+     * single-column path resolution.
+     */
     @SuppressWarnings("unchecked")
-    private static Predicate buildCriteriaPredicate(Path<?> path, QueryOperator operator, String value, CriteriaBuilder cb) {
+    static Predicate buildCriteriaPredicate(Path<?> path, QueryOperator operator, String value, CriteriaBuilder cb) {
         return switch (operator) {
             // Equality
             case EQUALS -> cb.equal(path, convertValue(path, value));
@@ -167,7 +211,7 @@ public class SpecificationBuilder {
         };
     }
 
-    private static Object convertValue(Path<?> path, String value) {
+    static Object convertValue(Path<?> path, String value) {
         Class<?> javaType = path.getJavaType();
         if (javaType == Long.class || javaType == long.class) {
             return Long.parseLong(value);

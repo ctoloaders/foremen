@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.MaterialCategoryService;
 import com.foremen.service.model.MaterialCategoryServiceExtendedModel;
 import com.foremen.service.model.MaterialCategoryServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class MaterialCategoryController implements AdminController<
 
     private final MaterialCategoryService service;
     private final MaterialCategoryControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<MaterialCategoryServiceModel, MaterialCategoryServiceExtendedModel,
@@ -44,5 +46,10 @@ public class MaterialCategoryController implements AdminController<
     public AdminService<MaterialCategoryServiceModel, MaterialCategoryServiceExtendedModel,
             MaterialCategoryEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

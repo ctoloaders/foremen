@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.WorkItemService;
 import com.foremen.service.model.WorkItemServiceExtendedModel;
 import com.foremen.service.model.WorkItemServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class WorkItemController implements AdminController<
 
     private final WorkItemService service;
     private final WorkItemControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<WorkItemServiceModel, WorkItemServiceExtendedModel,
@@ -44,5 +46,10 @@ public class WorkItemController implements AdminController<
     public AdminService<WorkItemServiceModel, WorkItemServiceExtendedModel,
             WorkItemEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.OfferPackageService;
 import com.foremen.service.model.OfferPackageServiceExtendedModel;
 import com.foremen.service.model.OfferPackageServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class OfferPackageController implements AdminController<
 
     private final OfferPackageService service;
     private final OfferPackageControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<OfferPackageServiceModel, OfferPackageServiceExtendedModel,
@@ -44,5 +46,10 @@ public class OfferPackageController implements AdminController<
     public AdminService<OfferPackageServiceModel, OfferPackageServiceExtendedModel,
             OfferPackageEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.MeasurementUnitService;
 import com.foremen.service.model.MeasurementUnitServiceExtendedModel;
 import com.foremen.service.model.MeasurementUnitServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class MeasurementUnitController implements AdminController<
 
     private final MeasurementUnitService service;
     private final MeasurementUnitControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<MeasurementUnitServiceModel, MeasurementUnitServiceExtendedModel,
@@ -44,5 +46,10 @@ public class MeasurementUnitController implements AdminController<
     public AdminService<MeasurementUnitServiceModel, MeasurementUnitServiceExtendedModel,
             MeasurementUnitEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

@@ -1,11 +1,17 @@
 package com.foremen.controller;
 
+import com.foremen.dao.UserDao;
 import com.foremen.dao.model.BaseEntity;
+import com.foremen.dao.model.UserEntity;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.audit.AuditLogEntity;
+import com.foremen.service.audit.AuditPerformedByResolver;
+import com.foremen.service.model.AuditServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
+import com.foremen.service.model.mapper.AuditServiceMapperImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -60,6 +66,13 @@ class AdminControllerDefaultMethodsTest {
     private AuditLogDao auditLogDao;
 
     @Mock
+    private UserDao userDao;
+
+    // Real audit mapper (MapStruct impl) over a real resolver backed by the mocked UserDao, so the
+    // getAudit default method's mapping to AuditServiceModel is actually exercised.
+    private AuditServiceMapper auditServiceMapper;
+
+    @Mock
     private ServiceToDaoMapper<TestDaoEntity, TestServiceModel, TestServiceExtendedModel> serviceToDaoMapper;
 
     // --- Controller under test ---
@@ -68,7 +81,13 @@ class AdminControllerDefaultMethodsTest {
             TestDaoEntity, Long, TestCreateRequest, TestCreateResponse, TestUpdateRequest, TestUpdateResponse> controller;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        auditServiceMapper = new AuditServiceMapperImpl();
+        java.lang.reflect.Field resolverField =
+                AuditServiceMapper.class.getDeclaredField("performedByResolver");
+        resolverField.setAccessible(true);
+        resolverField.set(auditServiceMapper, new AuditPerformedByResolver(userDao));
+
         controller = new AdminController<>() {
             @Override
             public ControllerToServiceMapper<TestServiceModel, TestServiceExtendedModel, TestDtoModel,
@@ -79,6 +98,11 @@ class AdminControllerDefaultMethodsTest {
             @Override
             public AdminService<TestServiceModel, TestServiceExtendedModel, TestDaoEntity, Long> getService() {
                 return service;
+            }
+
+            @Override
+            public AuditServiceMapper getAuditServiceMapper() {
+                return auditServiceMapper;
             }
         };
     }
@@ -250,23 +274,41 @@ class AdminControllerDefaultMethodsTest {
     // --- GET AUDIT ---
 
     @Test
-    @DisplayName("getAudit calls auditLogDao.findByEntityClassAndEntityId")
-    void getAuditCallsAuditLogDao() {
+    @DisplayName("getAudit maps rows to AuditServiceModel (performedBy resolved to name, "
+            + "snapshots as maps) and calls auditLogDao.findByEntityClassAndEntityId")
+    void getAuditMapsRowsToServiceModel() {
         Long entityId = 5L;
         var auditEntry = new AuditLogEntity();
         auditEntry.setEntityClass("TestDaoEntity");
         auditEntry.setEntityId(entityId);
-        auditEntry.setOperation("CREATE");
+        auditEntry.setOperation("UPDATE");
+        // Stored as the acting user's id string, not a name.
+        auditEntry.setPerformedBy("11");
+        auditEntry.setSnapshotBefore("{\"name\":\"old\"}");
+        auditEntry.setSnapshotAfter("{\"name\":\"new\"}");
+
+        var actingUser = new UserEntity();
+        actingUser.setName("Иван Петров");
 
         when(service.getAuditLogDao()).thenReturn(auditLogDao);
         when(service.getDaoModelClass()).thenReturn((Class) TestDaoEntity.class);
         when(auditLogDao.findByEntityClassAndEntityIdOrderByPerformedAtAsc("TestDaoEntity", entityId))
                 .thenReturn(List.of(auditEntry));
+        when(userDao.findById(11L)).thenReturn(java.util.Optional.of(actingUser));
 
-        ResponseEntity<List<AuditLogEntity>> result = controller.getAudit(entityId);
+        ResponseEntity<List<AuditServiceModel>> result = controller.getAudit(entityId);
 
         assertThat(result.getStatusCode().value()).isEqualTo(200);
-        assertThat(result.getBody()).containsExactly(auditEntry);
+        assertThat(result.getBody()).hasSize(1);
+        AuditServiceModel model = result.getBody().get(0);
+        assertThat(model.entityClass()).isEqualTo("TestDaoEntity");
+        assertThat(model.entityId()).isEqualTo(entityId);
+        assertThat(model.operation()).isEqualTo("UPDATE");
+        // performedBy resolved from stored id "11" to the acting user's name.
+        assertThat(model.performedBy()).isEqualTo("Иван Петров");
+        // snapshots parsed into maps.
+        assertThat(model.snapshotBefore()).containsEntry("name", "old");
+        assertThat(model.snapshotAfter()).containsEntry("name", "new");
         verify(auditLogDao).findByEntityClassAndEntityIdOrderByPerformedAtAsc("TestDaoEntity", entityId);
     }
 

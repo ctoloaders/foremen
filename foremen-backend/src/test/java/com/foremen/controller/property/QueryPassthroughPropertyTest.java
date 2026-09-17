@@ -71,6 +71,11 @@ class QueryPassthroughPropertyTest {
                 public AdminService<TestServiceModel, TestServiceExtendedModel, TestDaoEntity, Long> getService() {
                     return service;
                 }
+
+                @Override
+                public com.foremen.service.model.mapper.AuditServiceMapper getAuditServiceMapper() {
+                    return null; // audit endpoint not exercised by this property test
+                }
             };
 
     private final Pageable defaultPageable = PageRequest.of(0, 20);

@@ -2,17 +2,23 @@ package com.foremen.controller.integration;
 
 import com.foremen.dao.CurrencyDao;
 import com.foremen.dao.MeasurementUnitDao;
+import com.foremen.dao.OfferPackageDao;
 import com.foremen.dao.WorkCategoryDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkPriceDao;
 import com.foremen.dao.model.CurrencyEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
+import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.dao.model.WorkPackagePriceEntity;
 import com.foremen.dao.model.WorkPriceEntity;
+import com.foremen.service.pricing.SeededOfferPackages;
 import com.foremen.testsupport.MockMvcSecurityConfig;
 import org.junit.jupiter.api.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -31,27 +37,28 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Integration tests for {@link com.foremen.controller.WorkPriceController} CRUD operations.
+ * Integration tests for {@link com.foremen.controller.WorkPriceController} CRUD operations against the
+ * package-based {@code WorkPrice} aggregator model (FOR-04-12b).
  *
- * <p>Mirrors {@link WorkItemControllerIntegrationTest}: {@code @SpringBootTest} + MockMvc against a
- * Testcontainers PostgreSQL, {@code create-drop} DDL, {@code @WithMockUser(roles="ADMIN")},
- * {@code @Transactional} rollback for isolation. Since {@code WorkPrice} carries two FKs, each scenario
- * first persists a {@link WorkItemEntity} (which itself needs a category + unit) and a
- * {@link CurrencyEntity} fixture and uses their generated ids as {@code workItemId}/{@code currencyId}.
+ * <p>{@code @SpringBootTest} + MockMvc against a Testcontainers PostgreSQL, {@code create-drop} DDL,
+ * {@code @WithMockUser(roles="ADMIN")}, {@code @Transactional} rollback for isolation. A
+ * {@code WorkPrice} is a per-work-item aggregator that owns a {@code packagePrices} collection of
+ * {@link WorkPackagePriceEntity}; each scenario first persists a {@link WorkItemEntity} (category +
+ * unit), a {@link CurrencyEntity}, and an {@link OfferPackageEntity} to reference.
  *
- * <p>Covers: create current price (no validTo → current true) → create historic price (validTo set →
- * current false) → list (rows expose FK ids + workItemName + currencyCode + current) → extended read →
- * update → delete → 404, filtering by {@code workItem.id}, and {@code @Positive} netPrice validation.
+ * <p>Covers: create/update via the {@code packagePrices} upsert list, the list DTO exposing the
+ * code-keyed {@code prices} map (with {@code offerPackageId}), extended read, delete → 404, filtering
+ * by {@code workItem.id}, and {@code @Positive} netPrice validation.
  *
- * <p>Validates: Requirements 2.1, 2.2, 2.3, 2.4, 2.5, 5.1
+ * <p>Validates: Requirements 5.1
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -98,8 +105,26 @@ class WorkPriceControllerIntegrationTest {
     @Autowired
     private CurrencyDao currencyDao;
 
+    @Autowired
+    private OfferPackageDao offerPackageDao;
+
+    @Autowired
+    private SeededOfferPackages seededOfferPackages;
+
     @PersistenceContext
     private EntityManager entityManager;
+
+    /**
+     * Clears the {@link SeededOfferPackages} singleton cache so the code-keyed prices map is built
+     * from the offer packages this test persists (which live only inside the rolled-back test
+     * transaction) instead of a stale set warmed by an earlier test in the shared Spring context.
+     * Mirrors the reset in {@code WorkPricePivotQueryIntegrationTest}.
+     */
+    @BeforeEach
+    void resetOfferPackageCache() {
+        ReflectionTestUtils.setField(seededOfferPackages, "cached", null);
+        ReflectionTestUtils.setField(seededOfferPackages, "byId", null);
+    }
 
     private String unique(String prefix) {
         return prefix + System.nanoTime() + COUNTER.incrementAndGet();
@@ -140,24 +165,39 @@ class WorkPriceControllerIntegrationTest {
         return currencyDao.save(currency);
     }
 
-    private WorkPriceEntity createPrice(WorkItemEntity item, CurrencyEntity currency,
-                                        BigDecimal netPrice, LocalDate validFrom, LocalDate validTo) {
+    private OfferPackageEntity createOfferPackage() {
+        OfferPackageEntity pkg = new OfferPackageEntity();
+        pkg.setCode(unique("OP"));
+        pkg.setOrderNo(1);
+        pkg.setNameRU("Пакет");
+        pkg.setNamePL("Pakiet");
+        pkg.setActive(true);
+        return offerPackageDao.save(pkg);
+    }
+
+    private WorkPriceEntity createAggregator(WorkItemEntity item, OfferPackageEntity offerPackage,
+                                             CurrencyEntity currency, BigDecimal netPrice) {
         WorkPriceEntity price = new WorkPriceEntity();
         price.setWorkItem(item);
-        price.setCurrency(currency);
-        price.setNetPrice(netPrice);
-        price.setValidFrom(validFrom);
-        price.setValidTo(validTo);
+
+        WorkPackagePriceEntity member = new WorkPackagePriceEntity();
+        member.setWorkPrice(price);
+        member.setOfferPackage(offerPackage);
+        member.setCurrency(currency);
+        member.setNetPrice(netPrice);
+        price.getPackagePrices().add(member);
+
         return workPriceDao.save(price);
     }
 
     // --- CREATE ---
 
     @Test
-    @DisplayName("POST /api/work-prices - creates a CURRENT price (no validTo) → current=true")
-    void createCurrentPrice_returnsCurrentTrue() throws Exception {
+    @DisplayName("POST /api/work-prices - creates an aggregator with one package price")
+    void createAggregator_returnsWorkItemAndPackagePrices() throws Exception {
         WorkItemEntity item = createWorkItem("Укладка плитки", "Układanie płytek");
         CurrencyEntity currency = createCurrency();
+        OfferPackageEntity pkg = createOfferPackage();
         entityManager.flush();
 
         mockMvc.perform(post("/api/work-prices")
@@ -165,18 +205,15 @@ class WorkPriceControllerIntegrationTest {
                         .content("""
                                 {
                                     "workItemId": %d,
-                                    "currencyId": %d,
-                                    "netPrice": 99.90,
-                                    "validFrom": "2024-09-05"
+                                    "packagePrices": [
+                                        { "offerPackageId": %d, "currencyId": %d, "netPrice": 99.90 }
+                                    ]
                                 }
-                                """.formatted(item.getId(), currency.getId())))
+                                """.formatted(item.getId(), pkg.getId(), currency.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.workItemId").value(item.getId()))
-                .andExpect(jsonPath("$.currencyId").value(currency.getId()))
-                .andExpect(jsonPath("$.netPrice").value(99.90))
-                .andExpect(jsonPath("$.validFrom").value("2024-09-05"))
-                .andExpect(jsonPath("$.validTo").doesNotExist());
+                .andExpect(jsonPath("$.packagePrices[0].offerPackageId").value(pkg.getId()))
+                .andExpect(jsonPath("$.packagePrices[0].netPrice").value(99.90));
     }
 
     @Test
@@ -184,6 +221,7 @@ class WorkPriceControllerIntegrationTest {
     void createPrice_nonPositiveNetPrice_returns400() throws Exception {
         WorkItemEntity item = createWorkItem("Работа", "Praca");
         CurrencyEntity currency = createCurrency();
+        OfferPackageEntity pkg = createOfferPackage();
         entityManager.flush();
 
         mockMvc.perform(post("/api/work-prices")
@@ -191,11 +229,11 @@ class WorkPriceControllerIntegrationTest {
                         .content("""
                                 {
                                     "workItemId": %d,
-                                    "currencyId": %d,
-                                    "netPrice": 0,
-                                    "validFrom": "2024-09-05"
+                                    "packagePrices": [
+                                        { "offerPackageId": %d, "currencyId": %d, "netPrice": 0 }
+                                    ]
                                 }
-                                """.formatted(item.getId(), currency.getId())))
+                                """.formatted(item.getId(), pkg.getId(), currency.getId())))
                 .andExpect(status().isBadRequest());
     }
 
@@ -203,31 +241,30 @@ class WorkPriceControllerIntegrationTest {
     @DisplayName("POST /api/work-prices - missing workItemId returns 400")
     void createPrice_missingWorkItem_returns400() throws Exception {
         CurrencyEntity currency = createCurrency();
+        OfferPackageEntity pkg = createOfferPackage();
         entityManager.flush();
 
         mockMvc.perform(post("/api/work-prices")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                    "currencyId": %d,
-                                    "netPrice": 50.00,
-                                    "validFrom": "2024-09-05"
+                                    "packagePrices": [
+                                        { "offerPackageId": %d, "currencyId": %d, "netPrice": 50.00 }
+                                    ]
                                 }
-                                """.formatted(currency.getId())))
+                                """.formatted(pkg.getId(), currency.getId())))
                 .andExpect(status().isBadRequest());
     }
 
     // --- READ / LIST ---
 
     @Test
-    @DisplayName("GET /api/work-prices - rows expose FK ids + workItemName + currencyCode + current")
-    void findPrices_exposesFkIdsReferencedValuesAndCurrent() throws Exception {
+    @DisplayName("GET /api/work-prices - rows expose workItemId + workItemName + code-keyed prices map")
+    void findPrices_exposesPricesMap() throws Exception {
         WorkItemEntity item = createWorkItem("Укладка плитки", "Układanie płytek");
         CurrencyEntity currency = createCurrency();
-        WorkPriceEntity current = createPrice(item, currency,
-                new BigDecimal("120.00"), LocalDate.of(2024, 9, 5), null);
-        WorkPriceEntity historic = createPrice(item, currency,
-                new BigDecimal("100.00"), LocalDate.of(2024, 1, 1), LocalDate.of(2024, 9, 4));
+        OfferPackageEntity pkg = createOfferPackage();
+        WorkPriceEntity price = createAggregator(item, pkg, currency, new BigDecimal("120.00"));
         entityManager.flush();
 
         mockMvc.perform(get("/api/work-prices")
@@ -236,18 +273,14 @@ class WorkPriceControllerIntegrationTest {
                         .param("size", "50"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[?(@.id == " + current.getId() + ")].workItemId")
+                .andExpect(jsonPath("$.content[?(@.id == " + price.getId() + ")].workItemId")
                         .value(contains(item.getId().intValue())))
-                .andExpect(jsonPath("$.content[?(@.id == " + current.getId() + ")].currencyId")
-                        .value(contains(currency.getId().intValue())))
-                .andExpect(jsonPath("$.content[?(@.id == " + current.getId() + ")].workItemName")
+                .andExpect(jsonPath("$.content[?(@.id == " + price.getId() + ")].workItemName")
                         .value(contains("Układanie płytek")))
-                .andExpect(jsonPath("$.content[?(@.id == " + current.getId() + ")].currencyCode")
-                        .value(contains(currency.getCode())))
-                .andExpect(jsonPath("$.content[?(@.id == " + current.getId() + ")].current")
-                        .value(contains(true)))
-                .andExpect(jsonPath("$.content[?(@.id == " + historic.getId() + ")].current")
-                        .value(contains(false)));
+                .andExpect(jsonPath("$.content[?(@.id == " + price.getId() + ")].prices." + pkg.getCode()
+                        + ".offerPackageId").value(contains(pkg.getId().intValue())))
+                .andExpect(jsonPath("$.content[?(@.id == " + price.getId() + ")].prices." + pkg.getCode()
+                        + ".netPrice").value(contains(120.00)));
     }
 
     @Test
@@ -255,8 +288,8 @@ class WorkPriceControllerIntegrationTest {
     void findPrices_russianLocale_resolvesWorkItemNameToRU() throws Exception {
         WorkItemEntity item = createWorkItem("Укладка плитки", "Układanie płytek");
         CurrencyEntity currency = createCurrency();
-        WorkPriceEntity price = createPrice(item, currency,
-                new BigDecimal("120.00"), LocalDate.of(2024, 9, 5), null);
+        OfferPackageEntity pkg = createOfferPackage();
+        WorkPriceEntity price = createAggregator(item, pkg, currency, new BigDecimal("120.00"));
         entityManager.flush();
 
         mockMvc.perform(get("/api/work-prices")
@@ -269,21 +302,19 @@ class WorkPriceControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/work-prices/{id} - returns extended DTO with FK ids + price + dates")
+    @DisplayName("GET /api/work-prices/{id} - returns extended DTO with workItemId + packagePrices")
     void findPriceById_returnsExtendedModel() throws Exception {
         WorkItemEntity item = createWorkItem("Работа", "Praca");
         CurrencyEntity currency = createCurrency();
-        WorkPriceEntity price = createPrice(item, currency,
-                new BigDecimal("77.50"), LocalDate.of(2024, 9, 5), null);
+        OfferPackageEntity pkg = createOfferPackage();
+        WorkPriceEntity price = createAggregator(item, pkg, currency, new BigDecimal("77.50"));
         entityManager.flush();
 
         mockMvc.perform(get("/api/work-prices/" + price.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(price.getId()))
                 .andExpect(jsonPath("$.workItemId").value(item.getId()))
-                .andExpect(jsonPath("$.currencyId").value(currency.getId()))
-                .andExpect(jsonPath("$.netPrice").value(77.50))
-                .andExpect(jsonPath("$.validFrom").value("2024-09-05"));
+                .andExpect(jsonPath("$.packagePrices[0].offerPackageId").value(pkg.getId()))
+                .andExpect(jsonPath("$.packagePrices[0].netPrice").value(77.50));
     }
 
     @Test
@@ -301,10 +332,9 @@ class WorkPriceControllerIntegrationTest {
         WorkItemEntity itemA = createWorkItem("Работа A", "Praca A");
         WorkItemEntity itemB = createWorkItem("Работа B", "Praca B");
         CurrencyEntity currency = createCurrency();
-        WorkPriceEntity priceA = createPrice(itemA, currency,
-                new BigDecimal("10.00"), LocalDate.of(2024, 9, 5), null);
-        WorkPriceEntity priceB = createPrice(itemB, currency,
-                new BigDecimal("20.00"), LocalDate.of(2024, 9, 5), null);
+        OfferPackageEntity pkg = createOfferPackage();
+        WorkPriceEntity priceA = createAggregator(itemA, pkg, currency, new BigDecimal("10.00"));
+        WorkPriceEntity priceB = createAggregator(itemB, pkg, currency, new BigDecimal("20.00"));
         entityManager.flush();
 
         mockMvc.perform(get("/api/work-prices")
@@ -319,13 +349,12 @@ class WorkPriceControllerIntegrationTest {
     // --- UPDATE ---
 
     @Test
-    @DisplayName("PUT /api/work-prices/{id} - updates FKs, price and dates")
-    void updatePrice_changesFieldsAndClosesValidity() throws Exception {
-        WorkItemEntity itemOld = createWorkItem("старая", "stara");
-        WorkItemEntity itemNew = createWorkItem("новая", "nowa");
+    @DisplayName("PUT /api/work-prices/{id} - replaces the package price collection")
+    void updatePrice_replacesPackagePrices() throws Exception {
+        WorkItemEntity item = createWorkItem("работа", "praca");
         CurrencyEntity currency = createCurrency();
-        WorkPriceEntity price = createPrice(itemOld, currency,
-                new BigDecimal("50.00"), LocalDate.of(2024, 9, 5), null);
+        OfferPackageEntity pkg = createOfferPackage();
+        WorkPriceEntity price = createAggregator(item, pkg, currency, new BigDecimal("50.00"));
         entityManager.flush();
 
         mockMvc.perform(put("/api/work-prices/" + price.getId())
@@ -333,22 +362,58 @@ class WorkPriceControllerIntegrationTest {
                         .content("""
                                 {
                                     "workItemId": %d,
-                                    "currencyId": %d,
-                                    "netPrice": 65.00,
-                                    "validFrom": "2024-09-05",
-                                    "validTo": "2024-12-31"
+                                    "packagePrices": [
+                                        { "offerPackageId": %d, "currencyId": %d, "netPrice": 65.00 }
+                                    ]
                                 }
-                                """.formatted(itemNew.getId(), currency.getId())))
+                                """.formatted(item.getId(), pkg.getId(), currency.getId())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.workItemId").value(itemNew.getId()))
-                .andExpect(jsonPath("$.netPrice").value(65.00))
-                .andExpect(jsonPath("$.validTo").value("2024-12-31"));
+                .andExpect(jsonPath("$.workItemId").value(item.getId()))
+                .andExpect(jsonPath("$.packagePrices[0].netPrice").value(65.00));
 
         mockMvc.perform(get("/api/work-prices/" + price.getId()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.workItemId").value(itemNew.getId()))
-                .andExpect(jsonPath("$.netPrice").value(65.00))
-                .andExpect(jsonPath("$.validTo").value("2024-12-31"));
+                .andExpect(jsonPath("$.workItemId").value(item.getId()))
+                .andExpect(jsonPath("$.packagePrices[0].netPrice").value(65.00));
+    }
+
+    // --- UNIQUE CONSTRAINT (work_price_id, offer_package_id) ---
+
+    @Test
+    @DisplayName("work_package_prices - duplicate (work_price_id, offer_package_id) is rejected by the unique constraint")
+    void duplicatePackagePriceForSameAggregator_isRejected() throws Exception {
+        WorkItemEntity item = createWorkItem("Дубликат", "Duplikat");
+        CurrencyEntity currency = createCurrency();
+        OfferPackageEntity pkg = createOfferPackage();
+        entityManager.flush();
+
+        // Aggregator carrying TWO package prices that both reference the SAME offer package,
+        // violating the unique (work_price_id, offer_package_id) constraint.
+        WorkPriceEntity price = new WorkPriceEntity();
+        price.setWorkItem(item);
+
+        WorkPackagePriceEntity first = new WorkPackagePriceEntity();
+        first.setWorkPrice(price);
+        first.setOfferPackage(pkg);
+        first.setCurrency(currency);
+        first.setNetPrice(new BigDecimal("100.00"));
+        price.getPackagePrices().add(first);
+
+        WorkPackagePriceEntity duplicate = new WorkPackagePriceEntity();
+        duplicate.setWorkPrice(price);
+        duplicate.setOfferPackage(pkg);
+        duplicate.setCurrency(currency);
+        duplicate.setNetPrice(new BigDecimal("200.00"));
+        price.getPackagePrices().add(duplicate);
+
+        // The DB unique constraint uk_work_package_prices_work_offer rejects the second row. With
+        // IDENTITY id generation the cascaded child INSERTs execute during save(), so the violation
+        // surfaces there (Spring translates Hibernate's ConstraintViolationException into
+        // DataIntegrityViolationException at the repository boundary).
+        assertThatThrownBy(() -> {
+            workPriceDao.save(price);
+            entityManager.flush();
+        }).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     // --- DELETE ---
@@ -358,8 +423,8 @@ class WorkPriceControllerIntegrationTest {
     void deletePrice_returns200ThenNotFound() throws Exception {
         WorkItemEntity item = createWorkItem("удаляемая", "usuwana");
         CurrencyEntity currency = createCurrency();
-        WorkPriceEntity price = createPrice(item, currency,
-                new BigDecimal("30.00"), LocalDate.of(2024, 9, 5), null);
+        OfferPackageEntity pkg = createOfferPackage();
+        WorkPriceEntity price = createAggregator(item, pkg, currency, new BigDecimal("30.00"));
         entityManager.flush();
 
         mockMvc.perform(delete("/api/work-prices/" + price.getId()))

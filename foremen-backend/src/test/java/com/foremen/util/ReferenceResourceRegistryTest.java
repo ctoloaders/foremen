@@ -6,6 +6,7 @@ import com.foremen.controller.AdminReadOnlyController;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.ReadOnlyAdminService;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import com.foremen.util.ReferenceResourceRegistry.Reference;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -119,6 +120,11 @@ class ReferenceResourceRegistryTest {
             AdminService<Object, Object, StubRoleEntity, Long> service = mock(AdminService.class);
             when(service.getDaoModelClass()).thenReturn(StubRoleEntity.class);
             return service;
+        }
+
+        @Override
+        public AuditServiceMapper getAuditServiceMapper() {
+            return mock(AuditServiceMapper.class);
         }
     }
 

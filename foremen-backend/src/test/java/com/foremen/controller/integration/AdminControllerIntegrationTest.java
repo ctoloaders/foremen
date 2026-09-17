@@ -4,11 +4,16 @@ import com.foremen.config.i18n.MessageResolver;
 import com.foremen.controller.AdminController;
 import com.foremen.controller.advice.ForemenControllerAdvice;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.dao.UserDao;
+import com.foremen.dao.model.UserEntity;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.audit.AuditLogEntity;
+import com.foremen.service.audit.AuditPerformedByResolver;
+import com.foremen.service.model.mapper.AuditServiceMapper;
+import com.foremen.service.model.mapper.AuditServiceMapperImpl;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,12 +75,15 @@ class AdminControllerIntegrationTest {
     @Autowired
     private ServiceToDaoMapper<TestDaoEntity, TestServiceModel, TestServiceExtendedModel> mockServiceToDaoMapper;
 
+    @Autowired
+    private UserDao mockUserDao;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-        Mockito.reset(mockService, mockMapper, mockAuditLogDao, mockServiceToDaoMapper);
+        Mockito.reset(mockService, mockMapper, mockAuditLogDao, mockServiceToDaoMapper, mockUserDao);
     }
 
     // --- Test Models ---
@@ -150,6 +158,30 @@ class AdminControllerIntegrationTest {
         public ServiceToDaoMapper<TestDaoEntity, TestServiceModel, TestServiceExtendedModel> mockServiceToDaoMapper() {
             return Mockito.mock(ServiceToDaoMapper.class);
         }
+
+        @Bean
+        public UserDao mockUserDao() {
+            return Mockito.mock(UserDao.class);
+        }
+
+        /**
+         * Real resolver over the mocked {@link UserDao}. Registered as a bean so the MapStruct-
+         * generated {@link AuditServiceMapperImpl} gets it field-injected (it is {@code @Autowired}
+         * on the abstract mapper), matching production wiring.
+         */
+        @Bean
+        public AuditPerformedByResolver auditPerformedByResolver(UserDao userDao) {
+            return new AuditPerformedByResolver(userDao);
+        }
+
+        /**
+         * Real audit mapper (MapStruct-generated impl), so the per-entity {@code /audit/{id}}
+         * endpoint actually resolves {@code performedBy} and parses snapshots into maps.
+         */
+        @Bean
+        public AuditServiceMapper auditServiceMapper() {
+            return new AuditServiceMapperImpl();
+        }
     }
 
     @RestController
@@ -173,6 +205,9 @@ class AdminControllerIntegrationTest {
         private ControllerToServiceMapper<TestServiceModel, TestServiceExtendedModel, TestDtoModel,
                 TestDtoExtendedModel, TestCreateRequest, TestCreateResponse, TestUpdateRequest, TestUpdateResponse> mockControllerMapper;
 
+        @Autowired
+        private AuditServiceMapper auditServiceMapper;
+
         @Override
         public ControllerToServiceMapper<TestServiceModel, TestServiceExtendedModel, TestDtoModel,
                 TestDtoExtendedModel, TestCreateRequest, TestCreateResponse, TestUpdateRequest, TestUpdateResponse> getMapper() {
@@ -182,6 +217,11 @@ class AdminControllerIntegrationTest {
         @Override
         public AdminService<TestServiceModel, TestServiceExtendedModel, TestDaoEntity, Long> getService() {
             return mockAdminService;
+        }
+
+        @Override
+        public AuditServiceMapper getAuditServiceMapper() {
+            return auditServiceMapper;
         }
     }
 
@@ -415,26 +455,46 @@ class AdminControllerIntegrationTest {
     // --- AUDIT Tests ---
 
     @Test
-    @DisplayName("GET /audit/{id} → 200 + list of audit records")
-    void getAuditReturns200WithAuditRecords() throws Exception {
+    @DisplayName("GET /audit/{id} → 200 + list of AuditServiceModel (performedBy resolved to name, "
+            + "snapshots as objects, no BaseEntity leak)")
+    void getAuditReturns200WithMappedAuditRecords() throws Exception {
         var auditEntry = new AuditLogEntity();
         auditEntry.setEntityClass("TestDaoEntity");
         auditEntry.setEntityId(1L);
-        auditEntry.setOperation("CREATE");
-        auditEntry.setPerformedBy("admin");
+        auditEntry.setOperation("UPDATE");
+        // Stored as the acting user's id string (JWT sub), not a name.
+        auditEntry.setPerformedBy("11");
         auditEntry.setPerformedAt(LocalDateTime.of(2024, 1, 15, 10, 30, 0));
+        auditEntry.setSnapshotBefore("{\"name\":\"old\"}");
+        auditEntry.setSnapshotAfter("{\"name\":\"new\"}");
+        // BaseEntity fields that MUST NOT leak into the response.
+        auditEntry.setCreatedBy("someone");
+        auditEntry.setCreatedDate(LocalDateTime.of(2024, 1, 1, 0, 0, 0));
+
+        var actingUser = new UserEntity();
+        actingUser.setName("Иван Петров");
 
         when(mockService.getAuditLogDao()).thenReturn(mockAuditLogDao);
         when(mockService.getDaoModelClass()).thenReturn((Class) TestDaoEntity.class);
         when(mockAuditLogDao.findByEntityClassAndEntityIdOrderByPerformedAtAsc("TestDaoEntity", 1L))
                 .thenReturn(List.of(auditEntry));
+        when(mockUserDao.findById(11L)).thenReturn(java.util.Optional.of(actingUser));
 
         mockMvc.perform(get("/api/admin/test-entity/audit/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].entityClass").value("TestDaoEntity"))
                 .andExpect(jsonPath("$[0].entityId").value(1))
-                .andExpect(jsonPath("$[0].operation").value("CREATE"))
-                .andExpect(jsonPath("$[0].performedBy").value("admin"));
+                .andExpect(jsonPath("$[0].operation").value("UPDATE"))
+                // performedBy resolved from the stored id "11" to the acting user's name.
+                .andExpect(jsonPath("$[0].performedBy").value("Иван Петров"))
+                // snapshots parsed into maps, not raw strings.
+                .andExpect(jsonPath("$[0].snapshotBefore.name").value("old"))
+                .andExpect(jsonPath("$[0].snapshotAfter.name").value("new"))
+                // BaseEntity fields must not leak.
+                .andExpect(jsonPath("$[0].createdBy").doesNotExist())
+                .andExpect(jsonPath("$[0].createdDate").doesNotExist())
+                .andExpect(jsonPath("$[0].updatedBy").doesNotExist())
+                .andExpect(jsonPath("$[0].updatedDate").doesNotExist());
     }
 
     // --- DELETE Tests ---

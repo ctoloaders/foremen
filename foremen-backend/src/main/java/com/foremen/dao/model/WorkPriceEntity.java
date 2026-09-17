@@ -5,8 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "work_prices")
@@ -16,19 +16,9 @@ import java.time.LocalDate;
 public class WorkPriceEntity extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "work_item_id", nullable = false)
+    @JoinColumn(name = "work_item_id", nullable = false, unique = true)
     private WorkItemEntity workItem;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "currency_id", nullable = false)
-    private CurrencyEntity currency;
-
-    @Column(name = "net_price", nullable = false)
-    private BigDecimal netPrice;
-
-    @Column(name = "valid_from", nullable = false)
-    private LocalDate validFrom;
-
-    @Column(name = "valid_to")
-    private LocalDate validTo;
+    @OneToMany(mappedBy = "workPrice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<WorkPackagePriceEntity> packagePrices = new ArrayList<>();
 }

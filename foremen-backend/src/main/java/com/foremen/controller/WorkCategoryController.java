@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.WorkCategoryService;
 import com.foremen.service.model.WorkCategoryServiceExtendedModel;
 import com.foremen.service.model.WorkCategoryServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class WorkCategoryController implements AdminController<
 
     private final WorkCategoryService service;
     private final WorkCategoryControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<WorkCategoryServiceModel, WorkCategoryServiceExtendedModel,
@@ -44,5 +46,10 @@ public class WorkCategoryController implements AdminController<
     public AdminService<WorkCategoryServiceModel, WorkCategoryServiceExtendedModel,
             WorkCategoryEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

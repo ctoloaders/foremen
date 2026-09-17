@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-12b: migrate the FOR-04-12 single-price WorkPrice model
+        (work_item, currency, net_price, valid_from, valid_to) into the
+        package-based collection model:
+          - work_prices becomes a per-work-item aggregator (unique work_item_id,
+            price columns removed);
+          - a new work_package_prices join table carries the per-package price
+            (work_price_id, offer_package_id, currency_id, net_price).
+        Existing current prices (valid_to IS NULL) are fanned out into one
+        work_package_prices row per existing offer package (discovered
+        dynamically from offer_packages, no hard-coded codes).
+        Every sub-changeset is idempotent (preConditions + MARK_RAN).
+    -->
+
+    <!-- 044a: de-duplicate to exactly one aggregator per work item.
+         Keep the current row (valid_to IS NULL), delete the historical rows
+         (valid_to IS NOT NULL). Only meaningful while valid_to still exists. -->
+    <changeSet id="044a-dedupe-work-prices-to-current" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="work_prices" columnName="valid_to"/>
+        </preConditions>
+
+        <sql>
+            DELETE FROM work_prices WHERE valid_to IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <!-- 044b: create the work_package_prices join table with its three FKs.
+         The two owner FKs cascade on delete (whole-OfferPackage and, through
+         work_prices, whole-WorkItem cleanup); currency_id keeps the default
+         RESTRICT (currencies are reference data). -->
+    <changeSet id="044b-create-work-package-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_package_prices"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_package_prices">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="work_price_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="net_price" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            constraintName="fk_work_package_prices_work_price"
+            baseTableName="work_package_prices"
+            baseColumnNames="work_price_id"
+            referencedTableName="work_prices"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_work_package_prices_offer_package"
+            baseTableName="work_package_prices"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_work_package_prices_currency"
+            baseTableName="work_package_prices"
+            baseColumnNames="currency_id"
+            referencedTableName="currencies"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- 044c: fan-out. For each remaining (current) work_prices row, create one
+         work_package_prices row per existing offer package, copying net_price
+         and currency_id. CROSS JOIN over all offer_packages (no hard-coded
+         codes); NOT EXISTS guards against re-insertion so the changeset can be
+         re-run. Runs only while work_prices still carries the price columns. -->
+    <changeSet id="044c-fanout-work-prices-to-packages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <columnExists tableName="work_prices" columnName="net_price"/>
+                <columnExists tableName="work_prices" columnName="currency_id"/>
+                <tableExists tableName="work_package_prices"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO work_package_prices
+                (work_price_id, offer_package_id, currency_id, net_price, created_date, created_by)
+            SELECT wp.id, op.id, wp.currency_id, wp.net_price, NOW(), 'system'
+            FROM work_prices wp
+            CROSS JOIN offer_packages op
+            WHERE NOT EXISTS (
+                SELECT 1 FROM work_package_prices wpp
+                WHERE wpp.work_price_id = wp.id
+                  AND wpp.offer_package_id = op.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 044d: enforce at most one price per (work_price, offer_package). -->
+    <changeSet id="044d-uk-work-package-prices-work-offer" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="work_package_prices"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM information_schema.table_constraints
+                    WHERE constraint_name = 'uk_work_package_prices_work_offer'
+                      AND table_name = 'work_package_prices'
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <addUniqueConstraint
+            tableName="work_package_prices"
+            columnNames="work_price_id, offer_package_id"
+            constraintName="uk_work_package_prices_work_offer"/>
+    </changeSet>
+
+    <!-- 044e: enforce at most one aggregator per work item. -->
+    <changeSet id="044e-uk-work-prices-work-item" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM information_schema.table_constraints
+                WHERE constraint_name = 'uk_work_prices_work_item'
+                  AND table_name = 'work_prices'
+            </sqlCheck>
+        </preConditions>
+
+        <addUniqueConstraint
+            tableName="work_prices"
+            columnNames="work_item_id"
+            constraintName="uk_work_prices_work_item"/>
+    </changeSet>
+
+    <!-- 044f: drop the moved price columns from the aggregator. Each column drop
+         is guarded independently so partial re-runs are safe. The FK on
+         currency_id is dropped implicitly when its column is dropped. -->
+    <changeSet id="044f-drop-work-prices-price-columns" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <or>
+                <columnExists tableName="work_prices" columnName="valid_from"/>
+                <columnExists tableName="work_prices" columnName="valid_to"/>
+                <columnExists tableName="work_prices" columnName="net_price"/>
+                <columnExists tableName="work_prices" columnName="currency_id"/>
+            </or>
+        </preConditions>
+
+        <sql>
+            ALTER TABLE work_prices DROP COLUMN IF EXISTS valid_from;
+            ALTER TABLE work_prices DROP COLUMN IF EXISTS valid_to;
+            ALTER TABLE work_prices DROP COLUMN IF EXISTS net_price;
+            ALTER TABLE work_prices DROP COLUMN IF EXISTS currency_id;
+        </sql>
+    </changeSet>
+
+    <!-- 044g: recreate fk_work_prices_work_item as ON DELETE CASCADE so that
+         deleting a WorkItem removes its aggregator (and, via 044b's cascade on
+         work_price_id, all its package prices). Drop-then-recreate; the guard
+         re-runs harmlessly (drop IF EXISTS, add only when absent). -->
+    <changeSet id="044g-work-prices-work-item-fk-cascade" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="work_prices"/>
+        </preConditions>
+
+        <sql>
+            ALTER TABLE work_prices DROP CONSTRAINT IF EXISTS fk_work_prices_work_item;
+            ALTER TABLE work_prices
+                ADD CONSTRAINT fk_work_prices_work_item
+                FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

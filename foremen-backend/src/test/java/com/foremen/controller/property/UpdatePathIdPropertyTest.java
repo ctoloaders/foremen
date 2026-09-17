@@ -76,6 +76,11 @@ class UpdatePathIdPropertyTest {
                     public AdminService<Object, TestServiceExtendedModel, Object, Long> getService() {
                         return mockService;
                     }
+
+                    @Override
+                    public com.foremen.service.model.mapper.AuditServiceMapper getAuditServiceMapper() {
+                        return null; // audit endpoint not exercised by this property test
+                    }
                 };
 
         // Act
@@ -141,6 +146,11 @@ class UpdatePathIdPropertyTest {
                     @Override
                     public AdminService<Object, TestServiceExtendedModel, Object, Long> getService() {
                         return mockService;
+                    }
+
+                    @Override
+                    public com.foremen.service.model.mapper.AuditServiceMapper getAuditServiceMapper() {
+                        return null; // audit endpoint not exercised by this property test
                     }
                 };
 

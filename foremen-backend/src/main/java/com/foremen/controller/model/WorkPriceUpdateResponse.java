@@ -1,7 +1,9 @@
 package com.foremen.controller.model;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.util.List;
 
-public record WorkPriceUpdateResponse(Long id, Long workItemId, Long currencyId, BigDecimal netPrice,
-                                      LocalDate validFrom, LocalDate validTo) {}
+/**
+ * Update response for a {@code WorkPrice} aggregator: echoes the work item and the collection of
+ * per-package prices that were upserted. Mapped from {@code WorkPriceServiceExtendedModel}.
+ */
+public record WorkPriceUpdateResponse(Long workItemId, List<PackagePriceUpsert> packagePrices) {}

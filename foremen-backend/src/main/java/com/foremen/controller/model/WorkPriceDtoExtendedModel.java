@@ -1,7 +1,12 @@
 package com.foremen.controller.model;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
-public record WorkPriceDtoExtendedModel(Long id, Long workItemId, Long currencyId, BigDecimal netPrice,
-                                        LocalDate validFrom, LocalDate validTo) {}
+import java.util.List;
+
+public record WorkPriceDtoExtendedModel(
+    @NotNull Long workItemId,
+    @NotEmpty List<@Valid PackagePriceUpsert> packagePrices
+) {}

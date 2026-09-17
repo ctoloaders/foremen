@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.VatRateService;
 import com.foremen.service.model.VatRateServiceExtendedModel;
 import com.foremen.service.model.VatRateServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class VatRateController implements AdminController<
 
     private final VatRateService service;
     private final VatRateControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<VatRateServiceModel, VatRateServiceExtendedModel,
@@ -44,5 +46,10 @@ public class VatRateController implements AdminController<
     public AdminService<VatRateServiceModel, VatRateServiceExtendedModel,
             VatRateEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

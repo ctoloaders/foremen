@@ -1,15 +1,12 @@
 package com.foremen.controller.model;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.util.List;
 
 public record WorkPriceUpdateRequest(
     @NotNull Long workItemId,
-    @NotNull Long currencyId,
-    @NotNull @Positive BigDecimal netPrice,
-    @NotNull LocalDate validFrom,
-    LocalDate validTo
+    @NotEmpty List<@Valid PackagePriceUpsert> packagePrices
 ) {}

@@ -10,6 +10,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.RoleService;
 import com.foremen.service.model.RoleServiceExtendedModel;
 import com.foremen.service.model.RoleServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +34,7 @@ public class RoleController implements AdminController<
 
     private final RoleService roleService;
     private final RoleControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<RoleServiceModel, RoleServiceExtendedModel,
@@ -45,6 +47,11 @@ public class RoleController implements AdminController<
     @Override
     public AdminService<RoleServiceModel, RoleServiceExtendedModel, RoleEntity, Long> getService() {
         return roleService;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 
     @GetMapping("/{id}/permissions")

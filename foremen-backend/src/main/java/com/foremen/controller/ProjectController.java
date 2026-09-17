@@ -16,6 +16,7 @@ import com.foremen.service.ProjectService;
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.service.model.ProjectServiceExtendedModel;
 import com.foremen.service.model.ProjectServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -65,6 +66,7 @@ public class ProjectController implements AdminController<
 
     private final ProjectService service;
     private final ProjectControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<ProjectServiceModel, ProjectServiceExtendedModel,
@@ -78,6 +80,11 @@ public class ProjectController implements AdminController<
     public AdminService<ProjectServiceModel, ProjectServiceExtendedModel,
             ProjectEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 
     /**

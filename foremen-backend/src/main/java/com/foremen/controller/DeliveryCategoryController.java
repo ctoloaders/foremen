@@ -9,6 +9,7 @@ import com.foremen.service.AdminService;
 import com.foremen.service.DeliveryCategoryService;
 import com.foremen.service.model.DeliveryCategoryServiceExtendedModel;
 import com.foremen.service.model.DeliveryCategoryServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,7 @@ public class DeliveryCategoryController implements AdminController<
 
     private final DeliveryCategoryService service;
     private final DeliveryCategoryControllerMapper controllerMapper;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<DeliveryCategoryServiceModel, DeliveryCategoryServiceExtendedModel,
@@ -44,5 +46,10 @@ public class DeliveryCategoryController implements AdminController<
     public AdminService<DeliveryCategoryServiceModel, DeliveryCategoryServiceExtendedModel,
             DeliveryCategoryEntity, Long> getService() {
         return service;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 }

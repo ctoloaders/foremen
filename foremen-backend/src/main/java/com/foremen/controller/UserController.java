@@ -11,6 +11,7 @@ import com.foremen.service.ClientRegistrationService;
 import com.foremen.service.UserService;
 import com.foremen.service.model.UserServiceExtendedModel;
 import com.foremen.service.model.UserServiceModel;
+import com.foremen.service.model.mapper.AuditServiceMapper;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,7 @@ public class UserController implements AdminController<
     private final UserService userService;
     private final UserControllerMapper controllerMapper;
     private final ClientRegistrationService clientRegistrationService;
+    private final AuditServiceMapper auditServiceMapper;
 
     @Override
     public ControllerToServiceMapper<UserServiceModel, UserServiceExtendedModel,
@@ -51,6 +53,11 @@ public class UserController implements AdminController<
     @Override
     public AdminService<UserServiceModel, UserServiceExtendedModel, UserEntity, Long> getService() {
         return userService;
+    }
+
+    @Override
+    public AuditServiceMapper getAuditServiceMapper() {
+        return auditServiceMapper;
     }
 
     /**

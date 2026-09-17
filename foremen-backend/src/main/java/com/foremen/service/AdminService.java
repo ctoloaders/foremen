@@ -242,14 +242,24 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         auditLog.setPerformedBy(performedBy);
         auditLog.setPerformedAt(LocalDateTime.now());
         auditLog.setSnapshotBefore(beforeSnapshot);
-        auditLog.setSnapshotAfter(serializeEntity(after));
+        auditLog.setSnapshotAfter(serializeUpdateAfterSnapshot(beforeSnapshot, after));
 
         getAuditLogDao().save(auditLog);
     }
 
     // --- Serialization ---
 
-    private String serializeEntity(DaoModel entity) {
+    /**
+     * Serializes a single entity to a JSON snapshot for audit before/after fields. This is the
+     * overridable seam for CREATE/DELETE and the UPDATE before-state: subclasses whose JPA graph is
+     * cyclic (e.g. an entity holding a collection that back-references it) override this to build a
+     * flat, cycle-free snapshot instead of serializing the whole entity graph.
+     *
+     * <p>Default body: {@code null} in yields {@code null} out; otherwise the shared audit mapper
+     * serializes the entity, and any failure is captured as the
+     * {@code {"error":"serialization_failed","class":...}} fallback rather than crashing the write.
+     */
+    default String serializeEntity(DaoModel entity) {
         if (entity == null) return null;
         try {
             return AUDIT_OBJECT_MAPPER.writeValueAsString(entity);
@@ -257,6 +267,23 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
             // If serialization fails, store a fallback message rather than crashing the operation
             return "{\"error\":\"serialization_failed\",\"class\":\"" + entity.getClass().getSimpleName() + "\"}";
         }
+    }
+
+    /**
+     * Produces the UPDATE after-state snapshot, given the already-serialized before-state string and
+     * the post-update entity. This is the overridable seam for the UPDATE flow only: the default body
+     * simply serializes the after entity via {@link #serializeEntity(Object)}, so ordinary entities get
+     * a full after snapshot. Subclasses override this to build a cross-state (before&harr;after) diff.
+     *
+     * <p>The before-state is passed as the captured serialized string (not a live entity) because the
+     * update flow mutates {@code existing} in place, so the pre-state is only reliably available as the
+     * string captured before the mapper applied its changes.
+     *
+     * @param beforeSnapshot the serialized before-state (the value stored in {@code snapshotBefore})
+     * @param after          the entity after the update was applied
+     */
+    default String serializeUpdateAfterSnapshot(String beforeSnapshot, DaoModel after) {
+        return serializeEntity(after);
     }
 
     // --- Utility Methods ---
