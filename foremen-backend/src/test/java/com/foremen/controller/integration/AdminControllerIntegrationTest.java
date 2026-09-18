@@ -500,12 +500,12 @@ class AdminControllerIntegrationTest {
     // --- DELETE Tests ---
 
     @Test
-    @DisplayName("DELETE /{id} → 200")
-    void deleteByIdReturns200() throws Exception {
+    @DisplayName("DELETE /{id} → 204")
+    void deleteByIdReturns204() throws Exception {
         doNothing().when(mockService).deleteById(1L);
 
         mockMvc.perform(delete("/api/admin/test-entity/1"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         verify(mockService).deleteById(1L);
     }
@@ -525,13 +525,13 @@ class AdminControllerIntegrationTest {
     // --- SET PROPERTIES TO NULL Tests ---
 
     @Test
-    @DisplayName("DELETE /{id}/property?properties=field1,field2 → 200")
-    void deletePropertyReturns200() throws Exception {
+    @DisplayName("DELETE /{id}/property?properties=field1,field2 → 204")
+    void deletePropertyReturns204() throws Exception {
         doNothing().when(mockService).setPropertiesToNull(eq(1L), eq(Set.of("field1", "field2")));
 
         mockMvc.perform(delete("/api/admin/test-entity/1/property")
                         .param("properties", "field1", "field2"))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         verify(mockService).setPropertiesToNull(eq(1L), eq(Set.of("field1", "field2")));
     }

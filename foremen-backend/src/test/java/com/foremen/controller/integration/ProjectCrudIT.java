@@ -160,7 +160,7 @@ class ProjectCrudIT {
         long id = createProject(uniqueName(), "ACTIVE");
 
         mockMvc.perform(delete("/api/projects/" + id))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/projects/" + id))
                 .andExpect(status().isNotFound());

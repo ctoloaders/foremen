@@ -258,7 +258,7 @@ class MaterialCategoryControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/material-categories/" + materialCategory.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/material-categories/" + materialCategory.getId()))
                 .andExpect(status().isNotFound());

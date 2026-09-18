@@ -285,7 +285,7 @@ class DeliveryStatusControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/delivery-statuses/" + entity.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/delivery-statuses/" + entity.getId()))
                 .andExpect(status().isNotFound());

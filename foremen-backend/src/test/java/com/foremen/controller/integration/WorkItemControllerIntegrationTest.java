@@ -351,7 +351,7 @@ class WorkItemControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/work-items/" + item.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/work-items/" + item.getId()))
                 .andExpect(status().isNotFound());

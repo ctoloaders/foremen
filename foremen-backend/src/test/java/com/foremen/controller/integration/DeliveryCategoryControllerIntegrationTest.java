@@ -258,7 +258,7 @@ class DeliveryCategoryControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/delivery-categories/" + deliveryCategory.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/delivery-categories/" + deliveryCategory.getId()))
                 .andExpect(status().isNotFound());

@@ -269,7 +269,7 @@ class PermissionManagementIntegrationTest {
 
         // Delete the role
         mockMvc.perform(delete("/api/roles/" + role.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         entityManager.flush();
         entityManager.clear();

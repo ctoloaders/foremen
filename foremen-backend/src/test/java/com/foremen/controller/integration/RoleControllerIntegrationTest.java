@@ -209,7 +209,7 @@ class RoleControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/roles/" + role.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         // Verify role no longer exists
         mockMvc.perform(get("/api/roles/" + role.getId()))

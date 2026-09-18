@@ -175,7 +175,7 @@ public interface AdminController<
     @PermissionOperation("DELETE")
     default ResponseEntity<Void> deleteById(@PathVariable ID id) {
         getService().deleteById(id);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     // --- SET PROPERTIES TO NULL ---
@@ -186,7 +186,7 @@ public interface AdminController<
             @PathVariable ID id,
             @RequestParam(name = "properties") Set<String> properties) {
         getService().setPropertiesToNull(id, properties);
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 
     // --- I18N DISCOVERY ---

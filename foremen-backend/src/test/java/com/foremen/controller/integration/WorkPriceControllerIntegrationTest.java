@@ -428,7 +428,7 @@ class WorkPriceControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/work-prices/" + price.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/work-prices/" + price.getId()))
                 .andExpect(status().isNotFound());

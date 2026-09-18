@@ -285,7 +285,7 @@ class OfferPackageControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/offer-packages/" + entity.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/offer-packages/" + entity.getId()))
                 .andExpect(status().isNotFound());
