@@ -109,6 +109,34 @@ export async function uploadPhoto(
 }
 
 /**
+ * Generates a filename for the reprocessed receipt PDF uploaded to Drive.
+ * Format: YYYY-MM-DD_HH-MM_<store>_<sum>.pdf
+ */
+export function generatePdfFileName(storeName: string, sum: number): string {
+  const now = new Date();
+  const date = now.toISOString().split("T")[0];
+  const time = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`;
+  const store = transliterate(storeName);
+  return `${date}_${time}_${store}_${sum}.pdf`;
+}
+
+/**
+ * Uploads a single multi-page receipt PDF to the project's Drive folder.
+ * Returns the webViewLink for the uploaded PDF.
+ */
+export async function uploadReceiptPdf(
+  driveUrl: string,
+  storeName: string,
+  sum: number,
+  pdfBuffer: Buffer,
+): Promise<{ link: string }> {
+  const folderId = extractFolderId(driveUrl);
+  const fileName = generatePdfFileName(storeName, sum);
+  const result = await uploadFileToDrive(folderId, fileName, pdfBuffer, "application/pdf");
+  return { link: result.webViewLink };
+}
+
+/**
  * Uploads multiple photos (multi-page receipt) to a Drive folder.
  * For a single file: uses standard naming (no page suffix).
  * For multiple files: appends _page<N> to each filename.

@@ -70,6 +70,11 @@ export const config = {
     enabled: (process.env.OCR_ENABLED || "true") === "true",
     projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || "",
   },
+  reprocess: {
+    // When enabled, uploaded receipt photos are cropped/deskewed and saved as a single
+    // multi-page PDF to Drive. On any failure the bot falls back to uploading originals.
+    enabled: (process.env.RECEIPT_REPROCESS_ENABLED || "true") === "true",
+  },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || "",
     model: process.env.GEMINI_MODEL || "gemini-3.6-flash",

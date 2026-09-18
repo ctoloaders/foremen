@@ -4,9 +4,12 @@ import { ConversationStep, ConversationState } from "../state/machine.js";
 import { downloadFile } from "../services/telegram.js";
 import { extractTextFromPages } from "../services/ocr.js";
 import { parseReceipt } from "../services/gemini.js";
-import { uploadPhotos, formatPhotoLinks } from "../services/drive.js";
+import { uploadPhotos, uploadReceiptPdf, formatPhotoLinks } from "../services/drive.js";
 import { appendReceiptRow } from "../services/sheets.js";
+import { reprocessPages } from "../services/reprocess.js";
+import { buildReceiptPdf } from "../services/pdf.js";
 import { sessionLog } from "../services/session-log.js";
+import { config } from "../config.js";
 import { withRetry } from "../utils/retry.js";
 import { logger } from "../utils/logger.js";
 
@@ -97,6 +100,49 @@ export function createOcrCallbackHandler(bot: Bot) {
   }
 
   /**
+   * Uploads the receipt artifact to Drive and returns the resulting view links.
+   *
+   * Preferred: reprocess every page (crop + perspective-correct to a rectangle) and store a
+   * single multi-page PDF. If reprocessing or PDF assembly fails — or the feature flag is off —
+   * it falls back to uploading the original photos. A Drive API failure on the PDF also falls
+   * back to originals. Any failure of the fallback itself propagates to the caller.
+   */
+  async function uploadReceiptArtifact(
+    state: ConversationState,
+    files: Array<{ buffer: Buffer; mimeType: string }>,
+    telegramId: number,
+  ): Promise<string[]> {
+    if (config.reprocess.enabled) {
+      try {
+        const pages = await reprocessPages(files);
+        const pdfBuffer = await buildReceiptPdf(
+          pages.map((p) => ({ buffer: p.buffer, mimeType: p.mimeType })),
+        );
+        const { link } = await withRetry(() =>
+          uploadReceiptPdf(state.projectDriveUrl!, state.storeName!, state.sum!, pdfBuffer),
+        );
+        logger.info("Receipt PDF uploaded", {
+          telegramId,
+          pages: pages.length,
+          warpedPages: pages.filter((p) => p.warped).length,
+        });
+        return [link];
+      } catch (err: any) {
+        logger.warn("Receipt PDF path failed, falling back to original photos", {
+          telegramId,
+          error: err?.message,
+        });
+      }
+    }
+
+    // Fallback: upload the original photos as-is.
+    const result = await withRetry(() =>
+      uploadPhotos(state.projectDriveUrl!, state.storeName!, state.sum!, files),
+    );
+    return result.links;
+  }
+
+  /**
    * Saves the receipt in OCR flow: downloads photos, uploads to Drive, writes row to Sheets.
    */
   async function saveReceiptOcr(ctx: Context, state: ConversationState): Promise<void> {
@@ -112,13 +158,12 @@ export function createOcrCallbackHandler(bot: Bot) {
         files.push({ buffer, mimeType });
       }
 
-      // 2. Upload all photos to Drive (with retry)
+      // 2. Upload to Drive (with retry).
+      //    Preferred path: reprocess pages (crop + deskew) into ONE multi-page PDF.
+      //    On any reprocess/PDF failure, fall back to uploading the original photos.
       let links: string[];
       try {
-        const result = await withRetry(() =>
-          uploadPhotos(state.projectDriveUrl!, state.storeName!, state.sum!, files)
-        );
-        links = result.links;
+        links = await uploadReceiptArtifact(state, files, telegramId);
       } catch (err: any) {
         logger.error("Drive upload failed (OCR flow)", { telegramId, error: err.message });
         if (state.sessionId) {
