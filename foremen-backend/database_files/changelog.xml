@@ -50,5 +50,12 @@
     <include file="database_files/changesets/043-seed-rooms-resource.xml"/>
     <include file="database_files/changesets/044-migrate-work-prices-to-packages.xml"/>
     <include file="database_files/changesets/045-seed-work-package-prices.xml"/>
+    <include file="database_files/changesets/046-create-material-types.xml"/>
+    <include file="database_files/changesets/047-seed-material-types-resource.xml"/>
+    <include file="database_files/changesets/048-create-material-producers.xml"/>
+    <include file="database_files/changesets/049-seed-material-producers-resource.xml"/>
+    <include file="database_files/changesets/050-create-materials.xml"/>
+    <include file="database_files/changesets/051-seed-materials-resource.xml"/>
+    <include file="database_files/changesets/052-reseed-material-categories.xml"/>
 
 </databaseChangeLog>

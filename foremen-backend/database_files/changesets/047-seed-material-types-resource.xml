@@ -1,0 +1,684 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed MATERIAL_TYPES resource into resources table -->
+    <changeSet id="047-seed-material-types-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'MATERIAL_TYPES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="MATERIAL_TYPES"/>
+            <column name="name_ru" value="Типы материалов"/>
+            <column name="name_pl" value="Typy materiałów"/>
+            <column name="description_ru" value="Справочник типов материалов"/>
+            <column name="description_pl" value="Katalog typów materiałów"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on MATERIAL_TYPES resource -->
+    <changeSet id="047-seed-material-types-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on MATERIAL_TYPES resource -->
+    <changeSet id="047-seed-material-types-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on MATERIAL_TYPES resource -->
+    <changeSet id="047-seed-material-types-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on MATERIAL_TYPES resource -->
+    <changeSet id="047-seed-material-types-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on MATERIAL_TYPES resource -->
+    <changeSet id="047-seed-material-types-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the MATERIAL_TYPES grants
+        (deny-by-default). Like MATERIAL_CATEGORIES / WORK_CATEGORIES /
+        MEASUREMENT_UNITS, FINANCIER receives a READ grant here. Custom
+        (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- Seed the 39 distinct material types (CSV column Typ) -->
+
+    <!-- Typ: Laminat / Ламинат -->
+    <changeSet id="047-seed-material-types-laminat" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'laminat'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="laminat"/>
+            <column name="name_ru" value="Ламинат"/>
+            <column name="name_pl" value="Laminat"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Winyl / Винил -->
+    <changeSet id="047-seed-material-types-winyl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'winyl'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="winyl"/>
+            <column name="name_ru" value="Винил"/>
+            <column name="name_pl" value="Winyl"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Winyl prosty / Винил прямой -->
+    <changeSet id="047-seed-material-types-winyl-prosty" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'winyl_prosty'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="winyl_prosty"/>
+            <column name="name_ru" value="Винил прямой"/>
+            <column name="name_pl" value="Winyl prosty"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Winyl jódełka / Винил ёлочка -->
+    <changeSet id="047-seed-material-types-winyl-jodelka" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'winyl_jodelka'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="winyl_jodelka"/>
+            <column name="name_ru" value="Винил ёлочка"/>
+            <column name="name_pl" value="Winyl jódełka"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Deska prosta / Доска прямая -->
+    <changeSet id="047-seed-material-types-deska-prosta" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'deska_prosta'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="deska_prosta"/>
+            <column name="name_ru" value="Доска прямая"/>
+            <column name="name_pl" value="Deska prosta"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Deska jódełka / Доска ёлочка -->
+    <changeSet id="047-seed-material-types-deska-jodelka" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'deska_jodelka'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="deska_jodelka"/>
+            <column name="name_ru" value="Доска ёлочка"/>
+            <column name="name_pl" value="Deska jódełka"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Podkład / Подложка -->
+    <changeSet id="047-seed-material-types-podklad" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'podklad'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="podklad"/>
+            <column name="name_ru" value="Подложка"/>
+            <column name="name_pl" value="Podkład"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Podkład (klej, grunt) / Подложка (клей, грунт) -->
+    <changeSet id="047-seed-material-types-podklad-klej-grunt" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'podklad_klej_grunt'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="podklad_klej_grunt"/>
+            <column name="name_ru" value="Подложка (клей, грунт)"/>
+            <column name="name_pl" value="Podkład (klej, grunt)"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Styrodur / Стиродур (плинтус) -->
+    <changeSet id="047-seed-material-types-styrodur" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'styrodur'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="styrodur"/>
+            <column name="name_ru" value="Стиродур (плинтус)"/>
+            <column name="name_pl" value="Styrodur"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Listwy przypodłogowe / Плинтусы напольные -->
+    <changeSet id="047-seed-material-types-listwy-przypodlogowe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'listwy_przypodlogowe'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="listwy_przypodlogowe"/>
+            <column name="name_ru" value="Плинтусы напольные"/>
+            <column name="name_pl" value="Listwy przypodłogowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Brodzik + kabina / Поддон + кабина -->
+    <changeSet id="047-seed-material-types-brodzik-kabina" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'brodzik_kabina'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="brodzik_kabina"/>
+            <column name="name_ru" value="Поддон + кабина"/>
+            <column name="name_pl" value="Brodzik + kabina"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Brodzik prysznicowy / Душевой поддон -->
+    <changeSet id="047-seed-material-types-brodzik-prysznicowy" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'brodzik_prysznicowy'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="brodzik_prysznicowy"/>
+            <column name="name_ru" value="Душевой поддон"/>
+            <column name="name_pl" value="Brodzik prysznicowy"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Wanna / Ванна -->
+    <changeSet id="047-seed-material-types-wanna" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'wanna'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="wanna"/>
+            <column name="name_ru" value="Ванна"/>
+            <column name="name_pl" value="Wanna"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Syfon od wanny / Сифон для ванны -->
+    <changeSet id="047-seed-material-types-syfon-od-wanny" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'syfon_od_wanny'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="syfon_od_wanny"/>
+            <column name="name_ru" value="Сифон для ванны"/>
+            <column name="name_pl" value="Syfon od wanny"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Parawan nawannowy / Шторка на ванну -->
+    <changeSet id="047-seed-material-types-parawan-nawannowy" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'parawan_nawannowy'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="parawan_nawannowy"/>
+            <column name="name_ru" value="Шторка на ванну"/>
+            <column name="name_pl" value="Parawan nawannowy"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Ściana / kabina prysznicowa / Стенка / душевая кабина -->
+    <changeSet id="047-seed-material-types-sciana-kabina-prysznicowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'sciana_kabina_prysznicowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="sciana_kabina_prysznicowa"/>
+            <column name="name_ru" value="Стенка / душевая кабина"/>
+            <column name="name_pl" value="Ściana / kabina prysznicowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Odpływ liniowy / Линейный трап -->
+    <changeSet id="047-seed-material-types-odplyw-liniowy" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'odplyw_liniowy'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="odplyw_liniowy"/>
+            <column name="name_ru" value="Линейный трап"/>
+            <column name="name_pl" value="Odpływ liniowy"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Stelaż podtynkowy / Инсталляция скрытого монтажа -->
+    <changeSet id="047-seed-material-types-stelaz-podtynkowy" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'stelaz_podtynkowy'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="stelaz_podtynkowy"/>
+            <column name="name_ru" value="Инсталляция скрытого монтажа"/>
+            <column name="name_pl" value="Stelaż podtynkowy"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Miska WC / Унитаз (чаша) -->
+    <changeSet id="047-seed-material-types-miska-wc" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'miska_wc'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="miska_wc"/>
+            <column name="name_ru" value="Унитаз (чаша)"/>
+            <column name="name_pl" value="Miska WC"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Przycisk / Кнопка смыва -->
+    <changeSet id="047-seed-material-types-przycisk" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'przycisk'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="przycisk"/>
+            <column name="name_ru" value="Кнопка смыва"/>
+            <column name="name_pl" value="Przycisk"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Zestaw prysznicowy / Душевой набор -->
+    <changeSet id="047-seed-material-types-zestaw-prysznicowy" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'zestaw_prysznicowy'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="zestaw_prysznicowy"/>
+            <column name="name_ru" value="Душевой набор"/>
+            <column name="name_pl" value="Zestaw prysznicowy"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Bateria wannowo-prysznicowa z kompletem natryskowym / Смеситель ванна-душ с душевым комплектом -->
+    <changeSet id="047-seed-material-types-bateria-wannowo-prysznicowa-z-kompletem" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'bateria_wannowo_prysznicowa_z_kompletem'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="bateria_wannowo_prysznicowa_z_kompletem"/>
+            <column name="name_ru" value="Смеситель ванна-душ с душевым комплектом"/>
+            <column name="name_pl" value="Bateria wannowo-prysznicowa z kompletem natryskowym"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Baterie prysznicowe / wannowe / Смесители душевые/ванновые -->
+    <changeSet id="047-seed-material-types-baterie-prysznicowe-wannowe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'baterie_prysznicowe_wannowe'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="baterie_prysznicowe_wannowe"/>
+            <column name="name_ru" value="Смесители душевые/ванновые"/>
+            <column name="name_pl" value="Baterie prysznicowe / wannowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Bateria umywalkowa / Смеситель для умывальника -->
+    <changeSet id="047-seed-material-types-bateria-umywalkowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'bateria_umywalkowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="bateria_umywalkowa"/>
+            <column name="name_ru" value="Смеситель для умывальника"/>
+            <column name="name_pl" value="Bateria umywalkowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Umywalka ścienna / Умывальник настенный -->
+    <changeSet id="047-seed-material-types-umywalka-scienna" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'umywalka_scienna'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="umywalka_scienna"/>
+            <column name="name_ru" value="Умывальник настенный"/>
+            <column name="name_pl" value="Umywalka ścienna"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Umywalka nablatowa / Умывальник накладной -->
+    <changeSet id="047-seed-material-types-umywalka-nablatowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'umywalka_nablatowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="umywalka_nablatowa"/>
+            <column name="name_ru" value="Умывальник накладной"/>
+            <column name="name_pl" value="Umywalka nablatowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Umywalka wpuszczana / Умывальник врезной -->
+    <changeSet id="047-seed-material-types-umywalka-wpuszczana" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'umywalka_wpuszczana'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="umywalka_wpuszczana"/>
+            <column name="name_ru" value="Умывальник врезной"/>
+            <column name="name_pl" value="Umywalka wpuszczana"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Umywalka podblatowa / Умывальник подстольный -->
+    <changeSet id="047-seed-material-types-umywalka-podblatowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'umywalka_podblatowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="umywalka_podblatowa"/>
+            <column name="name_ru" value="Умывальник подстольный"/>
+            <column name="name_pl" value="Umywalka podblatowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Umywalka ścienna-nablatowa / Умывальник настенный-накладной -->
+    <changeSet id="047-seed-material-types-umywalka-scienna-nablatowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'umywalka_scienna_nablatowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="umywalka_scienna_nablatowa"/>
+            <column name="name_ru" value="Умывальник настенный-накладной"/>
+            <column name="name_pl" value="Umywalka ścienna-nablatowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Przylgowe / Дверь притворная -->
+    <changeSet id="047-seed-material-types-przylgowe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'przylgowe'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="przylgowe"/>
+            <column name="name_ru" value="Дверь притворная"/>
+            <column name="name_pl" value="Przylgowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Bezprzylgowe / Дверь скрытого притвора -->
+    <changeSet id="047-seed-material-types-bezprzylgowe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'bezprzylgowe'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="bezprzylgowe"/>
+            <column name="name_ru" value="Дверь скрытого притвора"/>
+            <column name="name_pl" value="Bezprzylgowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Ukryte / Скрытая (дверь) -->
+    <changeSet id="047-seed-material-types-ukryte" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'ukryte'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="ukryte"/>
+            <column name="name_ru" value="Скрытая (дверь)"/>
+            <column name="name_pl" value="Ukryte"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Ośczieżnica / Дверная коробка -->
+    <changeSet id="047-seed-material-types-oscieznica" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'oscieznica'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="oscieznica"/>
+            <column name="name_ru" value="Дверная коробка"/>
+            <column name="name_pl" value="Ośczieżnica"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Klamki drzwi / Дверные ручки -->
+    <changeSet id="047-seed-material-types-klamki-drzwi" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'klamki_drzwi'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="klamki_drzwi"/>
+            <column name="name_ru" value="Дверные ручки"/>
+            <column name="name_pl" value="Klamki drzwi"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Rozety drzwi / Дверные розетки -->
+    <changeSet id="047-seed-material-types-rozety-drzwi" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'rozety_drzwi'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="rozety_drzwi"/>
+            <column name="name_ru" value="Дверные розетки"/>
+            <column name="name_pl" value="Rozety drzwi"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: płytka ścienna / Плитка настенная -->
+    <changeSet id="047-seed-material-types-plytka-scienna" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'plytka_scienna'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="plytka_scienna"/>
+            <column name="name_ru" value="Плитка настенная"/>
+            <column name="name_pl" value="płytka ścienna"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: płytka podłogowa / Плитка напольная -->
+    <changeSet id="047-seed-material-types-plytka-podlogowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'plytka_podlogowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="plytka_podlogowa"/>
+            <column name="name_ru" value="Плитка напольная"/>
+            <column name="name_pl" value="płytka podłogowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: płytka ścienno - podłogowa / Плитка настенно-напольная -->
+    <changeSet id="047-seed-material-types-plytka-scienno-podlogowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'plytka_scienno_podlogowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="plytka_scienno_podlogowa"/>
+            <column name="name_ru" value="Плитка настенно-напольная"/>
+            <column name="name_pl" value="płytka ścienno - podłogowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Typ: Akcesoria / Аксессуары -->
+    <changeSet id="047-seed-material-types-akcesoria" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'akcesoria'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="akcesoria"/>
+            <column name="name_ru" value="Аксессуары"/>
+            <column name="name_pl" value="Akcesoria"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

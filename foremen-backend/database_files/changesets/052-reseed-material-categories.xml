@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-16 (Track D): DATA-ONLY re-seed of the existing material_categories
+        dictionary (table/resource/UI delivered by FOR-04-09). This changeset does
+        NOT touch the MATERIAL_CATEGORIES resource row or its ABAC grants (seeded in
+        changeset 033) — only the dictionary values change.
+
+        Step 1 deletes the two obsolete rows 'construction'/'finishing' (seeded in
+        033) and replaces them with the 5 distinct Kategoria values from
+        docs/Materiały pakiety - Lista.csv.
+    -->
+
+    <!--
+        Delete the two obsolete default categories. Safe because no dependent FK
+        rows reference material_categories yet — FinishingMaterial (FOR-04-18) is
+        not delivered, so nothing points at these rows. The precondition makes the
+        delete a natural no-op on re-run (once the rows are gone, sqlCheck returns 0
+        and the changeset is MARK_RAN).
+    -->
+    <changeSet id="052-reseed-material-categories-delete-obsolete" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="2">
+                SELECT COUNT(*) FROM material_categories WHERE code IN ('construction', 'finishing')
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            DELETE FROM material_categories WHERE code IN ('construction', 'finishing');
+        </sql>
+    </changeSet>
+
+    <!-- Insert Kategoria: Drzwi / Двери -->
+    <changeSet id="052-reseed-material-categories-drzwi" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_categories WHERE code = 'drzwi'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="material_categories">
+            <column name="code" value="drzwi"/>
+            <column name="name_ru" value="Двери"/>
+            <column name="name_pl" value="Drzwi"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Insert Kategoria: Listwy przypodłogowe / Плинтусы напольные -->
+    <changeSet id="052-reseed-material-categories-listwy-przypodlogowe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_categories WHERE code = 'listwy_przypodlogowe'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="material_categories">
+            <column name="code" value="listwy_przypodlogowe"/>
+            <column name="name_ru" value="Плинтусы напольные"/>
+            <column name="name_pl" value="Listwy przypodłogowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Insert Kategoria: Podłoga / Пол -->
+    <changeSet id="052-reseed-material-categories-podloga" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_categories WHERE code = 'podloga'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="material_categories">
+            <column name="code" value="podloga"/>
+            <column name="name_ru" value="Пол"/>
+            <column name="name_pl" value="Podłoga"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Insert Kategoria: Płytki / Плитка -->
+    <changeSet id="052-reseed-material-categories-plytki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_categories WHERE code = 'plytki'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="material_categories">
+            <column name="code" value="plytki"/>
+            <column name="name_ru" value="Плитка"/>
+            <column name="name_pl" value="Płytki"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Insert Kategoria: Sanitariat / Сантехника -->
+    <changeSet id="052-reseed-material-categories-sanitariat" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_categories WHERE code = 'sanitariat'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="material_categories">
+            <column name="code" value="sanitariat"/>
+            <column name="name_ru" value="Сантехника"/>
+            <column name="name_pl" value="Sanitariat"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

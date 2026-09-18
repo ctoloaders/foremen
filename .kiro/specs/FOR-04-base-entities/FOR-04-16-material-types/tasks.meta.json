@@ -1,0 +1,639 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 `MaterialTypeEntity` (`@Table(\"material_types\")`, code/nameRU/namePL/active) + `MaterialTypeDao extends AdminDao` + service/controller models (localized + extended; Create/Update(no code)/Response records)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960179
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747979832
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748108789
+      }
+    ],
+    "1.2 Mappers (`MaterialTypeServiceMapper` i18n=name, ignore id+code on update; `MaterialTypeControllerMapper` ignore id/create, id+code/update, active→true) + `MaterialTypeService implements AdminService<...>` (NOT `ProjectScopedService`) + `MaterialTypeController` at `/api/material-types`, `@PermissionResource(\"MATERIAL_TYPES\")`": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960228
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748121487
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748270759
+      }
+    ],
+    "1.3 `046-create-material-types.xml` (table, idempotent `tableExists`+`MARK_RAN`; register last)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960261
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748122890
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748269104
+      }
+    ],
+    "1.4 `047-seed-material-types-resource.xml` (resource `MATERIAL_TYPES` + grants ADMIN CRUD / MANAGER,FOREMAN,WORKER,FINANCIER READ / CLIENT none + 39 `Typ` seed rows; idempotent `MARK_RAN`+`sqlCheck`; register last)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960339
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748281772
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748542602
+      }
+    ],
+    "2.1 `MaterialProducerEntity` (`@Table(\"material_producers\")`, code/nameRU/namePL/active) + `MaterialProducerDao extends AdminDao` + service/controller models": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960396
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747981796
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748110210
+      }
+    ],
+    "2.2 Mappers + `MaterialProducerService implements AdminService<...>` (NOT `ProjectScopedService`) + `MaterialProducerController` at `/api/material-producers`, `@PermissionResource(\"MATERIAL_PRODUCERS\")`": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960446
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748124891
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748264011
+      }
+    ],
+    "2.3 `048-create-material-producers.xml` (table, idempotent; register last)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960494
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748125940
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748265451
+      }
+    ],
+    "2.4 `049-seed-material-producers-resource.xml` (resource `MATERIAL_PRODUCERS` + grants + 32 `Producent` seed rows, EXCLUDING `Podkład`; idempotent; register last)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960540
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748283260
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748544120
+      }
+    ],
+    "3.1 `MaterialEntity` (`@Table(\"materials\")`, code/nameRU/namePL/active) + `MaterialDao extends AdminDao` + service/controller models": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960577
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747983395
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748112108
+      }
+    ],
+    "3.2 Mappers + `MaterialService implements AdminService<...>` (NOT `ProjectScopedService`) + `MaterialController` at `/api/materials`, `@PermissionResource(\"MATERIALS\")`": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960607
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748127685
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748267002
+      }
+    ],
+    "3.3 `050-create-materials.xml` (table, idempotent; register last)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960633
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748128740
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748545585
+      }
+    ],
+    "3.4 `051-seed-materials-resource.xml` (resource `MATERIALS` + grants + 11 `Materiał` seed rows; idempotent; register last)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960666
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748546817
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748664405
+      }
+    ],
+    "4.1 `052-reseed-material-categories.xml` — DELETE `construction`/`finishing` (guarded, safe: no FinishingMaterial FK rows yet) + INSERT 5 `Kategoria` rows (`drzwi`, `listwy_przypodlogowe`, `podloga`, `plytki`, `sanitariat`), each guarded by `sqlCheck` on `code`; do NOT touch the `MATERIAL_CATEGORIES` resource/grants; register last": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960700
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747985677
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748114322
+      }
+    ],
+    "5. Checkpoint — backend compiles, changelog registers 046–052 in order": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960736
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748669491
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748694874
+      }
+    ],
+    "6.1 `MaterialTypeControllerIntegrationTest` (CRUD, i18n name ru/pl/fallback, code immutable, create validation 400)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960778
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748700954
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749852625
+      }
+    ],
+    "6.2 `MaterialTypesResourceSeedIntegrationTest` (resource; grants incl. FINANCIER READ / CLIENT none; seeded codes e.g. `laminat`/`plytka_scienna`; idempotency)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960812
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748702537
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749854036
+      }
+    ],
+    "6.3 `MaterialProducerControllerIntegrationTest` (CRUD, i18n, code immutable, create validation 400)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960848
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748703802
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749855805
+      }
+    ],
+    "6.4 `MaterialProducersResourceSeedIntegrationTest` (resource; grants; seeded codes e.g. `egger`/`villeroy_boch`; `Podkład` absent; idempotency)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960937
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748705665
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749857873
+      }
+    ],
+    "6.5 `MaterialControllerIntegrationTest` (CRUD, i18n, code immutable, create validation 400)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747960998
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748706935
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749858772
+      }
+    ],
+    "6.6 `MaterialsResourceSeedIntegrationTest` (resource; grants; seeded codes e.g. `podloga`/`plytki`; idempotency)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961194
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749864952
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750090034
+      }
+    ],
+    "6.7 `MaterialCategoriesReseedIntegrationTest` (`construction`/`finishing` absent; 5 new codes present with nameRU/namePL; idempotent)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961227
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749866540
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750091921
+      }
+    ],
+    "7. Checkpoint — run only the affected backend test classes": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961260
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751058479
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751236434
+      }
+    ],
+    "8.1 Scaffolding (types, `material-types-api.ts` via `buildFetchQuery`, hooks `materialTypeKeys`, zod schema)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961294
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749867821
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750093381
+      }
+    ],
+    "8.2 `MaterialTypesList` + `MaterialTypesPage` + `MaterialTypeFormSheet` + `DeleteMaterialTypeDialog` (columns code/name/active; code read-only on edit) + routing + interim guard (`/material-types` → `MATERIAL_TYPES`/`READ`) + i18n `materialTypes.*` + `nav.materialTypes` (PL+RU parity)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961324
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750107562
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750375886
+      }
+    ],
+    "8.3 `MaterialTypesList.test.tsx` + `materialTypes.*` i18n parity test": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961348
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750842368
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751046328
+      }
+    ],
+    "9.1 Scaffolding (types, `material-producers-api.ts`, hooks `materialProducerKeys`, zod schema)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961376
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749869302
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750095218
+      }
+    ],
+    "9.2 `MaterialProducersList` + `MaterialProducersPage` + form sheet + delete dialog + routing + interim guard (`/material-producers` → `MATERIAL_PRODUCERS`/`READ`) + i18n `materialProducers.*` + `nav.materialProducers` (PL+RU parity)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961424
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750103970
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750589274
+      }
+    ],
+    "9.3 `MaterialProducersList.test.tsx` + `materialProducers.*` i18n parity test": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961461
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750840171
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751045350
+      }
+    ],
+    "10.1 Scaffolding (types, `materials-api.ts`, hooks `materialKeys`, zod schema)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961496
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789749870653
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750096766
+      }
+    ],
+    "10.2 `MaterialsList` + `MaterialsPage` + form sheet + delete dialog + routing + interim guard (`/materials` → `MATERIALS`/`READ`) + i18n `materials.*` + `nav.materials` (PL+RU parity)": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961546
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750105203
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750834313
+      }
+    ],
+    "10.3 `MaterialsList.test.tsx` + `materials.*` i18n parity test": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961622
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750841025
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751044475
+      }
+    ],
+    "11. Checkpoint — frontend tsc + the new UI test files": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961661
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751241513
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751282957
+      }
+    ],
+    "12. Author test-cases.md": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961682
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751289556
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751357124
+      }
+    ],
+    "13. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789747961713
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751362990
+      },
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751368954
+      }
+    ],
+    "4. Track D — MaterialCategory re-seed": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748114370
+      }
+    ],
+    "1. Track A — MaterialType backend vertical": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748542746
+      }
+    ],
+    "2. Track B — MaterialProducer backend vertical": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748544155
+      }
+    ],
+    "3. Track C — Material backend vertical": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789748664497
+      }
+    ],
+    "6. Backend tests": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789750091951
+      }
+    ],
+    "10. Track C — Material admin page": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751044504
+      }
+    ],
+    "9. Track B — MaterialProducer admin page": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751045378
+      }
+    ],
+    "8. Track A — MaterialType admin page": [
+      {
+        "executionId": "b9f60725-a060-4875-bbd6-5c805161c4c9",
+        "chatSessionId": "sess_9ca21a6a-481a-41cf-806c-db286d12027f",
+        "timestamp": 1789751046413
+      }
+    ]
+  }
+}

@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed MATERIALS resource into resources table -->
+    <changeSet id="051-seed-materials-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'MATERIALS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="MATERIALS"/>
+            <column name="name_ru" value="Материалы"/>
+            <column name="name_pl" value="Materiały"/>
+            <column name="description_ru" value="Справочник именованных материалов"/>
+            <column name="description_pl" value="Katalog nazwanych materiałów"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on MATERIALS resource -->
+    <changeSet id="051-seed-materials-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'MATERIALS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIALS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIALS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on MATERIALS resource -->
+    <changeSet id="051-seed-materials-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'MATERIALS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIALS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIALS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on MATERIALS resource -->
+    <changeSet id="051-seed-materials-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'MATERIALS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIALS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIALS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on MATERIALS resource -->
+    <changeSet id="051-seed-materials-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'MATERIALS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIALS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIALS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on MATERIALS resource -->
+    <changeSet id="051-seed-materials-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'MATERIALS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIALS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIALS';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the MATERIALS grants
+        (deny-by-default). Like MATERIAL_TYPES / MATERIAL_CATEGORIES /
+        WORK_CATEGORIES / MEASUREMENT_UNITS, FINANCIER receives a READ grant
+        here. Custom (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- Seed the 11 named materials (CSV column Materiał) -->
+
+    <!-- Materiał: Podłoga / Пол -->
+    <changeSet id="051-seed-materials-podloga" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'podloga'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="podloga"/>
+            <column name="name_ru" value="Пол"/>
+            <column name="name_pl" value="Podłoga"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Listwy przypodłogowe / Плинтусы напольные -->
+    <changeSet id="051-seed-materials-listwy-przypodlogowe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'listwy_przypodlogowe'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="listwy_przypodlogowe"/>
+            <column name="name_ru" value="Плинтусы напольные"/>
+            <column name="name_pl" value="Listwy przypodłogowe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Wanna / prysznic / Ванна / душ -->
+    <changeSet id="051-seed-materials-wanna-prysznic" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'wanna_prysznic'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="wanna_prysznic"/>
+            <column name="name_ru" value="Ванна / душ"/>
+            <column name="name_pl" value="Wanna / prysznic"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Zestaw podtnykowy WC / Инсталляция WC (комплект) -->
+    <changeSet id="051-seed-materials-zestaw-podtynkowy-wc" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'zestaw_podtynkowy_wc'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="zestaw_podtynkowy_wc"/>
+            <column name="name_ru" value="Инсталляция WC (комплект)"/>
+            <column name="name_pl" value="Zestaw podtnykowy WC"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Bateria wannowa / prysznicowa / Смеситель ванна/душ -->
+    <changeSet id="051-seed-materials-bateria-wannowa-prysznicowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'bateria_wannowa_prysznicowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="bateria_wannowa_prysznicowa"/>
+            <column name="name_ru" value="Смеситель ванна/душ"/>
+            <column name="name_pl" value="Bateria wannowa / prysznicowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Bateria umywalkowa / Смеситель для умывальника -->
+    <changeSet id="051-seed-materials-bateria-umywalkowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'bateria_umywalkowa'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="bateria_umywalkowa"/>
+            <column name="name_ru" value="Смеситель для умывальника"/>
+            <column name="name_pl" value="Bateria umywalkowa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Umywalki / Умывальники -->
+    <changeSet id="051-seed-materials-umywalki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'umywalki'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="umywalki"/>
+            <column name="name_ru" value="Умывальники"/>
+            <column name="name_pl" value="Umywalki"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Drzwi / Двери -->
+    <changeSet id="051-seed-materials-drzwi" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'drzwi'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="drzwi"/>
+            <column name="name_ru" value="Двери"/>
+            <column name="name_pl" value="Drzwi"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Klamki, rozety / Ручки, розетки -->
+    <changeSet id="051-seed-materials-klamki-rozety" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'klamki_rozety'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="klamki_rozety"/>
+            <column name="name_ru" value="Ручки, розетки"/>
+            <column name="name_pl" value="Klamki, rozety"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Płytki / Плитка -->
+    <changeSet id="051-seed-materials-plytki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'plytki'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="plytki"/>
+            <column name="name_ru" value="Плитка"/>
+            <column name="name_pl" value="Płytki"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Materiał: Akcesoria / środki / Аксессуары / средства -->
+    <changeSet id="051-seed-materials-akcesoria-srodki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM materials WHERE code = 'akcesoria_srodki'</sqlCheck>
+        </preConditions>
+        <insert tableName="materials">
+            <column name="code" value="akcesoria_srodki"/>
+            <column name="name_ru" value="Аксессуары / средства"/>
+            <column name="name_pl" value="Akcesoria / środki"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

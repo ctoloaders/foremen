@@ -1,0 +1,560 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed MATERIAL_PRODUCERS resource into resources table -->
+    <changeSet id="049-seed-material-producers-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'MATERIAL_PRODUCERS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="MATERIAL_PRODUCERS"/>
+            <column name="name_ru" value="Производители материалов"/>
+            <column name="name_pl" value="Producenci materiałów"/>
+            <column name="description_ru" value="Справочник производителей материалов"/>
+            <column name="description_pl" value="Katalog producentów materiałów"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on MATERIAL_PRODUCERS resource -->
+    <changeSet id="049-seed-material-producers-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_PRODUCERS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on MATERIAL_PRODUCERS resource -->
+    <changeSet id="049-seed-material-producers-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_PRODUCERS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on MATERIAL_PRODUCERS resource -->
+    <changeSet id="049-seed-material-producers-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_PRODUCERS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on MATERIAL_PRODUCERS resource -->
+    <changeSet id="049-seed-material-producers-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_PRODUCERS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on MATERIAL_PRODUCERS resource -->
+    <changeSet id="049-seed-material-producers-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_PRODUCERS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIAL_PRODUCERS';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the MATERIAL_PRODUCERS grants
+        (deny-by-default). Like WORK_CATEGORIES / MEASUREMENT_UNITS, FINANCIER
+        receives a READ grant here. Custom (non-system) roles likewise receive
+        no grant.
+    -->
+
+    <!-- Seed the 32 material producers (brand names; name_ru kept identical to name_pl in Latin) -->
+    <changeSet id="049-seed-material-producers-afirmax" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'afirmax'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="afirmax"/>
+            <column name="name_ru" value="Afirmax"/>
+            <column name="name_pl" value="Afirmax"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-arbiton" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'arbiton'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="arbiton"/>
+            <column name="name_ru" value="Arbiton"/>
+            <column name="name_pl" value="Arbiton"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-barlinek" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'barlinek'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="barlinek"/>
+            <column name="name_ru" value="Barlinek"/>
+            <column name="name_pl" value="Barlinek"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-cersanit" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'cersanit'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="cersanit"/>
+            <column name="name_ru" value="Cersanit"/>
+            <column name="name_pl" value="Cersanit"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-dre" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'dre'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="dre"/>
+            <column name="name_ru" value="DRE"/>
+            <column name="name_pl" value="DRE"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-deante" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'deante'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="deante"/>
+            <column name="name_ru" value="Deante"/>
+            <column name="name_pl" value="Deante"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-domino" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'domino'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="domino"/>
+            <column name="name_ru" value="Domino"/>
+            <column name="name_pl" value="Domino"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-eclisse" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'eclisse'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="eclisse"/>
+            <column name="name_ru" value="Eclisse"/>
+            <column name="name_pl" value="Eclisse"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-egger" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'egger'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="egger"/>
+            <column name="name_ru" value="Egger"/>
+            <column name="name_pl" value="Egger"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-excellent" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'excellent'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="excellent"/>
+            <column name="name_ru" value="Excellent"/>
+            <column name="name_pl" value="Excellent"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-geberit" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'geberit'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="geberit"/>
+            <column name="name_ru" value="Geberit"/>
+            <column name="name_pl" value="Geberit"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-grohe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'grohe'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="grohe"/>
+            <column name="name_ru" value="Grohe"/>
+            <column name="name_pl" value="Grohe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-hagser" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'hagser'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="hagser"/>
+            <column name="name_ru" value="Hagser"/>
+            <column name="name_pl" value="Hagser"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-hansgrohe" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'hansgrohe'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="hansgrohe"/>
+            <column name="name_ru" value="Hansgrohe"/>
+            <column name="name_pl" value="Hansgrohe"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-infinity" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'infinity'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="infinity"/>
+            <column name="name_ru" value="Infinity"/>
+            <column name="name_pl" value="Infinity"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-marazzi" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'marazzi'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="marazzi"/>
+            <column name="name_ru" value="Marazzi"/>
+            <column name="name_pl" value="Marazzi"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-metamorphose" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'metamorphose'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="metamorphose"/>
+            <column name="name_ru" value="Metamorphose"/>
+            <column name="name_pl" value="Metamorphose"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-oltens" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'oltens'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="oltens"/>
+            <column name="name_ru" value="Oltens"/>
+            <column name="name_pl" value="Oltens"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-omnires" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'omnires'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="omnires"/>
+            <column name="name_ru" value="Omnires"/>
+            <column name="name_pl" value="Omnires"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-paradyz" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'paradyz'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="paradyz"/>
+            <column name="name_ru" value="Paradyż"/>
+            <column name="name_pl" value="Paradyż"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-pol-skone" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'pol_skone'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="pol_skone"/>
+            <column name="name_ru" value="Pol-Skone"/>
+            <column name="name_pl" value="Pol-Skone"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-porcelanosa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'porcelanosa'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="porcelanosa"/>
+            <column name="name_ru" value="Porcelanosa"/>
+            <column name="name_pl" value="Porcelanosa"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-porta" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'porta'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="porta"/>
+            <column name="name_ru" value="Porta"/>
+            <column name="name_pl" value="Porta"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-radaway" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'radaway'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="radaway"/>
+            <column name="name_ru" value="Radaway"/>
+            <column name="name_pl" value="Radaway"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-ravak" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'ravak'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="ravak"/>
+            <column name="name_ru" value="Ravak"/>
+            <column name="name_pl" value="Ravak"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-roca" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'roca'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="roca"/>
+            <column name="name_ru" value="Roca"/>
+            <column name="name_pl" value="Roca"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-salag" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'salag'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="salag"/>
+            <column name="name_ru" value="Salag"/>
+            <column name="name_pl" value="Salag"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-tubadzin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'tubadzin'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="tubadzin"/>
+            <column name="name_ru" value="Tubądzin"/>
+            <column name="name_pl" value="Tubądzin"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-tupai" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'tupai'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="tupai"/>
+            <column name="name_ru" value="Tupai"/>
+            <column name="name_pl" value="Tupai"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-vox" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'vox'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="vox"/>
+            <column name="name_ru" value="VOX"/>
+            <column name="name_pl" value="VOX"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-viega" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'viega'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="viega"/>
+            <column name="name_ru" value="Viega"/>
+            <column name="name_pl" value="Viega"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="049-seed-material-producers-villeroy-boch" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_producers WHERE code = 'villeroy_boch'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_producers">
+            <column name="code" value="villeroy_boch"/>
+            <column name="name_ru" value="Villeroy &amp; Boch"/>
+            <column name="name_pl" value="Villeroy &amp; Boch"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
