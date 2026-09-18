@@ -1,0 +1,1010 @@
+{
+  "pbtResults": {
+    "7.3 Write property test for the price-range computation (PRIMARY PBT target)": {
+      "status": "passed",
+      "lastRunTimestamp": 1789763663045
+    }
+  },
+  "executionHistory": {
+    "1.1 `ConstructionMaterialTypeEntity` (`@Table(\"construction_material_types\")`, `code`/`nameRU`/`namePL`/`active`) extending `BaseEntity` + `ConstructionMaterialTypeDao extends AdminDao<…, Long>` + service models (`ConstructionMaterialTypeServiceModel {id, code, name, active}`, `…ServiceExtendedModel {id, code, nameRU, namePL, active}`) + controller model records (`…DtoModel`, `…DtoExtendedModel`, `…CreateRequest {@NotBlank code/nameRU/namePL, Boolean active}`, `…UpdateRequest {@NotBlank nameRU/namePL, Boolean active}` (no `code`), `…CreateResponse`/`…UpdateResponse`)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911664
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760926747
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761242630
+      }
+    ],
+    "1.2 Mappers (`ConstructionMaterialTypeServiceMapper` `getI18nSupportedProperties()=Set.of(\"name\")`, ignore `id`+`code` on update; `ConstructionMaterialTypeControllerMapper` ignore `id`/create, `id`+`code`/update, default `active`→`true`) + `ConstructionMaterialTypeService implements AdminService<…>` (NOT `ProjectScopedService`) + `ConstructionMaterialTypeController` at `/api/construction-material-types`, `@PermissionResource(\"CONSTRUCTION_MATERIAL_TYPES\")`": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911716
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761260970
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761408273
+      }
+    ],
+    "1.3 `053-create-construction-material-types.xml` (table `construction_material_types`: `code` NOT NULL UNIQUE `uk_construction_material_types_code`, `name_ru`/`name_pl` NOT NULL, `active` NOT NULL default `true`, + `BaseEntity` audit columns; idempotent `tableExists`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911812
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761263271
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761403029
+      }
+    ],
+    "1.4 `054-seed-construction-material-types-resource.xml` (resource `CONSTRUCTION_MATERIAL_TYPES` with non-null `code`/`name_ru`/`name_pl`/`description_ru`/`description_pl`; grants ADMIN CRUD, MANAGER/FOREMAN/WORKER/FINANCIER READ, CLIENT none; a few placeholder type rows e.g. `farba`, `klej_plytki`; every insert guarded `sqlCheck expectedResult=\"0\"`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911837
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761887649
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762207955
+      }
+    ],
+    "2.1 `MaterialSellerEntity` (`@Table(\"material_sellers\")`, `code`/`nameRU`/`namePL`/`active` + `@Column(name=\"website\", length=255) String website` nullable) extending `BaseEntity` + `MaterialSellerDao extends AdminDao<…, Long>` + service models carrying `website` (`…ServiceModel {id, code, name, active, website}`, `…ServiceExtendedModel {id, code, nameRU, namePL, active, website}`) + controller records (`…DtoModel`, `…DtoExtendedModel`, `…CreateRequest {@NotBlank code/nameRU/namePL, Boolean active, @Size(max=255) String website}`, `…UpdateRequest {@NotBlank nameRU/namePL, Boolean active, @Size(max=255) String website}` (no `code`), `…CreateResponse`/`…UpdateResponse`)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911866
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760930124
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761246040
+      }
+    ],
+    "2.2 Mappers (`MaterialSellerServiceMapper` `getI18nSupportedProperties()=Set.of(\"name\")`, ignore `id`+`code` on update, carry `website`; `MaterialSellerControllerMapper` ignore `id`/create, `id`+`code`/update, default `active`→`true`) + `MaterialSellerService implements AdminService<…>` (NOT `ProjectScopedService`) + `MaterialSellerController` at `/api/material-sellers`, `@PermissionResource(\"MATERIAL_SELLERS\")` — `website` updatable on update": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911897
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761266135
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761405889
+      }
+    ],
+    "2.3 `055-create-material-sellers.xml` (table `material_sellers`: dictionary columns + nullable `website VARCHAR(255)`, `code` UNIQUE `uk_material_sellers_code`, + `BaseEntity` audit columns; idempotent `tableExists`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911923
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761268065
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761400648
+      }
+    ],
+    "2.4 `056-seed-material-sellers-resource.xml` (resource `MATERIAL_SELLERS` with non-null description columns; grants ADMIN CRUD, MANAGER/FOREMAN/WORKER/FINANCIER READ, CLIENT none; a few placeholder seller rows e.g. `leroy_merlin` with `website=https://www.leroymerlin.pl`, `castorama`; each insert `sqlCheck`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760911965
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761890003
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762217610
+      }
+    ],
+    "3.1 `com.foremen.service.image.ImageStorage` interface (`store(MultipartFile, keyNamespace)→objectKey`, `toCdnUrl(objectKey)→url` null-safe pure, `deleteIfOrphan(objectKey)`, `isConfigured()`) + `foremen.image-storage.*` config binding (bucket, cdnBase, credentials, maxUploadSize, reconciliation schedule) read from `application.yml`/env, never hardcoded": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912021
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760932713
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761248647
+      }
+    ],
+    "3.2 `GcsImageStorage` implementation (conditional on config): `store(...)` validates content type in `{image/png,image/jpeg,image/webp}` and size ≤ configured max (else client-error `400`, nothing stored), namespaces keys per kind (`producers/{uuid}.{ext}`, `construction-materials/{uuid}.{ext}`), uploads to the GCS bucket; `toCdnUrl(key)=cdnBase + \"/\" + key` (null key → null); `deleteIfOrphan(key)` re-checks the DB (union across `construction_materials.image` + `material_producers.image`) before deleting the bucket object": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912046
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761270639
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761685635
+      }
+    ],
+    "3.3 `DisabledImageStorage` fallback bean (active when not configured): `store(...)` rejects gracefully with a client-error `400`, `toCdnUrl(...)` returns null, `isConfigured()` false — so entities with null images keep reading/listing": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912071
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761413578
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761877217
+      }
+    ],
+    "3.4 `ImageController` `POST /api/images` (`multipart/form-data`, param `entityKind`/target `resource`) delegating to `ImageStorage.store(...)`, returning `{ objectKey, imageUrl }`; method-level `@RequiresPermission` bound to the target resource (`MATERIALS_CONSTRUCTION`/`MATERIAL_PRODUCERS` `CREATE`/`UPDATE`), the resource passed as a request param and validated against seeded resources — no direct-from-frontend signed-URL upload": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912098
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761893017
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762210681
+      }
+    ],
+    "3.5 `ImageReconciliationJob` (`@Scheduled`, cron/interval from `foremen.image-storage.*`): list bucket objects, subtract the union of DB-referenced object keys across all image columns, delete every bucket object no row references": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912123
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761415528
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761875211
+      }
+    ],
+    "3.6 Write property test for CDN URL resolution": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912149
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761893814
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762204988
+      }
+    ],
+    "4.1 `ConstructionMaterialEntity` (`@Table(\"construction_materials\")`) extending `BaseEntity`: `nameRU`/`namePL` (no `code`), mandatory `@ManyToOne type` (`type_id` NOT NULL), optional `@ManyToOne producer`/`seller`, `@ManyToMany packages` via `construction_material_packages`, mandatory `@ManyToOne unit`/`currency`, nullable `purchasePrice`/`retailGross`/`retailNet` (`NUMERIC(12,2)`), nullable `website` (255), nullable `image` (512, GCS object key), `active` NOT NULL default `true` + `ConstructionMaterialDao extends AdminDao<…, Long>`": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912173
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760936172
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761251497
+      }
+    ],
+    "4.2 `057-create-construction-materials.xml` (table `construction_materials` with all columns + `BaseEntity` audit + six entity FKs; join table `construction_material_packages(construction_material_id, offer_package_id)` composite PK with both FKs `ON DELETE CASCADE` per the FOR-04-12b pattern; idempotent `tableExists`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912204
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761417507
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761683095
+      }
+    ],
+    "5.1 Service/controller model records: `ConstructionMaterialServiceModel`/`…ServiceExtendedModel`; `…CreateRequest`/`…UpdateRequest` (`@NotBlank nameRU/namePL`, `@NotNull typeId`, optional `producerId`/`sellerId`, `@NotEmpty Set<Long> offerPackageIds`, `@NotNull unitId`/`currencyId`, three `@DecimalMin(\"0.00\")@DecimalMax(\"9999999999.99\")` nullable prices, `@Size(max=255) website`, `@Size(max=512) image`, `Boolean active`); `…DtoModel` (list row: `RefDto` for `type`/`producer`/`seller`/`unit`/`currency`, `List<RefDto> packages`, prices, `website`, resolved `imageUrl`, `active`, per-(package,type) price-range payload); `…DtoExtendedModel` (+ raw `typeId`/`producerId`/`sellerId`/`offerPackageIds`/`unitId`/`currencyId`, `imageUrl`); create/update responses": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912231
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761898140
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762215389
+      }
+    ],
+    "5.2 Mappers (`ConstructionMaterialServiceMapper` `getI18nSupportedProperties()=Set.of(\"name\")`; `ConstructionMaterialControllerMapper` maps refs → `RefDto` localized, resolves `imageUrl` via `ImageStorage.toCdnUrl(...)`, default `active`→`true`) + `ConstructionMaterialService implements AdminService<…>` (NOT `ProjectScopedService`) with a `normalize(...)` write path (mirroring `RoomService.resolveReferences`): resolve-and-load every reference (`typeId`/`producerId`/`sellerId`/`unitId`/`currencyId`/each `offerPackageId`), reject empty `packages`, range-check the three prices, `@Size` `website`; on image replace/detach/delete call `ImageStorage.deleteIfOrphan(previousKey)`; nothing persisted on any validation failure": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912258
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762245058
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762926833
+      }
+    ],
+    "5.3 `ConstructionMaterialController` at `/api/construction-materials`, `@PermissionResource(\"MATERIALS_CONSTRUCTION\")` implementing `AdminController<…>` (create/list/read/update/delete/count/metadata/i18n); reference filters `type.id`/`producer.id`/`seller.id`/`unit.id`/`currency.id`/`packages.id` ride the existing FOR-04-01 `SpecificationBuilder` grammar (collection path → JOIN + distinct)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912287
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762929282
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763018317
+      }
+    ],
+    "5.4 Write property test for write-path validation": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912315
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763025957
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763498259
+      }
+    ],
+    "6.1 Override `OfferPackageService.deleteById` (reuse of the existing offer-package vertical): after the DB `ON DELETE CASCADE` removes join rows, in the SAME transaction delete every `construction_materials` row now holding zero packages (`… WHERE id NOT IN (SELECT construction_material_id FROM construction_material_packages)` scoped to rows that had referenced the deleted package); leave multi-package materials untouched": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912349
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762240379
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762585323
+      }
+    ],
+    "6.2 Write property test for the package-deletion invariant": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912383
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763027315
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763490674
+      }
+    ],
+    "7.1 `PriceRangeResolver` `@Component`: records `PriceRangeKey(offerPackageId, constructionMaterialTypeId)` + `PriceRange(min, max)`; `compute(Collection<ConstructionMaterialEntity>)→Map<PriceRangeKey, PriceRange>` and `rangeFor(materials, packageId, typeId)→PriceRange` — a pure, deterministic, total function: consider only `active` materials with non-null `retailNet`, fan each out to `(p.id, type.id)` for every `p` in its packages, `min`/`max` per bucket via `BigDecimal.min`/`max`, empty bucket → `PriceRange(null, null)`; never persists": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912414
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762235468
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762582547
+      }
+    ],
+    "7.2 `GET /api/construction-materials/price-ranges` (optional `?packageId=&typeId=`) with method-level `@RequiresPermission(\"MATERIALS_CONSTRUCTION\", \"READ\")`: load active priced materials via a targeted DAO query, return either the full map (as `{offerPackageId, typeId, min, max}` rows) or a single `PriceRange`; also populate each list-DTO row's per-(package,type) range payload so the UI needs no second round-trip": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912446
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763029627
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763493543
+      }
+    ],
+    "7.3 Write property test for the price-range computation (PRIMARY PBT target)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912482
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763524335
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763923310
+      }
+    ],
+    "8.1 Add `@Column(name=\"image\", length=512) String image` (nullable GCS object key) to the existing `MaterialProducerEntity`; carry it through the producer service models and controller DTOs (create/update accept the object key `@Size(max=512)`, read/list expose `imageUrl` via `ImageStorage.toCdnUrl(...)`); producer service write path calls `ImageStorage.deleteIfOrphan(previousKey)` on image replace/detach/delete — no producer resource/entity/page recreated": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912507
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762237927
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762588081
+      }
+    ],
+    "8.2 `059-add-material-producers-image.xml` (additive nullable `material_producers.image VARCHAR(512)`; `addColumn` guarded by `columnExists` precondition + `onFail=\"MARK_RAN\"`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912538
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763031198
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763489647
+      }
+    ],
+    "8.3 `058-seed-construction-materials-resource.xml` (resource `MATERIALS_CONSTRUCTION` with non-null description columns; grants ADMIN CRUD, MANAGER CREATE/READ/UPDATE (NO DELETE), FOREMAN/WORKER/FINANCIER READ, CLIENT none, DELETE ADMIN-only; 1–2 placeholder material rows resolving placeholder `type_id`/`unit_id`/`currency_id`=`PLN`/≥1 existing package by sub-select, guarded by `sqlCheck` on `name_pl`, inserting nothing when a reference is absent; each insert `sqlCheck`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912567
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763034265
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763497157
+      }
+    ],
+    "9. Checkpoint — backend compiles, changelog registers 053–059 in order, controllers pass PermissionAnnotationValidator": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912591
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763513722
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763518783
+      }
+    ],
+    "10.1 Scaffolding under `foremen-frontend/src/features/construction-material-types/` (types, `construction-material-types-api.ts` via `buildFetchQuery`, query/mutation hooks `constructionMaterialTypeKeys` that invalidate + toast, zod schema)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912622
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763526117
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763925160
+      }
+    ],
+    "10.2 `ConstructionMaterialTypesList` + `ConstructionMaterialTypesPage` + `ConstructionMaterialTypeFormSheet` + `DeleteConstructionMaterialTypeDialog` (columns `code`/`name`/`active` localized badge; `code` read-only on edit; permission-gated create/edit/delete via `usePermission`) + lazy route + interim guard (`/construction-material-types` → `CONSTRUCTION_MATERIAL_TYPES`/`READ`) + i18n `constructionMaterialTypes.*` at PL+RU parity (no raw key)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912649
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763937518
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764574772
+      }
+    ],
+    "10.3 `ConstructionMaterialTypesList.test.tsx` (columns render, permission gating, localized empty state) + `constructionMaterialTypes.*` i18n key-parity test (pl/ru, all non-empty)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912683
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764598189
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765009831
+      }
+    ],
+    "11.1 Scaffolding under `foremen-frontend/src/features/material-sellers/` (types incl. `website`, `material-sellers-api.ts` via `buildFetchQuery`, hooks `materialSellerKeys`, zod schema with `website` ≤ 255)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912728
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763528034
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763926902
+      }
+    ],
+    "11.2 `MaterialSellersList` + `MaterialSellersPage` + `MaterialSellerFormSheet` (+ `website` column and form field) + `DeleteMaterialSellerDialog` (columns `code`/`name`/`active` + `website`; `code` read-only on edit; permission-gated controls) + lazy route + interim guard (`/material-sellers` → `MATERIAL_SELLERS`/`READ`) + i18n `materialSellers.*` at PL+RU parity": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912757
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763939875
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764572475
+      }
+    ],
+    "11.3 `MaterialSellersList.test.tsx` (columns incl. `website`, permission gating, empty state) + `materialSellers.*` i18n key-parity test": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912789
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764598946
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765011216
+      }
+    ],
+    "12.1 Scaffolding under `foremen-frontend/src/features/construction-materials/` (types incl. price-range payload + `imageUrl`, `construction-materials-api.ts` via `buildFetchQuery` with FOR-04-01 reference filters, hooks `constructionMaterialKeys` invalidate + toast, zod schema) + a shared `ImageUploadControl` component posting to `POST /api/images` and rendering the resolved CDN image": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912820
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763531455
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763929183
+      }
+    ],
+    "12.2 `ConstructionMaterialsList` + `ConstructionMaterialsPage` (`DataTable entityKey=\"construction-materials\" resource=\"MATERIALS_CONSTRUCTION\"`, columns `name`/`type`/`producer`/`seller`/`packages`/`unit`/`currency`/`retailNet` + rendered per-(package,type) price range, optional image thumbnail) + `ConstructionMaterialFormSheet` (`name`, required `type`, optional `producer`/`seller`, required multi-select `packages` ≥ 1, required `unit`/`currency`, three price inputs, optional `website`, optional `ImageUploadControl`, `active` toggle; no `code`) + `DeleteConstructionMaterialDialog` + lazy route + interim guard (`/materials/construction` → `MATERIALS_CONSTRUCTION`/`READ`) + Warehouse nav item `{ path:'/materials/construction', labelKey:'nav.constructionMaterials', requiredPermission:{ resource:'MATERIALS_CONSTRUCTION', operation:'READ' } }` in `navigation.ts` + i18n `constructionMaterials.*` + `nav.constructionMaterials` at PL+RU parity": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912847
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763944002
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764579170
+      }
+    ],
+    "12.3 `ConstructionMaterialsList.test.tsx` (columns + price-range render, permission gating, empty state) + image-control UI test (upload control on the construction-material form; a material with an image renders its resolved image) + `constructionMaterials.*` and `nav.constructionMaterials` i18n parity tests": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912879
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764600747
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765013560
+      }
+    ],
+    "13.1 Add the shared `ImageUploadControl` to the existing `MaterialProducerFormSheet` (upload via `POST /api/images`, render the resolved CDN image when present, associate the returned object key on save); nothing else on the producer page changes": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912905
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763531882
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764581210
+      }
+    ],
+    "13.2 Extend the producer form/list UI test to assert the image upload control appears and a producer with an image renders its resolved image": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912939
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764588482
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765009070
+      }
+    ],
+    "14. Checkpoint — frontend tsc + the new/changed UI test files": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760912972
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789766992776
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768380923
+      }
+    ],
+    "15.1 `ConstructionMaterialTypeControllerIntegrationTest` + `MaterialSellerControllerIntegrationTest` (Testcontainers CRUD; i18n `name` ru/pl/fallback; `code` immutable on update; create validation `400`; sellers: `website` null / 255 / 256 boundary)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913005
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789764603388
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765015328
+      }
+    ],
+    "15.2 `ConstructionMaterialControllerIntegrationTest` (CRUD with required `type`, optional `producer`/`seller`, required `packages` ≥ 1 incl. empty-set rejection; reference filters `type.id`/`packages.id`; i18n `name`)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913089
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765023283
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789766994677
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768383133
+      }
+    ],
+    "15.3 `ConstructionMaterialPackageCascadeIntegrationTest` (example alongside Property 2: deleting a package removes join rows, deletes a zero-package material, leaves a multi-package material)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913131
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765025128
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789766996243
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768384689
+      }
+    ],
+    "15.4 `ConstructionMaterialPriceRangeIntegrationTest` (example alongside Property 1: MIN/MAX per pair, multi-package contribution, null `retailNet` excluded, empty range for an unpriced pair)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913169
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765026606
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789766998104
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768386683
+      }
+    ],
+    "15.5 `ImageStorageUploadIntegrationTest` + `ImageStorageRejectionTest` (happy path stores under the correct namespace and DTO resolves the CDN URL; non-image type and over-size each → `400`, nothing stored)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913199
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765028439
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789766999871
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768388453
+      }
+    ],
+    "15.6 `ImageStorageOrphanCleanupTest` (replace deletes previous object; detach/delete deletes object; reconciliation job deletes an unreferenced bucket object)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913224
+      },
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765029957
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789767001276
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768390264
+      }
+    ],
+    "15.7 `MaterialProducerImageColumnIntegrationTest` (additive `image` column present; changeset idempotent; producer round-trips an object key → resolved CDN URL)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913256
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768397507
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768966802
+      }
+    ],
+    "15.8 `ConstructionMaterialTypesResourceSeedIntegrationTest` + `MaterialSellersResourceSeedIntegrationTest` + `MaterialsConstructionResourceSeedIntegrationTest` (resource present; exact grant matrix incl. CLIENT none, MANAGER no-DELETE, DELETE ADMIN-only on `MATERIALS_CONSTRUCTION`; re-run idempotency)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913286
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768399903
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768968952
+      }
+    ],
+    "15.9 `ConstructionMaterialsAnnotationCoverageSmokeIT` (fully annotated controllers incl. `/price-ranges` and `/api/images` start cleanly under `PermissionAnnotationValidator`)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913316
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768401298
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768970496
+      }
+    ],
+    "16. Author test-cases.md": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913350
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789769313223
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789769534319
+      }
+    ],
+    "17. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789760913384
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789769535419
+      },
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789769575135
+      }
+    ],
+    "4. Track 3 — ConstructionMaterial entity, join table & DAO (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789761683183
+      }
+    ],
+    "1. Track 1 — ConstructionMaterialType backend vertical (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762207986
+      }
+    ],
+    "3. Shared — ImageStorage service, controller & reconciliation job (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762210755
+      }
+    ],
+    "2. Track 2 — MaterialSeller backend vertical (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789762217639
+      }
+    ],
+    "6. Track 3 — Package-deletion cascade cleanup (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763490708
+      }
+    ],
+    "8. Reuse — MaterialProducer additive image + resource/grants for MATERIALS_CONSTRUCTION (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763497254
+      }
+    ],
+    "5. Track 3 — ConstructionMaterial service, mappers, controller & CRUD (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763498288
+      }
+    ],
+    "7. Track 3 — PriceRangeResolver & GET /price-ranges (root repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789763923371
+      }
+    ],
+    "13. Reuse — MaterialProducer form image control (foremen-frontend repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765009123
+      }
+    ],
+    "10. Track 1 — ConstructionMaterialType admin page (foremen-frontend repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765009890
+      }
+    ],
+    "11. Track 2 — MaterialSeller admin page (foremen-frontend repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765011263
+      }
+    ],
+    "12. Track 3 — ConstructionMaterial admin page + shared image control (foremen-frontend repo)": [
+      {
+        "executionId": "1ba1f88d-9b0b-4ba5-8c70-c85849d042e9",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789765013645
+      }
+    ],
+    "15. Backend example / integration / seed / smoke tests (root repo)": [
+      {
+        "executionId": "bca22f04-cdc8-41e6-985a-4f91f73309ac",
+        "chatSessionId": "sess_05dc11f6-bec8-4e70-aca8-829bb19d9cc4",
+        "timestamp": 1789768970549
+      }
+    ]
+  }
+}

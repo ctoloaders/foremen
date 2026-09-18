@@ -57,5 +57,12 @@
     <include file="database_files/changesets/050-create-materials.xml"/>
     <include file="database_files/changesets/051-seed-materials-resource.xml"/>
     <include file="database_files/changesets/052-reseed-material-categories.xml"/>
+    <include file="database_files/changesets/053-create-construction-material-types.xml"/>
+    <include file="database_files/changesets/054-seed-construction-material-types-resource.xml"/>
+    <include file="database_files/changesets/055-create-material-sellers.xml"/>
+    <include file="database_files/changesets/056-seed-material-sellers-resource.xml"/>
+    <include file="database_files/changesets/057-create-construction-materials.xml"/>
+    <include file="database_files/changesets/058-seed-construction-materials-resource.xml"/>
+    <include file="database_files/changesets/059-add-material-producers-image.xml"/>
 
 </databaseChangeLog>

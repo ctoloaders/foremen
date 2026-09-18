@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed CONSTRUCTION_MATERIAL_TYPES resource into resources table -->
+    <changeSet id="054-seed-construction-material-types-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'CONSTRUCTION_MATERIAL_TYPES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="CONSTRUCTION_MATERIAL_TYPES"/>
+            <column name="name_ru" value="Виды строительных материалов"/>
+            <column name="name_pl" value="Typy materiałów budowlanych"/>
+            <column name="description_ru" value="Справочник видов строительных материалов"/>
+            <column name="description_pl" value="Katalog typów materiałów budowlanych"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on CONSTRUCTION_MATERIAL_TYPES resource -->
+    <changeSet id="054-seed-construction-material-types-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on CONSTRUCTION_MATERIAL_TYPES resource -->
+    <changeSet id="054-seed-construction-material-types-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on CONSTRUCTION_MATERIAL_TYPES resource -->
+    <changeSet id="054-seed-construction-material-types-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on CONSTRUCTION_MATERIAL_TYPES resource -->
+    <changeSet id="054-seed-construction-material-types-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on CONSTRUCTION_MATERIAL_TYPES resource -->
+    <changeSet id="054-seed-construction-material-types-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'CONSTRUCTION_MATERIAL_TYPES';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the CONSTRUCTION_MATERIAL_TYPES
+        grants (deny-by-default). Custom (non-system) roles likewise receive no
+        grant. Matches the plain-dictionary grant matrix of MATERIAL_TYPES /
+        MATERIAL_CATEGORIES / WORK_CATEGORIES.
+    -->
+
+    <!--
+        Minimal PLACEHOLDER type rows only. The full construction-material-type
+        data seed is delivered separately by FOR-04-RESEARCH-construction-materials
+        (Requirement 11). Each insert is guarded by an sqlCheck on code.
+    -->
+
+    <!-- Placeholder: farba / Краска -->
+    <changeSet id="054-seed-construction-material-types-farba" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'farba'</sqlCheck>
+        </preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="farba"/>
+            <column name="name_ru" value="Краска"/>
+            <column name="name_pl" value="Farba"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Placeholder: klej_plytki / Клей для плитки -->
+    <changeSet id="054-seed-construction-material-types-klej-plytki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'klej_plytki'</sqlCheck>
+        </preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="klej_plytki"/>
+            <column name="name_ru" value="Клей для плитки"/>
+            <column name="name_pl" value="Klej do płytek"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- Placeholder: grunt / Грунтовка -->
+    <changeSet id="054-seed-construction-material-types-grunt" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'grunt'</sqlCheck>
+        </preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="grunt"/>
+            <column name="name_ru" value="Грунтовка"/>
+            <column name="name_pl" value="Grunt"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

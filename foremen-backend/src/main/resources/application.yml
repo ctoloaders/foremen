@@ -30,6 +30,22 @@ foremen:
     allowed-origins: "http://localhost:3000"
   google:
     client-id: ${FOREMEN_GOOGLE_CLIENT_ID:}
+  image-storage:
+    # Shared ImageStorage service (FOR-04-17). All values from environment; no secrets committed.
+    # When bucket + cdn-base are blank, storage is treated as not configured and uploads are
+    # rejected gracefully (disabled fallback), while existing entities keep working without images.
+    bucket: ${FOREMEN_IMAGE_STORAGE_BUCKET:}
+    cdn-base: ${FOREMEN_IMAGE_STORAGE_CDN_BASE:}
+    max-upload-size: ${FOREMEN_IMAGE_STORAGE_MAX_UPLOAD_SIZE:5MB}
+    credentials:
+      path: ${FOREMEN_IMAGE_STORAGE_CREDENTIALS_PATH:}
+      location: ${FOREMEN_IMAGE_STORAGE_CREDENTIALS_LOCATION:}
+    reconciliation:
+      # Cron for the orphan-reconciliation job (FOR-04-17, Requirement 7.10). Defaults to "-"
+      # (Scheduled.CRON_DISABLED) so the job is registered but never fires until a schedule is
+      # supplied; a blank value would fail @Scheduled cron parsing, "-" disables it cleanly.
+      cron: ${FOREMEN_IMAGE_STORAGE_RECONCILIATION_CRON:-}
+      interval: ${FOREMEN_IMAGE_STORAGE_RECONCILIATION_INTERVAL:}
   google-places:
     # When enabled, api-key must be set or application startup fails fast.
     enabled: ${GOOGLE_PLACES_ENABLED:false}

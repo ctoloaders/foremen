@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed MATERIALS_CONSTRUCTION resource into resources table -->
+    <changeSet id="058-seed-construction-materials-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'MATERIALS_CONSTRUCTION'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="MATERIALS_CONSTRUCTION"/>
+            <column name="name_ru" value="Строительные материалы"/>
+            <column name="name_pl" value="Materiały budowlane"/>
+            <column name="description_ru" value="Справочник предложений строительных материалов"/>
+            <column name="description_pl" value="Katalog ofert materiałów budowlanych"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on MATERIALS_CONSTRUCTION resource -->
+    <changeSet id="058-seed-construction-materials-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'MATERIALS_CONSTRUCTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+
+        <!-- DELETE on MATERIALS_CONSTRUCTION is granted to ADMIN ONLY (Requirement 9.4). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER CREATE/READ/UPDATE on MATERIALS_CONSTRUCTION resource (NO DELETE) -->
+    <changeSet id="058-seed-construction-materials-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'MATERIALS_CONSTRUCTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+
+        <!-- MANAGER gets CREATE/READ/UPDATE but intentionally NO DELETE (Requirement 9.3, 9.4). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE')
+            WHERE r.code = 'MANAGER' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on MATERIALS_CONSTRUCTION resource -->
+    <changeSet id="058-seed-construction-materials-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'MATERIALS_CONSTRUCTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on MATERIALS_CONSTRUCTION resource -->
+    <changeSet id="058-seed-construction-materials-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'MATERIALS_CONSTRUCTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on MATERIALS_CONSTRUCTION resource -->
+    <changeSet id="058-seed-construction-materials-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'MATERIALS_CONSTRUCTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'MATERIALS_CONSTRUCTION';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the MATERIALS_CONSTRUCTION grants
+        (deny-by-default). Unlike the plain dictionaries CONSTRUCTION_MATERIAL_TYPES
+        / MATERIAL_SELLERS (where MANAGER gets READ only), MATERIALS_CONSTRUCTION is
+        an operational entity: MANAGER gets CREATE/READ/UPDATE but NO DELETE, and
+        DELETE is granted to ADMIN only (Requirement 9.3, 9.4). FOREMAN / WORKER /
+        FINANCIER receive READ. Custom (non-system) roles receive no grant.
+    -->
+
+    <!--
+        Minimal PLACEHOLDER construction-material offer rows only. The full
+        Polish-market data seed is delivered separately by
+        FOR-04-RESEARCH-construction-materials (Requirement 11).
+
+        Each material insert:
+          * is guarded by an sqlCheck on name_pl (expectedResult="0" + MARK_RAN),
+            so a re-run — or the later research seed — inserts nothing extra;
+          * is written as INSERT ... SELECT ... WHERE all referenced rows EXIST,
+            so if any placeholder reference (the 'farba' construction_material_type
+            seeded by 054, the 'm2' measurement unit, the 'PLN' currency, or the
+            'budget' offer package) is absent, the insert is a no-op and NOTHING is
+            persisted (references are resolved by sub-select at apply time).
+        The construction_material_packages join row is likewise inserted by
+        sub-select and only when both the material row and the offer package exist.
+    -->
+
+    <!-- Placeholder offer: Farba lateksowa biała 10L (type=farba, unit=m2, currency=PLN, package=budget) -->
+    <changeSet id="058-seed-construction-materials-farba-lateksowa" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_materials WHERE name_pl = 'Farba lateksowa biała 10L'</sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO construction_materials
+                (name_ru, name_pl, type_id, unit_id, currency_id, retail_net, active, created_date, created_by)
+            SELECT 'Латексная краска белая 10л', 'Farba lateksowa biała 10L',
+                   t.id, u.id, c.id, 149.99, TRUE, NOW(), 'system'
+            FROM construction_material_types t, measurement_units u, currencies c
+            WHERE t.code = 'farba' AND u.code = 'm2' AND c.code = 'PLN'
+              AND EXISTS (SELECT 1 FROM offer_packages p WHERE p.code = 'budget');
+        </sql>
+
+        <sql>
+            INSERT INTO construction_material_packages (construction_material_id, offer_package_id)
+            SELECT cm.id, p.id
+            FROM construction_materials cm, offer_packages p
+            WHERE cm.name_pl = 'Farba lateksowa biała 10L' AND p.code = 'budget';
+        </sql>
+    </changeSet>
+
+    <!-- Placeholder offer: Klej do płytek elastyczny 25kg (type=klej_plytki, unit=m2, currency=PLN, package=norm) -->
+    <changeSet id="058-seed-construction-materials-klej-plytki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_materials WHERE name_pl = 'Klej do płytek elastyczny 25kg'</sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO construction_materials
+                (name_ru, name_pl, type_id, unit_id, currency_id, retail_net, active, created_date, created_by)
+            SELECT 'Клей для плитки эластичный 25кг', 'Klej do płytek elastyczny 25kg',
+                   t.id, u.id, c.id, 59.90, TRUE, NOW(), 'system'
+            FROM construction_material_types t, measurement_units u, currencies c
+            WHERE t.code = 'klej_plytki' AND u.code = 'm2' AND c.code = 'PLN'
+              AND EXISTS (SELECT 1 FROM offer_packages p WHERE p.code = 'norm');
+        </sql>
+
+        <sql>
+            INSERT INTO construction_material_packages (construction_material_id, offer_package_id)
+            SELECT cm.id, p.id
+            FROM construction_materials cm, offer_packages p
+            WHERE cm.name_pl = 'Klej do płytek elastyczny 25kg' AND p.code = 'norm';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
