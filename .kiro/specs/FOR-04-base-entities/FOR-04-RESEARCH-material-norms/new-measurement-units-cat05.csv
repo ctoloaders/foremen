@@ -1,0 +1,6 @@
+code,name_pl,name_ru,note
+szt,sztuka,штука,"Puszki podtynkowe, sterowniki/czujniki, obejmy liczone na sztuki; physical unit, nie 'opak'."
+mb,metr bieżący,погонный метр,"Kabel YDYp/przewód i peszel/rurka RL liczone na długość; physical unit, nie 'krążek'/'rolka'."
+kg,kilogram,килограмм,"Gips szybkowiążący/zaprawa do osadzenia puszek i łatania bruzd; physical unit, nie 'worek'."
+l,litr,литр,"Klej/masa samopoziomująca cienką warstwą pod matę grzewczą; physical unit, nie 'opak'."
+m2,metr kwadratowy,квадратный метр,"Powierzchnia montażu maty grzewczej jako denominator; physical unit."

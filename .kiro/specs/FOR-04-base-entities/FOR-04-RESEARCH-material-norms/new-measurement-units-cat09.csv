@@ -1,0 +1,6 @@
+code,name_pl,name_ru,note
+l,litr,литр,"Farby (gruntujące/podkładowe i dekoracyjne nawierzchniowe) oraz akryl liczone objętościowo; anchory ml przeliczone na l (20 ml = 0.02 l). Physical unit, nie 'opak'/'puszka'."
+kg,kilogram,килограмм,"Kleje do tapet i klej montażowy 'mamut' liczone masowo; physical unit, nie 'opak'/'worek'."
+m2,metr kwadratowy,квадратный метр,"Tapeta, filc, tynk dekoracyjny, lamele/panele ścienne liczone powierzchniowo; physical unit, nie 'rolka'/'opak'."
+szt,sztuka,штука,"Rusztowanie oraz taśma malarska liczone na sztuki/odcinki (taśma jako rolka -> sztuka); physical unit, nie 'rolka'."
+mb,metr bieżący,погонный метр,"Profile sztukaterii i lamele ścienne liczone na długość; jednostka pracy (denominator), nie 'listwa'/'wiązka'."

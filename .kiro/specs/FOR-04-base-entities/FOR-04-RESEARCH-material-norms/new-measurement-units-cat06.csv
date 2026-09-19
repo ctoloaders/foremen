@@ -1,0 +1,5 @@
+code,name_pl,name_ru,note
+szt,sztuka,штука,"Złączki WAGO, wkręty, kołki, zaślepki, oprawy liczone na sztuki; physical unit, nie 'opak'."
+kg,kilogram,килограмм,"Cyna lutownicza / topnik ważone masowo (norma w kg/szt); physical unit, nie 'rolka'/'szpula'."
+l,litr,литр,"Klej montażowy / silikon liczony objętościowo (kartusz przeliczony na l); physical unit, nie 'opak'/'kartusz'."
+mb,metr bieżący,погонный метр,"Taśma izolacyjna i taśma dwustronna do profili LED liczone na długość; physical unit, nie 'rolka'."

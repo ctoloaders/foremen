@@ -1,0 +1,6 @@
+code,name_pl,name_ru,note
+kg,kilogram,килограмм,"Masa suchych mieszanek (zaprawa, klej, masa szpachlowa/spoinowa); physical unit, nie 'worek'."
+m2,metr kwadratowy,квадратный метр,"Płyty GK/OSB i wełna akustyczna liczone powierzchniowo; physical unit, nie 'opak'/'arkusz'."
+szt,sztuka,штука,"Bloczki komórkowe, wkręty, łączniki, narożniki liczone na sztuki; physical unit, nie 'opak'."
+mb,metr bieżący,погонный метр,"Profile CD/UD/CW/UW i taśmy/narożniki liczone na długość; physical unit, nie 'rolka'/'wiązka'."
+l,litr,литр,"Grunt/emulsja gruntująca płynna; physical unit, nie 'opak'."
