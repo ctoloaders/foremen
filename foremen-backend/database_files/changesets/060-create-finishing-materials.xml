@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-18: the FinishingMaterial operational entity plus its ManyToMany
+        join to offer packages.
+
+        060a creates finishing_materials (columns mirror FinishingMaterialEntity)
+        with its five reference FKs: category_id/material_id/unit_id NOT NULL,
+        type_id/producer_id nullable. It has NO code and NO localized name; the
+        three prices are NUMERIC(12,2) (matching the entity's precision/scale) and
+        there is no per-unit price column. Four BaseEntity audit columns are
+        appended (created_date/created_by/updated_date/updated_by).
+        060b creates the finishing_material_packages join table with a composite PK
+        on (finishing_material_id, offer_package_id) and both FKs ON DELETE CASCADE
+        (deleting a material or an offer package removes its join rows), following
+        the FOR-04-12b (044) / FOR-04-17 (057) join pattern.
+        Both sub-changesets are idempotent via tableExists + MARK_RAN: a re-run
+        against an existing table makes no schema changes.
+    -->
+
+    <changeSet id="060a-create-finishing-materials" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="finishing_materials"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="finishing_materials">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="category_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="material_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type_id" type="BIGINT"/>
+            <column name="producer_id" type="BIGINT"/>
+            <column name="unit_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="model" type="VARCHAR(255)"/>
+            <column name="sku" type="VARCHAR(255)"/>
+            <column name="features" type="TEXT"/>
+            <column name="purchase_price" type="NUMERIC(12,2)"/>
+            <column name="retail_gross" type="NUMERIC(12,2)"/>
+            <column name="retail_net" type="NUMERIC(12,2)"/>
+            <column name="link" type="VARCHAR(1024)"/>
+            <column name="photo" type="VARCHAR(512)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            constraintName="fk_finishing_materials_category"
+            baseTableName="finishing_materials"
+            baseColumnNames="category_id"
+            referencedTableName="material_categories"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_finishing_materials_material"
+            baseTableName="finishing_materials"
+            baseColumnNames="material_id"
+            referencedTableName="materials"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_finishing_materials_type"
+            baseTableName="finishing_materials"
+            baseColumnNames="type_id"
+            referencedTableName="material_types"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_finishing_materials_producer"
+            baseTableName="finishing_materials"
+            baseColumnNames="producer_id"
+            referencedTableName="material_producers"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_finishing_materials_unit"
+            baseTableName="finishing_materials"
+            baseColumnNames="unit_id"
+            referencedTableName="measurement_units"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- 060b: finishing_material_packages join table. Composite PK on both
+         columns; both FKs ON DELETE CASCADE (deleting a material or an offer
+         package removes its join rows), per the FOR-04-12b / FOR-04-17 join
+         pattern. -->
+    <changeSet id="060b-create-finishing-material-packages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="finishing_material_packages"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="finishing_material_packages">
+            <column name="finishing_material_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+            tableName="finishing_material_packages"
+            columnNames="finishing_material_id, offer_package_id"
+            constraintName="pk_finishing_material_packages"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_fmp_finishing_material"
+            baseTableName="finishing_material_packages"
+            baseColumnNames="finishing_material_id"
+            referencedTableName="finishing_materials"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_fmp_offer_package"
+            baseTableName="finishing_material_packages"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

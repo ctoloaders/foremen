@@ -64,5 +64,8 @@
     <include file="database_files/changesets/057-create-construction-materials.xml"/>
     <include file="database_files/changesets/058-seed-construction-materials-resource.xml"/>
     <include file="database_files/changesets/059-add-material-producers-image.xml"/>
+    <include file="database_files/changesets/060-create-finishing-materials.xml"/>
+    <include file="database_files/changesets/061-seed-finishing-materials-resource.xml"/>
+    <include file="database_files/changesets/062-seed-finishing-materials.xml"/>
 
 </databaseChangeLog>

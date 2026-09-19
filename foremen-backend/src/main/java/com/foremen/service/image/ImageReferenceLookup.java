@@ -14,8 +14,8 @@ import java.util.Set;
  * Small DB-reference lookup for image object keys, shared by the shared {@link ImageStorage}
  * seam (FOR-04-17, Requirement 7). It answers the single question the orphan-cleanup logic needs:
  * "is this object key still referenced by any database row?", counting references across the
- * UNION of every image column in the schema — currently {@code construction_materials.image} and
- * {@code material_producers.image}.
+ * UNION of every image column in the schema — currently {@code construction_materials.image},
+ * {@code material_producers.image}, and {@code finishing_materials.photo}.
  *
  * <p>This helper is deliberately extracted so it can be reused by BOTH the eager
  * {@link GcsImageStorage#deleteIfOrphan(String)} trigger (Requirement 7.8, 7.9) and the periodic
@@ -38,7 +38,8 @@ public class ImageReferenceLookup {
      */
     private static final List<ImageColumn> IMAGE_COLUMNS = List.of(
             new ImageColumn("construction_materials", "image"),
-            new ImageColumn("material_producers", "image"));
+            new ImageColumn("material_producers", "image"),
+            new ImageColumn("finishing_materials", "photo"));
 
     @PersistenceContext
     private EntityManager entityManager;
