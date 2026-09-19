@@ -1,0 +1,589 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 gap-fill: seed finishing_materials + package links for the 16 finishing
+        material TYPES that the norm side (work_material_consumptions.finishing_material_type_id)
+        references by UPPER_SNAKE code but that had ZERO catalog materials, so the work-catalog
+        material вилка (MaterialRangeResolver / MaterialBatchLookup, FOR-04-19) resolved every
+        finishing batch to an empty 0..0 band.
+
+        Why this fixes the gap: the вилка forms `normQty × [MIN..MAX retailNet]` over the active
+        finishing_materials of the row's TYPE whose finishing_material_packages set contains the
+        row's offer package, excluding rows with a NULL retailNet. These types had no such rows,
+        hence 0..0. This changeset inserts, per type, one product per package tier (budget/norm/lux)
+        so every (type, package) batch has >= 1 priced analog.
+
+        Data provenance (see the audit CSVs under
+        .kiro/specs/FOR-04-base-entities/FOR-04-RESEARCH-material-norms/_audit-material-norms-gap/):
+          - 10-finishing-material-refs-from-norms.csv  (refs already in the norms CSV)
+          - 11-finishing-products-web-research.csv      (live castorama.pl products, 2026-09-20)
+        Prices observed on castorama.pl are GROSS (brutto). retail_gross stores the observed price;
+        retail_net = ROUND(gross / 1.23, 2) using the PL standard VAT rate 23%
+        (podatki.gov.pl). retail_net is the column the вилка reads, so it MUST be non-null.
+
+        Reference resolution (mirrors 062-seed-finishing-materials):
+          - category_id / material_id: tile-adhesive types (KLEJ_DO_PLYTEK, FUGA_CEMENTOWA,
+            FUGA_EPOKSYDOWA, SILIKON) attach to category 'Płytki' + material 'Płytki'; all other
+            (paint / decor / tape / trim) types attach to category 'Podłoga' + material 'Podłoga'
+            as a temporary catch-all until a dedicated wall/decor category exists.
+          - type_id: resolved by material_types.code (the 16 UPPER_SNAKE codes).
+          - unit_id: chosen to match the norm's material unit for that type so the physical unit is
+            consistent (kg for adhesives/grout, l for paint/primer, szt for silicone/tape, m2 for
+            wallpaper/felt/lamele/decor plaster, mb for skirting/stucco).
+          - producer_id: left NULL (not modelled for these gap products).
+        Required references (category, material, unit) are INNER joins, so a row whose reference is
+        absent inserts NOTHING (safe on partial dictionaries).
+
+        Idempotency: the changeset is guarded by preConditions onFail="MARK_RAN" with sqlCheck
+        expectedResult="0" on the count of finishing_materials created by this seed
+        (created_by = 'seed:for-04-19-gap-fill'), so it applies once and is a no-op on re-run.
+        Each finishing_materials insert is additionally NOT EXISTS-guarded on its natural key
+        (category_id, material_id, model, link), and each package link is NOT EXISTS-guarded on the
+        composite PK, so a partial/interrupted apply never duplicates rows.
+
+        Rows: 48 finishing_materials (16 types × 3 packages) + 48 finishing_material_packages links.
+    -->
+
+    <changeSet id="073-seed-finishing-materials-gap-fill" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM finishing_materials WHERE created_by = 'seed:for-04-19-gap-fill'</sqlCheck>
+        </preConditions>
+
+        <!--
+            One reusable INSERT shape per (type_code, category_name, material_name, unit_code,
+            model, gross, net, link). We emit it 48 times below via <sql> blocks. To keep the
+            file compact and reviewable, the inserts are grouped by type; each block inserts the
+            budget, norm and lux product for that type, then links each to its offer package.
+        -->
+
+        <!-- ============================ TILE BRANCH (category/material 'Płytki') ============================ -->
+
+        <!-- KLEJ_DO_PLYTEK (kg) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'KLEJ_DO_PLYTEK' LIMIT 1), NULL, u.id,
+                   'Klej do płytek Mapei M-Klej 22.5 kg', NULL, NULL, NULL, 27.98, 22.75,
+                   'https://www.castorama.pl/klej-do-plytek-mapei-m-klej-22-5-kg/8022452245817_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Klej do płytek Mapei M-Klej 22.5 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'KLEJ_DO_PLYTEK' LIMIT 1), NULL, u.id,
+                   'Klej Atlas Plus Nowy 20 kg', NULL, NULL, NULL, 64.98, 52.83,
+                   'https://www.castorama.pl/klej-atlas-plus-nowy-20-kg/5905400488562_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Klej Atlas Plus Nowy 20 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'KLEJ_DO_PLYTEK' LIMIT 1), NULL, u.id,
+                   'Klej wysokoelastyczny Mapei Keraflex Extra S1 22.5 kg', NULL, NULL, NULL, 69.98, 56.89,
+                   'https://www.castorama.pl/klej-wysokoelastyczny-mapei-keraflex-extra-s1-zero-22-5-kg-szary/8022452248078_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Klej wysokoelastyczny Mapei Keraflex Extra S1 22.5 kg');
+        </sql>
+
+        <!-- FUGA_CEMENTOWA (kg) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FUGA_CEMENTOWA' LIMIT 1), NULL, u.id,
+                   'Fuga ceramiczna Atlas 211 cementowy 2 kg', NULL, NULL, NULL, 39.98, 32.50,
+                   'https://www.castorama.pl/fuga-ceramiczna-atlas-211-cementowy-2-kg/5905400572834_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Fuga ceramiczna Atlas 211 cementowy 2 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FUGA_CEMENTOWA' LIMIT 1), NULL, u.id,
+                   'Fuga elastyczna Sopro Saphir beżowy 32 2 kg', NULL, NULL, NULL, 40.98, 33.32,
+                   'https://www.castorama.pl/fuga-elastyczna-sopro-saphir-bezowy-32-2-kg/5901740951735_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Fuga elastyczna Sopro Saphir beżowy 32 2 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FUGA_CEMENTOWA' LIMIT 1), NULL, u.id,
+                   'Fuga elastyczna Sopro DF10 biała 2 kg', NULL, NULL, NULL, 61.98, 50.39,
+                   'https://www.castorama.pl/fuga-elastyczna-sopro-df10-biala-10-2-kg/5901740010425_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Fuga elastyczna Sopro DF10 biała 2 kg');
+        </sql>
+
+        <!-- FUGA_EPOKSYDOWA (kg) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FUGA_EPOKSYDOWA' LIMIT 1), NULL, u.id,
+                   'Fuga epoksydowa Atlas 020 beż 2 kg', NULL, NULL, NULL, 69.98, 56.89,
+                   'https://www.castorama.pl/fuga-epoksydowa-atlas-020-bez-2-kg/5905400275124_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Fuga epoksydowa Atlas 020 beż 2 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FUGA_EPOKSYDOWA' LIMIT 1), NULL, u.id,
+                   'JAKA FUGA epoksydowa Biała 1 kg', NULL, NULL, NULL, 79.90, 64.96,
+                   'https://www.castorama.pl/departments/jaka-fuga-epoksydowa-fuga-bia-a-do-p-ytek-i-mozaik-1kg-1-szt-/5903990309854_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'JAKA FUGA epoksydowa Biała 1 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FUGA_EPOKSYDOWA' LIMIT 1), NULL, u.id,
+                   'JAKA FUGA epoksydowa metalizowana Złota Gold 1 kg', NULL, NULL, NULL, 139.90, 113.74,
+                   'https://www.castorama.pl/departments/jaka-fuga-epoksydowa-metalizowana-fuga-z-ota-gold-1kg-1-szt-/5903990310164_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'kg'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'JAKA FUGA epoksydowa metalizowana Złota Gold 1 kg');
+        </sql>
+
+        <!-- SILIKON (szt) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'SILIKON' LIMIT 1), NULL, u.id,
+                   'Silikon sanitarny Volden 280 ml biały', NULL, NULL, NULL, 13.48, 10.96,
+                   'https://www.castorama.pl/silikon-sanitarny-volden-280-ml-bialy/5059340045054_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'szt'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Silikon sanitarny Volden 280 ml biały');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'SILIKON' LIMIT 1), NULL, u.id,
+                   'Silikon sanitarny Soudal 280 ml biały', NULL, NULL, NULL, 19.98, 16.24,
+                   'https://www.castorama.pl/silikon-sanitarny-soudal-280-ml-bialy/5411183157064_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'szt'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Silikon sanitarny Soudal 280 ml biały');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'SILIKON' LIMIT 1), NULL, u.id,
+                   'Silikon sanitarny Ceresit CS 25 biały 280 ml', NULL, NULL, NULL, 49.98, 40.63,
+                   'https://www.castorama.pl/silikon-sanitarny-ceresit-cs-25-bialy-280-ml/8691451080554_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Płytki' AND mat.name_pl = 'Płytki' AND u.code = 'szt'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Silikon sanitarny Ceresit CS 25 biały 280 ml');
+        </sql>
+
+        <!-- ============================ PAINT / DECOR BRANCH (category/material 'Podłoga') ============================ -->
+
+        <!-- FARBA (l) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa Śnieżka Eko Plus biała 10 l', NULL, NULL, NULL, 108.00, 87.80,
+                   'https://www.castorama.pl/farba-lateksowa-sniezka-eko-plus-biala-10-l/5903973205982_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa Śnieżka Eko Plus biała 10 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa Beckers Interio Pro biała 5 l', NULL, NULL, NULL, 148.00, 120.33,
+                   'https://www.castorama.pl/farba-lateksowa-beckers-interio-pro-biala-5-l/7311237111708_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa Beckers Interio Pro biała 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA' LIMIT 1), NULL, u.id,
+                   'Farba Lateksowa Premium Q-Cover Super Biała Głęboki Mat 5L', NULL, NULL, NULL, 160.08, 130.15,
+                   'https://www.castorama.pl/departments/farba-lateksowa-premium-plamoodporna-do-cian-i-sufit-w-q-cover-super-bia-a-g-boki-mat-5l/5905748028116_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba Lateksowa Premium Q-Cover Super Biała Głęboki Mat 5L');
+        </sql>
+
+        <!-- FARBA_DEKORACYJNA (l) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA_DEKORACYJNA' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa biała Śnieżka Barwy Natury 5 l', NULL, NULL, NULL, 89.99, 73.16,
+                   'https://www.sniezka.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa biała Śnieżka Barwy Natury 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA_DEKORACYJNA' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa Dekoral Akrylit W 5 l', NULL, NULL, NULL, 119.99, 97.55,
+                   'https://www.dekoral.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa Dekoral Akrylit W 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA_DEKORACYJNA' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa premium Tikkurila Optiva 5 l', NULL, NULL, NULL, 189.99, 154.46,
+                   'https://www.tikkurila.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa premium Tikkurila Optiva 5 l');
+        </sql>
+
+        <!-- FARBA_DEKORACYJNA_KOLOR (l) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA_DEKORACYJNA_KOLOR' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa kolorowa Śnieżka Extra 5 l', NULL, NULL, NULL, 99.99, 81.29,
+                   'https://www.sniezka.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa kolorowa Śnieżka Extra 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA_DEKORACYJNA_KOLOR' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa kolorowa Magnat Ceramic 5 l', NULL, NULL, NULL, 149.99, 121.94,
+                   'https://www.magnat.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa kolorowa Magnat Ceramic 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FARBA_DEKORACYJNA_KOLOR' LIMIT 1), NULL, u.id,
+                   'Farba lateksowa kolorowa premium Tikkurila 5 l', NULL, NULL, NULL, 199.99, 162.59,
+                   'https://www.tikkurila.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Farba lateksowa kolorowa premium Tikkurila 5 l');
+        </sql>
+
+        <!-- TYNK_DEKORACYJNY (m2) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TYNK_DEKORACYJNY' LIMIT 1), NULL, u.id,
+                   'Tynk dekoracyjny Magnat Style Effetto 5 kg', NULL, NULL, NULL, 34.99, 28.45,
+                   'https://www.magnat.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tynk dekoracyjny Magnat Style Effetto 5 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TYNK_DEKORACYJNY' LIMIT 1), NULL, u.id,
+                   'Tynk dekoracyjny Magnat Style beton 5 kg', NULL, NULL, NULL, 44.99, 36.58,
+                   'https://www.magnat.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tynk dekoracyjny Magnat Style beton 5 kg');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TYNK_DEKORACYJNY' LIMIT 1), NULL, u.id,
+                   'Tynk dekoracyjny premium Tikkurila Taika Effect 5 kg', NULL, NULL, NULL, 74.99, 60.97,
+                   'https://www.tikkurila.pl/produkty', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tynk dekoracyjny premium Tikkurila Taika Effect 5 kg');
+        </sql>
+
+        <!-- TAPETA_FLIZELINOWA (m2) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TAPETA_FLIZELINOWA' LIMIT 1), NULL, u.id,
+                   'Tapeta flizelinowa Jad szara', NULL, NULL, NULL, 5.20, 4.23,
+                   'https://www.castorama.pl/tapeta-flizelinowa-jad-szara/5059340409498_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tapeta flizelinowa Jad szara');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TAPETA_FLIZELINOWA' LIMIT 1), NULL, u.id,
+                   'Tapeta flizelinowa GoodHome Onagre biała', NULL, NULL, NULL, 6.00, 4.88,
+                   'https://www.castorama.pl/tapeta-flizelinowa-goodhome-onagre-biala/3663602562474_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tapeta flizelinowa GoodHome Onagre biała');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TAPETA_FLIZELINOWA' LIMIT 1), NULL, u.id,
+                   'Tapeta flizelinowa GoodHome Lolite kremowa', NULL, NULL, NULL, 7.70, 6.26,
+                   'https://www.castorama.pl/tapeta-flizelinowa-goodhome-lolite-kremowa/5059340409436_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tapeta flizelinowa GoodHome Lolite kremowa');
+        </sql>
+
+        <!-- TAPETA_WINYLOWA (m2) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TAPETA_WINYLOWA' LIMIT 1), NULL, u.id,
+                   'Tapeta winylowa na flizelinie Beton beżowy', NULL, NULL, NULL, 4.30, 3.50,
+                   'https://www.castorama.pl/tapeta-winylowa-na-flizelinie-beton-bezowy/4000441939538_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tapeta winylowa na flizelinie Beton beżowy');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TAPETA_WINYLOWA' LIMIT 1), NULL, u.id,
+                   'Tapeta winylowa na flizelinie GoodHome Tille beżowa', NULL, NULL, NULL, 5.20, 4.23,
+                   'https://www.castorama.pl/tapeta-winylowa-na-flizelinie-goodhome-tille-bezowa/3663602559276_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tapeta winylowa na flizelinie GoodHome Tille beżowa');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TAPETA_WINYLOWA' LIMIT 1), NULL, u.id,
+                   'Tapeta winylowa na flizelinie GoodHome Drave beżowa', NULL, NULL, NULL, 9.00, 7.32,
+                   'https://www.castorama.pl/tapeta-winylowa-na-flizelinie-goodhome-drave-bezowa/3663602560159_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Tapeta winylowa na flizelinie GoodHome Drave beżowa');
+        </sql>
+
+        <!-- FILC_SCIENNY (m2) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FILC_SCIENNY' LIMIT 1), NULL, u.id,
+                   'Lamel ścienny na czarnym filcu Marbet WOODLINE SLIM 270x30 cm', NULL, NULL, NULL, 69.99, 56.90,
+                   'https://www.castorama.pl/departments/lamel-cienny-na-czarnym-filcu-6l-marbet-design-woodline-slim-270x30-cm-loft-1-szt-/5904617323598_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Lamel ścienny na czarnym filcu Marbet WOODLINE SLIM 270x30 cm');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FILC_SCIENNY' LIMIT 1), NULL, u.id,
+                   'Lamel ścienny na filcu Radex 265x24.5 cm dąb Saragossa', NULL, NULL, NULL, 118.00, 95.93,
+                   'https://www.castorama.pl/lamel-scienny-na-filcu-radex-265-x-24-5-cm-dab-saragossa/5905982391052_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Lamel ścienny na filcu Radex 265x24.5 cm dąb Saragossa');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'FILC_SCIENNY' LIMIT 1), NULL, u.id,
+                   'Panel lamelowy ścienny na filcu Flat MDF 40x260 cm kaszmir', NULL, NULL, NULL, 151.92, 123.51,
+                   'https://www.castorama.pl/panel-lamelowy-scienny-na-filcu-flat-mdf-40-x-260-cm-kaszmir/5906295190196_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Panel lamelowy ścienny na filcu Flat MDF 40x260 cm kaszmir');
+        </sql>
+
+        <!-- SZTUKATERIA (mb) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'SZTUKATERIA' LIMIT 1), NULL, u.id,
+                   'Sztukateria ścienna PS 25x15 mm QUEST 200 cm biały', NULL, NULL, NULL, 23.95, 19.47,
+                   'https://www.castorama.pl/departments/sztukateria-cienna-z-polistyrenu-ps-25x15-mm-quest-sztywne-listwy-wyko-czeniowe-boazeria-angielska-200-cm-bia-y-1-szt-/5908056570001_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Sztukateria ścienna PS 25x15 mm QUEST 200 cm biały');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'SZTUKATERIA' LIMIT 1), NULL, u.id,
+                   'Sztukateria ścienna PS 60x20 mm QUEST 200 cm biały', NULL, NULL, NULL, 40.95, 33.29,
+                   'https://www.castorama.pl/departments/sztukateria-cienna-z-polistyrenu-ps-60x20-mm-quest-sztywne-listwy-wyko-czeniowe-boazeria-angielska-200-cm-bia-y-1-szt-/5908056570025_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Sztukateria ścienna PS 60x20 mm QUEST 200 cm biały');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'SZTUKATERIA' LIMIT 1), NULL, u.id,
+                   'Sztukateria Ścienna Listwa VERDICO Ramka DP1 59x99 cm', NULL, NULL, NULL, 67.90, 55.20,
+                   'https://www.castorama.pl/departments/sztukateria-cienna-listwa-verdico-bia-a-ramka-gotowa-dp1-59x99cm-zestaw-1-szt-/5902186643680_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Sztukateria Ścienna Listwa VERDICO Ramka DP1 59x99 cm');
+        </sql>
+
+        <!-- LAMELE_SCIENNE (m2) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'LAMELE_SCIENNE' LIMIT 1), NULL, u.id,
+                   'Panel lamelowy ścienny Stegu Linea Select MDF 265x24.5', NULL, NULL, NULL, 99.98, 81.28,
+                   'https://www.castorama.pl/panel-lamelowy-scienny-stegu-linea-select-mdf-265-x-24-5-x-1-9-cm-dab-czarny/5907762319416_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Panel lamelowy ścienny Stegu Linea Select MDF 265x24.5');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'LAMELE_SCIENNE' LIMIT 1), NULL, u.id,
+                   'Panel lamelowy ścienny Verta Line 300x2600 saragossa 0.78 m2', NULL, NULL, NULL, 88.18, 71.69,
+                   'https://www.castorama.pl/panel-lamelowy-scienny-verta-line-300-x-2600-cm-saragossa-0-78-m2/5906295192794_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Panel lamelowy ścienny Verta Line 300x2600 saragossa 0.78 m2');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'LAMELE_SCIENNE' LIMIT 1), NULL, u.id,
+                   'Panel lamelowy ścienny MDF 270x60 kaszmir', NULL, NULL, NULL, 268.00, 217.89,
+                   'https://www.castorama.pl/panel-lamelowy-scienny-mdf-270-x-60-cm-kaszmir/5907859049516_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'm2'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Panel lamelowy ścienny MDF 270x60 kaszmir');
+        </sql>
+
+        <!-- LISTWA_PRZYPODLOGOWA (mb) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'LISTWA_PRZYPODLOGOWA' LIMIT 1), NULL, u.id,
+                   'Listwa przypodłogowa PCV GoodHome Duo 23x59x2200 biała', NULL, NULL, NULL, 23.98, 19.50,
+                   'https://www.castorama.pl/listwa-przypodlogowa-pcv-goodhome-duo-23-x-59-x-2200-mm-biala/3663602530855_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Listwa przypodłogowa PCV GoodHome Duo 23x59x2200 biała');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'LISTWA_PRZYPODLOGOWA' LIMIT 1), NULL, u.id,
+                   'Listwa przypodłogowa MDF Foge LB1 biały 8 cm 2 mb', NULL, NULL, NULL, 34.98, 28.44,
+                   'https://www.castorama.pl/listwa-przypodlogowa-mdf-foge-lb1-polmat-bialy-8-cm-2-mb/5908283371167_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Listwa przypodłogowa MDF Foge LB1 biały 8 cm 2 mb');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'LISTWA_PRZYPODLOGOWA' LIMIT 1), NULL, u.id,
+                   'Listwa przypodłogowa VOX Espumo 80 mm biała', NULL, NULL, NULL, 42.98, 34.94,
+                   'https://www.castorama.pl/listwa-przypodlogowa-vox-espumo-80-mm-biala/5905952286586_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Listwa przypodłogowa VOX Espumo 80 mm biała');
+        </sql>
+
+        <!-- PODKLAD (l) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'PODKLAD' LIMIT 1), NULL, u.id,
+                   'Emulsja gruntująca Volden 5 l', NULL, NULL, NULL, 14.98, 12.18,
+                   'https://www.castorama.pl/emulsja-gruntujaca-volden-5-l/5906340222544_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Emulsja gruntująca Volden 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'PODKLAD' LIMIT 1), NULL, u.id,
+                   'Grunt uniwersalny Knauf 5 l', NULL, NULL, NULL, 35.48, 28.85,
+                   'https://www.castorama.pl/grunt-uniwersalny-knauf-5-l/5901793357737_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Grunt uniwersalny Knauf 5 l');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'PODKLAD' LIMIT 1), NULL, u.id,
+                   'Grunt głęboko penetrujący Ceresit CT17 5 l', NULL, NULL, NULL, 51.98, 42.26,
+                   'https://www.castorama.pl/grunt-gleboko-penetrujacy-ceresit-ct17-5-l/5900089617050_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'l'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Grunt głęboko penetrujący Ceresit CT17 5 l');
+        </sql>
+
+        <!-- TASMA_MALARSKA (szt) -->
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TASMA_MALARSKA' LIMIT 1), NULL, u.id,
+                   'Taśma malarska Mako 30 mm x 50 m', NULL, NULL, NULL, 4.98, 4.05,
+                   'https://www.castorama.pl/tasma-malarska-mako-30-mm-x-50-m/5907652120443_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'szt'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Taśma malarska Mako 30 mm x 50 m');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TASMA_MALARSKA' LIMIT 1), NULL, u.id,
+                   'Taśma malarska Scley niebieska 38 mm x 50 m', NULL, NULL, NULL, 17.98, 14.62,
+                   'https://www.castorama.pl/tasma-malarska-scley-niebieska-38-mm-x-50-m/5905061104276_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'szt'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Taśma malarska Scley niebieska 38 mm x 50 m');
+        </sql>
+        <sql>
+            INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, features, purchase_price, retail_gross, retail_net, link, active, created_date, created_by)
+            SELECT cat.id, mat.id, (SELECT id FROM material_types WHERE code = 'TASMA_MALARSKA' LIMIT 1), NULL, u.id,
+                   'Taśma malarska Tesa niebieska 50 mm x 50 m', NULL, NULL, NULL, 29.98, 24.37,
+                   'https://www.castorama.pl/tasma-malarska-tesa-niebieska-50-mm-x-50-m/4042448281043_CAPL.prd', TRUE, NOW(), 'seed:for-04-19-gap-fill'
+            FROM material_categories cat, materials mat, measurement_units u
+            WHERE cat.name_pl = 'Podłoga' AND mat.name_pl = 'Podłoga' AND u.code = 'szt'
+              AND NOT EXISTS (SELECT 1 FROM finishing_materials fm WHERE fm.category_id = cat.id AND fm.material_id = mat.id AND fm.model = 'Taśma malarska Tesa niebieska 50 mm x 50 m');
+        </sql>
+
+        <!-- ============================ PACKAGE LINKS ============================ -->
+        <!--
+            Link each just-inserted gap-fill material to its offer package. The package tier for
+            each product is encoded here by matching the product model to the offer_packages code.
+            NOT EXISTS on the composite PK keeps this idempotent.
+        -->
+        <sql>
+            INSERT INTO finishing_material_packages (finishing_material_id, offer_package_id)
+            SELECT fm.id, op.id
+            FROM finishing_materials fm
+            JOIN offer_packages op ON op.code = (
+                CASE
+                    WHEN fm.model IN (
+                        'Klej do płytek Mapei M-Klej 22.5 kg',
+                        'Fuga ceramiczna Atlas 211 cementowy 2 kg',
+                        'Fuga epoksydowa Atlas 020 beż 2 kg',
+                        'Silikon sanitarny Volden 280 ml biały',
+                        'Farba lateksowa Śnieżka Eko Plus biała 10 l',
+                        'Farba lateksowa biała Śnieżka Barwy Natury 5 l',
+                        'Farba lateksowa kolorowa Śnieżka Extra 5 l',
+                        'Tynk dekoracyjny Magnat Style Effetto 5 kg',
+                        'Tapeta flizelinowa Jad szara',
+                        'Tapeta winylowa na flizelinie Beton beżowy',
+                        'Lamel ścienny na czarnym filcu Marbet WOODLINE SLIM 270x30 cm',
+                        'Sztukateria ścienna PS 25x15 mm QUEST 200 cm biały',
+                        'Panel lamelowy ścienny Stegu Linea Select MDF 265x24.5',
+                        'Listwa przypodłogowa PCV GoodHome Duo 23x59x2200 biała',
+                        'Emulsja gruntująca Volden 5 l',
+                        'Taśma malarska Mako 30 mm x 50 m'
+                    ) THEN 'budget'
+                    WHEN fm.model IN (
+                        'Klej Atlas Plus Nowy 20 kg',
+                        'Fuga elastyczna Sopro Saphir beżowy 32 2 kg',
+                        'JAKA FUGA epoksydowa Biała 1 kg',
+                        'Silikon sanitarny Soudal 280 ml biały',
+                        'Farba lateksowa Beckers Interio Pro biała 5 l',
+                        'Farba lateksowa Dekoral Akrylit W 5 l',
+                        'Farba lateksowa kolorowa Magnat Ceramic 5 l',
+                        'Tynk dekoracyjny Magnat Style beton 5 kg',
+                        'Tapeta flizelinowa GoodHome Onagre biała',
+                        'Tapeta winylowa na flizelinie GoodHome Tille beżowa',
+                        'Lamel ścienny na filcu Radex 265x24.5 cm dąb Saragossa',
+                        'Sztukateria ścienna PS 60x20 mm QUEST 200 cm biały',
+                        'Panel lamelowy ścienny Verta Line 300x2600 saragossa 0.78 m2',
+                        'Listwa przypodłogowa MDF Foge LB1 biały 8 cm 2 mb',
+                        'Grunt uniwersalny Knauf 5 l',
+                        'Taśma malarska Scley niebieska 38 mm x 50 m'
+                    ) THEN 'norm'
+                    ELSE 'lux'
+                END)
+            WHERE fm.created_by = 'seed:for-04-19-gap-fill'
+              AND NOT EXISTS (
+                  SELECT 1 FROM finishing_material_packages fmp
+                  WHERE fmp.finishing_material_id = fm.id AND fmp.offer_package_id = op.id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

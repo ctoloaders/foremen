@@ -1,0 +1,699 @@
+{
+  "pbtResults": {
+    "3.3 Write property test for the write-path validation accept/reject partition": {
+      "status": "passed",
+      "lastRunTimestamp": 1789843882412
+    }
+  },
+  "executionHistory": {
+    "1.1 Add a nullable `code` field to `WorkItemEntity` (FOR-04-11, `work_items`) — `@Column(name = \"code\")` `String`, unique among non-null values; expose `code` on the work-catalog DTO/mapper. No other change to the entity": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840716879
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840727322
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789841858067
+      }
+    ],
+    "1.2 `063-add-work-items-code.xml`: an idempotent additive changeset — `addColumn code VARCHAR(64)` guarded by `columnExists`+`MARK_RAN`; the partial unique index `ux_work_items_code ON work_items(code) WHERE code IS NOT NULL` guarded on index absence + `MARK_RAN`; a guarded data changeset backfilling `code` from the Excel positional `LP` (normalized `N.MM`) by matching the existing seeded work items' row order/name, guarded so a re-run changes nothing and a work item with no derivable `LP` keeps `code = null` without failing. Register LAST in `changelog.xml`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840716941
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842246889
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842535294
+      }
+    ],
+    "1.3 Write integration test for the `work_items.code` backfill": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840716992
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842871008
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843172333
+      }
+    ],
+    "2.1 `ConsumptionBranch` enum `{ construction, finishing }` + `WorkMaterialConsumptionEntity` (`dao/model`, `@Table(\"work_material_consumptions\")`) extending `BaseEntity`: NO `code`/`name`; mandatory `@ManyToOne workItem` (`work_item_id` NOT NULL), `@ManyToOne offerPackage` (`offer_package_id` NOT NULL), `@ManyToOne materialUnit` (`material_unit_id` NOT NULL, numerator unit); `@Enumerated(STRING) branch` (`branch` NOT NULL); nullable `@ManyToOne constructionMaterialType` (`construction_material_type_id` → `construction_material_types`) + nullable `@ManyToOne finishingMaterialType` (`finishing_material_type_id` → `material_types`); `normQty` `NUMERIC(12,4)` NOT NULL `>= 0`; nullable `wastePct` `NUMERIC(5,2)`; nullable text `justificationRU`/`justificationPL`; `sourceType`/`sourceDoc`/`sourceRef` NOT NULL + nullable `sourceUrl` (≤ 1024) + `WorkMaterialConsumptionDao extends AdminDao<…, Long>`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717037
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842254105
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842543187
+      }
+    ],
+    "2.2 `067-create-work-material-consumptions.xml`: table `work_material_consumptions` with the columns above plus the four `BaseEntity` audit columns; two OWNER FKs `work_item_id`/`offer_package_id` `ON DELETE CASCADE` (FOR-04-12b/17/18 pattern), the two type-dictionary FKs + `material_unit_id` `RESTRICT`; guarded `tableExists`+`MARK_RAN` so a re-run makes no schema change. Register LAST in `changelog.xml`. The XOR + branch-match rule is NOT a DB check constraint (enforced at the write path in task 3.2)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717071
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842874344
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843175582
+      }
+    ],
+    "3.1 Service/controller model records: `WorkMaterialConsumptionCreateRequest`/`…UpdateRequest` (`@NotNull workItemId`/`offerPackageId`/`branch`/`materialUnitId`, nullable `constructionMaterialTypeId`/`finishingMaterialTypeId`, `@NotNull @DecimalMin(\"0.0000\") @DecimalMax(\"99999999.9999\") normQty`, optional `@DecimalMin(\"0.00\")@DecimalMax(\"999.99\") wastePct`, optional `justificationRU`/`justificationPL` text, `@NotBlank sourceType`/`sourceDoc`/`sourceRef`, `@Size(max=1024) sourceUrl`); `WorkMaterialConsumptionDtoModel` (list row: `id`, `workItem`/`offerPackage`/`materialUnit` `RefDto`, `branch`+`branchLabel`, `materialType` `RefDto` = whichever type is set, `normQty`, `wastePct`, `typeBatchRange {min,max}`, `materials: List<AnalogMaterialDto>`, localized `justification`, citation); `WorkMaterialConsumptionDtoExtendedModel` (+ raw `workItemId`/`offerPackageId`/`materialUnitId`/`constructionMaterialTypeId`/`finishingMaterialTypeId` and BOTH raw `justificationRU`/`justificationPL`); `AnalogMaterialDto {id, name, producer, seller, unit: RefDto, retailNet, moneyCost}` (`moneyCost = normQty × retailNet`); create/update responses. No `code`/`name`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717109
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842883699
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846904544
+      }
+    ],
+    "3.2 Mappers (`WorkMaterialConsumptionServiceMapper` with `getI18nSupportedProperties() = Set.of(\"justification\")` for the `ru`→`justificationRU` else `justificationPL` PL fallback; `WorkMaterialConsumptionControllerMapper` maps refs → localized `RefDto` and picks `materialType` from the non-null type) + `WorkMaterialConsumptionService implements AdminService<…>` (NOT `ProjectScopedService`) with a `normalize(...)` write path overriding `create`/`update` (mirroring `ConstructionMaterialService`/`RoomService.resolveReferences`): (a) require `workItemId`/`offerPackageId`/`branch`/`materialUnitId`/`normQty` and exactly one material-type id; (b) real-load each supplied reference, dangling id → field-naming client error; (c) `normQty` outside `[0, 99999999.9999]` → error naming `normQty`; (d) the XOR + branch-match rule (NEITHER/BOTH type ids → reject; set type not matching `branch` → reject); nothing persisted on any failure": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717174
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843189092
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843573235
+      }
+    ],
+    "3.3 Write property test for the write-path validation accept/reject partition": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717226
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843588760
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844015249
+      }
+    ],
+    "3.4 `WorkMaterialConsumptionController` at `/api/work-material-consumptions`, `@RestController @PermissionResource(\"WORK_MATERIAL_CONSUMPTION\")` implementing the full 10-op `AdminController<…>` (create/list/read/update/delete/count/metadata/i18n, inherited `@PermissionOperation`; NO custom endpoints — the drill-in rides the generic list handler). Reference filters `workItem.id`/`offerPackage.id`/`materialUnit.id`/`constructionMaterialType.id`/`finishingMaterialType.id` (reference paths) and `branch` (scalar enum path) ride the existing FOR-04-01 `SpecificationBuilder` grammar — no custom resolver": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717267
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843592506
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844018295
+      }
+    ],
+    "3.5 Override ONLY `serializeEntity(WorkMaterialConsumptionEntity)` in `WorkMaterialConsumptionService` to build a FLAT, cycle-free `LinkedHashMap<String,Object>` audit snapshot (following the `FinishingMaterialService.serializeEntity(...)` / `WorkPriceService.serializeEntity(...)` precedent): scalars verbatim (`id`, `branch` enum `name()`, `normQty`, `wastePct`, `sourceType`/`sourceDoc`/`sourceUrl`/`sourceRef`, `justificationRU`/`justificationPL`); each nested reference flattened to a readable NAME string (never nested JSON) via the shared `firstNonBlank(namePL, nameRU, code)` convention — `workItem`, `offerPackage`, `materialUnit`, and whichever of `constructionMaterialType`/`finishingMaterialType` is set under a single `materialType` key; serialize with the shared `AUDIT_OBJECT_MAPPER` wrapped in a try/catch returning `{\"error\":\"serialization_failed\",\"class\":\"WorkMaterialConsumptionEntity\"}` on `JsonProcessingException`; LEAVE `serializeUpdateAfterSnapshot` at the `AdminService` default so before/after are symmetric. The computed money range (вилка) and the analog `materials` list are read-time computed and NOT audited": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717301
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843598198
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844023420
+      }
+    ],
+    "4.1 `MaterialBatchLookup` (`@Component`, DAO-backed): for a set of `(offerPackageId, materialTypeId, branch)` keys, load the analog batch's non-null `retailNet`s in ONE query per branch (construction: `construction_materials` ⋈ `construction_material_packages`; finishing: `finishing_materials` ⋈ `finishing_material_packages`), filtered to `active = true` and non-null `retailNet`, returning `TypeBatch(offerPackageId, materialTypeId, branch, List<BigDecimal> retailNets)`. Keeps the DB read out of the resolver so it stays pure": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717333
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840735471
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789841877672
+      }
+    ],
+    "4.2 `MaterialRangeResolver` (`@Component` + equivalent pure static helper for the property test): `MoneyRange {min,max}` (`ZERO = 0,0`), `BranchRanges {construction, finishing}`; `typeBatchRange(normQty, TypeBatch)` = `normQty × [MIN..MAX retailNet]` with empty batch ⇒ `0..0`; `branchRange(rowsOfBranch, batches)` = SUM over the branch's DISTINCT material types of the type-level batch `min`/`max`, empty branch ⇒ explicit `MoneyRange(0,0)`, money-only (no cross-unit physical sum); `compute(rowsForWorkPackage, batches)` = both `BranchRanges`, each explicit `0` when its branch is empty. Distinct-type batching (compute once per type); null-`retailNet` exclusion; deterministic `BigDecimal.min`/`max` over an order-independent aggregate": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717366
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842260114
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842550050
+      }
+    ],
+    "4.3 Write property test for the branch-range computation": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717392
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842885105
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843177056
+      }
+    ],
+    "4.4 Write property test for range determinism": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717437
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842886083
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843178023
+      }
+    ],
+    "5. Checkpoint — backend compiles, changesets 063/067 register, controller passes PermissionAnnotationValidator": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717491
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846609145
+      }
+    ],
+    "6.1 `WorkCatalogAggregationResolver` (`@Component`): per work item build `Map<Long /*offerPackageId*/, PackageCell>` where `PackageCell = {offerPackageId, BigDecimal labourPrice, MoneyRange construction, MoneyRange finishing}` — (a) `labourPrice` reuses the FOR-04-12b `EffectivePriceResolver` over the work item's `WorkPrice.packagePrices` (surfaced, not recomputed); (b)/(c) construction/finishing ranges from `MaterialRangeResolver.compute(...)`, each explicit `0` when its branch has no consumption. Load the page's work items' consumption rows in one `IN` query by `workItem.id` and the analog batches via `MaterialBatchLookup` (no N+1)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717549
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843192182
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843581190
+      }
+    ],
+    "6.2 Attach the pivot map in an `@AfterMapping` on the work-catalog service mapper (exactly as FOR-04-12b attaches its `prices` map) so the list read stays paginated over DISTINCT `WorkItem` rows and the synthetic pivot fields never multiply or split rows": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717576
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843600060
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844025853
+      }
+    ],
+    "6.3 Override `WorkItemController.getMetadata()` (thin): call `EntityMetadataResolver.resolve(WorkItemEntity.class)` then append ONE synthetic pivot descriptor per seeded offer package from the cached `SeededOfferPackages` provider (reused from FOR-04-12b, keyed by `offerPackage.id`) — field name embedding the `offerPackage.id`, a `dataType` carrying the THREE prices (labour, construction range, finishing range), and the package's localized label": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717609
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844039215
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844345179
+      }
+    ],
+    "6.4 Write integration test for the work-catalog aggregation + metadata": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717643
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844360655
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844799755
+      }
+    ],
+    "6.5 Write integration test for the drill-in read": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717725
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844361975
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844800973
+      }
+    ],
+    "7.1 `068-seed-work-material-consumptions-resource.xml` (per `.kiro/steering/entity-creation-rules.md`): insert the `WORK_MATERIAL_CONSUMPTION` resource row with non-null `code`/`name_ru`/`name_pl`/`description_ru`/`description_pl`; `role_resources` + `role_resource_operations` grants — ADMIN CRUD, MANAGER CREATE/READ/UPDATE (NO DELETE), FOREMAN/WORKER/FINANCIER READ, CLIENT none (deny-by-default), DELETE ADMIN-only; each insert guarded `<preConditions onFail=\"MARK_RAN\"><sqlCheck expectedResult=\"0\">` so a re-run inserts zero rows. Register LAST in `changelog.xml`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717824
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843195362
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843576467
+      }
+    ],
+    "8.1 `064-seed-new-measurement-units.xml`: idempotent seed of `FOR-04-RESEARCH-material-norms/new-measurement-units.csv` (e.g. `kg`, `l`) into `MEASUREMENT_UNITS`, `sqlCheck`+`MARK_RAN`; register LAST — runs before the material seed": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717866
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840741378
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789841882153
+      }
+    ],
+    "8.2 `065-seed-construction-material-types-research.xml`: seed any `CONSTRUCTION_MATERIAL_TYPES` referenced by the research CSVs but absent (from the distinct `material_type` values), `sqlCheck`+`MARK_RAN`; register LAST": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717900
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789841887040
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842238083
+      }
+    ],
+    "8.3 CSV-to-SQL seed generator (throwaway Python, deleted after generating) + `066-reseed-construction-materials-research.xml`: GENERATED real construction-materials seed from `construction-materials.csv`, SUPERSEDING the FOR-04-17 placeholder seed; resolve each material's `type`→`CONSTRUCTION_MATERIAL_TYPES`, `producer`/`seller`→`MATERIAL_PRODUCERS`/`MATERIAL_SELLERS` (seeding any missing), `unit`→`MEASUREMENT_UNITS`, `packages`→`OFFER_PACKAGES`, `currency`→`CURRENCIES` by sub-select; parse comma-decimal prices (`53,61`→`53.61`, empty→`NULL`); insert nothing for an unresolved required reference; idempotent `sqlCheck`+`MARK_RAN`; document parsed/skipped/unresolved counts in the changeset header. Register LAST — runs BEFORE the consumption seed so each type's analog batch exists": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840717939
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842557261
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789842862968
+      }
+    ],
+    "8.4 Consumption seed generator (throwaway Python, deleted after generating) + `069-seed-work-material-consumptions.xml`: GENERATED seed from `work-material-norms.csv`; per row resolve `work_code`→`WorkItem.code`, `packages`→`OfferPackage`(s) fanning a multi-package CSV row into ONE consumption row per package, and the CSV `material_type`→the analog-group TYPE dictionary matching `branch` (construction→`CONSTRUCTION_MATERIAL_TYPES`, finishing→FOR-04-16 `material_types`); copy `material_unit`/`norm_qty`/`waste_pct`/`branch` (preserved)/`justification_pl`/`justification_ru`/citation; references a TYPE never a concrete material; an unresolved `work_code`/package/`material_type` inserts NO row for that `(row, package)` and is recorded in the generator output; idempotent `sqlCheck`+`MARK_RAN`; document counts in the header. Register LAST in dependency order units → construction material types → construction materials → consumption": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718009
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843604071
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844030498
+      }
+    ],
+    "8.5 Write seed integration tests": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718076
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844040046
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844346688
+      }
+    ],
+    "9. Checkpoint — backend compiles, changelog registers 063–069 in dependency order, seeds idempotent": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718109
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846613988
+      }
+    ],
+    "10.1 Scaffolding under `foremen-frontend/src/features/work-material-consumption/`: types (list/extended DTOs incl. reference ids, `branch`, `typeBatchRange`, `materials`, `justification`, citation), `work-material-consumption-api.ts` via `buildFetchQuery` with FOR-04-01 reference filters (`workItem.id`/`offerPackage.id`/`materialUnit.id`/`constructionMaterialType.id`/`finishingMaterialType.id`/`branch`), query/mutation hooks (`workMaterialConsumptionKeys`) that invalidate the consumption list query AND the work-catalog aggregation query and toast, and a zod schema mirroring the backend validation (required refs, exactly one type matching branch, `normQty` in `[0, 99999999.9999]`)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718144
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844043343
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844349787
+      }
+    ],
+    "10.2 `WorkMaterialConsumptionsList` + `WorkMaterialConsumptionsPage` (`DataTable entityKey=\"work-material-consumptions\" resource=\"WORK_MATERIAL_CONSUMPTION\"`, columns `workItem`/`offerPackage`/`branch`/`materialType`/`material`/`materialUnit`/`normQty`, `branch` via localized labels) + `WorkMaterialConsumptionFormSheet` (required `workItem`/`offerPackage` selectors, required `branch` toggle, required `materialType` selector, optional concrete `material` selector filtered by branch, required `materialUnit` selector, required `normQty`, optional `wastePct`, `justificationRU`/`justificationPL`, citation inputs `sourceType`/`sourceDoc`/`sourceUrl`/`sourceRef`; NO `code`/`name`; zod validation blocks + retains + shows a localized per-field message) + `DeleteWorkMaterialConsumptionDialog` + lazy route `/catalog/material-consumption` + interim guard (`WORK_MATERIAL_CONSUMPTION`/`READ`); permission-gated create/edit/delete via `usePermission`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718187
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844366475
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844805166
+      }
+    ],
+    "10.3 Work-catalog list integration (FOR-04-11/12b page): render, per seeded package, a computed column showing the THREE prices (labour price, construction range, finishing range), rendering `0` where a branch has no norm; clicking a package material cell opens a **drill-in panel** issuing `GET /api/work-material-consumptions?workItem.id==<id>&offerPackage.id==<id>` (large `size`), grouping the rows by branch → material type (analog batch), each material showing `normQty` in the material unit per work-unit AND the money cost per work-unit (`normQty × retailNet`), plus the batch min/max, material characteristics, and justification + citation": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718217
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789845824228
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846174377
+      }
+    ],
+    "10.4 Nav + i18n: add the `\"Расход материалов / Material Consumption\"` item under the `\"Каталог / Catalog\"` section in `navigation.ts` pointing to `/catalog/material-consumption`, ABAC-gated on `WORK_MATERIAL_CONSUMPTION` READ (interim guard); define the full `workMaterialConsumption.*` namespace (page/table/branch/form/price/drillIn/sourceType/empty/toast/validation keys per the design i18n table) + `nav.materialConsumption` at PL+RU parity in BOTH `pl.json` and `ru.json`, non-empty, no raw key rendered; the per-package pivot column renders the package's localized name as header + localized sub-labels `workMaterialConsumption.price.labour`/`.construction`/`.finishing`; drill-in `justification` uses PL fallback; `sourceType` renders via `workMaterialConsumption.sourceType.*`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718251
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789845112216
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789845816608
+      }
+    ],
+    "10.5 Write frontend component + parity tests": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718284
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846181587
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846573240
+      }
+    ],
+    "11. Checkpoint — frontend tsc + the new UI test files": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718318
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846618572
+      }
+    ],
+    "12.1 `WorkMaterialConsumptionControllerIntegrationTest` (Testcontainers): CRUD create/read/update/delete with required references; empty-set/missing-field rejection; branch/material-mismatch rejection; `normQty` range boundaries; plus the `justification` PL fallback on read and both raw variants on the extended DTO; and assert the audit snapshot is FLAT and cycle-free — nested references (`workItem`/`offerPackage`/`materialUnit`/`materialType`) appear as readable name strings, not nested JSON (per task 3.5)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718350
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846184122
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846576525
+      }
+    ],
+    "12.2 `WorkMaterialConsumptionFilterIntegrationTest` (Testcontainers): reference filters (`workItem.id`, `offerPackage.id`, `materialType.id` via both `constructionMaterialType.id`/`finishingMaterialType.id`, `materialUnit.id`, `branch`) return only matching rows": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718383
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846186288
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846578587
+      }
+    ],
+    "12.3 `WorkMaterialConsumptionStartupSmokeTest` (Testcontainers/context): the fully annotated `WorkMaterialConsumptionController` starts under `PermissionAnnotationValidator`; a guard assertion confirms `WorkMaterialConsumptionService` does NOT implement `ProjectScopedService`": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718411
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846187984
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846580715
+      }
+    ],
+    "13. Author test-cases.md": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718443
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846623433
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846878013
+      }
+    ],
+    "14. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789840718477
+      },
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846883981
+      }
+    ],
+    "1. WorkItem stable `code` (additive migration + DTO) (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843172471
+      }
+    ],
+    "2. WorkMaterialConsumption entity, enum, table & DAO (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843175627
+      }
+    ],
+    "4. MaterialRangeResolver + MaterialBatchLookup (computed money вилка) (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843178065
+      }
+    ],
+    "7. ABAC resource & grant matrix seed (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789843576532
+      }
+    ],
+    "8. Generated data seed — materials FIRST, then consumption (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844346725
+      }
+    ],
+    "6. Work-catalog pivot aggregation, /metadata descriptor & drill-in (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789844801024
+      }
+    ],
+    "10. WorkMaterialConsumption admin page (foremen-frontend repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846573308
+      }
+    ],
+    "12. Backend integration / example / smoke tests (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846580799
+      }
+    ],
+    "3. WorkMaterialConsumption service, mappers, controller & CRUD (root repo)": [
+      {
+        "executionId": "4155d0a6-70fe-496a-8337-7fc8dbf4c981",
+        "chatSessionId": "sess_83e5b359-4980-436a-8920-09180a0bce48",
+        "timestamp": 1789846602187
+      }
+    ]
+  }
+}

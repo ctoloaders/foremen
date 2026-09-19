@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19: the WorkMaterialConsumption operational entity — one
+        (work item, offer package, material TYPE) norm binding a WorkItem to how
+        much of a material analog GROUP it consumes per one work-unit.
+
+        Columns mirror WorkMaterialConsumptionEntity exactly (branch VARCHAR(32),
+        norm_qty NUMERIC(12,4), waste_pct NUMERIC(5,2), justification_ru/pl text,
+        source_type VARCHAR(32), source_doc, source_url VARCHAR(1024), source_ref)
+        plus the four BaseEntity audit columns (created_date/created_by/
+        updated_date/updated_by).
+
+        FK conventions:
+          - work_item_id / offer_package_id are the OWNER FKs, ON DELETE CASCADE
+            (deleting the owning work item or offer package removes its norm rows),
+            following the FOR-04-12b/17/18 join pattern.
+          - construction_material_type_id -> construction_material_types and
+            finishing_material_type_id -> material_types are the two type-dictionary
+            FKs, and material_unit_id -> measurement_units, all ON DELETE RESTRICT
+            (a referenced dictionary row cannot be deleted while a norm references it).
+
+        The XOR + branch-match rule (exactly one of the two type ids non-null and
+        matching branch) is NOT a DB check constraint — it is enforced at the write
+        path (task 3.2), so both type FK columns are nullable here.
+
+        Idempotent via tableExists + MARK_RAN: a re-run against an existing table
+        makes no schema change.
+    -->
+
+    <changeSet id="067-create-work-material-consumptions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_material_consumptions"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_material_consumptions">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="material_unit_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="branch" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="construction_material_type_id" type="BIGINT"/>
+            <column name="finishing_material_type_id" type="BIGINT"/>
+            <column name="norm_qty" type="NUMERIC(12,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="waste_pct" type="NUMERIC(5,2)"/>
+            <column name="justification_ru" type="TEXT"/>
+            <column name="justification_pl" type="TEXT"/>
+            <column name="source_type" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_doc" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_url" type="VARCHAR(1024)"/>
+            <column name="source_ref" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FKs: ON DELETE CASCADE (FOR-04-12b/17/18 pattern). -->
+        <addForeignKeyConstraint
+            constraintName="fk_wmc_work_item"
+            baseTableName="work_material_consumptions"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_wmc_offer_package"
+            baseTableName="work_material_consumptions"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Dictionary FKs: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_wmc_material_unit"
+            baseTableName="work_material_consumptions"
+            baseColumnNames="material_unit_id"
+            referencedTableName="measurement_units"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_wmc_construction_material_type"
+            baseTableName="work_material_consumptions"
+            baseColumnNames="construction_material_type_id"
+            referencedTableName="construction_material_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_wmc_finishing_material_type"
+            baseTableName="work_material_consumptions"
+            baseColumnNames="finishing_material_type_id"
+            referencedTableName="material_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>

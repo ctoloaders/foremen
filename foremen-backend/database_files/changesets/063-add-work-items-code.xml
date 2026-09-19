@@ -1,0 +1,300 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 (task 1.2, Requirements 1.1/1.2/1.4): add the stable natural key
+        WorkItem.code (from the Excel positional LP normalized to N.MM) to work_items.
+
+        Three idempotent, independently-guarded changesets:
+
+          063a  addColumn code VARCHAR(64)                — guarded by NOT columnExists + MARK_RAN
+          063b  partial unique index ux_work_items_code   — Postgres partial index
+                ON work_items(code) WHERE code IS NOT NULL — guarded on index absence + MARK_RAN
+                (uniqueness of non-null codes; unlimited NULLs allowed — Requirement 1.3/1.4)
+          063c  data backfill of code from the Excel LP    — guarded so a re-run changes nothing
+
+        The backfill (063c) maps each seeded work item to its Excel LP by matching
+        work_items.name_pl to the Oferta sheet's ZAKRES text (the same name_pl the
+        FOR-04-12b work-catalog / 045-seed-work-package-prices seed resolves against),
+        setting code to the LP normalized to N.MM (e.g. '1,01' -> '1.01', '2,10' -> '2.10').
+        The 211 catalog rows have distinct name_pl values (verified), so the match is
+        unambiguous; the multi-line names (10.06-10.11) preserve the exact embedded
+        newlines the catalog was seeded with.
+
+        Idempotency / robustness:
+          - the changeset-level preCondition (sqlCheck COUNT(*) WHERE code IS NOT NULL = 0)
+            skips the whole backfill via MARK_RAN once any code is populated, so a re-run
+            changes nothing;
+          - every UPDATE additionally carries "AND code IS NULL" so it never overwrites an
+            already-set code;
+          - a work item whose name_pl does not match any LP (or a work item absent from the
+            catalog) simply matches no UPDATE and keeps code = NULL — the migration does NOT
+            fail (Requirement 1.4).
+
+        Registered LAST in changelog.xml, BEFORE 064/065 in dependency order.
+    -->
+
+    <changeSet id="063a-add-work-items-code" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="work_items" columnName="code"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="work_items">
+            <column name="code" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="063b-uk-work-items-code" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <columnExists tableName="work_items" columnName="code"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM pg_indexes
+                    WHERE schemaname = 'public'
+                      AND tablename = 'work_items'
+                      AND indexname = 'ux_work_items_code'
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            CREATE UNIQUE INDEX ux_work_items_code ON work_items(code) WHERE code IS NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="063c-backfill-work-items-code" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <columnExists tableName="work_items" columnName="code"/>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_items WHERE code IS NOT NULL</sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql splitStatements="true" endDelimiter=";"><![CDATA[
+            UPDATE work_items SET code = '1.01' WHERE name_pl = 'Zabezpieczenie na czas prac okien, drzwi, drogi transportu' AND code IS NULL;
+            UPDATE work_items SET code = '1.02' WHERE name_pl = 'Rozbiórki ściany murowanej' AND code IS NULL;
+            UPDATE work_items SET code = '1.03' WHERE name_pl = 'Naprawa posadzek i stropu po pracach wyburzeniowych' AND code IS NULL;
+            UPDATE work_items SET code = '1.04' WHERE name_pl = 'Wentylacja - relokacja otworów' AND code IS NULL;
+            UPDATE work_items SET code = '1.05' WHERE name_pl = 'Wentylacja - poszerzenie otworu' AND code IS NULL;
+            UPDATE work_items SET code = '1.06' WHERE name_pl = 'Wentylacja - dostosowanie (wydłużenie kanału)' AND code IS NULL;
+            UPDATE work_items SET code = '1.07' WHERE name_pl = 'Naprawa ścian i stropów po bruzdowania po firmie zewnętrznej' AND code IS NULL;
+            UPDATE work_items SET code = '1.08' WHERE name_pl = 'Wyburzenie posadzki cementowej z wynoszeniem' AND code IS NULL;
+            UPDATE work_items SET code = '1.09' WHERE name_pl = 'Demontaże / wyburzenie płytek' AND code IS NULL;
+            UPDATE work_items SET code = '1.10' WHERE name_pl = 'Demontaże / wyburzenie paneli podłogowych ułożonych na pływająco' AND code IS NULL;
+            UPDATE work_items SET code = '1.11' WHERE name_pl = 'Demontaże / wyburzenie paneli, deski ułożonych na klej' AND code IS NULL;
+            UPDATE work_items SET code = '1.12' WHERE name_pl = 'Demontaże / wyburzenie listw przypodłogowych' AND code IS NULL;
+            UPDATE work_items SET code = '2.01' WHERE name_pl = 'Obniżenie wysokości otworów drzwiowych - dostosowanie do stolarki' AND code IS NULL;
+            UPDATE work_items SET code = '2.02' WHERE name_pl = 'Zmniejszenie otworu (GK + wyrównanie) <3cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.03' WHERE name_pl = 'Zmniejszenie otworu (GK + wyrównanie) >3cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.04' WHERE name_pl = 'Poszerzenie otworu drzwiowego ściany <5 cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.05' WHERE name_pl = 'Poszerzenie otworu drzwiowego ściany >5 cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.06' WHERE name_pl = 'Demontaż / montaż belki poprzecznej w ścianie z bloczków' AND code IS NULL;
+            UPDATE work_items SET code = '2.07' WHERE name_pl = 'Nowa belka poprzeczna w ścianie z bloczków' AND code IS NULL;
+            UPDATE work_items SET code = '2.08' WHERE name_pl = 'Wycięcie posadzki pod nową ścianę murowaną z bloczków' AND code IS NULL;
+            UPDATE work_items SET code = '2.09' WHERE name_pl = 'Ściana murowana z bloczków komórkowych do 10cm gr.' AND code IS NULL;
+            UPDATE work_items SET code = '2.10' WHERE name_pl = 'Gładź startowa i tynkowanie ściany murowanej' AND code IS NULL;
+            UPDATE work_items SET code = '2.11' WHERE name_pl = 'Ścianka GK, płytowana obustronnie podwójnie, szpachlowanie łączeń' AND code IS NULL;
+            UPDATE work_items SET code = '2.12' WHERE name_pl = 'Wypełnienie wełną akustyczną ściany gk' AND code IS NULL;
+            UPDATE work_items SET code = '2.13' WHERE name_pl = 'Przedścianka GK, płytowana jednostronnie podwójnie, szpachlowanie łączeń' AND code IS NULL;
+            UPDATE work_items SET code = '2.14' WHERE name_pl = 'Licowanie ścian płytą GK bez szpachlowania' AND code IS NULL;
+            UPDATE work_items SET code = '2.15' WHERE name_pl = 'Licowanie / przedścianka z płyty OSB' AND code IS NULL;
+            UPDATE work_items SET code = '2.16' WHERE name_pl = 'Obszycie stelażu WC płytą GK (do 120x100 cm)' AND code IS NULL;
+            UPDATE work_items SET code = '2.17' WHERE name_pl = 'Obudowa wanny gk (1 strona)' AND code IS NULL;
+            UPDATE work_items SET code = '2.18' WHERE name_pl = 'Obudowa wanny gk (2/3 strona)' AND code IS NULL;
+            UPDATE work_items SET code = '2.19' WHERE name_pl = 'Wykonanie rewizji pod wanną' AND code IS NULL;
+            UPDATE work_items SET code = '2.20' WHERE name_pl = 'Półka z GK do szerokości 80 cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.21' WHERE name_pl = 'Wnęka w zabudowie z GK do szerokości 80 cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.22' WHERE name_pl = 'Płyta betonowa (półka / blat) do wymiarów 60x90 cm' AND code IS NULL;
+            UPDATE work_items SET code = '2.23' WHERE name_pl = 'Montaż narożnika aluminiowego dla konstrukcji suchej zabudowy' AND code IS NULL;
+            UPDATE work_items SET code = '2.24' WHERE name_pl = 'Wykończenie połączeń ścian z sufitem za pomocą narożników papierowych' AND code IS NULL;
+            UPDATE work_items SET code = '2.25' WHERE name_pl = 'Sufit podwieszany prosty wraz z obróbką łączeń' AND code IS NULL;
+            UPDATE work_items SET code = '2.26' WHERE name_pl = 'Uskok przy suficie podwieszany' AND code IS NULL;
+            UPDATE work_items SET code = '2.27' WHERE name_pl = 'Karnisze z GK 5 cm szerokości, z narożnikiem i szpachlowaniem' AND code IS NULL;
+            UPDATE work_items SET code = '2.28' WHERE name_pl = 'Wnęka w suficie GK' AND code IS NULL;
+            UPDATE work_items SET code = '3.01' WHERE name_pl = 'Punkt wod-kan bez wkucia - nowy / relokacja' AND code IS NULL;
+            UPDATE work_items SET code = '3.02' WHERE name_pl = 'Likwidacja (zaślepienie) punktu hydrauliki istniejącego' AND code IS NULL;
+            UPDATE work_items SET code = '3.03' WHERE name_pl = 'Likwidacja grzejników' AND code IS NULL;
+            UPDATE work_items SET code = '3.04' WHERE name_pl = 'Bruzdowanie / wkucie rur' AND code IS NULL;
+            UPDATE work_items SET code = '3.05' WHERE name_pl = 'Tynkowanie bruzd' AND code IS NULL;
+            UPDATE work_items SET code = '3.06' WHERE name_pl = 'Bateria umywalkowa/bidet podtynkowa dwupunktowa - montaż podtynkowy' AND code IS NULL;
+            UPDATE work_items SET code = '3.07' WHERE name_pl = 'Bateria prysznicowa podtynkowa - montaż podtynkowy (kpl deszczownica, słuchawka, sterownik)' AND code IS NULL;
+            UPDATE work_items SET code = '3.08' WHERE name_pl = 'Stelaż miski WC lub bidetowej' AND code IS NULL;
+            UPDATE work_items SET code = '3.09' WHERE name_pl = 'Odpływ liniowy - wykucie i obsadzenie' AND code IS NULL;
+            UPDATE work_items SET code = '3.10' WHERE name_pl = 'Odpływ liniowy - wykonanie spadku' AND code IS NULL;
+            UPDATE work_items SET code = '3.11' WHERE name_pl = 'Odpływ punktowy - montaż kompletny' AND code IS NULL;
+            UPDATE work_items SET code = '4.01' WHERE name_pl = 'Zawory kątowe' AND code IS NULL;
+            UPDATE work_items SET code = '4.02' WHERE name_pl = 'Przycisk WC' AND code IS NULL;
+            UPDATE work_items SET code = '4.03' WHERE name_pl = 'Miska WC wisząca' AND code IS NULL;
+            UPDATE work_items SET code = '4.04' WHERE name_pl = 'Miska WC stojąca' AND code IS NULL;
+            UPDATE work_items SET code = '4.05' WHERE name_pl = 'Miska bidetowa wisząca' AND code IS NULL;
+            UPDATE work_items SET code = '4.06' WHERE name_pl = 'Odpływ liniowy - montaż końcowy' AND code IS NULL;
+            UPDATE work_items SET code = '4.07' WHERE name_pl = 'Przegroda szklana jednoskrzydłowa prysznicowa' AND code IS NULL;
+            UPDATE work_items SET code = '4.08' WHERE name_pl = 'Wanna' AND code IS NULL;
+            UPDATE work_items SET code = '4.09' WHERE name_pl = 'Parawan nawannowy' AND code IS NULL;
+            UPDATE work_items SET code = '4.10' WHERE name_pl = 'Brodzik prysznicowy' AND code IS NULL;
+            UPDATE work_items SET code = '4.11' WHERE name_pl = 'Drzwiczki systemowe prysznicowe' AND code IS NULL;
+            UPDATE work_items SET code = '4.12' WHERE name_pl = 'Umywalka nablatowa' AND code IS NULL;
+            UPDATE work_items SET code = '4.13' WHERE name_pl = 'Umywalka podblatowa (bez otworowania)' AND code IS NULL;
+            UPDATE work_items SET code = '4.14' WHERE name_pl = 'Syfon' AND code IS NULL;
+            UPDATE work_items SET code = '4.15' WHERE name_pl = 'Bateria stojąca umywalkowa' AND code IS NULL;
+            UPDATE work_items SET code = '4.16' WHERE name_pl = 'Bateria umywalkowa/bidet podtynkowa dwupunktowy - montaż końcowy' AND code IS NULL;
+            UPDATE work_items SET code = '4.17' WHERE name_pl = 'Bateria stojąca wannowa' AND code IS NULL;
+            UPDATE work_items SET code = '4.18' WHERE name_pl = 'Bateria natynkowa prysznicowa' AND code IS NULL;
+            UPDATE work_items SET code = '4.19' WHERE name_pl = 'Bateria prysznicowa podtynkowa - montaż końcowy (kpl deszczownica, słuchawka, sterownik)' AND code IS NULL;
+            UPDATE work_items SET code = '4.20' WHERE name_pl = 'Drążek (uchwyt) natryskowy z deszczownicą' AND code IS NULL;
+            UPDATE work_items SET code = '4.21' WHERE name_pl = 'Istniejący grzejnik łazienkowy (demontaż, zabezpieczenie na czas prac, montaż)' AND code IS NULL;
+            UPDATE work_items SET code = '4.22' WHERE name_pl = 'Istniejący grzejnik pokojowy (demontaż, zabezpieczenie na czas prac, montaż)' AND code IS NULL;
+            UPDATE work_items SET code = '4.23' WHERE name_pl = 'Nowy grzejnik - podłączenia i instalacja' AND code IS NULL;
+            UPDATE work_items SET code = '4.24' WHERE name_pl = 'Instalacja przycisku pneumatycznego wc' AND code IS NULL;
+            UPDATE work_items SET code = '5.01' WHERE name_pl = 'Relokacja skrzynki TS (demontaż starej, wnęka w ścianie na nową, montaż skrzynki nowej)' AND code IS NULL;
+            UPDATE work_items SET code = '5.02' WHERE name_pl = 'Relokacja skrzynki TS (przełączanie)' AND code IS NULL;
+            UPDATE work_items SET code = '5.03' WHERE name_pl = 'Kanał podtynkowy kablowy w ścianie z bloczków' AND code IS NULL;
+            UPDATE work_items SET code = '5.04' WHERE name_pl = 'Kanał podtynkowy kablowy w ścianie z żelbetu' AND code IS NULL;
+            UPDATE work_items SET code = '5.05' WHERE name_pl = 'Demontaż ramek istniejącego osprzętu elektrycznego' AND code IS NULL;
+            UPDATE work_items SET code = '5.06' WHERE name_pl = 'Demontaż osprzętu elektrycznego (gniazdo)' AND code IS NULL;
+            UPDATE work_items SET code = '5.07' WHERE name_pl = 'Montaż ramek elektrycznego z demontażu' AND code IS NULL;
+            UPDATE work_items SET code = '5.08' WHERE name_pl = 'Montaż maty grzewczej elektrycznej na podłogę' AND code IS NULL;
+            UPDATE work_items SET code = '5.09' WHERE name_pl = 'Montaż maty grzewczej elektrycznej do ściany' AND code IS NULL;
+            UPDATE work_items SET code = '5.10' WHERE name_pl = 'Montaż sterownika maty oraz doprowadzenie zasilania' AND code IS NULL;
+            UPDATE work_items SET code = '5.11' WHERE name_pl = 'Likwidacja punktu elektrycznego' AND code IS NULL;
+            UPDATE work_items SET code = '5.12' WHERE name_pl = 'Gniazdo 220v - nowe lub relokacja w ścianie z bloczków lub GK' AND code IS NULL;
+            UPDATE work_items SET code = '5.13' WHERE name_pl = 'Gniazdo 220v - nowe lub relokacja w ścianie z żelbetu' AND code IS NULL;
+            UPDATE work_items SET code = '5.14' WHERE name_pl = 'Łącznik pojedynczy - nowe lub relokacja w ścianie z bloczków lub GK' AND code IS NULL;
+            UPDATE work_items SET code = '5.15' WHERE name_pl = 'Łącznik pojedynczy - nowe lub relokacja w ścianie z żelbetu' AND code IS NULL;
+            UPDATE work_items SET code = '5.16' WHERE name_pl = 'Łącznik schodowy lub krzyżowy - nowe lub relokacja' AND code IS NULL;
+            UPDATE work_items SET code = '5.17' WHERE name_pl = 'Łącznik Master - nowe lub relokacja' AND code IS NULL;
+            UPDATE work_items SET code = '5.18' WHERE name_pl = 'Czujnik lub sterownik - nowe lub relokacja' AND code IS NULL;
+            UPDATE work_items SET code = '5.19' WHERE name_pl = 'Wypusty - nowe wyprowadzenie lub relokacja kabla zasilającego istniejącego' AND code IS NULL;
+            UPDATE work_items SET code = '5.20' WHERE name_pl = 'Gniazdo sieciowe / tv / multimedialne - nowe lub relokacja' AND code IS NULL;
+            UPDATE work_items SET code = '5.21' WHERE name_pl = 'Gniazdo siłowe do kuchenki - nowe lub relokacja' AND code IS NULL;
+            UPDATE work_items SET code = '5.22' WHERE name_pl = 'Bruzdowanie i układanie kabli elektrycznych w tynku' AND code IS NULL;
+            UPDATE work_items SET code = '5.23' WHERE name_pl = 'Bruzdowanie i układanie kabli elektrycznych w ścianie z żelbetu' AND code IS NULL;
+            UPDATE work_items SET code = '5.24' WHERE name_pl = 'Łatanie po kablach elektrycznych' AND code IS NULL;
+            UPDATE work_items SET code = '5.25' WHERE name_pl = 'Doprowadzenie zasilania i przygotowanie wypustu do taśmy LED w podstopnicy' AND code IS NULL;
+            UPDATE work_items SET code = '6.01' WHERE name_pl = 'Transformator do taśmy led' AND code IS NULL;
+            UPDATE work_items SET code = '6.02' WHERE name_pl = 'Taśma LED' AND code IS NULL;
+            UPDATE work_items SET code = '6.03' WHERE name_pl = 'Profil podtynkowy do taśmy LED' AND code IS NULL;
+            UPDATE work_items SET code = '6.04' WHERE name_pl = 'Wklejenie i lutowanie taśmy LED w podstopnicy w przygotowany profil' AND code IS NULL;
+            UPDATE work_items SET code = '6.05' WHERE name_pl = 'Oprawy sufitowe lub klinkiety jednopunktowe' AND code IS NULL;
+            UPDATE work_items SET code = '6.06' WHERE name_pl = 'Oprawy sufitowe złożone, wielopunktowe, od' AND code IS NULL;
+            UPDATE work_items SET code = '6.07' WHERE name_pl = 'Szynoprzewód + 2 reflektory' AND code IS NULL;
+            UPDATE work_items SET code = '6.08' WHERE name_pl = 'Montaż osprzętu elektrycznego wraz z ramką (gniazda, włączniki, sterowniki)' AND code IS NULL;
+            UPDATE work_items SET code = '6.09' WHERE name_pl = 'Grzejnik Elektryczny' AND code IS NULL;
+            UPDATE work_items SET code = '6.10' WHERE name_pl = 'Elektrozawór wodny' AND code IS NULL;
+            UPDATE work_items SET code = '7.01' WHERE name_pl = 'Hydroizolacja podłogi' AND code IS NULL;
+            UPDATE work_items SET code = '7.02' WHERE name_pl = 'Hydroizolacja ścian do pełnej wysokości' AND code IS NULL;
+            UPDATE work_items SET code = '7.03' WHERE name_pl = 'Gruntowanie gruntem podkładowym pod płytki' AND code IS NULL;
+            UPDATE work_items SET code = '7.04' WHERE name_pl = 'Brodzik prysznicowy - docinka płytek, obsadzenie, obróbka' AND code IS NULL;
+            UPDATE work_items SET code = '7.05' WHERE name_pl = 'Odpływ liniowy - docinka płytek, obsadzenie, obróbka' AND code IS NULL;
+            UPDATE work_items SET code = '7.06' WHERE name_pl = 'Podłoga - gres format mozaika' AND code IS NULL;
+            UPDATE work_items SET code = '7.07' WHERE name_pl = 'Podłoga - gres format mały 6x6 - 25x25' AND code IS NULL;
+            UPDATE work_items SET code = '7.08' WHERE name_pl = 'Podłoga - gres format średni 30x30 - 60x60' AND code IS NULL;
+            UPDATE work_items SET code = '7.09' WHERE name_pl = 'Podłoga - gres format duży 60x60 - 120x120' AND code IS NULL;
+            UPDATE work_items SET code = '7.10' WHERE name_pl = 'Podłoga - gres format bardzo duży 120x240 - 100x300' AND code IS NULL;
+            UPDATE work_items SET code = '7.11' WHERE name_pl = 'Ściany - glazura format mozaika' AND code IS NULL;
+            UPDATE work_items SET code = '7.12' WHERE name_pl = 'Ściany - glazura format mały 6x6 - 25x25' AND code IS NULL;
+            UPDATE work_items SET code = '7.13' WHERE name_pl = 'Ściany - glazura format średni 30x30 - 60x60' AND code IS NULL;
+            UPDATE work_items SET code = '7.14' WHERE name_pl = 'Ściany - glazura format duży 60x60 - 120x120' AND code IS NULL;
+            UPDATE work_items SET code = '7.15' WHERE name_pl = 'Ściany - glazura format bardzo duży 120x240 - 100x300' AND code IS NULL;
+            UPDATE work_items SET code = '7.16' WHERE name_pl = 'Wąskie pasy płytek (szer. <1m) format do 25cm' AND code IS NULL;
+            UPDATE work_items SET code = '7.17' WHERE name_pl = 'Wąskie pasy płytek (szer. <1m) format 30 - 90cm' AND code IS NULL;
+            UPDATE work_items SET code = '7.18' WHERE name_pl = 'Wąskie pasy płytek (szer. <1m) format >90' AND code IS NULL;
+            UPDATE work_items SET code = '7.19' WHERE name_pl = 'Fugowanie płytek - format >30 cm (spoina cementowa)' AND code IS NULL;
+            UPDATE work_items SET code = '7.20' WHERE name_pl = 'Fugowanie płytek - format >30 cm (spoina epoksydowa)' AND code IS NULL;
+            UPDATE work_items SET code = '7.21' WHERE name_pl = 'Fugowanie płytek - format <30 cm (spoina cementowa)' AND code IS NULL;
+            UPDATE work_items SET code = '7.22' WHERE name_pl = 'Fugowanie płytek - format <30 cm (spoina epoksydowa)' AND code IS NULL;
+            UPDATE work_items SET code = '7.23' WHERE name_pl = 'Fugowanie narożników fugą epoksydową' AND code IS NULL;
+            UPDATE work_items SET code = '7.24' WHERE name_pl = 'Szlifowanie płytek na 45st. w narożnikach format >30 cm' AND code IS NULL;
+            UPDATE work_items SET code = '7.25' WHERE name_pl = 'Szlifowanie płytek na 45st. w narożnikach' AND code IS NULL;
+            UPDATE work_items SET code = '7.26' WHERE name_pl = 'Odcięcie i szlifowanie (zakończenie jak fabryczne) przy łączeniach płytka-płytka' AND code IS NULL;
+            UPDATE work_items SET code = '7.27' WHERE name_pl = 'Otworowanie w płytkach śr. powyżej 15mm' AND code IS NULL;
+            UPDATE work_items SET code = '7.28' WHERE name_pl = 'Silikonowanie narożników' AND code IS NULL;
+            UPDATE work_items SET code = '8.01' WHERE name_pl = 'Gruntowanie gruntem podkładowym x2 - glify okienne lub wnęki' AND code IS NULL;
+            UPDATE work_items SET code = '8.02' WHERE name_pl = 'Gruntowanie gruntem podkładowym x2 - sufity' AND code IS NULL;
+            UPDATE work_items SET code = '8.03' WHERE name_pl = 'Gruntowanie gruntem podkładowym x2 - ściany' AND code IS NULL;
+            UPDATE work_items SET code = '8.04' WHERE name_pl = 'Szlifowanie tynku - glify okienne lub wnęki' AND code IS NULL;
+            UPDATE work_items SET code = '8.05' WHERE name_pl = 'Szlifowanie tynku - sufit' AND code IS NULL;
+            UPDATE work_items SET code = '8.06' WHERE name_pl = 'Szlifowanie tynku - ściany' AND code IS NULL;
+            UPDATE work_items SET code = '8.07' WHERE name_pl = 'Gładzie x1 - glify okienne lub wnęki' AND code IS NULL;
+            UPDATE work_items SET code = '8.08' WHERE name_pl = 'Gładzie x1 - sufit' AND code IS NULL;
+            UPDATE work_items SET code = '8.09' WHERE name_pl = 'Gładzie x1 - ściany' AND code IS NULL;
+            UPDATE work_items SET code = '8.10' WHERE name_pl = 'Gładzie x2 - glify okienne lub wnęki (odp. Q3)' AND code IS NULL;
+            UPDATE work_items SET code = '8.11' WHERE name_pl = 'Gładzie x2 - sufit (odp. Q3)' AND code IS NULL;
+            UPDATE work_items SET code = '8.12' WHERE name_pl = 'Gładzie x2 - ściany (odp. Q3)' AND code IS NULL;
+            UPDATE work_items SET code = '8.13' WHERE name_pl = 'Gładzie x3+ - glify okienne lub wnęki (odp. Q4)' AND code IS NULL;
+            UPDATE work_items SET code = '8.14' WHERE name_pl = 'Gładzie x3+ - sufit (odp. Q4)' AND code IS NULL;
+            UPDATE work_items SET code = '8.15' WHERE name_pl = 'Gładzie x3+ - ściany (odp. Q4)' AND code IS NULL;
+            UPDATE work_items SET code = '8.16' WHERE name_pl = 'Szpachlowanie po kablach elektrycznych' AND code IS NULL;
+            UPDATE work_items SET code = '9.01' WHERE name_pl = 'Prace malarskie na wysokości. Zastosowanie rusztowań' AND code IS NULL;
+            UPDATE work_items SET code = '9.02' WHERE name_pl = 'Malowanie wałkiem na biało - glify okienne lub wnęki' AND code IS NULL;
+            UPDATE work_items SET code = '9.03' WHERE name_pl = 'Malowanie wałkiem na biało - sufity i blendy' AND code IS NULL;
+            UPDATE work_items SET code = '9.04' WHERE name_pl = 'Malowanie wałkiem na biało - ściany' AND code IS NULL;
+            UPDATE work_items SET code = '9.05' WHERE name_pl = 'Malowanie wałkiem w kolorze - glify okienne lub wnęki' AND code IS NULL;
+            UPDATE work_items SET code = '9.06' WHERE name_pl = 'Malowanie wałkiem w kolorze - sufity i blendy' AND code IS NULL;
+            UPDATE work_items SET code = '9.07' WHERE name_pl = 'Malowanie wałkiem w kolorze - ściany' AND code IS NULL;
+            UPDATE work_items SET code = '9.08' WHERE name_pl = 'Dopłata za więcej niż jeden kolor na 1 ścianie (etapowanie robót i dodatkowe zabezpieczenie)' AND code IS NULL;
+            UPDATE work_items SET code = '9.09' WHERE name_pl = 'Wykończenie końca schodów (zabiezpeczenie, tynkowanie, gruntowanie, gładzie, malowanie)' AND code IS NULL;
+            UPDATE work_items SET code = '9.10' WHERE name_pl = 'Akrylowanie narożników' AND code IS NULL;
+            UPDATE work_items SET code = '9.11' WHERE name_pl = 'Tynk dekoracyjny' AND code IS NULL;
+            UPDATE work_items SET code = '9.12' WHERE name_pl = 'Tapeta flizelinowa, od' AND code IS NULL;
+            UPDATE work_items SET code = '9.13' WHERE name_pl = 'Tapeta winylowa, od' AND code IS NULL;
+            UPDATE work_items SET code = '9.14' WHERE name_pl = 'Filc ścienny' AND code IS NULL;
+            UPDATE work_items SET code = '9.15' WHERE name_pl = 'Sztukateria ścienna wraz z akrylowaniem i malowaniem' AND code IS NULL;
+            UPDATE work_items SET code = '9.16' WHERE name_pl = 'Sztukateria przysufitowa wraz z akrylowaniem i malowaniem' AND code IS NULL;
+            UPDATE work_items SET code = '9.17' WHERE name_pl = 'Lamele na podkładzie / panele ścienne, m2' AND code IS NULL;
+            UPDATE work_items SET code = '9.18' WHERE name_pl = 'Lamele ścienne, mb' AND code IS NULL;
+            UPDATE work_items SET code = '10.01' WHERE name_pl = 'Posadzka cementowa' AND code IS NULL;
+            UPDATE work_items SET code = '10.02' WHERE name_pl = 'Wylewka wyrównująca samopoziomująca' AND code IS NULL;
+            UPDATE work_items SET code = '10.03' WHERE name_pl = 'Obniżenie poziomu posadzek, szlifowanie. Do 5mm' AND code IS NULL;
+            UPDATE work_items SET code = '10.04' WHERE name_pl = 'Szlifowanie posadzek, przygotowanie do klejania podłogi' AND code IS NULL;
+            UPDATE work_items SET code = '10.05' WHERE name_pl = 'Gruntowanie gruntem podkładowym' AND code IS NULL;
+            UPDATE work_items SET code = '10.06' WHERE name_pl = 'Panele podłogowe/winylowe (wraz podkładem i folią)
+Układ - prosty, technologia - na pływająco' AND code IS NULL;
+            UPDATE work_items SET code = '10.07' WHERE name_pl = 'Panele podłogowe/winylowe (wraz podkładem i folią)
+Układ - jodełka, technologia - na pływająco' AND code IS NULL;
+            UPDATE work_items SET code = '10.08' WHERE name_pl = 'Panele winylowe - na klej 
+Układ - prosty, technologia - na klej' AND code IS NULL;
+            UPDATE work_items SET code = '10.09' WHERE name_pl = 'Panele winylowe - na klej 
+Układ - jodełka, technologia - na klej' AND code IS NULL;
+            UPDATE work_items SET code = '10.10' WHERE name_pl = 'Deska warstwowa - na klej
+Układ - prosty, na klej' AND code IS NULL;
+            UPDATE work_items SET code = '10.11' WHERE name_pl = 'Deska warstwowa - na klej
+Układ -  jodełka, na klej' AND code IS NULL;
+            UPDATE work_items SET code = '10.12' WHERE name_pl = 'Zabezpieczenie zainstalowanej podłogi na czas prac' AND code IS NULL;
+            UPDATE work_items SET code = '10.13' WHERE name_pl = 'Listwa dylatacyjna aluminiowa przy łączeniu posadzek / akrylowanie, szt. do 1 mb' AND code IS NULL;
+            UPDATE work_items SET code = '10.14' WHERE name_pl = 'Listwa dylatacyjna przy wejściu do lokalu z docięciem' AND code IS NULL;
+            UPDATE work_items SET code = '10.15' WHERE name_pl = 'Listwa przypodłogowa MDF / styrodur / PCV na klej' AND code IS NULL;
+            UPDATE work_items SET code = '10.16' WHERE name_pl = 'Listwa przypodłogowa ukryta z podcięciem ściany na grubość listwy' AND code IS NULL;
+            UPDATE work_items SET code = '11.01' WHERE name_pl = 'Przycięcie skrzydła drzwi (1 strona)' AND code IS NULL;
+            UPDATE work_items SET code = '11.02' WHERE name_pl = 'Drzwi ukryte - montaż ościeżnicy i skrzydła (do 2 m, powyżej 2 m +10% za 10 cm)' AND code IS NULL;
+            UPDATE work_items SET code = '11.03' WHERE name_pl = 'Drzwi ukryte - obróbka otworu (do 2 m, powyżej 2 m +10% za 10 cm)' AND code IS NULL;
+            UPDATE work_items SET code = '11.04' WHERE name_pl = 'Drzwi ukryte - malowanie skrzydła (do 2 m, powyżej 2 m +10% za 10 cm)' AND code IS NULL;
+            UPDATE work_items SET code = '11.05' WHERE name_pl = 'Drzwi z widoczną ościeżnicą bez docięć - montaż' AND code IS NULL;
+            UPDATE work_items SET code = '11.06' WHERE name_pl = 'Klamka z zamkiem lub bez - montaż' AND code IS NULL;
+            UPDATE work_items SET code = '11.07' WHERE name_pl = 'Składanie szafki umywalkowej' AND code IS NULL;
+            UPDATE work_items SET code = '11.08' WHERE name_pl = 'Montaż szafki umywalkowej' AND code IS NULL;
+            UPDATE work_items SET code = '12.01' WHERE name_pl = 'Parapet bez bocznego wkucia szerokość do 150cm' AND code IS NULL;
+            UPDATE work_items SET code = '12.02' WHERE name_pl = 'Parapet bez bocznego wkucia szerokość od 150 cm' AND code IS NULL;
+            UPDATE work_items SET code = '12.03' WHERE name_pl = 'Listwy przysufitowe maskownice karnisza (blendy) wraz z akrylowaniem i malowaniem' AND code IS NULL;
+            UPDATE work_items SET code = '12.04' WHERE name_pl = 'Montaż karnisza' AND code IS NULL;
+            UPDATE work_items SET code = '12.05' WHERE name_pl = 'Montaż lustra łazienkowego' AND code IS NULL;
+            UPDATE work_items SET code = '12.06' WHERE name_pl = 'Montaż lustra łazienkowego z podświetleniem' AND code IS NULL;
+            UPDATE work_items SET code = '12.07' WHERE name_pl = 'Montaż lustra / szkla, m2/mb' AND code IS NULL;
+            UPDATE work_items SET code = '12.08' WHERE name_pl = 'Wentylacja - montaż wentylatora' AND code IS NULL;
+            UPDATE work_items SET code = '12.09' WHERE name_pl = 'Wentylacja - montaż kratki wentylacyjnej' AND code IS NULL;
+            UPDATE work_items SET code = '12.10' WHERE name_pl = 'Montaż akcesoriów' AND code IS NULL;
+            UPDATE work_items SET code = '12.11' WHERE name_pl = 'Instalacja sprzętu AGD, od' AND code IS NULL;
+            UPDATE work_items SET code = '13.01' WHERE name_pl = 'Koordynacja zakupów i dostaw chemii budowlanej z wniesieniem' AND code IS NULL;
+            UPDATE work_items SET code = '13.02' WHERE name_pl = 'Utrzymanie czystości podczas prac, odkurzanie, stosowanie dywaników, sprzątanie podstawowe. Nie obejmuje czyszczenia detali ani usług profesjonalnego sprzątania (cleaningu)' AND code IS NULL;
+            UPDATE work_items SET code = '13.03' WHERE name_pl = 'Uwzględnienie lokalizacji / specyfiki projektu (np. lokalizacja, terminowość, piętro)' AND code IS NULL;
+            UPDATE work_items SET code = '13.04' WHERE name_pl = 'Odbiór, rozładowanie, wniesienie dostaw zewnętrznych' AND code IS NULL;
+        ]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

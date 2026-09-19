@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-20 (data-fill): first-pass consumption-norm autofill + class-B package links.
+        Reproduces the INSERT...SELECT logic applied to the live DB (not per-row dumped).
+        072a autofill norms: per (real work with code, non-QA) x (type typical for its work_category,
+             used by >=2 works of the category) the work lacks in ANY branch, one row per package
+             (budget/norm/lux) with the type default unit + median norm_qty from FOR-04-19 baseline
+             norms. Marked created_by=seed:auto-fill-for-04-20 / source_type=auto for easy cleanup.
+        072b class-B links: attach each ACTIVE construction material to packages its type is required
+             in by a norm but not yet linked to. No fictional materials.
+        Idempotent (MARK_RAN + NOT EXISTS). Finishing class-A (16 types, 0 catalog products) NOT covered.
+    -->
+
+    <changeSet id="072a-autofill-consumption-norms" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_material_consumptions WHERE created_by = 'seed:auto-fill-for-04-20'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+WITH works AS (SELECT wi.id, wi.work_category_id AS cat FROM work_items wi WHERE wi.code IS NOT NULL AND wi.name_ru NOT LIKE 'QA Work%'),
+nt AS (SELECT w.work_item_id AS wid, wk.cat, w.branch, COALESCE(cmt.code,mt.code) AS type_code, u.code AS unit, w.norm_qty
+       FROM work_material_consumptions w JOIN works wk ON wk.id=w.work_item_id JOIN measurement_units u ON u.id=w.material_unit_id
+       LEFT JOIN construction_material_types cmt ON cmt.id=w.construction_material_type_id
+       LEFT JOIN material_types mt ON mt.id=w.finishing_material_type_id
+       WHERE w.created_by <> 'seed:auto-fill-for-04-20'),
+cat_typical AS (SELECT cat, branch, type_code FROM nt GROUP BY cat, branch, type_code HAVING COUNT(DISTINCT wid) >= 2),
+agg AS (SELECT branch, type_code, unit, COUNT(*) uses, ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY norm_qty)::numeric,4) med FROM nt GROUP BY branch, type_code, unit),
+defaults AS (SELECT DISTINCT ON (branch,type_code) branch, type_code, unit, med FROM agg ORDER BY branch, type_code, uses DESC),
+targets AS (SELECT wk.id AS work_id, ct.branch, ct.type_code, d.unit, d.med FROM works wk JOIN cat_typical ct ON ct.cat=wk.cat JOIN defaults d ON d.branch=ct.branch AND d.type_code=ct.type_code WHERE NOT EXISTS (SELECT 1 FROM nt x WHERE x.wid=wk.id AND x.type_code=ct.type_code)),
+fan AS (SELECT t.*, p.code AS pkg FROM targets t CROSS JOIN (VALUES ('budget'),('norm'),('lux')) p(code))
+INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, construction_material_type_id, finishing_material_type_id, norm_qty, waste_pct, justification_ru, justification_pl, source_type, source_doc, source_ref, created_date, created_by)
+SELECT f.work_id, op.id, u.id, f.branch, CASE WHEN f.branch='construction' THEN cmt.id END, CASE WHEN f.branch='finishing' THEN mt.id END, f.med, 0, 'auto-fill iz patterna kategorii; review', 'auto-fill z wzorca kategorii; review', 'auto', 'AUTO-FILL FOR-04-20', 'AUTO-FILL-FOR-04-20', NOW(), 'seed:auto-fill-for-04-20'
+FROM fan f JOIN offer_packages op ON op.code=f.pkg JOIN measurement_units u ON u.code=f.unit LEFT JOIN construction_material_types cmt ON f.branch='construction' AND cmt.code=f.type_code LEFT JOIN material_types mt ON f.branch='finishing' AND mt.code=f.type_code
+WHERE (f.branch='construction' AND cmt.id IS NOT NULL) OR (f.branch='finishing' AND mt.id IS NOT NULL);
+]]></sql>
+    </changeSet>
+
+    <changeSet id="072b-classb-construction-package-links" author="foremen">
+        <sql><![CDATA[
+INSERT INTO construction_material_packages (construction_material_id, offer_package_id)
+SELECT DISTINCT cm.id, op.id FROM work_material_consumptions wmc JOIN construction_material_types cmt ON cmt.id=wmc.construction_material_type_id JOIN offer_packages op ON op.id=wmc.offer_package_id JOIN construction_materials cm ON cm.type_id=cmt.id AND cm.active
+WHERE wmc.branch='construction' AND NOT EXISTS (SELECT 1 FROM construction_materials cm2 JOIN construction_material_packages cmp ON cmp.construction_material_id=cm2.id WHERE cm2.active AND cm2.type_id=wmc.construction_material_type_id AND cmp.offer_package_id=wmc.offer_package_id) AND NOT EXISTS (SELECT 1 FROM construction_material_packages x WHERE x.construction_material_id=cm.id AND x.offer_package_id=op.id);
+]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

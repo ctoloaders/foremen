@@ -1,0 +1,17 @@
+type_code,name_pl,name_ru,norm_rows,works,catalog_materials
+KLEJ_DO_PLYTEK,Klej do płytek,Клей для плитки,39,13,0
+FARBA_DEKORACYJNA,Farba dekoracyjna,Декоративная краска,22,8,0
+FUGA_EPOKSYDOWA,Fuga epoksydowa,Эпоксидная затирка,9,3,0
+FARBA_DEKORACYJNA_KOLOR,Farba dekoracyjna kolorowa,Декоративная краска (колерованная),8,3,0
+LAMELE_SCIENNE,Lamele ścienne,Стеновые ламели (панели),6,2,0
+SZTUKATERIA,Sztukateria,Лепнина (декоративные молдинги),6,2,0
+FUGA_CEMENTOWA,Fuga cementowa,Цементная затирка,6,2,0
+LISTWA_PRZYPODLOGOWA,Listwa przypodłogowa,Напольный плинтус,6,2,0
+TYNK_DEKORACYJNY,Tynk dekoracyjny,Декоративная штукатурка,3,1,0
+FILC_SCIENNY,Filc ścienny,Стеновой войлок,3,1,0
+SILIKON,Silikon,Силикон (санитарный),3,1,0
+TAPETA_WINYLOWA,Tapeta winylowa,Виниловые обои,3,1,0
+FARBA,Farba,Краска,3,1,0
+TAPETA_FLIZELINOWA,Tapeta flizelinowa,Флизелиновые обои,3,1,0
+PODKLAD,Podkład,Грунт-подложка (акриловая),2,1,0
+TASMA_MALARSKA,Taśma malarska,Малярная лента,2,1,0
