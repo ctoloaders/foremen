@@ -1,102 +1,81 @@
 import sharp from "sharp";
 import { detectDocumentQuad } from "./document-detect.js";
 import { logger } from "../utils/logger.js";
-import {
-  warpQuadToRect,
-  outputSizeForQuad,
-  type RawImage,
-} from "../utils/perspective.js";
+import { quadMaskSvg } from "../utils/perspective.js";
 
 /**
- * Receipt reprocessing pipeline (Variant A).
+ * Receipt reprocessing pipeline (white-out background).
  *
  * For each uploaded page:
- *   1. decode with sharp (auto-rotate by EXIF), downscale very large photos to keep the
- *      pure-JS warp affordable, and read raw RGBA pixels;
+ *   1. auto-rotate by EXIF (no resizing, no resampling of content);
  *   2. ask Gemini for the document's four corners (falls back to the full image);
- *   3. warp the detected quadrilateral into an upright rectangle;
- *   4. re-encode as JPEG.
+ *   3. paint everything OUTSIDE the detected receipt quadrilateral white, keeping the image
+ *      at its ORIGINAL size and the receipt pixels untouched.
  *
- * The result is a per-page JPEG buffer. If any step fails for a page, that page falls back
- * to its original bytes so a single bad page never blocks the whole receipt.
+ * There is deliberately NO crop, NO perspective warp, NO scaling, and NO DPI change: the
+ * output has the same dimensions as the (oriented) original; only the background around the
+ * receipt is replaced with white. If a page fails at any step it falls back to its original
+ * bytes.
  */
 
-/** Cap the longest edge to bound the O(w*h) pure-JS warp cost while keeping receipts legible. */
-const MAX_EDGE = 2000;
-const JPEG_QUALITY = 85;
-
 export interface ReprocessedPage {
-  /** JPEG bytes for the page (either warped or the original fallback). */
+  /** Image bytes for the page (background whited-out, or the original on fallback). */
   buffer: Buffer;
-  mimeType: "image/jpeg";
-  /** True when the page was successfully warped, false when it fell back to the original. */
-  warped: boolean;
+  mimeType: string;
+  /** True when the background was successfully whited-out, false when it fell back. */
+  processed: boolean;
 }
 
 /**
- * Reprocesses a single page image buffer into an upright JPEG.
- * Never throws: on failure returns the original buffer with warped=false.
+ * Reprocesses a single page image buffer by whiting-out everything around the detected receipt.
+ * Never throws: on failure returns the original buffer with processed=false.
  */
 export async function reprocessPage(
   input: Buffer,
   inputMimeType: string,
 ): Promise<ReprocessedPage> {
   try {
-    // 1. Normalize orientation and bound the size, then read raw RGBA pixels.
-    const pipeline = sharp(input).rotate().resize({
-      width: MAX_EDGE,
-      height: MAX_EDGE,
-      fit: "inside",
-      withoutEnlargement: true,
-    });
+    // 1. Normalize orientation only (bake in EXIF rotation; does not resample content).
+    const oriented = await sharp(input).rotate().toBuffer();
+    const meta = await sharp(oriented).metadata();
+    const width = meta.width ?? 0;
+    const height = meta.height ?? 0;
+    const outMime = meta.format === "png" ? "image/png" : "image/jpeg";
+    if (!width || !height) {
+      return { buffer: input, mimeType: inputMimeType, processed: false };
+    }
 
-    const { data, info } = await pipeline
+    // 2. Detect the document quad (Gemini). Hand it the oriented image so coordinates align.
+    const { quad, detected } = await detectDocumentQuad(oriented, outMime, width, height);
+
+    if (!detected) {
+      // No usable detection → keep the original (oriented) image untouched.
+      return { buffer: oriented, mimeType: outMime, processed: false };
+    }
+
+    // 3. Build a mask opaque inside the receipt quad and transparent outside. Keep only the
+    //    receipt pixels (dest-in) as a transparent PNG, then composite that over a white canvas
+    //    of the SAME size. Everything outside the receipt becomes white; the receipt pixels are
+    //    untouched and the dimensions are unchanged.
+    const maskSvg = Buffer.from(quadMaskSvg(quad, width, height));
+
+    const receiptOnly = await sharp(oriented)
       .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    const src: RawImage = {
-      data,
-      width: info.width,
-      height: info.height,
-      channels: info.channels,
-    };
-
-    // 2. Detect the document quad (Gemini). We hand the detector a JPEG snapshot at the
-    //    same resolution so its normalized coordinates line up with `src`.
-    const detectJpeg = await sharp(data, {
-      raw: { width: info.width, height: info.height, channels: info.channels },
-    })
-      .jpeg({ quality: 80 })
+      .composite([{ input: maskSvg, blend: "dest-in" }])
+      .png()
       .toBuffer();
 
-    const { quad, detected } = await detectDocumentQuad(
-      detectJpeg,
-      "image/jpeg",
-      info.width,
-      info.height,
-    );
-
-    // 3. Warp the quad into a straight rectangle.
-    const { width: outW, height: outH } = outputSizeForQuad(quad);
-    const warped = warpQuadToRect(src, quad, outW, outH);
-
-    // 4. Re-encode as JPEG (drop the alpha channel over a white background).
-    const buffer = await sharp(Buffer.from(warped.data), {
-      raw: {
-        width: warped.width,
-        height: warped.height,
-        channels: warped.channels as 1 | 2 | 3 | 4,
-      },
+    const buffer = await sharp({
+      create: { width, height, channels: 3, background: "#ffffff" },
     })
-      .flatten({ background: "#ffffff" })
-      .jpeg({ quality: JPEG_QUALITY })
+      .composite([{ input: receiptOnly, blend: "over" }])
+      .jpeg({ quality: 90 })
       .toBuffer();
 
-    return { buffer, mimeType: "image/jpeg", warped: detected };
+    return { buffer, mimeType: "image/jpeg", processed: true };
   } catch (err: any) {
     logger.warn("reprocessPage failed, using original page", { error: err?.message });
-    return { buffer: input, mimeType: "image/jpeg", warped: false };
+    return { buffer: input, mimeType: inputMimeType, processed: false };
   }
 }
 

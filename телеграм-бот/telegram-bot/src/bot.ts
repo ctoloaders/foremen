@@ -49,8 +49,9 @@ export function createBot(): Bot {
     await ctx.editMessageText("❌ Отменено. Отправьте /start для нового чека.");
   });
 
-  // Photo messages
+  // Photo messages (compressed) and image documents (uncompressed originals)
   bot.on("message:photo", handlePhoto);
+  bot.on("message:document", handlePhoto);
 
   // Text messages (step-by-step flow)
   const textHandler = createTextHandler(bot);

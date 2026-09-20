@@ -7,6 +7,25 @@ import { logger } from "../utils/logger.js";
 
 const cancelKeyboard = new InlineKeyboard().text("❌ Отмена", "cancel");
 
+/**
+ * Resolves the Telegram file id of the receipt image from an incoming message.
+ *
+ * Prefers an attached image DOCUMENT (sent "as a file" — uncompressed, full resolution) so
+ * the original quality is always processed. Falls back to the largest compressed `photo`
+ * when the user sent it the normal way. Returns null if the message carries no usable image.
+ */
+export function resolveImageFileId(ctx: Context): string | null {
+  const doc = ctx.message?.document;
+  if (doc && (doc.mime_type ?? "").startsWith("image/")) {
+    return doc.file_id;
+  }
+  const photos = ctx.message?.photo;
+  if (photos && photos.length > 0) {
+    return photos[photos.length - 1].file_id; // largest rendition
+  }
+  return null;
+}
+
 export async function handlePhoto(ctx: Context) {
   const telegramId = ctx.from?.id;
   if (!telegramId) return;
@@ -36,11 +55,17 @@ export async function handlePhoto(ctx: Context) {
     return;
   }
 
-  const photos = ctx.message?.photo;
-  if (!photos || photos.length === 0) return;
-
-  // Pick largest photo (last in array)
-  const largestPhoto = photos[photos.length - 1];
+  // Resolve the file id to use. Prefer an attached image DOCUMENT (uncompressed original)
+  // over a compressed `photo`, so the highest-quality source is always processed.
+  const fileId = resolveImageFileId(ctx);
+  if (!fileId) {
+    // A document that isn't an image while awaiting a receipt: guide the user.
+    if (ctx.message?.document) {
+      await ctx.reply("Пришлите изображение чека (фото или файл-картинку).");
+    }
+    return;
+  }
+  const largestPhoto = { file_id: fileId };
 
   // Feature flag: OCR disabled → old flow (single photo → AWAIT_SUM)
   if (!config.ocr.enabled) {
