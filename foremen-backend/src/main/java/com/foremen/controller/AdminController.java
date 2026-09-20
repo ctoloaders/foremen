@@ -1,5 +1,22 @@
 package com.foremen.controller;
 
+import java.time.Duration;
+import java.util.Collection;
+import java.util.List;
+import java.util.Set;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.controller.model.MetadataResponse;
 import com.foremen.mapper.ControllerToServiceMapper;
@@ -8,17 +25,8 @@ import com.foremen.service.audit.AuditLogEntity;
 import com.foremen.service.model.AuditServiceModel;
 import com.foremen.service.model.mapper.AuditServiceMapper;
 import com.foremen.util.EntityMetadataResolver;
-import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.CacheControl;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
-import java.time.Duration;
-import java.util.Collection;
-import java.util.List;
-import java.util.Set;
+import jakarta.validation.Valid;
 
 /**
  * Generic full-CRUD controller interface.
@@ -109,6 +117,31 @@ public interface AdminController<
         UpdateResponseModel response = getMapper().toUpdateResponse(updated);
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/bulk")
+    @PermissionOperation("UPDATE")
+    default ResponseEntity<List<UpdateResponseModel>> updateBulk(
+            @Valid @RequestBody List<BulkUpdateItem<ID, UpdateRequestModel>> items) {
+        List<AdminService.IdModel<ID, ServiceExtendedModel>> models = items.stream()
+                .map(item -> new AdminService.IdModel<>(
+                        item.id(), getMapper().toUpdateServiceExtendedModel(item.data())))
+                .toList();
+        List<ServiceExtendedModel> updated = getService().update(models);
+        List<UpdateResponseModel> response = updated.stream()
+                .map(getMapper()::toUpdateResponse)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Generic per-row bulk-update item: an entity id paired with its update payload.
+     * The {@code data} payload is cascade-validated so each row's request DTO is validated
+     * exactly as it would be on the single-row {@code PUT /{id}} endpoint.
+     *
+     * @param <ID> the entity identifier type
+     * @param <T>  the inbound update request DTO type
+     */
+    record BulkUpdateItem<ID, T>(ID id, @Valid T data) {}
 
     // --- READ (paginated) ---
 

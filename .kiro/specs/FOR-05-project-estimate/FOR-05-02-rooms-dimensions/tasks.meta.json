@@ -1,0 +1,570 @@
+{
+  "pbtResults": {
+    "4.2 * Write property tests for the pure helpers": {
+      "status": "passed",
+      "lastRunTimestamp": 1789918793205
+    },
+    "5.3 * Write property + unit tests for the store": {
+      "status": "passed",
+      "lastRunTimestamp": 1789919178675
+    }
+  },
+  "executionHistory": {
+    "1.1 Add `AdminService.update(List<IdModel<ID, ServiceExtendedModel>>)` + the `IdModel` record": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918447839
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918457695
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918633792
+      }
+    ],
+    "1.2 Add `AdminController.updateBulk` (`PUT /bulk`) + the `BulkUpdateItem` request record": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918447977
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918643643
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918913654
+      }
+    ],
+    "1.3 * Write `AdminService`/bulk-update unit + property coverage": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448025
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918644860
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918908014
+      }
+    ],
+    "2.1 Extend `applyCalculatedMetrics` with a per-metric override guard": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448073
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918461464
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918635059
+      }
+    ],
+    "2.2 * Write property test P4 — per-field override": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448160
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918646922
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918910718
+      }
+    ],
+    "2.3 * Write `RoomBulkUpdateIT` (Testcontainers)": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448208
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918920025
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920833013
+      }
+    ],
+    "3. Checkpoint — backend compiles + affected classes pass": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448253
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920837598
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920927432
+      }
+    ],
+    "4.1 Create `DIMENSION_ROWS` + `getDimensionValue` / `getEffectiveValue` / `sumDimension`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448278
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918463629
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918637160
+      }
+    ],
+    "4.2 * Write property tests for the pure helpers": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448310
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918647705
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918909325
+      }
+    ],
+    "5.1 Implement the two project-keyed stores in `src/features/rooms/state/roomMatrixStorage.ts`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448342
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918464389
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918637978
+      }
+    ],
+    "5.2 Implement the change-set reducer + undo/redo in `src/features/rooms/state/roomMatrixStore.ts`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448371
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918648749
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918912176
+      }
+    ],
+    "5.3 * Write property + unit tests for the store": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448405
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918921358
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920831837
+      }
+    ],
+    "6.1 Add `createRoomsBulk`, `bulkUpdateRooms`, `useProjectRooms`, and `useBulkSaveRooms`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448438
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918922476
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920830486
+      }
+    ],
+    "7.1 Implement `EditableCell` in `src/features/rooms/components/workspace/EditableCell.tsx`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448472
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920932401
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921339696
+      }
+    ],
+    "7.2 Implement `RoomDimensionsMatrix` in `src/features/rooms/components/workspace/RoomDimensionsMatrix.tsx`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448508
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920934031
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921342190
+      }
+    ],
+    "7.3 Implement `NewRoomColumnHeader` (quick create)": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448542
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920935085
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921341092
+      }
+    ],
+    "7.4 Implement `RoomsMatrixTab` (the tab panel) in `src/features/rooms/components/workspace/RoomsMatrixTab.tsx`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448602
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921347163
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921774486
+      }
+    ],
+    "7.5 * Component tests for the matrix": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448643
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921787903
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922152334
+      }
+    ],
+    "8. Checkpoint — frontend tsc + new test files": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448697
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922157168
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922211202
+      }
+    ],
+    "9.1 Implement `RoomEditorPage` in `src/features/rooms/pages/RoomEditorPage.tsx`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448741
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921348457
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921775759
+      }
+    ],
+    "9.2 * Component tests for `RoomEditorPage`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448778
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921787037
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922151265
+      }
+    ],
+    "10.1 Swap the `rooms` tab `lazy` target in `src/features/project-workspace/workspaceTabs.ts`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448810
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921785099
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922150035
+      }
+    ],
+    "10.2 Add the editor route + requirement": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448848
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921785498
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922148399
+      }
+    ],
+    "10.3 * Tests for the tab swap and route gating": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448961
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922227977
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922443924
+      }
+    ],
+    "11.1 Add `roomsSummary.*` keys to `pl.json` and `ru.json`": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918448992
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789921782955
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922147142
+      }
+    ],
+    "11.2 * Write the i18n parity test": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918449024
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922229023
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922442787
+      }
+    ],
+    "12. Checkpoint — backend + frontend": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918449056
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922460004
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922525454
+      }
+    ],
+    "13. Author test-cases.md": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918449090
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922529891
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922811052
+      }
+    ],
+    "14. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918449122
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922815627
+      },
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922880762
+      }
+    ],
+    "4. Dimension registry and pure helpers (`src/features/rooms/dimensions.ts`)": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918909484
+      }
+    ],
+    "1. Generic heterogeneous bulk-update on the CRUD framework": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789918913698
+      }
+    ],
+    "6. API + save orchestration (`src/features/rooms/api`)": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920830566
+      }
+    ],
+    "5. Client change-set store + localStorage": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920831914
+      }
+    ],
+    "2. RoomService per-field manual override": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789920833078
+      }
+    ],
+    "9. Full-page room editor": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922151312
+      }
+    ],
+    "7. Interactive matrix panel + grid + editable cell": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922152394
+      }
+    ],
+    "11. i18n — `roomsSummary.*` namespace with a parity test": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922442841
+      }
+    ],
+    "10. Wire the tab, route, and route-permission": [
+      {
+        "executionId": "c3d340c3-f438-4df3-9138-a7c8a24aeeec",
+        "chatSessionId": "sess_64105d56-c26c-453c-833d-fd27f72893c2",
+        "timestamp": 1789922444058
+      }
+    ]
+  }
+}
