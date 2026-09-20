@@ -95,4 +95,45 @@ public final class ProjectsPage {
     public void waitUntilFormClosed() {
         dialog().first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.HIDDEN));
     }
+
+    // ---- Row click + row actions (FOR-05-01) ----
+
+    /**
+     * Click a list row containing {@code text} (e.g. a project name), reusing the generic
+     * {@link DataTablePage#rowByText(String)} row locator. In the projects list a row-click is
+     * overridden (FOR-05-01 Req 5.1/5.2) to open the project workspace and set the working project
+     * rather than opening the edit form. Clicks the row body (not the per-row action icons, which
+     * call {@code stopPropagation}).
+     */
+    public void clickRow(String text) {
+        // Breakpoint-agnostic: a table body row on desktop/tablet, a DataTableCards card on mobile.
+        Locator row = table().rowOrCardByText(text).first();
+        row.waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        row.click();
+    }
+
+    /**
+     * The per-row edit icon button (Pencil) within the row containing {@code text}. The frontend
+     * renders the edit action as a {@code lucide-pencil} / {@code lucide-square-pen} icon button; a
+     * row-action click stops propagation so it does NOT trigger the row-click workspace navigation.
+     */
+    public Locator rowEditButton(String text) {
+        return table().rowByText(text).first()
+                .locator("button:has(svg.lucide-pencil), button:has(svg.lucide-square-pen)");
+    }
+
+    /** The per-row delete icon button (Trash2, {@code lucide-trash-2}) within the row for {@code text}. */
+    public Locator rowDeleteButton(String text) {
+        return table().rowByText(text).first().locator("button:has(svg.lucide-trash-2)");
+    }
+
+    /** Click the per-row edit (Pencil) action for the row containing {@code text}. */
+    public void clickRowEdit(String text) {
+        rowEditButton(text).first().click();
+    }
+
+    /** {@code true} while the create/edit sheet dialog is open (visible). */
+    public boolean isFormOpen() {
+        return dialog().count() > 0 && dialog().first().isVisible();
+    }
 }

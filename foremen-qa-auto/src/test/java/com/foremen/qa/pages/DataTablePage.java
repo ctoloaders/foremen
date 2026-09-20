@@ -42,14 +42,49 @@ public final class DataTablePage {
      * the more specific waits below; this is a non-blocking predicate.
      */
     public boolean isLoaded() {
-        return table().count() > 0;
+        return table().count() > 0 || mobileCards().count() > 0;
     }
 
-    /** Wait until the table header row is visible (list finished its initial render). */
+    /**
+     * The mobile card list rendered by {@code DataTableCards} in place of the table on the mobile
+     * breakpoint. Each row is a {@code div} with the exact class combo {@code rounded-lg border
+     * bg-card p-4} — matching all four keeps this from colliding with other {@code bg-card}
+     * containers on the page.
+     */
+    private Locator mobileCards() {
+        return page.locator("div.rounded-lg.border.bg-card.p-4");
+    }
+
+    /**
+     * Wait until the list has finished its initial render, in a breakpoint-agnostic way. On
+     * desktop/tablet the DataTable renders a {@code <table>} (wait for the header row); on the mobile
+     * breakpoint the table is replaced by {@code DataTableCards} (a stack of {@code div.bg-card}
+     * cards) so there is no {@code <thead>} — wait for the first card instead. Waiting for either
+     * signal lets the same step work at every viewport (FOR-QA-AUTO-05 mobile scenarios).
+     */
     public DataTablePage waitUntilLoaded() {
-        page.locator("thead tr th").first().waitFor(
+        page.locator("thead tr th, div.rounded-lg.border.bg-card.p-4").first().waitFor(
                 new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
         return this;
+    }
+
+    /** A mobile card ({@code DataTableCards}) that contains {@code text} (e.g. a project name). */
+    public Locator cardByText(String text) {
+        return mobileCards().filter(new Locator.FilterOptions().setHasText(text));
+    }
+
+    /**
+     * A clickable list entry containing {@code text}, working at every breakpoint without a racy
+     * snapshot decision: a single combined selector matches BOTH the desktop/tablet table body row
+     * ({@code tbody tr}) and the mobile {@code DataTableCards} card (the exact
+     * {@code rounded-lg border bg-card p-4} combo), filtered to the ones containing {@code text}.
+     * Exactly one representation is mounted per breakpoint, so {@code .first()} on the result is the
+     * intended entry. Playwright auto-waits on the returned locator, so callers do not need the
+     * table/cards to have finished rendering when this is called.
+     */
+    public Locator rowOrCardByText(String text) {
+        return page.locator("tbody tr, div.rounded-lg.border.bg-card.p-4")
+                .filter(new Locator.FilterOptions().setHasText(text));
     }
 
     // ---- Structure ----

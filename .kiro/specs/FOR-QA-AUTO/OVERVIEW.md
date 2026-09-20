@@ -65,7 +65,7 @@ them into runnable Java BDD scenarios.
 | # | Child spec | Type | Description | Status |
 |---|-----------|------|-------------|--------|
 | SMOKE | FOR-QA-AUTO-SMOKE | framework + smoke | The BDD+Playwright framework itself **and** the growing smoke suite covering top-level UI requirements of FOR-01 … FOR-04. Defines the registration mechanism new specs use to append smoke scenarios. | planned |
-| 05 | FOR-QA-AUTO-05-project-estimate *(future)* | detailed E2E | Deep UI E2E for FOR-05 (project estimate / kosztorys) | future |
+| 05 | FOR-QA-AUTO-05-workspace-shell | detailed E2E | Deep UI E2E for **FOR-05-01** (project workspace shell): route + normalization, working-project surface (desktop button / mobile chip) incl. FIX-1 instant sync, stage-dependent tabs incl. FIX-2 design selector, URL-driven tab memory, readiness widget + mode caption, row-click override. Tagged `@detailed @FOR-QA-AUTO-05`; task `featureTestForQaAuto05`. | present |
 | 06 | FOR-QA-AUTO-06-work-schedule *(future)* | detailed E2E | Deep UI E2E for FOR-06 | future |
 | … | FOR-QA-AUTO-NN-<feature> *(future)* | detailed E2E | One child spec per new feature spec from FOR-05 onward | future |
 
