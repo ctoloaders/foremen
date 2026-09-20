@@ -54,9 +54,11 @@ import java.util.Set;
  *   <li>validates the geometry when present (≥ 3 vertices; every opening has
  *       {@code type ∈ {DOOR, WINDOW}}, {@code count > 0}, {@code height > 0}, {@code width > 0}),
  *       rejecting with a {@code 400} geometry/opening code otherwise (Requirements 2.3, 2.4);</li>
- *   <li>when geometry is present, treats it as authoritative — runs the
- *       {@link RoomCalculationService}, overwrites the five metrics + counts + gaps with the
- *       computed values and stamps the five sources {@code CALCULATED} (Requirement 4.2);</li>
+ *   <li>when geometry is present, treats it as authoritative by default — runs the
+ *       {@link RoomCalculationService}, overwrites the counts + gaps and any non-overridden metric
+ *       with the computed values, stamping those metrics' sources {@code CALCULATED}
+ *       (Requirement 4.2); a metric supplied with an explicit value and {@code MANUAL} source is a
+ *       per-field override that is kept as {@code MANUAL} (FOR-05-02, Requirements 5.2, 5.3, 5.4);</li>
  *   <li>when geometry is absent, keeps the supplied manual metrics and stamps each one's source
  *       {@code MANUAL} (Requirement 4.1);</li>
  *   <li>validates numerics within {@code [0, 9999999999.99]} and counts non-negative, and rejects
@@ -274,28 +276,72 @@ public class RoomService
     }
 
     /**
-     * Geometry is authoritative (Requirement 4.2): runs the calculation engine and overwrites the
-     * five metrics + door/window counts + wall/finish gaps with the computed values, stamping each
-     * of the five sources {@code CALCULATED}.
+     * Geometry is authoritative by default (Requirement 4.2), but a caller may override an
+     * individual metric (FOR-05-02, Requirements 5.2, 5.3, 5.4). For each of the five metrics
+     * ({@code floorArea}, {@code wallArea}, {@code perimeter}, {@code doorArea}, {@code windowArea}),
+     * if the incoming model carries an explicit value AND its source is {@code MANUAL}, the supplied
+     * value is kept and the source stays {@code MANUAL} (a per-field override); otherwise the
+     * geometry-calculated value is set and the source stamped {@code CALCULATED}. A supplied manual
+     * override is range-checked ({@code [0, 9999999999.99]}) like any manual metric. The
+     * non-overridable geometry-derived fields (door/window counts, wall/finish gaps) always take the
+     * computed value.
      */
     private void applyCalculatedMetrics(RoomServiceExtendedModel model, RoomGeometry geometry) {
         RoomMetrics metrics = roomCalculationService.calculate(geometry, model.getCeilingHeight());
 
-        model.setFloorArea(metrics.floorArea());
-        model.setFloorAreaSource(MeasureSource.CALCULATED);
-        model.setPerimeter(metrics.perimeter());
-        model.setPerimeterSource(MeasureSource.CALCULATED);
-        model.setWallArea(metrics.wallArea());
-        model.setWallAreaSource(MeasureSource.CALCULATED);
-        model.setDoorArea(metrics.doorArea());
-        model.setDoorAreaSource(MeasureSource.CALCULATED);
-        model.setWindowArea(metrics.windowArea());
-        model.setWindowAreaSource(MeasureSource.CALCULATED);
+        if (isManualOverride("floorArea", model.getFloorArea(), model.getFloorAreaSource())) {
+            model.setFloorAreaSource(MeasureSource.MANUAL);
+        } else {
+            model.setFloorArea(metrics.floorArea());
+            model.setFloorAreaSource(MeasureSource.CALCULATED);
+        }
+
+        if (isManualOverride("wallArea", model.getWallArea(), model.getWallAreaSource())) {
+            model.setWallAreaSource(MeasureSource.MANUAL);
+        } else {
+            model.setWallArea(metrics.wallArea());
+            model.setWallAreaSource(MeasureSource.CALCULATED);
+        }
+
+        if (isManualOverride("perimeter", model.getPerimeter(), model.getPerimeterSource())) {
+            model.setPerimeterSource(MeasureSource.MANUAL);
+        } else {
+            model.setPerimeter(metrics.perimeter());
+            model.setPerimeterSource(MeasureSource.CALCULATED);
+        }
+
+        if (isManualOverride("doorArea", model.getDoorArea(), model.getDoorAreaSource())) {
+            model.setDoorAreaSource(MeasureSource.MANUAL);
+        } else {
+            model.setDoorArea(metrics.doorArea());
+            model.setDoorAreaSource(MeasureSource.CALCULATED);
+        }
+
+        if (isManualOverride("windowArea", model.getWindowArea(), model.getWindowAreaSource())) {
+            model.setWindowAreaSource(MeasureSource.MANUAL);
+        } else {
+            model.setWindowArea(metrics.windowArea());
+            model.setWindowAreaSource(MeasureSource.CALCULATED);
+        }
 
         model.setDoorCount(metrics.doorCount());
         model.setWindowCount(metrics.windowCount());
         model.setWallGap(metrics.wallGap());
         model.setFinishGap(metrics.finishGap());
+    }
+
+    /**
+     * True when the incoming model requests a per-field manual override of a geometry-derived
+     * metric (FOR-05-02, Requirement 5.2): an explicit non-null value carrying a {@code MANUAL}
+     * source. A supplied override value is range-checked ({@code [0, 9999999999.99]}) so an invalid
+     * override is rejected before persistence, consistent with the manual path.
+     */
+    private boolean isManualOverride(String field, BigDecimal value, MeasureSource source) {
+        if (source == MeasureSource.MANUAL && value != null) {
+            validateMetricRange(field, value);
+            return true;
+        }
+        return false;
     }
 
     /**

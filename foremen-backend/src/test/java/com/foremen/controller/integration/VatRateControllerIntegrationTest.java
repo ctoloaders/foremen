@@ -299,7 +299,7 @@ class VatRateControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/vat-rates/" + vatRate.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/vat-rates/" + vatRate.getId()))
                 .andExpect(status().isNotFound());

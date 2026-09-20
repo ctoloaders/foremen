@@ -1,0 +1,31 @@
+material_type,material_ref,material_unit,packages,source_type,source_url
+KLEJ_DO_PLYTEK,Klej do płytek Ceresit CM 11 25kg,kg,budget,excel,
+KLEJ_DO_PLYTEK,Klej elastyczny Atlas Plus 25kg,kg,"norm,lux",producer_tds,https://www.atlas.com.pl/en/product/atlas-plus/
+KLEJ_DO_PLYTEK,Klej elastyczny Atlas Plus 25kg,kg,"budget,norm",excel,
+KLEJ_DO_PLYTEK,Klej wysokoelastyczny Mapei Adesilex P9 25kg,kg,lux,producer_tds,https://www.mapei.com/pl/pl/produkty-i-rozwiazania/produkty/detal/adesilex-p9
+FUGA_CEMENTOWA,Fuga cementowa Ceresit CE 40 Aquastatic 2kg,kg,"norm,lux",producer_tds,https://www.ceresit.com/products/tiling/product.html/ceresit-ce-40/SAP_0201SGC013M9.html
+FUGA_CEMENTOWA,Fuga cementowa Atlas Fuga Wąska 2kg,kg,budget,producer_tds,https://www.atlas.com.pl/en/product/atlas-narrow-joint/
+FUGA_EPOKSYDOWA,Fuga epoksydowa Ceresit CE 79 UltraEpoxy 2.5kg,kg,"budget,norm",producer_tds,https://www.ceresit.com/products/tiling/product.html/ceresit-ce-79/SAP_0201SGC0142C6.html
+FUGA_EPOKSYDOWA,Fuga epoksydowa Mapei Kerapoxy 3kg,kg,lux,producer_tds,https://www.mapei.com/pl/pl/produkty-i-rozwiazania/produkty/detal/kerapoxy
+SILIKON,Silikon sanitarny Soudal 280ml,szt,"budget,norm",producer_tds,https://www.soudal.com/pl-pl/diy/produkty/silikony/silikon-sanitarny
+SILIKON,Silikon Ceresit CS 25 dopasowany do fugi 280ml,szt,lux,producer_tds,https://www.ceresit.com/products/tiling/product.html/ceresit-cs-25/SAP_0201SGC0139J8.html
+FARBA_DEKORACYJNA,Farba lateksowa biała Śnieżka Barwy Natury 5l,l,budget,producer_tds,https://www.sniezka.pl/produkty
+FARBA_DEKORACYJNA,Farba lateksowa Dekoral Akrylit W 5l,l,norm,producer_tds,https://www.dekoral.pl/produkty
+FARBA_DEKORACYJNA,Farba lateksowa premium Tikkurila Optiva 5l,l,lux,producer_tds,https://www.tikkurila.pl/produkty
+FARBA_DEKORACYJNA_KOLOR,Farba lateksowa kolorowa Śnieżka Extra Fasada/Wnętrza 5l,l,budget,producer_tds,https://www.sniezka.pl/produkty
+FARBA_DEKORACYJNA_KOLOR,Farba lateksowa kolorowa Magnat Ceramic 5l,l,"norm,lux",producer_tds,https://www.magnat.pl/produkty
+TYNK_DEKORACYJNY,Tynk dekoracyjny Magnat Style Effetto 5kg,m2,"budget,norm",producer_tds,https://www.magnat.pl/produkty
+TYNK_DEKORACYJNY,Tynk dekoracyjny premium Tikkurila Taika/Optiva Effect 5kg,m2,lux,producer_tds,https://www.tikkurila.pl/produkty
+TAPETA_FLIZELINOWA,Tapeta flizelinowa dekoracyjna,m2,"budget,norm,lux",expert,
+TAPETA_WINYLOWA,Tapeta winylowa na flizelinie,m2,"budget,norm,lux",expert,
+FILC_SCIENNY,Filc ścienny dekoracyjny,m2,"norm,lux",expert,
+SZTUKATERIA,Sztukateria ścienna listwa Mardom Decor,mb,"budget,norm",producer_tds,https://www.mardomdecor.pl/produkty
+SZTUKATERIA,Sztukateria przysufitowa listwa Decor System,mb,lux,producer_tds,https://www.decorsystem.pl/produkty
+LAMELE_SCIENNE,Lamele ścienne na podkładzie / panele ścienne,m2,"budget,norm,lux",producer_tds,https://www.mardomdecor.pl/produkty
+LAMELE_SCIENNE,Lamele ścienne profil pojedynczy,mb,"budget,norm,lux",producer_tds,https://www.decorsystem.pl/produkty
+LISTWA_PRZYPODLOGOWA,Listwa przypodłogowa MDF Salag 80mm 2.4m,mb,budget,retail,"https://bel-pol.pl/listwy-przypodlogowe/salag/listwa-przypodlogowa-bravo-80-mm-kaszmir-2,4m-br81f4,p24745,14.html"
+LISTWA_PRZYPODLOGOWA,Listwa przypodłogowa styrodur VOX Espumo 2.4m,mb,"norm,lux",retail,"https://bel-pol.pl/listwy-przypodlogowe/vox/listwa-espumo-201-esp201-biala-2,4-m-201-esp201-2.4,p18166,14.html"
+FARBA,Farba lateksowa biała Śnieżka 1L,l,budget,producer_tds,https://www.sniezka.md/
+FARBA,Farba lateksowa premium biała Dekoral 1L,l,"norm,lux",producer_tds,https://domal.pl/produkt/dulux-easy-care-biala-25l/
+PODKLAD,Podkład akrylowy do drewna/MDF Śnieżka 1L,l,"norm,lux",producer_tds,https://www.sniezka.md/
+TASMA_MALARSKA,Taśma malarska 38mm rolka 50m,szt,"norm,lux",expert,

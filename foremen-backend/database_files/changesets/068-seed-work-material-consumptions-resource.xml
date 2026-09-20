@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- Seed WORK_MATERIAL_CONSUMPTION resource into resources table (FOR-04-19, Requirement 6.1) -->
+    <changeSet id="068-seed-work-material-consumptions-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'WORK_MATERIAL_CONSUMPTION'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="WORK_MATERIAL_CONSUMPTION"/>
+            <column name="name_ru" value="Расход материалов"/>
+            <column name="name_pl" value="Zużycie materiałów"/>
+            <column name="description_ru" value="Нормы расхода материалов по работам и пакетам предложений"/>
+            <column name="description_pl" value="Normy zużycia materiałów wg prac i pakietów ofert"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on WORK_MATERIAL_CONSUMPTION resource (Requirement 6.2) -->
+    <changeSet id="068-seed-work-material-consumptions-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'WORK_MATERIAL_CONSUMPTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+
+        <!-- DELETE on WORK_MATERIAL_CONSUMPTION is granted to ADMIN ONLY (Requirement 6.3, 6.6). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER CREATE/READ/UPDATE on WORK_MATERIAL_CONSUMPTION resource (NO DELETE) -->
+    <changeSet id="068-seed-work-material-consumptions-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'WORK_MATERIAL_CONSUMPTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+
+        <!-- MANAGER gets CREATE/READ/UPDATE but intentionally NO DELETE (Requirement 6.3, 6.6). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE')
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on WORK_MATERIAL_CONSUMPTION resource (Requirement 6.3) -->
+    <changeSet id="068-seed-work-material-consumptions-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'WORK_MATERIAL_CONSUMPTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on WORK_MATERIAL_CONSUMPTION resource (Requirement 6.3) -->
+    <changeSet id="068-seed-work-material-consumptions-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'WORK_MATERIAL_CONSUMPTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on WORK_MATERIAL_CONSUMPTION resource (Requirement 6.3) -->
+    <changeSet id="068-seed-work-material-consumptions-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'WORK_MATERIAL_CONSUMPTION'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_MATERIAL_CONSUMPTION';
+        </sql>
+    </changeSet>
+
+    <!--
+        CLIENT is intentionally omitted from the WORK_MATERIAL_CONSUMPTION grants
+        (deny-by-default, Requirement 6.7). WORK_MATERIAL_CONSUMPTION is an
+        operational entity mirroring MATERIALS_CONSTRUCTION / MATERIALS_FINISHING:
+        MANAGER gets CREATE/READ/UPDATE but NO DELETE, and DELETE is granted to
+        ADMIN only (Requirement 6.3, 6.6). FOREMAN / WORKER / FINANCIER receive
+        READ. Custom (non-system) roles receive no grant. WORK_MATERIAL_CONSUMPTION
+        is a GLOBAL admin resource (not project-scoped).
+    -->
+
+</databaseChangeLog>

@@ -1,0 +1,18 @@
+material_id,name_ru,type,add_to_package
+62,Смеситель для умывальника скрытого монтажа,BATERIA_PODTYNKOWA,budget
+63,Душевой смеситель скрытый с тропическим душем (компл),BATERIA_PODTYNKOWA,budget
+113,Готовая шпаклёвка Knauf Super Finish,GLADZ_GOTOWA_MASA,budget
+114,Готовая полимерная шпаклёвка Śnieżka Acryl-Putz Finisz,GLADZ_GOTOWA_MASA,budget
+113,Готовая шпаклёвка Knauf Super Finish,GLADZ_GOTOWA_MASA,norm
+114,Готовая полимерная шпаклёвка Śnieżka Acryl-Putz Finisz,GLADZ_GOTOWA_MASA,norm
+111,Гипсовая шпаклёвка Knauf MP Finish,GLADZ_POLIMEROWA,budget
+112,Полимерная шпаклёвка Śnieżka Acryl-Putz Start,GLADZ_POLIMEROWA,budget
+111,Гипсовая шпаклёвка Knauf MP Finish,GLADZ_POLIMEROWA,lux
+112,Полимерная шпаклёвка Śnieżka Acryl-Putz Start,GLADZ_POLIMEROWA,lux
+46,Пресс-фитинги PEX/Al (колено/тройник),KSZTALTKI_PEX,budget
+45,Фитинги PP-R под сварку (колено/муфта/тройник),KSZTALTKI_PP,lux
+60,Линейный душевой трап TECEdrainline,ODPLYW_LINIOWY,budget
+69,Лён сантехнический с уплотнительной пастой (набор),PAKULY_PASTA,budget
+16,Монтажная пена полиуретановая Soudal 750мл,PIANKA_MONTAZOWA,budget
+19,Влагостойкий ГК-лист Rigips RBI 12.5мм,PLYTA_GK_IMPREGNOWANA,budget
+159,Двусторонняя монтажная лента вспененная,TASMA_DWUSTRONNA,budget

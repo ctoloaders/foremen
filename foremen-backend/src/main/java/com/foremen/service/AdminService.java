@@ -106,6 +106,39 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
                 .toList();
     }
 
+    /**
+     * A single (id, model) pair for a heterogeneous batch update.
+     *
+     * @param id    the id of the row to update
+     * @param model the per-row service-extended model carrying that row's new field values
+     * @param <ID>  the id type
+     * @param <M>   the model type
+     */
+    record IdModel<ID, M>(ID id, M model) {}
+
+    /**
+     * Heterogeneous batch update: applies a distinct model to each id in one transaction.
+     *
+     * <p>Each item is delegated to the single-row {@link #update(Object, Object)} so that validation
+     * ({@code validateUpdate} → e.g. {@code RoomService.normalize}), the before-state snapshot,
+     * {@code updateFields}, per-row audit, AND the project-scope guard (via
+     * {@code ProjectScopedService.assertProjectAccess} reached through the overridden
+     * {@code update(id, model)}) all run identically to a single-row update. The shared
+     * {@link Transactional} makes the whole batch atomic: any per-row failure rolls back every row.
+     *
+     * <p>This intentionally delegates per row rather than issuing a raw {@code saveAll}, so the
+     * per-row project-scope guard fires for every element.
+     *
+     * @param items the (id, model) pairs to apply, in order
+     * @return the updated service-extended models, in the same order as {@code items}
+     */
+    @Transactional
+    default List<ServiceExtendedModel> update(List<IdModel<ID, ServiceExtendedModel>> items) {
+        return items.stream()
+                .map(item -> update(item.id(), item.model()))
+                .toList();
+    }
+
     @Transactional
     default <V> void updateSingleField(ID id, V value, BiConsumer<DaoModel, V> setter) {
         DaoModel existing = getReadDao().findById(id)

@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 gap-fill (round 2): seed finishing consumption norms for the 6 POSADZKI floor
+        works (work_items.id 178-183) that had ZERO material norms. Root cause: these 6 works have
+        NO `code`, so the code-matched autofill (changeset 072) skipped them, leaving them without
+        any work_material_consumptions rows and thus no material вилка in any package.
+
+        These works ARE live (each has a work_prices row); the catalog already contains the floor
+        materials, under the LOWERCASE material_types (laminat/winyl/deska_*/podklad*) seeded by
+        FOR-04-18 (changeset 062). This changeset only adds the norm rows that connect each work to
+        the correct floor type per package.
+
+        Package strategy (per user decision, matching the catalog's real package distribution):
+          - "Common" floor types laminat(code 'laminat') and winyl(code 'winyl') carry budget+norm
+            materials -> used for the budget & norm package norms.
+          - "Premium" floor types winyl_prosty / winyl_jodelka / deska_prosta / deska_jodelka carry
+            ONLY lux materials -> used for the lux package norms.
+          - podklad(code 'podklad') exists in all 3 packages -> underlay norm in every package for
+            the floating-panel works.
+          - podklad_klej_grunt(code 'podklad_klej_grunt') exists only in lux -> glue norm only in
+            the lux package for the glued works.
+          - Solid board (deska) has NO budget/norm material, so works 182/183 (deska, glued) get a
+            norm ONLY in the lux package; in budget/norm they intentionally show no floor вилка
+            (no board product exists at those tiers).
+
+        All norms are per m2 of work (work unit is m2); material_unit is 'm2' (every floor type's
+        catalog materials are priced per m2). Waste: 5% straight lay, 10% herringbone (jodelka) on
+        the floor covering layer; underlay/glue waste 5%/0%.
+
+        type_id is resolved by material_types.code (lowercase floor codes). work_item is matched by
+        id (these works have no code). Required refs (work_item, unit, type) are inner joins.
+
+        Idempotency: guarded by preConditions onFail="MARK_RAN" sqlCheck expectedResult="0" on the
+        count of rows created by this seed (created_by='seed:for-04-19-posadzki'); each insert is
+        additionally NOT EXISTS-guarded on (work_item_id, offer_package_id, branch,
+        finishing_material_type_id).
+
+        Rows: 24 finishing norm rows across works 178-183.
+    -->
+
+    <changeSet id="074-seed-posadzki-floor-norms" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_material_consumptions WHERE created_by = 'seed:for-04-19-posadzki'</sqlCheck>
+        </preConditions>
+
+        <!--
+            Reusable insert shape (one <sql> per (work_id, pkg_code, type_code, norm_qty, waste)):
+            resolve work_item by id, offer_package by code, unit 'm2', finishing type by code.
+        -->
+
+        <!-- ===== 178: Panele podłogowe/winylowe (podkład+folia), floating, STRAIGHT ===== -->
+        <!-- budget/norm: laminat + podklad ; lux: winyl_prosty + podklad -->
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 178, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Panel podłogowy/laminat, układ prosty, technologia pływająca; norma z zapasem na docinki.',
+                    'Ламинат/панель, прямая укладка, плавающий монтаж; норма с запасом на подрезку.',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-178', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code IN ('budget','norm') AND u.code = 'm2' AND mt.code = 'laminat'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=178 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 178, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Podkład pod panele (wraz z folią), układ prosty.',
+                    'Подложка под панели (с плёнкой), прямая укладка.',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-178', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code IN ('budget','norm','lux') AND u.code = 'm2' AND mt.code = 'podklad'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=178 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 178, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Panel winylowy premium, układ prosty (pakiet lux).',
+                    'Винил премиум, прямая укладка (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-178', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'winyl_prosty'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=178 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+
+        <!-- ===== 179: Panele podłogowe/winylowe (podkład+folia), floating, HERRINGBONE ===== -->
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 179, op.id, u.id, 'finishing', mt.id, 1.1000, 10.00,
+                    'Panel podłogowy/laminat, układ jodełka (większy odpad).',
+                    'Ламинат/панель, укладка ёлочкой (больше отходов).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-179', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code IN ('budget','norm') AND u.code = 'm2' AND mt.code = 'laminat'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=179 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 179, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Podkład pod panele (wraz z folią), układ jodełka.',
+                    'Подложка под панели (с плёнкой), укладка ёлочкой.',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-179', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code IN ('budget','norm','lux') AND u.code = 'm2' AND mt.code = 'podklad'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=179 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 179, op.id, u.id, 'finishing', mt.id, 1.1000, 10.00,
+                    'Panel winylowy premium, układ jodełka (pakiet lux).',
+                    'Винил премиум, укладка ёлочкой (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-179', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'winyl_jodelka'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=179 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+
+        <!-- ===== 180: Panele winylowe - na klej, STRAIGHT ===== -->
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 180, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Panel winylowy na klej, układ prosty.',
+                    'Винил на клей, прямая укладка.',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-180', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code IN ('budget','norm') AND u.code = 'm2' AND mt.code = 'winyl'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=180 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 180, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Panel winylowy premium na klej, układ prosty (pakiet lux).',
+                    'Винил премиум на клей, прямая укладка (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-180', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'winyl_prosty'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=180 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 180, op.id, u.id, 'finishing', mt.id, 0.3500, 0.00,
+                    'Klej do winylu/LVT (pakiet lux).',
+                    'Клей для винила/LVT (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-180', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'podklad_klej_grunt'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=180 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+
+        <!-- ===== 181: Panele winylowe - na klej, HERRINGBONE ===== -->
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 181, op.id, u.id, 'finishing', mt.id, 1.1000, 10.00,
+                    'Panel winylowy na klej, układ jodełka.',
+                    'Винил на клей, укладка ёлочкой.',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-181', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code IN ('budget','norm') AND u.code = 'm2' AND mt.code = 'winyl'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=181 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 181, op.id, u.id, 'finishing', mt.id, 1.1000, 10.00,
+                    'Panel winylowy premium na klej, układ jodełka (pakiet lux).',
+                    'Винил премиум на клей, укладка ёлочкой (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-181', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'winyl_jodelka'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=181 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 181, op.id, u.id, 'finishing', mt.id, 0.3500, 0.00,
+                    'Klej do winylu/LVT, układ jodełka (pakiet lux).',
+                    'Клей для винила/LVT, укладка ёлочкой (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-181', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'podklad_klej_grunt'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=181 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+
+        <!-- ===== 182: Deska warstwowa - na klej, STRAIGHT (lux only: no board material below lux) ===== -->
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 182, op.id, u.id, 'finishing', mt.id, 1.0500, 5.00,
+                    'Deska warstwowa na klej, układ prosty (dostępna tylko w pakiecie lux).',
+                    'Многослойная доска на клей, прямая укладка (только пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-182', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'deska_prosta'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=182 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 182, op.id, u.id, 'finishing', mt.id, 1.0000, 0.00,
+                    'Klej do deski warstwowej/drewna (pakiet lux).',
+                    'Клей для многослойной доски/дерева (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-182', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'podklad_klej_grunt'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=182 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+
+        <!-- ===== 183: Deska warstwowa - na klej, HERRINGBONE (lux only) ===== -->
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 183, op.id, u.id, 'finishing', mt.id, 1.1000, 10.00,
+                    'Deska warstwowa na klej, układ jodełka (dostępna tylko w pakiecie lux).',
+                    'Многослойная доска на клей, укладка ёлочкой (только пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-183', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'deska_jodelka'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=183 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+        <sql>INSERT INTO work_material_consumptions (work_item_id, offer_package_id, material_unit_id, branch, finishing_material_type_id, norm_qty, waste_pct, justification_pl, justification_ru, source_type, source_doc, source_ref, created_date, created_by)
+             SELECT 183, op.id, u.id, 'finishing', mt.id, 1.0000, 0.00,
+                    'Klej do deski warstwowej/drewna, układ jodełka (pakiet lux).',
+                    'Клей для многослойной доски/дерева, укладка ёлочкой (пакет lux).',
+                    'expert', 'FOR-04-19 gap-fill', 'POSADZKI-183', NOW(), 'seed:for-04-19-posadzki'
+             FROM offer_packages op, measurement_units u, material_types mt
+             WHERE op.code = 'lux' AND u.code = 'm2' AND mt.code = 'podklad_klej_grunt'
+               AND NOT EXISTS (SELECT 1 FROM work_material_consumptions w WHERE w.work_item_id=183 AND w.offer_package_id=op.id AND w.branch='finishing' AND w.finishing_material_type_id=mt.id);</sql>
+
+    </changeSet>
+
+</databaseChangeLog>

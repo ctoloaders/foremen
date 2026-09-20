@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 price normalization (stored side). Requirement: stored monetary values are kept to
+        real currency units (0.01 / grosz). The price columns are already numeric(12,2), so the DB
+        enforces scale 2 on write; this changeset is a DEFENSIVE, idempotent normalization that
+        rounds any pre-existing value to 2 decimals (HALF_UP) in case earlier data or manual inserts
+        carried extra precision. On the current data set it affects 0 rows (all values already at
+        scale 2), but it pins the invariant explicitly and makes a re-run safe.
+
+        The DERIVED side (the computed money вилка = normQty × retailNet, and per-material moneyCost)
+        is normalized in application code (MaterialRangeResolver.money / WorkMaterialConsumption-
+        EnrichmentResolver.moneyCost), rounded UP (CEILING) to 2 decimals so a shown price never
+        understates cost. That is code, not data, so it is not part of this changeset.
+
+        Idempotent by construction: ROUND(x, 2) is a fixed point for values already at scale 2, so
+        re-running changes nothing. Guarded so the changeset is always safe to re-apply.
+    -->
+
+    <changeSet id="075-normalize-stored-prices" author="foremen">
+        <sql>UPDATE finishing_materials
+             SET retail_net = ROUND(retail_net, 2),
+                 retail_gross = ROUND(retail_gross, 2),
+                 purchase_price = ROUND(purchase_price, 2)
+             WHERE (retail_net IS NOT NULL AND retail_net &lt;&gt; ROUND(retail_net, 2))
+                OR (retail_gross IS NOT NULL AND retail_gross &lt;&gt; ROUND(retail_gross, 2))
+                OR (purchase_price IS NOT NULL AND purchase_price &lt;&gt; ROUND(purchase_price, 2));</sql>
+        <sql>UPDATE construction_materials
+             SET retail_net = ROUND(retail_net, 2),
+                 retail_gross = ROUND(retail_gross, 2),
+                 purchase_price = ROUND(purchase_price, 2)
+             WHERE (retail_net IS NOT NULL AND retail_net &lt;&gt; ROUND(retail_net, 2))
+                OR (retail_gross IS NOT NULL AND retail_gross &lt;&gt; ROUND(retail_gross, 2))
+                OR (purchase_price IS NOT NULL AND purchase_price &lt;&gt; ROUND(purchase_price, 2));</sql>
+    </changeSet>
+
+</databaseChangeLog>

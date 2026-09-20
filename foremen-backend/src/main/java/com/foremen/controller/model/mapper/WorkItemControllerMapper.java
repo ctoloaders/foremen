@@ -1,12 +1,18 @@
 package com.foremen.controller.model.mapper;
 
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
 import com.foremen.config.mapper.ForemenMapperConfig;
-import com.foremen.controller.model.*;
+import com.foremen.controller.model.WorkItemCreateRequest;
+import com.foremen.controller.model.WorkItemCreateResponse;
+import com.foremen.controller.model.WorkItemDtoExtendedModel;
+import com.foremen.controller.model.WorkItemDtoModel;
+import com.foremen.controller.model.WorkItemUpdateRequest;
+import com.foremen.controller.model.WorkItemUpdateResponse;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.model.WorkItemServiceExtendedModel;
 import com.foremen.service.model.WorkItemServiceModel;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 @Mapper(config = ForemenMapperConfig.class)
 public interface WorkItemControllerMapper extends ControllerToServiceMapper<

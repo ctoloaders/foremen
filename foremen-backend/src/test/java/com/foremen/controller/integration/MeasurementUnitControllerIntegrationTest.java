@@ -260,7 +260,7 @@ class MeasurementUnitControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/measurement-units/" + unit.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/measurement-units/" + unit.getId()))
                 .andExpect(status().isNotFound());

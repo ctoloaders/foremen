@@ -1,0 +1,3 @@
+code,name_pl,name_ru,note
+kg,kilogram,килограмм,"Masa materialow sypkich/zapraw (zaprawa murarska, naprawcza, tynkarska, gladz); nie jest jednostka pracy - dodac do MEASUREMENT_UNITS"
+l,litr,литр,"Objetosc plynnych materialow (grunt gruntujacy); nie jest jednostka pracy - dodac do MEASUREMENT_UNITS"

@@ -1,0 +1,612 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 (task 8.2, R7.8 / R7.6): idempotent seed of the construction analog-group
+        material TYPES referenced by the research artifacts under
+        FOR-04-RESEARCH-material-norms but not yet present in CONSTRUCTION_MATERIAL_TYPES.
+
+        Source of truth: the DISTINCT `material_type` values on the `branch = construction`
+        rows of work-material-norms.csv (identical to the union of the per-category
+        work-material-norms-cat*.csv files) — 83 codes. The downstream construction-materials
+        reseed (066) and the consumption seed (069) resolve their `type` / `material_type`
+        column against CONSTRUCTION_MATERIAL_TYPES.code by this exact (verbatim, UPPER_SNAKE)
+        code string, so the code stored here MUST equal the CSV material_type verbatim.
+
+        The three FOR-04-17 placeholder types seeded by 054 use lowercase codes
+        (farba / klej_plytki / grunt) and therefore do NOT collide with any of these
+        research codes; all 83 are genuinely absent. Each insert is nonetheless guarded by
+        its own <preConditions onFail="MARK_RAN"> + <sqlCheck expectedResult="0"> on the
+        type code, so a re-run — or a run against a database where a code already exists —
+        inserts nothing (idempotent).
+
+        Registered LAST in changelog.xml, AFTER 064 (units) and BEFORE 066 (construction
+        materials) so every analog-group type a construction material resolves to exists.
+    -->
+
+    <changeSet id="065-seed-cmt-AKRYL" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'AKRYL'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="AKRYL"/><column name="name_ru" value="Акрил"/><column name="name_pl" value="Akryl"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-BATERIA_PODTYNKOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'BATERIA_PODTYNKOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="BATERIA_PODTYNKOWA"/><column name="name_ru" value="Встраиваемый смеситель"/><column name="name_pl" value="Bateria podtynkowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-BELKA_NADPROZOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'BELKA_NADPROZOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="BELKA_NADPROZOWA"/><column name="name_ru" value="Перемычка"/><column name="name_pl" value="Belka nadprożowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-BLOCZEK_KOMORKOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'BLOCZEK_KOMORKOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="BLOCZEK_KOMORKOWY"/><column name="name_ru" value="Газобетонный блок"/><column name="name_pl" value="Bloczek komórkowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-CYNA_LUTOWNICZA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'CYNA_LUTOWNICZA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="CYNA_LUTOWNICZA"/><column name="name_ru" value="Припой оловянный"/><column name="name_pl" value="Cyna lutownicza"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-FOLIA_OCHRONNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'FOLIA_OCHRONNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="FOLIA_OCHRONNA"/><column name="name_ru" value="Защитная плёнка"/><column name="name_pl" value="Folia ochronna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-GIPS_SZYBKOWIAZACY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'GIPS_SZYBKOWIAZACY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="GIPS_SZYBKOWIAZACY"/><column name="name_ru" value="Гипс быстросхватывающийся"/><column name="name_pl" value="Gips szybkowiążący"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-GLADZ_GIPSOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'GLADZ_GIPSOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="GLADZ_GIPSOWA"/><column name="name_ru" value="Гипсовая шпаклёвка"/><column name="name_pl" value="Gładź gipsowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-GLADZ_GOTOWA_MASA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'GLADZ_GOTOWA_MASA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="GLADZ_GOTOWA_MASA"/><column name="name_ru" value="Готовая финишная шпаклёвка"/><column name="name_pl" value="Gładź gotowa masa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-GLADZ_POLIMEROWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'GLADZ_POLIMEROWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="GLADZ_POLIMEROWA"/><column name="name_ru" value="Полимерная шпаклёвка"/><column name="name_pl" value="Gładź polimerowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-GRUNT_MALARSKI" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'GRUNT_MALARSKI'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="GRUNT_MALARSKI"/><column name="name_ru" value="Малярная грунтовка"/><column name="name_pl" value="Grunt malarski"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-GRUNT_UNIWERSALNY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'GRUNT_UNIWERSALNY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="GRUNT_UNIWERSALNY"/><column name="name_ru" value="Универсальная грунтовка"/><column name="name_pl" value="Grunt uniwersalny"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-HYDROIZOLACJA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'HYDROIZOLACJA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="HYDROIZOLACJA"/><column name="name_ru" value="Гидроизоляция"/><column name="name_pl" value="Hydroizolacja"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-JASTRYCH_CEMENTOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'JASTRYCH_CEMENTOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="JASTRYCH_CEMENTOWY"/><column name="name_ru" value="Цементная стяжка"/><column name="name_pl" value="Jastrych cementowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KABEL_ELEKTRYCZNY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KABEL_ELEKTRYCZNY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KABEL_ELEKTRYCZNY"/><column name="name_ru" value="Электрический кабель"/><column name="name_pl" value="Kabel elektryczny"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KATOWNIK_ALUMINIOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KATOWNIK_ALUMINIOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KATOWNIK_ALUMINIOWY"/><column name="name_ru" value="Алюминиевый уголок"/><column name="name_pl" value="Kątownik aluminiowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLEJ_DO_LUSTER" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLEJ_DO_LUSTER'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLEJ_DO_LUSTER"/><column name="name_ru" value="Клей для зеркал"/><column name="name_pl" value="Klej do luster"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLEJ_DO_PLYTEK" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLEJ_DO_PLYTEK'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLEJ_DO_PLYTEK"/><column name="name_ru" value="Клей для плитки"/><column name="name_pl" value="Klej do płytek"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLEJ_DO_PODLOG" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLEJ_DO_PODLOG'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLEJ_DO_PODLOG"/><column name="name_ru" value="Клей для напольных покрытий"/><column name="name_pl" value="Klej do podłóg"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLEJ_DO_TAPET" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLEJ_DO_TAPET'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLEJ_DO_TAPET"/><column name="name_ru" value="Клей для обоев"/><column name="name_pl" value="Klej do tapet"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLEJ_MONTAZOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLEJ_MONTAZOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLEJ_MONTAZOWY"/><column name="name_ru" value="Монтажный клей"/><column name="name_pl" value="Klej montażowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLEJ_SAMOPOZIOMUJACY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLEJ_SAMOPOZIOMUJACY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLEJ_SAMOPOZIOMUJACY"/><column name="name_ru" value="Самовыравнивающийся клей"/><column name="name_pl" value="Klej samopoziomujący"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KLINY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KLINY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KLINY"/><column name="name_ru" value="Клинья"/><column name="name_pl" value="Kliny"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KOLKI" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KOLKI'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KOLKI"/><column name="name_ru" value="Дюбели"/><column name="name_pl" value="Kołki"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KOLKI_SRUBY_MONTAZOWE" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KOLKI_SRUBY_MONTAZOWE'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KOLKI_SRUBY_MONTAZOWE"/><column name="name_ru" value="Дюбели и монтажные винты"/><column name="name_pl" value="Kołki i śruby montażowe"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KSZTALTKI_KANALIZACYJNE" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KSZTALTKI_KANALIZACYJNE'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KSZTALTKI_KANALIZACYJNE"/><column name="name_ru" value="Канализационные фитинги"/><column name="name_pl" value="Kształtki kanalizacyjne"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KSZTALTKI_PEX" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KSZTALTKI_PEX'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KSZTALTKI_PEX"/><column name="name_ru" value="Фитинги PEX"/><column name="name_pl" value="Kształtki PEX"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-KSZTALTKI_PP" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'KSZTALTKI_PP'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="KSZTALTKI_PP"/><column name="name_ru" value="Фитинги PP"/><column name="name_pl" value="Kształtki PP"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-LISTWA_DYLATACYJNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'LISTWA_DYLATACYJNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="LISTWA_DYLATACYJNA"/><column name="name_ru" value="Дилатационный профиль"/><column name="name_pl" value="Listwa dylatacyjna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-MASA_SPOINOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'MASA_SPOINOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="MASA_SPOINOWA"/><column name="name_ru" value="Шпаклёвочная масса для швов"/><column name="name_pl" value="Masa spoinowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-MATERIALY_POMOCNICZE" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'MATERIALY_POMOCNICZE'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="MATERIALY_POMOCNICZE"/><column name="name_ru" value="Вспомогательные материалы"/><column name="name_pl" value="Materiały pomocnicze"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-MIESZANKA_BETONOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'MIESZANKA_BETONOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="MIESZANKA_BETONOWA"/><column name="name_ru" value="Бетонная смесь"/><column name="name_pl" value="Mieszanka betonowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-NAROZNIK_OCHRONNY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'NAROZNIK_OCHRONNY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="NAROZNIK_OCHRONNY"/><column name="name_ru" value="Защитный уголок"/><column name="name_pl" value="Narożnik ochronny"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-NAROZNIK_PAPIEROWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'NAROZNIK_PAPIEROWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="NAROZNIK_PAPIEROWY"/><column name="name_ru" value="Бумажный уголок"/><column name="name_pl" value="Narożnik papierowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-NARZEDZIE_DIAMENTOWE" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'NARZEDZIE_DIAMENTOWE'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="NARZEDZIE_DIAMENTOWE"/><column name="name_ru" value="Алмазный инструмент"/><column name="name_pl" value="Narzędzie diamentowe"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-OBRZEZE" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'OBRZEZE'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="OBRZEZE"/><column name="name_ru" value="Кромка"/><column name="name_pl" value="Obrzeże"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ODPLYW_LINIOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ODPLYW_LINIOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ODPLYW_LINIOWY"/><column name="name_ru" value="Линейный трап"/><column name="name_pl" value="Odpływ liniowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ODPLYW_PUNKTOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ODPLYW_PUNKTOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ODPLYW_PUNKTOWY"/><column name="name_ru" value="Точечный трап"/><column name="name_pl" value="Odpływ punktowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PAKULY_PASTA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PAKULY_PASTA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PAKULY_PASTA"/><column name="name_ru" value="Лён и уплотнительная паста"/><column name="name_pl" value="Pakuły i pasta"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PAPIER_SCIERNY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PAPIER_SCIERNY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PAPIER_SCIERNY"/><column name="name_ru" value="Наждачная бумага"/><column name="name_pl" value="Papier ścierny"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PESZEL_RURKA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PESZEL_RURKA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PESZEL_RURKA"/><column name="name_ru" value="Гофрированная электротруба"/><column name="name_pl" value="Peszel / rurka"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PIANA_MONTAZOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PIANA_MONTAZOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PIANA_MONTAZOWA"/><column name="name_ru" value="Монтажная пена"/><column name="name_pl" value="Piana montażowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PIANKA_MONTAZOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PIANKA_MONTAZOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PIANKA_MONTAZOWA"/><column name="name_ru" value="Подложка-пенка"/><column name="name_pl" value="Pianka montażowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PLYTA_GK" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PLYTA_GK'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PLYTA_GK"/><column name="name_ru" value="Гипсокартонная плита"/><column name="name_pl" value="Płyta GK"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PLYTA_GK_IMPREGNOWANA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PLYTA_GK_IMPREGNOWANA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PLYTA_GK_IMPREGNOWANA"/><column name="name_ru" value="Влагостойкая гипсокартонная плита"/><column name="name_pl" value="Płyta GK impregnowana"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PLYTA_OSB" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PLYTA_OSB'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PLYTA_OSB"/><column name="name_ru" value="Плита OSB"/><column name="name_pl" value="Płyta OSB"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PROFIL_GK" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PROFIL_GK'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PROFIL_GK"/><column name="name_ru" value="Профиль для гипсокартона"/><column name="name_pl" value="Profil GK"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-PUSZKA_PODTYNKOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'PUSZKA_PODTYNKOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="PUSZKA_PODTYNKOWA"/><column name="name_ru" value="Встраиваемая монтажная коробка"/><column name="name_pl" value="Puszka podtynkowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-RURA_KANALIZACYJNA_PVC" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'RURA_KANALIZACYJNA_PVC'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="RURA_KANALIZACYJNA_PVC"/><column name="name_ru" value="Канализационная труба ПВХ"/><column name="name_pl" value="Rura kanalizacyjna PVC"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-RURA_PEX" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'RURA_PEX'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="RURA_PEX"/><column name="name_ru" value="Труба PEX"/><column name="name_pl" value="Rura PEX"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-RURA_PP" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'RURA_PP'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="RURA_PP"/><column name="name_ru" value="Труба PP"/><column name="name_pl" value="Rura PP"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-SILIKON" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'SILIKON'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="SILIKON"/><column name="name_ru" value="Силикон"/><column name="name_pl" value="Silikon"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-SILIKON_SANITARNY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'SILIKON_SANITARNY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="SILIKON_SANITARNY"/><column name="name_ru" value="Санитарный силикон"/><column name="name_pl" value="Silikon sanitarny"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-STELAZ_PODTYNKOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'STELAZ_PODTYNKOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="STELAZ_PODTYNKOWY"/><column name="name_ru" value="Встраиваемая инсталляция"/><column name="name_pl" value="Stelaż podtynkowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-SYFON_WEZYK" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'SYFON_WEZYK'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="SYFON_WEZYK"/><column name="name_ru" value="Сифон и подводка"/><column name="name_pl" value="Syfon / wężyk"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TARCZA_TNACA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TARCZA_TNACA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TARCZA_TNACA"/><column name="name_ru" value="Отрезной диск"/><column name="name_pl" value="Tarcza tnąca"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_DWUSTRONNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_DWUSTRONNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_DWUSTRONNA"/><column name="name_ru" value="Двусторонняя лента"/><column name="name_pl" value="Taśma dwustronna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_IZOLACYJNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_IZOLACYJNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_IZOLACYJNA"/><column name="name_ru" value="Изоляционная лента"/><column name="name_pl" value="Taśma izolacyjna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_MALARSKA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_MALARSKA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_MALARSKA"/><column name="name_ru" value="Малярная лента"/><column name="name_pl" value="Taśma malarska"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_SPOINOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_SPOINOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_SPOINOWA"/><column name="name_ru" value="Лента для швов"/><column name="name_pl" value="Taśma spoinowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_TEFLONOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_TEFLONOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_TEFLONOWA"/><column name="name_ru" value="Тефлоновая лента (ФУМ)"/><column name="name_pl" value="Taśma teflonowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_TYNKARSKA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_TYNKARSKA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_TYNKARSKA"/><column name="name_ru" value="Штукатурная лента"/><column name="name_pl" value="Taśma tynkarska"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TASMA_USZCZELNIAJACA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TASMA_USZCZELNIAJACA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TASMA_USZCZELNIAJACA"/><column name="name_ru" value="Уплотнительная лента"/><column name="name_pl" value="Taśma uszczelniająca"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TEKTURA_OCHRONNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TEKTURA_OCHRONNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TEKTURA_OCHRONNA"/><column name="name_ru" value="Защитный картон"/><column name="name_pl" value="Tektura ochronna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-TOPNIK_LUTOWNICZY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'TOPNIK_LUTOWNICZY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="TOPNIK_LUTOWNICZY"/><column name="name_ru" value="Паяльный флюс"/><column name="name_pl" value="Topnik lutowniczy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-UCHWYT_OBEJMA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'UCHWYT_OBEJMA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="UCHWYT_OBEJMA"/><column name="name_ru" value="Держатель / хомут"/><column name="name_pl" value="Uchwyt / obejma"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-USZCZELKI" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'USZCZELKI'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="USZCZELKI"/><column name="name_ru" value="Уплотнители"/><column name="name_pl" value="Uszczelki"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-USZCZELNIENIE_GWINTU" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'USZCZELNIENIE_GWINTU'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="USZCZELNIENIE_GWINTU"/><column name="name_ru" value="Уплотнение резьбы"/><column name="name_pl" value="Uszczelnienie gwintu"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WELNA_AKUSTYCZNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WELNA_AKUSTYCZNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WELNA_AKUSTYCZNA"/><column name="name_ru" value="Акустическая минвата"/><column name="name_pl" value="Wełna akustyczna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WEZYK_PRZYLACZENIOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WEZYK_PRZYLACZENIOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WEZYK_PRZYLACZENIOWY"/><column name="name_ru" value="Подводка гибкая"/><column name="name_pl" value="Wężyk przyłączeniowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WKRETY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WKRETY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WKRETY"/><column name="name_ru" value="Саморезы"/><column name="name_pl" value="Wkręty"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WKRET_GK" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WKRET_GK'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WKRET_GK"/><column name="name_ru" value="Саморез для гипсокартона"/><column name="name_pl" value="Wkręt GK"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WKRET_KOLEK_MONTAZOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WKRET_KOLEK_MONTAZOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WKRET_KOLEK_MONTAZOWY"/><column name="name_ru" value="Саморез с дюбелем"/><column name="name_pl" value="Wkręt z kołkiem montażowym"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WOREK_NA_GRUZ" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WOREK_NA_GRUZ'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WOREK_NA_GRUZ"/><column name="name_ru" value="Мешок для строительного мусора"/><column name="name_pl" value="Worek na gruz"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-WYLEWKA_SAMOPOZIOMUJACA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'WYLEWKA_SAMOPOZIOMUJACA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="WYLEWKA_SAMOPOZIOMUJACA"/><column name="name_ru" value="Самовыравнивающаяся стяжка"/><column name="name_pl" value="Wylewka samopoziomująca"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZAPRAWA_KLEJ_BLOCZKI" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZAPRAWA_KLEJ_BLOCZKI'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZAPRAWA_KLEJ_BLOCZKI"/><column name="name_ru" value="Клей для газобетонных блоков"/><column name="name_pl" value="Zaprawa klejowa do bloczków"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZAPRAWA_MONTAZOWA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZAPRAWA_MONTAZOWA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZAPRAWA_MONTAZOWA"/><column name="name_ru" value="Монтажный раствор"/><column name="name_pl" value="Zaprawa montażowa"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZAPRAWA_MURARSKA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZAPRAWA_MURARSKA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZAPRAWA_MURARSKA"/><column name="name_ru" value="Кладочный раствор"/><column name="name_pl" value="Zaprawa murarska"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZAPRAWA_NAPRAWCZA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZAPRAWA_NAPRAWCZA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZAPRAWA_NAPRAWCZA"/><column name="name_ru" value="Ремонтный раствор"/><column name="name_pl" value="Zaprawa naprawcza"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZAPRAWA_TYNKARSKA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZAPRAWA_TYNKARSKA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZAPRAWA_TYNKARSKA"/><column name="name_ru" value="Штукатурный раствор"/><column name="name_pl" value="Zaprawa tynkarska"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZASLEPKA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZASLEPKA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZASLEPKA"/><column name="name_ru" value="Заглушка"/><column name="name_pl" value="Zaślepka"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZAWOR_KATOWY" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZAWOR_KATOWY'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZAWOR_KATOWY"/><column name="name_ru" value="Угловой вентиль"/><column name="name_pl" value="Zawór kątowy"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="065-seed-cmt-ZLACZKA_INSTALACYJNA" author="foremen">
+        <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">SELECT COUNT(*) FROM construction_material_types WHERE code = 'ZLACZKA_INSTALACYJNA'</sqlCheck></preConditions>
+        <insert tableName="construction_material_types">
+            <column name="code" value="ZLACZKA_INSTALACYJNA"/><column name="name_ru" value="Соединительная муфта"/><column name="name_pl" value="Złączka instalacyjna"/><column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -288,7 +288,7 @@ class CurrencyControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/currencies/" + currency.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/currencies/" + currency.getId()))
                 .andExpect(status().isNotFound());

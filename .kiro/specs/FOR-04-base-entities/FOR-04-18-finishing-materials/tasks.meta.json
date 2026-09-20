@@ -1,0 +1,501 @@
+{
+  "pbtResults": {
+    "4.2 Write property test for photo CDN URL resolution reuse": {
+      "status": "passed",
+      "lastRunTimestamp": 1789816989195
+    }
+  },
+  "executionHistory": {
+    "1.1 `FinishingMaterialEntity` (`@Table(\"finishing_materials\")`) extending `BaseEntity`: NO `code`/`name`; mandatory `@ManyToOne category` (`category_id` NOT NULL) + `material` (`material_id` NOT NULL); optional `@ManyToOne type`/`producer`; `@ManyToMany packages` via `finishing_material_packages`; mandatory `@ManyToOne unit`; free-text `model`/`sku` (255) + `features` (text); nullable `purchasePrice`/`retailGross`/`retailNet` (`NUMERIC(12,2)`, no per-unit price field); nullable `link` (1024); nullable `photo` (512, GCS object key); `active` NOT NULL default `true` + `FinishingMaterialDao extends AdminDao<…, Long>`": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262175
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816281208
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816385219
+      }
+    ],
+    "1.2 `060-create-finishing-materials.xml` (table `finishing_materials` with all columns + `BaseEntity` audit + five entity FKs; join table `finishing_material_packages(finishing_material_id, offer_package_id)` composite PK with both FKs `ON DELETE CASCADE` per the FOR-04-12b/FOR-04-17 pattern; idempotent `tableExists`+`MARK_RAN`; register LAST)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262292
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816403389
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816556556
+      }
+    ],
+    "2.1 Service/controller model records: `FinishingMaterialServiceModel`/`…ServiceExtendedModel`; `…CreateRequest`/`…UpdateRequest` (`@NotNull categoryId`/`materialId`, optional `typeId`/`producerId`, `@NotEmpty Set<Long> offerPackageIds`, `@NotNull unitId`, `@Size(max=255) model`/`sku`, `String features`, three `@DecimalMin(\"0.00\")@DecimalMax(\"9999999999.99\")` nullable prices (`purchasePrice`/`retailGross`/`retailNet`), `@Size(max=1024) link`, `@Size(max=512) photo`, `Boolean active`); `…DtoModel` (list row: derived `label`, `RefDto` for `category`/`material`/`type`/`producer`/`unit`, `List<RefDto> packages`, `model`/`sku`/`features`, three prices, `link`, resolved `photoUrl`, `active`); `…DtoExtendedModel` (+ raw `categoryId`/`materialId`/`typeId`/`producerId`/`offerPackageIds`/`unitId`, `photoUrl`); create/update responses — no `code`, no `name`": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262324
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816407281
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816560700
+      }
+    ],
+    "2.2 Mappers (`FinishingMaterialServiceMapper`; `FinishingMaterialControllerMapper` maps refs → localized `RefDto`, builds derived `label = material + \" — \" + model`, resolves `photoUrl` via `ImageStorage.toCdnUrl(...)`, default `active`→`true`) + `FinishingMaterialService implements AdminService<…>` (NOT `ProjectScopedService`) with a `normalize(...)` write path (mirroring `ConstructionMaterialService.resolveReferences`): resolve-and-load every reference (`categoryId`/`materialId`/`typeId`/`producerId`/`unitId`/each `offerPackageId`), reject missing required `category`/`material`/`unit` and empty `packages`, range-check the three prices, `@Size` `model`/`sku`/`link`; on photo replace/detach/delete call `ImageStorage.deleteIfOrphan(previousKey)`; flat custom audit snapshot serializing nested references as a simple name (like `ConstructionMaterialService.serializeEntity`); nothing persisted on any validation failure": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262362
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816567893
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816878350
+      }
+    ],
+    "2.3 `FinishingMaterialController` at `/api/finishing-materials`, `@PermissionResource(\"MATERIALS_FINISHING\")` implementing `AdminController<…>` (create/list/read/update/delete/count/metadata/i18n, inherited `@PermissionOperation`; no custom endpoints); reference filters `category.id`/`material.id`/`type.id`/`producer.id`/`unit.id`/`packages.id` ride the existing FOR-04-01 `SpecificationBuilder` grammar (collection path → JOIN + distinct)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262391
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816887122
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817040513
+      }
+    ],
+    "2.4 Write property test for write-path validation": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262422
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817050314
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817657653
+      }
+    ],
+    "3.1 Extend the existing `OfferPackageService.deleteById` override (already carries the FOR-04-17 `construction_materials` cleanup): after the DB `ON DELETE CASCADE` removes join rows, in the SAME transaction ALSO delete every `finishing_materials` row now holding zero packages (`… WHERE id NOT IN (SELECT finishing_material_id FROM finishing_material_packages)` scoped to rows that had referenced the deleted package); leave multi-package materials untouched": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262448
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816570174
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816880836
+      }
+    ],
+    "3.2 Write property test for the package-deletion invariant": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262479
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817051766
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817658467
+      }
+    ],
+    "4.1 Register `finishing_materials.photo` in the shared `ImageReferenceLookup.IMAGE_COLUMNS` (add `new ImageColumn(\"finishing_materials\", \"photo\")`) so both the eager `deleteIfOrphan` trigger and the periodic `ImageReconciliationJob` count finishing-material photo references; the lookup's `information_schema.columns` existence guard keeps it graceful before changeset `060` runs — no other change to `com.foremen.service.image`": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262513
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816283461
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816381974
+      }
+    ],
+    "4.2 Write property test for photo CDN URL resolution reuse": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262558
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816888489
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817041922
+      }
+    ],
+    "5.1 `061-seed-finishing-materials-resource.xml` (resource `MATERIALS_FINISHING` with non-null `code`/`name_ru`/`name_pl`/`description_ru`/`description_pl`; `role_resources` + `role_resource_operations` grants: ADMIN CRUD, MANAGER CREATE/READ/UPDATE (NO DELETE), FOREMAN/WORKER/FINANCIER READ, CLIENT none, DELETE ADMIN-only; each insert guarded `sqlCheck expectedResult=\"0\"`+`MARK_RAN`; register LAST) per `.kiro/steering/entity-creation-rules.md`": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262597
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816890990
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817045323
+      }
+    ],
+    "5.2 CSV-to-SQL seed generator + `062-seed-finishing-materials.xml`: a repeatable generation step reads `docs/Materiały pakiety - Lista.csv`, maps each column to a field (`Cena detal / m2` has NO stored field — it is used only as the `retail_net` fallback below), parses comma-decimal prices (empty → NULL), applies the `retail_net` fallback (when a row's `Cena detal netto` is empty, use that row's `Cena detal / m2` value for `retail_net`; when both are empty, `retail_net` is NULL), normalizes the multi-value `Pakiet` cell (split on comma; strip whitespace/quotes/leading `+ `; map `Standart`→`Standard`; collapse duplicates), skips blank-`Kategoria` rows, and emits guarded inserts that resolve `category_id`/`material_id`/`type_id`/`producer_id`/`unit_id` by sub-select (inserting nothing when a required reference is absent) plus `finishing_material_packages` rows; the whole changeset is idempotent (`sqlCheck` on `finishing_materials`+`MARK_RAN`); register LAST. Document the generation approach in the changeset header (Requirement 6.8)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262644
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817055973
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817664770
+      }
+    ],
+    "5.3 Write property test for the Pakiet parsing normalization": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262665
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817672136
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818334102
+      }
+    ],
+    "6. Checkpoint — backend compiles, changelog registers 060–062 in order, controller passes PermissionAnnotationValidator": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262697
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819090136
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819105524
+      }
+    ],
+    "7.1 Scaffolding under `foremen-frontend/src/features/finishing-materials/` (types incl. `label`/`photoUrl`/reference ids, `finishing-materials-api.ts` via `buildFetchQuery` with FOR-04-01 reference filters, query/mutation hooks `finishingMaterialKeys` that invalidate + toast, zod schema: required `category`/`material`/`unit`, ≥ 1 package, `model`/`sku` ≤ 255, `link` ≤ 1024, prices in range)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262728
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817058368
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817667086
+      }
+    ],
+    "7.2 `FinishingMaterialsList` + `FinishingMaterialsPage` (`DataTable entityKey=\"finishing-materials\" resource=\"MATERIALS_FINISHING\"`, columns `category`/`material`/`type`/`producer`/`model`/`sku`/`retailNet`/`link` + optional `photo` thumbnail) + `FinishingMaterialFormSheet` (required `category`/`material` selectors, optional `type`/`producer` selectors, required multi-select `packages` ≥ 1, required `unit` selector, `model`/`sku`/`features` inputs, three price inputs, `link` input, optional reused `ImageUploadControl` `entityKind=\"finishing-materials\"` `resource=\"MATERIALS_FINISHING\"`, `active` toggle; no `code`/`name`) + `DeleteFinishingMaterialDialog` + lazy route + interim guard (`/materials/finishing` → `MATERIALS_FINISHING`/`READ`) + Warehouse nav item `{ path:'/materials/finishing', labelKey:'nav.finishingMaterials', requiredPermission:{ resource:'MATERIALS_FINISHING', operation:'READ' } }` in `navigation.ts` + i18n `finishingMaterials.*` + `nav.finishingMaterials` at PL+RU parity (no raw key); permission-gated create/edit/delete via `usePermission`": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262764
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817677816
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818338939
+      }
+    ],
+    "7.3 `FinishingMaterialsList.test.tsx` (columns render, permission gating, localized empty state) + photo-control UI test (reused `ImageUploadControl` appears on the form; a material with a photo renders its resolved image) + `finishingMaterials.*` and `nav.finishingMaterials` i18n parity tests (pl/ru, all non-empty)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262806
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818359904
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818820007
+      }
+    ],
+    "8. Checkpoint — frontend tsc + the new UI test files": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262836
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819110703
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819314459
+      }
+    ],
+    "9.1 `FinishingMaterialControllerIntegrationTest` (Testcontainers CRUD with required `category`/`material`/`unit`, optional `type`/`producer`, required `packages` ≥ 1 incl. empty-set rejection; `model`/`sku` 255/256 and `link` 1024/1025 boundaries; derived `label` on read; reference filters `category.id`/`material.id`/`type.id`/`producer.id`/`unit.id`/`packages.id`)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262862
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818352340
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818822300
+      }
+    ],
+    "9.2 `FinishingMaterialPackageCascadeIntegrationTest` (example alongside Property 2: deleting a package removes join rows, deletes a zero-package material, leaves a multi-package material)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262890
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818353742
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818824209
+      }
+    ],
+    "9.3 `FinishingMaterialPhotoIntegrationTest` + `FinishingMaterialImageReferenceLookupIntegrationTest` (photo object-key round-trip → resolved `photoUrl`; upload rejection reuse for non-image/over-size; `ImageReferenceLookup` counts a `finishing_materials.photo` reference so a referenced photo is not reclaimed and a detached one is)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262912
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818356102
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818826541
+      }
+    ],
+    "9.4 `MaterialsFinishingResourceSeedIntegrationTest` (resource present; exact grant matrix incl. CLIENT none, MANAGER no-DELETE, DELETE ADMIN-only; re-run idempotency)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262939
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818358142
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818828291
+      }
+    ],
+    "9.5 `FinishingMaterialsCsvSeedIntegrationTest` (generated seed populated `finishing_materials` with resolved references + parsed multi-value packages for representative rows; comma-decimal prices parsed; blank-category rows skipped; re-run inserts no duplicates)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262964
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818833907
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819049795
+      }
+    ],
+    "9.6 `FinishingMaterialsAnnotationCoverageSmokeIT` (the fully annotated `FinishingMaterialController` starts cleanly under `PermissionAnnotationValidator`)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816262995
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818835428
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819051236
+      }
+    ],
+    "10. Author test-cases.md": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816263027
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819111581
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819315335
+      }
+    ],
+    "11. Final checkpoint — affected backend classes + frontend tsc/UI tests": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816263065
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819335853
+      },
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819343117
+      }
+    ],
+    "1. FinishingMaterial entity, join table & DAO (root repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789816556664
+      }
+    ],
+    "4. Shared image reuse — photo wiring & reference-lookup coverage (root repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817041969
+      }
+    ],
+    "2. FinishingMaterial service, mappers, controller & CRUD (root repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817657784
+      }
+    ],
+    "3. Package-deletion cascade cleanup (root repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789817658521
+      }
+    ],
+    "5. ABAC resource/grants seed + generated CSV data seed (root repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818334192
+      }
+    ],
+    "7. FinishingMaterial admin page (foremen-frontend repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789818820125
+      }
+    ],
+    "9. Backend example / integration / seed / smoke tests (root repo)": [
+      {
+        "executionId": "b54ec84c-4be6-48ba-8406-e5bef793a572",
+        "chatSessionId": "sess_4492dfcf-be4a-4bcb-aa4d-4791c433fd0f",
+        "timestamp": 1789819051341
+      }
+    ]
+  }
+}

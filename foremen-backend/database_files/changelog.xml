@@ -57,5 +57,33 @@
     <include file="database_files/changesets/050-create-materials.xml"/>
     <include file="database_files/changesets/051-seed-materials-resource.xml"/>
     <include file="database_files/changesets/052-reseed-material-categories.xml"/>
+    <include file="database_files/changesets/053-create-construction-material-types.xml"/>
+    <include file="database_files/changesets/054-seed-construction-material-types-resource.xml"/>
+    <include file="database_files/changesets/055-create-material-sellers.xml"/>
+    <include file="database_files/changesets/056-seed-material-sellers-resource.xml"/>
+    <include file="database_files/changesets/057-create-construction-materials.xml"/>
+    <include file="database_files/changesets/058-seed-construction-materials-resource.xml"/>
+    <include file="database_files/changesets/059-add-material-producers-image.xml"/>
+    <include file="database_files/changesets/060-create-finishing-materials.xml"/>
+    <include file="database_files/changesets/061-seed-finishing-materials-resource.xml"/>
+    <include file="database_files/changesets/062-seed-finishing-materials.xml"/>
+    <include file="database_files/changesets/063-add-work-items-code.xml"/>
+    <include file="database_files/changesets/064-seed-new-measurement-units.xml"/>
+    <include file="database_files/changesets/065-seed-construction-material-types-research.xml"/>
+    <include file="database_files/changesets/066-reseed-construction-materials-research.xml"/>
+    <include file="database_files/changesets/067-create-work-material-consumptions.xml"/>
+    <include file="database_files/changesets/068-seed-work-material-consumptions-resource.xml"/>
+    <!-- 070 seeds the finishing analog TYPES referenced by the CSV finishing rows; it MUST
+         run BEFORE 069 so 069's finishing INSERT...SELECT resolves them on a fresh migrate. -->
+    <include file="database_files/changesets/070-seed-finishing-material-types-research.xml"/>
+    <include file="database_files/changesets/069-seed-work-material-consumptions.xml"/>
+    <!-- 071 supplies the finishing-branch consumption rows (069 emitted construction only);
+         runs after 070 so its finishing INSERT...SELECT resolves the seeded analog types. -->
+    <include file="database_files/changesets/071-seed-work-material-consumptions-finishing.xml"/>
+
+    <include file="database_files/changesets/072-autofill-consumption-norms-and-classb-links.xml"/>
+    <include file="database_files/changesets/073-seed-finishing-materials-gap-fill.xml"/>
+    <include file="database_files/changesets/074-seed-posadzki-floor-norms.xml"/>
+    <include file="database_files/changesets/075-normalize-stored-prices.xml"/>
 
 </databaseChangeLog>

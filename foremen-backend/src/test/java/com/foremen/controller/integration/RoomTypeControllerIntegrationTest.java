@@ -260,7 +260,7 @@ class RoomTypeControllerIntegrationTest {
         entityManager.flush();
 
         mockMvc.perform(delete("/api/room-types/" + roomType.getId()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/room-types/" + roomType.getId()))
                 .andExpect(status().isNotFound());

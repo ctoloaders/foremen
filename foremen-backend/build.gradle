@@ -64,6 +64,10 @@ dependencies {
     // Not managed by the Spring Boot BOM, so pin the version.
     implementation "com.google.api-client:google-api-client:${googleApiClientVersion}"
 
+    // Google Cloud Storage - backing store for the shared ImageStorage service (FOR-04-17).
+    // Not managed by the Spring Boot BOM, so pin the version.
+    implementation "com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}"
+
     // Jackson JSR310 (for JavaTimeModule in audit serialization)
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 

@@ -1,0 +1,6 @@
+code,name_pl,name_ru,note
+kg,kilogram,килограмм,"Masa suchych mieszanek (jastrych cementowy, wylewka samopoziomująca) i klejów do podłóg liczonych masowo; physical unit, nie 'worek'/'opak'."
+l,litr,литр,"Objętość płynów: grunt podkładowy, akryl i klej do listew w kartuszu przeliczony na litry (ml→l); physical unit, nie 'kartusz'/'opak'."
+m2,metr kwadratowy,квадратный метр,"Powierzchniowe pokrycia podłogowe (panele/winyl/deska), podkład i folia paroizolacyjna oraz folia/tektura ochronna; physical unit, nie 'opak'/'rolka'."
+szt,sztuka,штука,"Materiał ścierny (papier/siatka/tarcza) oraz listwa dylatacyjna przy wejściu liczone na sztuki; physical unit, nie 'opak'/'arkusz'."
+mb,metr bieżący,погонный метр,"Listwy przypodłogowe i listwy dylatacyjne liczone na długość jako material_unit; physical unit, nie 'sztuka'/'wiązka'."

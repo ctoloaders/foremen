@@ -1,0 +1,979 @@
+work_code,work,branch,missing_type,typical_in_cat
+1.01,"Защита во время работы (окна, двери, транспортные пути)",construction,PIANKA_MONTAZOWA,2
+1.01,"Защита во время работы (окна, двери, транспортные пути)",construction,TARCZA_TNACA,5
+1.01,"Защита во время работы (окна, двери, транспортные пути)",construction,WOREK_NA_GRUZ,6
+1.01,"Защита во время работы (окна, двери, транспортные пути)",construction,ZAPRAWA_NAPRAWCZA,4
+1.02,Снос кирпичной стены,construction,PIANKA_MONTAZOWA,2
+1.02,Снос кирпичной стены,construction,ZAPRAWA_NAPRAWCZA,4
+1.03,Заделка пола и потолка после демонтажных работ,construction,PIANKA_MONTAZOWA,2
+1.03,Заделка пола и потолка после демонтажных работ,construction,TARCZA_TNACA,5
+1.03,Заделка пола и потолка после демонтажных работ,construction,WOREK_NA_GRUZ,6
+1.04,Вентиляция - перенос отверстий,construction,TARCZA_TNACA,5
+1.04,Вентиляция - перенос отверстий,construction,WOREK_NA_GRUZ,6
+1.04,Вентиляция - перенос отверстий,construction,ZAPRAWA_NAPRAWCZA,4
+1.05,Вентиляция - расширение отверстия,construction,PIANKA_MONTAZOWA,2
+1.05,Вентиляция - расширение отверстия,construction,WOREK_NA_GRUZ,6
+1.06,Вентиляция - регулировка (удлинение воздуховода),construction,TARCZA_TNACA,5
+1.06,Вентиляция - регулировка (удлинение воздуховода),construction,WOREK_NA_GRUZ,6
+1.07,"Заделка стен и потолков после штробы, выполненной сторонней компанией",construction,PIANKA_MONTAZOWA,2
+1.07,"Заделка стен и потолков после штробы, выполненной сторонней компанией",construction,TARCZA_TNACA,5
+1.07,"Заделка стен и потолков после штробы, выполненной сторонней компанией",construction,WOREK_NA_GRUZ,6
+1.08,Разбитие и вынос стяжки,construction,PIANKA_MONTAZOWA,2
+1.08,Разбитие и вынос стяжки,construction,ZAPRAWA_NAPRAWCZA,4
+1.09,Демонтаж плитки,construction,PIANKA_MONTAZOWA,2
+1.09,Демонтаж плитки,construction,ZAPRAWA_NAPRAWCZA,4
+1.10,Демонтаж пола,construction,PIANKA_MONTAZOWA,2
+1.10,Демонтаж пола,construction,TARCZA_TNACA,5
+1.10,Демонтаж пола,construction,ZAPRAWA_NAPRAWCZA,4
+1.11,Демонтаж пола на клею,construction,PIANKA_MONTAZOWA,2
+1.11,Демонтаж пола на клею,construction,ZAPRAWA_NAPRAWCZA,4
+1.12,Демонтаж плинтусов,construction,PIANKA_MONTAZOWA,2
+1.12,Демонтаж плинтусов,construction,TARCZA_TNACA,5
+1.12,Демонтаж плинтусов,construction,ZAPRAWA_NAPRAWCZA,4
+10.01,Стяжка цементная,construction,AKRYL,2
+10.01,Стяжка цементная,construction,KLEJ_MONTAZOWY,2
+10.01,Стяжка цементная,construction,LISTWA_DYLATACYJNA,2
+10.01,Стяжка цементная,construction,PAPIER_SCIERNY,2
+10.01,Стяжка цементная,finishing,LISTWA_PRZYPODLOGOWA,2
+10.02,Стяжка самовыравнивающая,construction,AKRYL,2
+10.02,Стяжка самовыравнивающая,construction,KLEJ_MONTAZOWY,2
+10.02,Стяжка самовыравнивающая,construction,LISTWA_DYLATACYJNA,2
+10.02,Стяжка самовыравнивающая,construction,PAPIER_SCIERNY,2
+10.02,Стяжка самовыравнивающая,finishing,LISTWA_PRZYPODLOGOWA,2
+10.03,"Шлифовка пола для понижения уровня, до 5 мм",construction,AKRYL,2
+10.03,"Шлифовка пола для понижения уровня, до 5 мм",construction,KLEJ_MONTAZOWY,2
+10.03,"Шлифовка пола для понижения уровня, до 5 мм",construction,LISTWA_DYLATACYJNA,2
+10.03,"Шлифовка пола для понижения уровня, до 5 мм",finishing,LISTWA_PRZYPODLOGOWA,2
+10.04,Шлифовка пола для поклейки,construction,AKRYL,2
+10.04,Шлифовка пола для поклейки,construction,KLEJ_MONTAZOWY,2
+10.04,Шлифовка пола для поклейки,construction,LISTWA_DYLATACYJNA,2
+10.04,Шлифовка пола для поклейки,finishing,LISTWA_PRZYPODLOGOWA,2
+10.05,Грунтовка полов,construction,AKRYL,2
+10.05,Грунтовка полов,construction,KLEJ_MONTAZOWY,2
+10.05,Грунтовка полов,construction,LISTWA_DYLATACYJNA,2
+10.05,Грунтовка полов,construction,PAPIER_SCIERNY,2
+10.05,Грунтовка полов,finishing,LISTWA_PRZYPODLOGOWA,2
+10.12,Защита уложенного пола на время работ,construction,AKRYL,2
+10.12,Защита уложенного пола на время работ,construction,KLEJ_MONTAZOWY,2
+10.12,Защита уложенного пола на время работ,construction,LISTWA_DYLATACYJNA,2
+10.12,Защита уложенного пола на время работ,construction,PAPIER_SCIERNY,2
+10.12,Защита уложенного пола на время работ,finishing,LISTWA_PRZYPODLOGOWA,2
+10.13,Алюминиевый порожек / нанесение акрила на стыках полов,construction,KLEJ_MONTAZOWY,2
+10.13,Алюминиевый порожек / нанесение акрила на стыках полов,construction,PAPIER_SCIERNY,2
+10.13,Алюминиевый порожек / нанесение акрила на стыках полов,finishing,LISTWA_PRZYPODLOGOWA,2
+10.14,Порожек на входе в помещение,construction,AKRYL,2
+10.14,Порожек на входе в помещение,construction,KLEJ_MONTAZOWY,2
+10.14,Порожек на входе в помещение,construction,PAPIER_SCIERNY,2
+10.14,Порожек на входе в помещение,finishing,LISTWA_PRZYPODLOGOWA,2
+10.15,Плинтус МДФ / пенополистирол на клей,construction,LISTWA_DYLATACYJNA,2
+10.15,Плинтус МДФ / пенополистирол на клей,construction,PAPIER_SCIERNY,2
+10.16,Скрытый плинтус с подрезом стены,construction,AKRYL,2
+10.16,Скрытый плинтус с подрезом стены,construction,LISTWA_DYLATACYJNA,2
+10.16,Скрытый плинтус с подрезом стены,construction,PAPIER_SCIERNY,2
+11.01,Подрезка дверного полотна (1 сторона),construction,KLEJ_MONTAZOWY,2
+11.01,Подрезка дверного полотна (1 сторона),construction,KLINY,2
+11.01,Подрезка дверного полотна (1 сторона),construction,KOLKI,4
+11.01,Подрезка дверного полотна (1 сторона),construction,PIANA_MONTAZOWA,2
+11.01,Подрезка дверного полотна (1 сторона),construction,SILIKON,3
+11.01,Подрезка дверного полотна (1 сторона),construction,WKRETY,4
+11.02,"Монтаж встроенной дверной коробки и двери (дo 2 м, выше 2 м +10% зa 10 см)",construction,SILIKON,3
+11.02,"Монтаж встроенной дверной коробки и двери (дo 2 м, выше 2 м +10% зa 10 см)",construction,WKRETY,4
+11.03,"Отделка дверной коробки встроенных дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,KLINY,2
+11.03,"Отделка дверной коробки встроенных дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,KOLKI,4
+11.03,"Отделка дверной коробки встроенных дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,PIANA_MONTAZOWA,2
+11.03,"Отделка дверной коробки встроенных дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,SILIKON,3
+11.04,"Покраска полотна скрытых дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,KLEJ_MONTAZOWY,2
+11.04,"Покраска полотна скрытых дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,KLINY,2
+11.04,"Покраска полотна скрытых дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,KOLKI,4
+11.04,"Покраска полотна скрытых дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,PIANA_MONTAZOWA,2
+11.04,"Покраска полотна скрытых дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,SILIKON,3
+11.04,"Покраска полотна скрытых дверей (дo 2 м, выше 2 м +10% зa 10 см)",construction,WKRETY,4
+11.05,Монтаж межкомнатных дверей,construction,KLEJ_MONTAZOWY,2
+11.05,Монтаж межкомнатных дверей,construction,WKRETY,4
+11.06,Монтаж дверной ручки и замка,construction,KLEJ_MONTAZOWY,2
+11.06,Монтаж дверной ручки и замка,construction,KLINY,2
+11.06,Монтаж дверной ручки и замка,construction,KOLKI,4
+11.06,Монтаж дверной ручки и замка,construction,PIANA_MONTAZOWA,2
+11.06,Монтаж дверной ручки и замка,construction,SILIKON,3
+11.07,Сборка шкафчика под умывальник,construction,KLEJ_MONTAZOWY,2
+11.07,Сборка шкафчика под умывальник,construction,KLINY,2
+11.07,Сборка шкафчика под умывальник,construction,PIANA_MONTAZOWA,2
+11.08,Монтаж шкафчика под умывальник,construction,KLEJ_MONTAZOWY,2
+11.08,Монтаж шкафчика под умывальник,construction,KLINY,2
+11.08,Монтаж шкафчика под умывальник,construction,PIANA_MONTAZOWA,2
+12.01,"Подоконник без боковой вковки, ширина до 150 см",construction,KLEJ_DO_LUSTER,3
+12.01,"Подоконник без боковой вковки, ширина до 150 см",construction,TASMA_DWUSTRONNA,2
+12.01,"Подоконник без боковой вковки, ширина до 150 см",construction,WKRET_KOLEK_MONTAZOWY,6
+12.02,"Подоконник без боковой вковки, ширина от 150 см",construction,KLEJ_DO_LUSTER,3
+12.02,"Подоконник без боковой вковки, ширина от 150 см",construction,TASMA_DWUSTRONNA,2
+12.02,"Подоконник без боковой вковки, ширина от 150 см",construction,WKRET_KOLEK_MONTAZOWY,6
+12.03,Монтаж фальш карниза,construction,KLEJ_DO_LUSTER,3
+12.03,Монтаж фальш карниза,construction,PIANKA_MONTAZOWA,3
+12.03,Монтаж фальш карниза,construction,SILIKON,5
+12.03,Монтаж фальш карниза,construction,TASMA_DWUSTRONNA,2
+12.03,Монтаж фальш карниза,construction,WKRET_KOLEK_MONTAZOWY,6
+12.03,Монтаж фальш карниза,construction,ZAPRAWA_MONTAZOWA,2
+12.04,Монтаж карниза,construction,KLEJ_DO_LUSTER,3
+12.04,Монтаж карниза,construction,KLEJ_MONTAZOWY,4
+12.04,Монтаж карниза,construction,PIANKA_MONTAZOWA,3
+12.04,Монтаж карниза,construction,SILIKON,5
+12.04,Монтаж карниза,construction,TASMA_DWUSTRONNA,2
+12.04,Монтаж карниза,construction,ZAPRAWA_MONTAZOWA,2
+12.05,Установка зеркала,construction,KLEJ_MONTAZOWY,4
+12.05,Установка зеркала,construction,PIANKA_MONTAZOWA,3
+12.05,Установка зеркала,construction,SILIKON,5
+12.05,Установка зеркала,construction,WKRET_KOLEK_MONTAZOWY,6
+12.05,Установка зеркала,construction,ZAPRAWA_MONTAZOWA,2
+12.06,Установка зеркала с подсветкой,construction,KLEJ_MONTAZOWY,4
+12.06,Установка зеркала с подсветкой,construction,PIANKA_MONTAZOWA,3
+12.06,Установка зеркала с подсветкой,construction,SILIKON,5
+12.06,Установка зеркала с подсветкой,construction,TASMA_DWUSTRONNA,2
+12.06,Установка зеркала с подсветкой,construction,ZAPRAWA_MONTAZOWA,2
+12.07,Установка зеркала / стекла по м2,construction,KLEJ_MONTAZOWY,4
+12.07,Установка зеркала / стекла по м2,construction,PIANKA_MONTAZOWA,3
+12.07,Установка зеркала / стекла по м2,construction,SILIKON,5
+12.07,Установка зеркала / стекла по м2,construction,WKRET_KOLEK_MONTAZOWY,6
+12.07,Установка зеркала / стекла по м2,construction,ZAPRAWA_MONTAZOWA,2
+12.08,Вентиляция - монтаж вентиллятора,construction,KLEJ_DO_LUSTER,3
+12.08,Вентиляция - монтаж вентиллятора,construction,KLEJ_MONTAZOWY,4
+12.08,Вентиляция - монтаж вентиллятора,construction,TASMA_DWUSTRONNA,2
+12.08,Вентиляция - монтаж вентиллятора,construction,ZAPRAWA_MONTAZOWA,2
+12.09,Вентиляция - монтаж кратки,construction,KLEJ_DO_LUSTER,3
+12.09,Вентиляция - монтаж кратки,construction,KLEJ_MONTAZOWY,4
+12.09,Вентиляция - монтаж кратки,construction,PIANKA_MONTAZOWA,3
+12.09,Вентиляция - монтаж кратки,construction,TASMA_DWUSTRONNA,2
+12.09,Вентиляция - монтаж кратки,construction,ZAPRAWA_MONTAZOWA,2
+12.10,Монтаж аксессуаров,construction,KLEJ_DO_LUSTER,3
+12.10,Монтаж аксессуаров,construction,PIANKA_MONTAZOWA,3
+12.10,Монтаж аксессуаров,construction,SILIKON,5
+12.10,Монтаж аксессуаров,construction,TASMA_DWUSTRONNA,2
+12.10,Монтаж аксессуаров,construction,ZAPRAWA_MONTAZOWA,2
+12.11,"Установка бытовой техники, от",construction,KLEJ_DO_LUSTER,3
+12.11,"Установка бытовой техники, от",construction,KLEJ_MONTAZOWY,4
+12.11,"Установка бытовой техники, от",construction,PIANKA_MONTAZOWA,3
+12.11,"Установка бытовой техники, от",construction,TASMA_DWUSTRONNA,2
+12.11,"Установка бытовой техники, от",construction,ZAPRAWA_MONTAZOWA,2
+2.01,Уменьшение высоты дверных проемов - подгонка под стандартные размеры,construction,KATOWNIK_ALUMINIOWY,4
+2.01,Уменьшение высоты дверных проемов - подгонка под стандартные размеры,construction,MASA_SPOINOWA,13
+2.01,Уменьшение высоты дверных проемов - подгонка под стандартные размеры,construction,PLYTA_GK,11
+2.01,Уменьшение высоты дверных проемов - подгонка под стандартные размеры,construction,PLYTA_GK_IMPREGNOWANA,4
+2.01,Уменьшение высоты дверных проемов - подгонка под стандартные размеры,construction,PROFIL_GK,13
+2.01,Уменьшение высоты дверных проемов - подгонка под стандартные размеры,construction,WKRET_GK,8
+2.02,"Уменьшение дверного проёма, до 3 см (зашивка ГК)",construction,BELKA_NADPROZOWA,3
+2.02,"Уменьшение дверного проёма, до 3 см (зашивка ГК)",construction,KATOWNIK_ALUMINIOWY,4
+2.02,"Уменьшение дверного проёма, до 3 см (зашивка ГК)",construction,PLYTA_GK_IMPREGNOWANA,4
+2.02,"Уменьшение дверного проёма, до 3 см (зашивка ГК)",construction,PROFIL_GK,13
+2.02,"Уменьшение дверного проёма, до 3 см (зашивка ГК)",construction,WKRET_GK,8
+2.02,"Уменьшение дверного проёма, до 3 см (зашивка ГК)",construction,ZAPRAWA_MURARSKA,6
+2.03,"Уменьшение дверного проёма, больше 3 см (зашивка блоком и выравнивание)",construction,BELKA_NADPROZOWA,3
+2.03,"Уменьшение дверного проёма, больше 3 см (зашивка блоком и выравнивание)",construction,KATOWNIK_ALUMINIOWY,4
+2.03,"Уменьшение дверного проёма, больше 3 см (зашивка блоком и выравнивание)",construction,PLYTA_GK_IMPREGNOWANA,4
+2.03,"Уменьшение дверного проёма, больше 3 см (зашивка блоком и выравнивание)",construction,WKRET_GK,8
+2.03,"Уменьшение дверного проёма, больше 3 см (зашивка блоком и выравнивание)",construction,ZAPRAWA_MURARSKA,6
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,BELKA_NADPROZOWA,3
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,KATOWNIK_ALUMINIOWY,4
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,MASA_SPOINOWA,13
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,PLYTA_GK,11
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,PLYTA_GK_IMPREGNOWANA,4
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,PROFIL_GK,13
+2.04,"Расширение дверного проёма из ГБ / кирпича, до 5 см",construction,WKRET_GK,8
+2.05,"Расширение дверного проёма из ГБ / кирпича, больше 5 см",construction,KATOWNIK_ALUMINIOWY,4
+2.05,"Расширение дверного проёма из ГБ / кирпича, больше 5 см",construction,MASA_SPOINOWA,13
+2.05,"Расширение дверного проёма из ГБ / кирпича, больше 5 см",construction,PLYTA_GK,11
+2.05,"Расширение дверного проёма из ГБ / кирпича, больше 5 см",construction,PLYTA_GK_IMPREGNOWANA,4
+2.05,"Расширение дверного проёма из ГБ / кирпича, больше 5 см",construction,PROFIL_GK,13
+2.05,"Расширение дверного проёма из ГБ / кирпича, больше 5 см",construction,WKRET_GK,8
+2.06,Демонтаж / монтаж балки дверного проёма,construction,BELKA_NADPROZOWA,3
+2.06,Демонтаж / монтаж балки дверного проёма,construction,KATOWNIK_ALUMINIOWY,4
+2.06,Демонтаж / монтаж балки дверного проёма,construction,MASA_SPOINOWA,13
+2.06,Демонтаж / монтаж балки дверного проёма,construction,PLYTA_GK,11
+2.06,Демонтаж / монтаж балки дверного проёма,construction,PLYTA_GK_IMPREGNOWANA,4
+2.06,Демонтаж / монтаж балки дверного проёма,construction,PROFIL_GK,13
+2.06,Демонтаж / монтаж балки дверного проёма,construction,WKRET_GK,8
+2.07,Монтаж поперечной балки в дверном проеме,construction,KATOWNIK_ALUMINIOWY,4
+2.07,Монтаж поперечной балки в дверном проеме,construction,MASA_SPOINOWA,13
+2.07,Монтаж поперечной балки в дверном проеме,construction,PLYTA_GK,11
+2.07,Монтаж поперечной балки в дверном проеме,construction,PLYTA_GK_IMPREGNOWANA,4
+2.07,Монтаж поперечной балки в дверном проеме,construction,PROFIL_GK,13
+2.07,Монтаж поперечной балки в дверном проеме,construction,WKRET_GK,8
+2.08,Штроба в полу для установки стены,construction,BELKA_NADPROZOWA,3
+2.08,Штроба в полу для установки стены,construction,KATOWNIK_ALUMINIOWY,4
+2.08,Штроба в полу для установки стены,construction,MASA_SPOINOWA,13
+2.08,Штроба в полу для установки стены,construction,PLYTA_GK,11
+2.08,Штроба в полу для установки стены,construction,PLYTA_GK_IMPREGNOWANA,4
+2.08,Штроба в полу для установки стены,construction,PROFIL_GK,13
+2.08,Штроба в полу для установки стены,construction,WKRET_GK,8
+2.09,Монтаж стены из газосиликатных блоков,construction,BELKA_NADPROZOWA,3
+2.09,Монтаж стены из газосиликатных блоков,construction,KATOWNIK_ALUMINIOWY,4
+2.09,Монтаж стены из газосиликатных блоков,construction,MASA_SPOINOWA,13
+2.09,Монтаж стены из газосиликатных блоков,construction,PLYTA_GK,11
+2.09,Монтаж стены из газосиликатных блоков,construction,PLYTA_GK_IMPREGNOWANA,4
+2.09,Монтаж стены из газосиликатных блоков,construction,PROFIL_GK,13
+2.09,Монтаж стены из газосиликатных блоков,construction,WKRET_GK,8
+2.09,Монтаж стены из газосиликатных блоков,construction,ZAPRAWA_MURARSKA,6
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,BELKA_NADPROZOWA,3
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,KATOWNIK_ALUMINIOWY,4
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,PLYTA_GK,11
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,PLYTA_GK_IMPREGNOWANA,4
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,PROFIL_GK,13
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,WKRET_GK,8
+2.10,Стартовая шпаклевка и штукатурка для новой стены из блоков,construction,ZAPRAWA_MURARSKA,6
+2.11,Монтаж стены из ГК с двух сторон двухсторонняя с заделкой швов,construction,BELKA_NADPROZOWA,3
+2.11,Монтаж стены из ГК с двух сторон двухсторонняя с заделкой швов,construction,KATOWNIK_ALUMINIOWY,4
+2.11,Монтаж стены из ГК с двух сторон двухсторонняя с заделкой швов,construction,PLYTA_GK_IMPREGNOWANA,4
+2.11,Монтаж стены из ГК с двух сторон двухсторонняя с заделкой швов,construction,ZAPRAWA_MURARSKA,6
+2.12,Заполнение стен из ГК акустической ватой,construction,BELKA_NADPROZOWA,3
+2.12,Заполнение стен из ГК акустической ватой,construction,KATOWNIK_ALUMINIOWY,4
+2.12,Заполнение стен из ГК акустической ватой,construction,MASA_SPOINOWA,13
+2.12,Заполнение стен из ГК акустической ватой,construction,PLYTA_GK,11
+2.12,Заполнение стен из ГК акустической ватой,construction,PLYTA_GK_IMPREGNOWANA,4
+2.12,Заполнение стен из ГК акустической ватой,construction,PROFIL_GK,13
+2.12,Заполнение стен из ГК акустической ватой,construction,WKRET_GK,8
+2.12,Заполнение стен из ГК акустической ватой,construction,ZAPRAWA_MURARSKA,6
+2.13,Монтаж предстенка из ГК с заделкой швов,construction,BELKA_NADPROZOWA,3
+2.13,Монтаж предстенка из ГК с заделкой швов,construction,KATOWNIK_ALUMINIOWY,4
+2.13,Монтаж предстенка из ГК с заделкой швов,construction,PLYTA_GK_IMPREGNOWANA,4
+2.13,Монтаж предстенка из ГК с заделкой швов,construction,ZAPRAWA_MURARSKA,6
+2.14,Облицовка стен гипсокартоном,construction,BELKA_NADPROZOWA,3
+2.14,Облицовка стен гипсокартоном,construction,KATOWNIK_ALUMINIOWY,4
+2.14,Облицовка стен гипсокартоном,construction,MASA_SPOINOWA,13
+2.14,Облицовка стен гипсокартоном,construction,PLYTA_GK_IMPREGNOWANA,4
+2.14,Облицовка стен гипсокартоном,construction,PROFIL_GK,13
+2.14,Облицовка стен гипсокартоном,construction,ZAPRAWA_MURARSKA,6
+2.15,Облицовка / стена с плиты OSB,construction,BELKA_NADPROZOWA,3
+2.15,Облицовка / стена с плиты OSB,construction,KATOWNIK_ALUMINIOWY,4
+2.15,Облицовка / стена с плиты OSB,construction,MASA_SPOINOWA,13
+2.15,Облицовка / стена с плиты OSB,construction,PLYTA_GK,11
+2.15,Облицовка / стена с плиты OSB,construction,PLYTA_GK_IMPREGNOWANA,4
+2.15,Облицовка / стена с плиты OSB,construction,PROFIL_GK,13
+2.15,Облицовка / стена с плиты OSB,construction,ZAPRAWA_MURARSKA,6
+2.16,Обшивка туалетной рамы гипсокартоном (до 120х100 см),construction,BELKA_NADPROZOWA,3
+2.16,Обшивка туалетной рамы гипсокартоном (до 120х100 см),construction,KATOWNIK_ALUMINIOWY,4
+2.16,Обшивка туалетной рамы гипсокартоном (до 120х100 см),construction,PLYTA_GK,11
+2.16,Обшивка туалетной рамы гипсокартоном (до 120х100 см),construction,ZAPRAWA_MURARSKA,6
+2.17,Корпус ванны из гипсокартона (1 сторона),construction,BELKA_NADPROZOWA,3
+2.17,Корпус ванны из гипсокартона (1 сторона),construction,KATOWNIK_ALUMINIOWY,4
+2.17,Корпус ванны из гипсокартона (1 сторона),construction,MASA_SPOINOWA,13
+2.17,Корпус ванны из гипсокартона (1 сторона),construction,PLYTA_GK,11
+2.17,Корпус ванны из гипсокартона (1 сторона),construction,ZAPRAWA_MURARSKA,6
+2.18,Корпус ванны из гипсокартона (2/3 стороны),construction,BELKA_NADPROZOWA,3
+2.18,Корпус ванны из гипсокартона (2/3 стороны),construction,KATOWNIK_ALUMINIOWY,4
+2.18,Корпус ванны из гипсокартона (2/3 стороны),construction,MASA_SPOINOWA,13
+2.18,Корпус ванны из гипсокартона (2/3 стороны),construction,PLYTA_GK,11
+2.18,Корпус ванны из гипсокартона (2/3 стороны),construction,ZAPRAWA_MURARSKA,6
+2.19,Выполнение ревизии под ванной,construction,BELKA_NADPROZOWA,3
+2.19,Выполнение ревизии под ванной,construction,KATOWNIK_ALUMINIOWY,4
+2.19,Выполнение ревизии под ванной,construction,MASA_SPOINOWA,13
+2.19,Выполнение ревизии под ванной,construction,PLYTA_GK,11
+2.19,Выполнение ревизии под ванной,construction,WKRET_GK,8
+2.19,Выполнение ревизии под ванной,construction,ZAPRAWA_MURARSKA,6
+2.20,Полка из ГК шириной до 80 см,construction,BELKA_NADPROZOWA,3
+2.20,Полка из ГК шириной до 80 см,construction,KATOWNIK_ALUMINIOWY,4
+2.20,Полка из ГК шириной до 80 см,construction,PLYTA_GK_IMPREGNOWANA,4
+2.20,Полка из ГК шириной до 80 см,construction,WKRET_GK,8
+2.20,Полка из ГК шириной до 80 см,construction,ZAPRAWA_MURARSKA,6
+2.21,Ниша в ГК шириной до 80 см,construction,BELKA_NADPROZOWA,3
+2.21,Ниша в ГК шириной до 80 см,construction,MASA_SPOINOWA,13
+2.21,Ниша в ГК шириной до 80 см,construction,PLYTA_GK_IMPREGNOWANA,4
+2.21,Ниша в ГК шириной до 80 см,construction,WKRET_GK,8
+2.21,Ниша в ГК шириной до 80 см,construction,ZAPRAWA_MURARSKA,6
+2.22,Бетонная полка до 60х90 см,construction,BELKA_NADPROZOWA,3
+2.22,Бетонная полка до 60х90 см,construction,KATOWNIK_ALUMINIOWY,4
+2.22,Бетонная полка до 60х90 см,construction,MASA_SPOINOWA,13
+2.22,Бетонная полка до 60х90 см,construction,PLYTA_GK,11
+2.22,Бетонная полка до 60х90 см,construction,PLYTA_GK_IMPREGNOWANA,4
+2.22,Бетонная полка до 60х90 см,construction,PROFIL_GK,13
+2.22,Бетонная полка до 60х90 см,construction,WKRET_GK,8
+2.22,Бетонная полка до 60х90 см,construction,ZAPRAWA_MURARSKA,6
+2.23,Монтаж алюминиевого уголка,construction,BELKA_NADPROZOWA,3
+2.23,Монтаж алюминиевого уголка,construction,PLYTA_GK,11
+2.23,Монтаж алюминиевого уголка,construction,PLYTA_GK_IMPREGNOWANA,4
+2.23,Монтаж алюминиевого уголка,construction,PROFIL_GK,13
+2.23,Монтаж алюминиевого уголка,construction,WKRET_GK,8
+2.23,Монтаж алюминиевого уголка,construction,ZAPRAWA_MURARSKA,6
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,BELKA_NADPROZOWA,3
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,KATOWNIK_ALUMINIOWY,4
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,PLYTA_GK,11
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,PLYTA_GK_IMPREGNOWANA,4
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,PROFIL_GK,13
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,WKRET_GK,8
+2.24,Обработка стыков стен из ГК с потолком с применением бумажного уголка,construction,ZAPRAWA_MURARSKA,6
+2.25,Прямой подвесной потолок с заделкой швов,construction,BELKA_NADPROZOWA,3
+2.25,Прямой подвесной потолок с заделкой швов,construction,KATOWNIK_ALUMINIOWY,4
+2.25,Прямой подвесной потолок с заделкой швов,construction,PLYTA_GK_IMPREGNOWANA,4
+2.25,Прямой подвесной потолок с заделкой швов,construction,ZAPRAWA_MURARSKA,6
+2.26,Торец в подвесном потолке,construction,BELKA_NADPROZOWA,3
+2.26,Торец в подвесном потолке,construction,PLYTA_GK_IMPREGNOWANA,4
+2.26,Торец в подвесном потолке,construction,WKRET_GK,8
+2.26,Торец в подвесном потолке,construction,ZAPRAWA_MURARSKA,6
+2.27,Карнизы из ГК шириной 5 см,construction,BELKA_NADPROZOWA,3
+2.27,Карнизы из ГК шириной 5 см,construction,PLYTA_GK_IMPREGNOWANA,4
+2.27,Карнизы из ГК шириной 5 см,construction,WKRET_GK,8
+2.27,Карнизы из ГК шириной 5 см,construction,ZAPRAWA_MURARSKA,6
+2.28,Ниша в потолке из ГК,construction,BELKA_NADPROZOWA,3
+2.28,Ниша в потолке из ГК,construction,KATOWNIK_ALUMINIOWY,4
+2.28,Ниша в потолке из ГК,construction,PLYTA_GK_IMPREGNOWANA,4
+2.28,Ниша в потолке из ГК,construction,WKRET_GK,8
+2.28,Ниша в потолке из ГК,construction,ZAPRAWA_MURARSKA,6
+3.01,"Перенос водозаборных точек, канализации без ковки",construction,BATERIA_PODTYNKOWA,2
+3.01,"Перенос водозаборных точек, канализации без ковки",construction,TARCZA_TNACA,2
+3.01,"Перенос водозаборных точек, канализации без ковки",construction,ZAPRAWA_MONTAZOWA,4
+3.01,"Перенос водозаборных точек, канализации без ковки",construction,ZASLEPKA,2
+3.02,Ликвидация точки вод-кан,construction,BATERIA_PODTYNKOWA,2
+3.02,Ликвидация точки вод-кан,construction,KSZTALTKI_KANALIZACYJNE,2
+3.02,Ликвидация точки вод-кан,construction,KSZTALTKI_PEX,3
+3.02,Ликвидация точки вод-кан,construction,KSZTALTKI_PP,3
+3.02,Ликвидация точки вод-кан,construction,RURA_KANALIZACYJNA_PVC,2
+3.02,Ликвидация точки вод-кан,construction,TARCZA_TNACA,2
+3.02,Ликвидация точки вод-кан,construction,USZCZELNIENIE_GWINTU,4
+3.02,Ликвидация точки вод-кан,construction,ZAPRAWA_MONTAZOWA,4
+3.03,Ликвидация радиаторов,construction,BATERIA_PODTYNKOWA,2
+3.03,Ликвидация радиаторов,construction,KSZTALTKI_KANALIZACYJNE,2
+3.03,Ликвидация радиаторов,construction,KSZTALTKI_PEX,3
+3.03,Ликвидация радиаторов,construction,KSZTALTKI_PP,3
+3.03,Ликвидация радиаторов,construction,RURA_KANALIZACYJNA_PVC,2
+3.03,Ликвидация радиаторов,construction,TARCZA_TNACA,2
+3.03,Ликвидация радиаторов,construction,ZAPRAWA_MONTAZOWA,4
+3.04,Прокладка труб и заделка штробы,construction,BATERIA_PODTYNKOWA,2
+3.04,Прокладка труб и заделка штробы,construction,KSZTALTKI_KANALIZACYJNE,2
+3.04,Прокладка труб и заделка штробы,construction,KSZTALTKI_PEX,3
+3.04,Прокладка труб и заделка штробы,construction,KSZTALTKI_PP,3
+3.04,Прокладка труб и заделка штробы,construction,RURA_KANALIZACYJNA_PVC,2
+3.04,Прокладка труб и заделка штробы,construction,USZCZELNIENIE_GWINTU,4
+3.04,Прокладка труб и заделка штробы,construction,ZAPRAWA_MONTAZOWA,4
+3.04,Прокладка труб и заделка штробы,construction,ZASLEPKA,2
+3.05,Заделка штробы,construction,BATERIA_PODTYNKOWA,2
+3.05,Заделка штробы,construction,KSZTALTKI_KANALIZACYJNE,2
+3.05,Заделка штробы,construction,KSZTALTKI_PEX,3
+3.05,Заделка штробы,construction,KSZTALTKI_PP,3
+3.05,Заделка штробы,construction,RURA_KANALIZACYJNA_PVC,2
+3.05,Заделка штробы,construction,TARCZA_TNACA,2
+3.05,Заделка штробы,construction,USZCZELNIENIE_GWINTU,4
+3.05,Заделка штробы,construction,ZAPRAWA_MONTAZOWA,4
+3.05,Заделка штробы,construction,ZASLEPKA,2
+3.06,Двухвентильный смеситель для скрытой - установка в стене,construction,KSZTALTKI_KANALIZACYJNE,2
+3.06,Двухвентильный смеситель для скрытой - установка в стене,construction,RURA_KANALIZACYJNA_PVC,2
+3.06,Двухвентильный смеситель для скрытой - установка в стене,construction,TARCZA_TNACA,2
+3.06,Двухвентильный смеситель для скрытой - установка в стене,construction,ZAPRAWA_MONTAZOWA,4
+3.06,Двухвентильный смеситель для скрытой - установка в стене,construction,ZASLEPKA,2
+3.07,Скрытый смеситель для душа,construction,KSZTALTKI_KANALIZACYJNE,2
+3.07,Скрытый смеситель для душа,construction,RURA_KANALIZACYJNA_PVC,2
+3.07,Скрытый смеситель для душа,construction,TARCZA_TNACA,2
+3.07,Скрытый смеситель для душа,construction,ZAPRAWA_MONTAZOWA,4
+3.07,Скрытый смеситель для душа,construction,ZASLEPKA,2
+3.08,Установка рамы туалета,construction,BATERIA_PODTYNKOWA,2
+3.08,Установка рамы туалета,construction,KSZTALTKI_KANALIZACYJNE,2
+3.08,Установка рамы туалета,construction,KSZTALTKI_PEX,3
+3.08,Установка рамы туалета,construction,KSZTALTKI_PP,3
+3.08,Установка рамы туалета,construction,TARCZA_TNACA,2
+3.08,Установка рамы туалета,construction,USZCZELNIENIE_GWINTU,4
+3.08,Установка рамы туалета,construction,ZASLEPKA,2
+3.09,Встроенный слив - монтаж слива,construction,BATERIA_PODTYNKOWA,2
+3.09,Встроенный слив - монтаж слива,construction,KSZTALTKI_KANALIZACYJNE,2
+3.09,Встроенный слив - монтаж слива,construction,KSZTALTKI_PEX,3
+3.09,Встроенный слив - монтаж слива,construction,KSZTALTKI_PP,3
+3.09,Встроенный слив - монтаж слива,construction,RURA_KANALIZACYJNA_PVC,2
+3.09,Встроенный слив - монтаж слива,construction,USZCZELNIENIE_GWINTU,4
+3.09,Встроенный слив - монтаж слива,construction,ZASLEPKA,2
+3.10,Встроенный слив - формирование уклона,construction,BATERIA_PODTYNKOWA,2
+3.10,Встроенный слив - формирование уклона,construction,KSZTALTKI_KANALIZACYJNE,2
+3.10,Встроенный слив - формирование уклона,construction,KSZTALTKI_PEX,3
+3.10,Встроенный слив - формирование уклона,construction,KSZTALTKI_PP,3
+3.10,Встроенный слив - формирование уклона,construction,RURA_KANALIZACYJNA_PVC,2
+3.10,Встроенный слив - формирование уклона,construction,TARCZA_TNACA,2
+3.10,Встроенный слив - формирование уклона,construction,USZCZELNIENIE_GWINTU,4
+3.10,Встроенный слив - формирование уклона,construction,ZASLEPKA,2
+3.11,Точечный слив - монтаж,construction,BATERIA_PODTYNKOWA,2
+3.11,Точечный слив - монтаж,construction,KSZTALTKI_PEX,3
+3.11,Точечный слив - монтаж,construction,KSZTALTKI_PP,3
+3.11,Точечный слив - монтаж,construction,RURA_KANALIZACYJNA_PVC,2
+3.11,Точечный слив - монтаж,construction,TARCZA_TNACA,2
+3.11,Точечный слив - монтаж,construction,USZCZELNIENIE_GWINTU,4
+3.11,Точечный слив - монтаж,construction,ZASLEPKA,2
+4.01,Монтаж краников,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.01,Монтаж краников,construction,PAKULY_PASTA,3
+4.01,Монтаж краников,construction,SILIKON_SANITARNY,13
+4.02,Монтаж кнопки инсталляции,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.02,Монтаж кнопки инсталляции,construction,PAKULY_PASTA,3
+4.02,Монтаж кнопки инсталляции,construction,SILIKON_SANITARNY,13
+4.02,Монтаж кнопки инсталляции,construction,TASMA_TEFLONOWA,11
+4.03,Монтаж подвесного унитаза,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.03,Монтаж подвесного унитаза,construction,PAKULY_PASTA,3
+4.03,Монтаж подвесного унитаза,construction,TASMA_TEFLONOWA,11
+4.04,Монтаж напольного унитаза,construction,PAKULY_PASTA,3
+4.04,Монтаж напольного унитаза,construction,TASMA_TEFLONOWA,11
+4.04,Монтаж напольного унитаза,construction,USZCZELKI,11
+4.05,Монтаж подвесной чаши-биде,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.05,Монтаж подвесной чаши-биде,construction,PAKULY_PASTA,3
+4.05,Монтаж подвесной чаши-биде,construction,TASMA_TEFLONOWA,11
+4.06,Встроенный слив - чистовой монтаж,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.06,Встроенный слив - чистовой монтаж,construction,PAKULY_PASTA,3
+4.06,Встроенный слив - чистовой монтаж,construction,TASMA_TEFLONOWA,11
+4.06,Встроенный слив - чистовой монтаж,construction,USZCZELKI,11
+4.07,Стеклянная перегородка душа,construction,PAKULY_PASTA,3
+4.07,Стеклянная перегородка душа,construction,TASMA_TEFLONOWA,11
+4.07,Стеклянная перегородка душа,construction,USZCZELKI,11
+4.08,Монтаж ванны,construction,PAKULY_PASTA,3
+4.08,Монтаж ванны,construction,TASMA_TEFLONOWA,11
+4.08,Монтаж ванны,construction,USZCZELKI,11
+4.09,Перегородка / стекло для ванны,construction,PAKULY_PASTA,3
+4.09,Перегородка / стекло для ванны,construction,TASMA_TEFLONOWA,11
+4.09,Перегородка / стекло для ванны,construction,USZCZELKI,11
+4.10,Душевой поддон,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.10,Душевой поддон,construction,PAKULY_PASTA,3
+4.10,Душевой поддон,construction,TASMA_TEFLONOWA,11
+4.11,Душевые двери,construction,PAKULY_PASTA,3
+4.11,Душевые двери,construction,TASMA_TEFLONOWA,11
+4.11,Душевые двери,construction,USZCZELKI,11
+4.12,Монтаж накладного умывальника,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.12,Монтаж накладного умывальника,construction,PAKULY_PASTA,3
+4.12,Монтаж накладного умывальника,construction,TASMA_TEFLONOWA,11
+4.13,Монтаж встраиваемого умывальника,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.13,Монтаж встраиваемого умывальника,construction,PAKULY_PASTA,3
+4.13,Монтаж встраиваемого умывальника,construction,TASMA_TEFLONOWA,11
+4.14,Монтаж сифона,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.14,Монтаж сифона,construction,PAKULY_PASTA,3
+4.14,Монтаж сифона,construction,SILIKON_SANITARNY,13
+4.15,Смеситель на умывальник,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.15,Смеситель на умывальник,construction,PAKULY_PASTA,3
+4.15,Смеситель на умывальник,construction,SILIKON_SANITARNY,13
+4.15,Смеситель на умывальник,construction,USZCZELKI,11
+4.16,Двухвентильный смеситель для раковины - окончательная сборка,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.16,Двухвентильный смеситель для раковины - окончательная сборка,construction,PAKULY_PASTA,3
+4.16,Двухвентильный смеситель для раковины - окончательная сборка,construction,USZCZELKI,11
+4.17,Смеситель для ванны вертикальный,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.17,Смеситель для ванны вертикальный,construction,PAKULY_PASTA,3
+4.17,Смеситель для ванны вертикальный,construction,SILIKON_SANITARNY,13
+4.18,Стандартный смеситель для душа,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.18,Стандартный смеситель для душа,construction,PAKULY_PASTA,3
+4.18,Стандартный смеситель для душа,construction,SILIKON_SANITARNY,13
+4.19,"Скрытый смеситель для душа - чистовой монтаж (комплект: дождик, регулятор, душ)",construction,KOLKI_SRUBY_MONTAZOWE,7
+4.19,"Скрытый смеситель для душа - чистовой монтаж (комплект: дождик, регулятор, душ)",construction,PAKULY_PASTA,3
+4.19,"Скрытый смеситель для душа - чистовой монтаж (комплект: дождик, регулятор, душ)",construction,USZCZELKI,11
+4.20,Душевая штанга с тропическим душем,construction,PAKULY_PASTA,3
+4.20,Душевая штанга с тропическим душем,construction,SILIKON_SANITARNY,13
+4.20,Душевая штанга с тропическим душем,construction,USZCZELKI,11
+4.21,Существующий радиатор в ванной комнате (демонтаж/монтаж),construction,KOLKI_SRUBY_MONTAZOWE,7
+4.21,Существующий радиатор в ванной комнате (демонтаж/монтаж),construction,SILIKON_SANITARNY,13
+4.21,Существующий радиатор в ванной комнате (демонтаж/монтаж),construction,USZCZELKI,11
+4.22,Существующий комнатный обогреватель (демонтаж/монтаж),construction,KOLKI_SRUBY_MONTAZOWE,7
+4.22,Существующий комнатный обогреватель (демонтаж/монтаж),construction,SILIKON_SANITARNY,13
+4.22,Существующий комнатный обогреватель (демонтаж/монтаж),construction,USZCZELKI,11
+4.23,Новый радиатор,construction,SILIKON_SANITARNY,13
+4.23,Новый радиатор,construction,USZCZELKI,11
+4.24,Установка пневматического кнопочного унитаза,construction,KOLKI_SRUBY_MONTAZOWE,7
+4.24,Установка пневматического кнопочного унитаза,construction,PAKULY_PASTA,3
+4.24,Установка пневматического кнопочного унитаза,construction,SILIKON_SANITARNY,13
+4.24,Установка пневматического кнопочного унитаза,construction,TASMA_TEFLONOWA,11
+5.01,"Перемещение телетехнического щитка (демонтаж старого, ниша в стене под новый, монтаж коробки щитка)",construction,KABEL_ELEKTRYCZNY,8
+5.01,"Перемещение телетехнического щитка (демонтаж старого, ниша в стене под новый, монтаж коробки щитка)",construction,KLEJ_SAMOPOZIOMUJACY,2
+5.01,"Перемещение телетехнического щитка (демонтаж старого, ниша в стене под новый, монтаж коробки щитка)",construction,PESZEL_RURKA,5
+5.01,"Перемещение телетехнического щитка (демонтаж старого, ниша в стене под новый, монтаж коробки щитка)",construction,PUSZKA_PODTYNKOWA,11
+5.01,"Перемещение телетехнического щитка (демонтаж старого, ниша в стене под новый, монтаж коробки щитка)",construction,TARCZA_TNACA,3
+5.01,"Перемещение телетехнического щитка (демонтаж старого, ниша в стене под новый, монтаж коробки щитка)",construction,ZAPRAWA_MONTAZOWA,5
+5.02,Перемещение электрощитка (коммутация),construction,GIPS_SZYBKOWIAZACY,9
+5.02,Перемещение электрощитка (коммутация),construction,KLEJ_SAMOPOZIOMUJACY,2
+5.02,Перемещение электрощитка (коммутация),construction,PESZEL_RURKA,5
+5.02,Перемещение электрощитка (коммутация),construction,PUSZKA_PODTYNKOWA,11
+5.02,Перемещение электрощитка (коммутация),construction,TARCZA_TNACA,3
+5.02,Перемещение электрощитка (коммутация),construction,ZAPRAWA_MONTAZOWA,5
+5.03,Канал скрытого монтажа под кабеля в стене с блочков,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.03,Канал скрытого монтажа под кабеля в стене с блочков,construction,PUSZKA_PODTYNKOWA,11
+5.03,Канал скрытого монтажа под кабеля в стене с блочков,construction,TARCZA_TNACA,3
+5.04,Канал скрытого монтажа под кабеля в стене с ж/б,construction,GIPS_SZYBKOWIAZACY,9
+5.04,Канал скрытого монтажа под кабеля в стене с ж/б,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.04,Канал скрытого монтажа под кабеля в стене с ж/б,construction,PUSZKA_PODTYNKOWA,11
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,GIPS_SZYBKOWIAZACY,9
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,KABEL_ELEKTRYCZNY,8
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,KLEJ_SAMOPOZIOMUJACY,2
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,PESZEL_RURKA,5
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,PUSZKA_PODTYNKOWA,11
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,TARCZA_TNACA,3
+5.05,Демонтаж пластиков с розеток и выключателей (с упаковкой в пленку),construction,ZAPRAWA_MONTAZOWA,5
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,GIPS_SZYBKOWIAZACY,9
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,KABEL_ELEKTRYCZNY,8
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,KLEJ_SAMOPOZIOMUJACY,2
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,PESZEL_RURKA,5
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,PUSZKA_PODTYNKOWA,11
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,TARCZA_TNACA,3
+5.06,Демонтаж электрофурнитуры (только гнездо),construction,ZAPRAWA_MONTAZOWA,5
+5.07,Монтаж пластиков розеток и выключателей,construction,GIPS_SZYBKOWIAZACY,9
+5.07,Монтаж пластиков розеток и выключателей,construction,KABEL_ELEKTRYCZNY,8
+5.07,Монтаж пластиков розеток и выключателей,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.07,Монтаж пластиков розеток и выключателей,construction,PESZEL_RURKA,5
+5.07,Монтаж пластиков розеток и выключателей,construction,PUSZKA_PODTYNKOWA,11
+5.07,Монтаж пластиков розеток и выключателей,construction,TARCZA_TNACA,3
+5.07,Монтаж пластиков розеток и выключателей,construction,ZAPRAWA_MONTAZOWA,5
+5.08,Установка теплого пола,construction,GIPS_SZYBKOWIAZACY,9
+5.08,Установка теплого пола,construction,KABEL_ELEKTRYCZNY,8
+5.08,Установка теплого пола,construction,PESZEL_RURKA,5
+5.08,Установка теплого пола,construction,PUSZKA_PODTYNKOWA,11
+5.08,Установка теплого пола,construction,TARCZA_TNACA,3
+5.08,Установка теплого пола,construction,ZAPRAWA_MONTAZOWA,5
+5.09,Установка теплой стены,construction,GIPS_SZYBKOWIAZACY,9
+5.09,Установка теплой стены,construction,KABEL_ELEKTRYCZNY,8
+5.09,Установка теплой стены,construction,PESZEL_RURKA,5
+5.09,Установка теплой стены,construction,PUSZKA_PODTYNKOWA,11
+5.09,Установка теплой стены,construction,TARCZA_TNACA,3
+5.09,Установка теплой стены,construction,ZAPRAWA_MONTAZOWA,5
+5.10,Установка пульта управления теплым полом с подводкой питания,construction,GIPS_SZYBKOWIAZACY,9
+5.10,Установка пульта управления теплым полом с подводкой питания,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.10,Установка пульта управления теплым полом с подводкой питания,construction,PESZEL_RURKA,5
+5.10,Установка пульта управления теплым полом с подводкой питания,construction,TARCZA_TNACA,3
+5.10,Установка пульта управления теплым полом с подводкой питания,construction,ZAPRAWA_MONTAZOWA,5
+5.11,"Ликвидация пункта электрики (обрезка кабеля, изоляция, защита изоляционным материалом)",construction,KABEL_ELEKTRYCZNY,8
+5.11,"Ликвидация пункта электрики (обрезка кабеля, изоляция, защита изоляционным материалом)",construction,KLEJ_SAMOPOZIOMUJACY,2
+5.11,"Ликвидация пункта электрики (обрезка кабеля, изоляция, защита изоляционным материалом)",construction,PESZEL_RURKA,5
+5.11,"Ликвидация пункта электрики (обрезка кабеля, изоляция, защита изоляционным материалом)",construction,PUSZKA_PODTYNKOWA,11
+5.11,"Ликвидация пункта электрики (обрезка кабеля, изоляция, защита изоляционным материалом)",construction,TARCZA_TNACA,3
+5.11,"Ликвидация пункта электрики (обрезка кабеля, изоляция, защита изоляционным материалом)",construction,ZAPRAWA_MONTAZOWA,5
+5.12,Перенос или новая розетка 220 В в стене с блочков,construction,KABEL_ELEKTRYCZNY,8
+5.12,Перенос или новая розетка 220 В в стене с блочков,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.12,Перенос или новая розетка 220 В в стене с блочков,construction,PESZEL_RURKA,5
+5.12,Перенос или новая розетка 220 В в стене с блочков,construction,TARCZA_TNACA,3
+5.12,Перенос или новая розетка 220 В в стене с блочков,construction,ZAPRAWA_MONTAZOWA,5
+5.13,Перенос или новая розетка 220 В в стене ж/б,construction,GIPS_SZYBKOWIAZACY,9
+5.13,Перенос или новая розетка 220 В в стене ж/б,construction,KABEL_ELEKTRYCZNY,8
+5.13,Перенос или новая розетка 220 В в стене ж/б,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.13,Перенос или новая розетка 220 В в стене ж/б,construction,PESZEL_RURKA,5
+5.13,Перенос или новая розетка 220 В в стене ж/б,construction,TARCZA_TNACA,3
+5.14,Одинарный переключатель в стене с блочков,construction,KABEL_ELEKTRYCZNY,8
+5.14,Одинарный переключатель в стене с блочков,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.14,Одинарный переключатель в стене с блочков,construction,PESZEL_RURKA,5
+5.14,Одинарный переключатель в стене с блочков,construction,TARCZA_TNACA,3
+5.14,Одинарный переключатель в стене с блочков,construction,ZAPRAWA_MONTAZOWA,5
+5.15,Одинарный переключательв стене ж/б,construction,GIPS_SZYBKOWIAZACY,9
+5.15,Одинарный переключательв стене ж/б,construction,KABEL_ELEKTRYCZNY,8
+5.15,Одинарный переключательв стене ж/б,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.15,Одинарный переключательв стене ж/б,construction,PESZEL_RURKA,5
+5.15,Одинарный переключательв стене ж/б,construction,TARCZA_TNACA,3
+5.16,Односторонний или перекрестный переключатель,construction,GIPS_SZYBKOWIAZACY,9
+5.16,Односторонний или перекрестный переключатель,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.16,Односторонний или перекрестный переключатель,construction,PESZEL_RURKA,5
+5.16,Односторонний или перекрестный переключатель,construction,TARCZA_TNACA,3
+5.16,Односторонний или перекрестный переключатель,construction,ZAPRAWA_MONTAZOWA,5
+5.17,Главный выключатель,construction,KABEL_ELEKTRYCZNY,8
+5.17,Главный выключатель,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.17,Главный выключатель,construction,PESZEL_RURKA,5
+5.17,Главный выключатель,construction,TARCZA_TNACA,3
+5.17,Главный выключатель,construction,ZAPRAWA_MONTAZOWA,5
+5.18,Датчик или контроллер,construction,KABEL_ELEKTRYCZNY,8
+5.18,Датчик или контроллер,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.18,Датчик или контроллер,construction,PESZEL_RURKA,5
+5.18,Датчик или контроллер,construction,TARCZA_TNACA,3
+5.18,Датчик или контроллер,construction,ZAPRAWA_MONTAZOWA,5
+5.19,Перенос или новый вывод кабеля под освещение,construction,GIPS_SZYBKOWIAZACY,9
+5.19,Перенос или новый вывод кабеля под освещение,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.19,Перенос или новый вывод кабеля под освещение,construction,PUSZKA_PODTYNKOWA,11
+5.19,Перенос или новый вывод кабеля под освещение,construction,TARCZA_TNACA,3
+5.19,Перенос или новый вывод кабеля под освещение,construction,ZAPRAWA_MONTAZOWA,5
+5.20,Сетевая / телевизионная / мультимедийная розетка от щитка,construction,GIPS_SZYBKOWIAZACY,9
+5.20,Сетевая / телевизионная / мультимедийная розетка от щитка,construction,KABEL_ELEKTRYCZNY,8
+5.20,Сетевая / телевизионная / мультимедийная розетка от щитка,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.20,Сетевая / телевизионная / мультимедийная розетка от щитка,construction,TARCZA_TNACA,3
+5.20,Сетевая / телевизионная / мультимедийная розетка от щитка,construction,ZAPRAWA_MONTAZOWA,5
+5.21,Розетка для плиты - перенос или новая,construction,GIPS_SZYBKOWIAZACY,9
+5.21,Розетка для плиты - перенос или новая,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.21,Розетка для плиты - перенос или новая,construction,PESZEL_RURKA,5
+5.21,Розетка для плиты - перенос или новая,construction,TARCZA_TNACA,3
+5.21,Розетка для плиты - перенос или новая,construction,ZAPRAWA_MONTAZOWA,5
+5.22,Штробление и прокладка провода в штукатурке,construction,KABEL_ELEKTRYCZNY,8
+5.22,Штробление и прокладка провода в штукатурке,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.22,Штробление и прокладка провода в штукатурке,construction,PESZEL_RURKA,5
+5.22,Штробление и прокладка провода в штукатурке,construction,PUSZKA_PODTYNKOWA,11
+5.22,Штробление и прокладка провода в штукатурке,construction,ZAPRAWA_MONTAZOWA,5
+5.23,Штробление и прокладка провода в железобетонной стене,construction,GIPS_SZYBKOWIAZACY,9
+5.23,Штробление и прокладка провода в железобетонной стене,construction,KABEL_ELEKTRYCZNY,8
+5.23,Штробление и прокладка провода в железобетонной стене,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.23,Штробление и прокладка провода в железобетонной стене,construction,PESZEL_RURKA,5
+5.23,Штробление и прокладка провода в железобетонной стене,construction,PUSZKA_PODTYNKOWA,11
+5.24,Заделка швов после прокладки провода (штукатурка + унифлот),construction,KABEL_ELEKTRYCZNY,8
+5.24,Заделка швов после прокладки провода (штукатурка + унифлот),construction,KLEJ_SAMOPOZIOMUJACY,2
+5.24,Заделка швов после прокладки провода (штукатурка + унифлот),construction,PESZEL_RURKA,5
+5.24,Заделка швов после прокладки провода (штукатурка + унифлот),construction,PUSZKA_PODTYNKOWA,11
+5.24,Заделка швов после прокладки провода (штукатурка + унифлот),construction,TARCZA_TNACA,3
+5.24,Заделка швов после прокладки провода (штукатурка + унифлот),construction,ZAPRAWA_MONTAZOWA,5
+5.25,Вывод кабеля под LED на ступеньках,construction,GIPS_SZYBKOWIAZACY,9
+5.25,Вывод кабеля под LED на ступеньках,construction,KLEJ_SAMOPOZIOMUJACY,2
+5.25,Вывод кабеля под LED на ступеньках,construction,TARCZA_TNACA,3
+5.25,Вывод кабеля под LED на ступеньках,construction,ZAPRAWA_MONTAZOWA,5
+6.01,Трансформатор для LED ленты,construction,KLEJ_MONTAZOWY,3
+6.02,Монтаж LED ленты,construction,WKRET_KOLEK_MONTAZOWY,7
+6.02,Монтаж LED ленты,construction,ZLACZKA_INSTALACYJNA,7
+6.03,Врезка профиля для LED ленты,construction,ZLACZKA_INSTALACYJNA,7
+6.04,Вклейка и пайка LED ленты в ступеньку в готовый профиль,construction,WKRET_KOLEK_MONTAZOWY,7
+6.04,Вклейка и пайка LED ленты в ступеньку в готовый профиль,construction,ZLACZKA_INSTALACYJNA,7
+6.05,Потолочные светильники или одноточечные клинкеры,construction,KLEJ_MONTAZOWY,3
+6.06,"Люстры / многоточечные потолочные светильники, от",construction,KLEJ_MONTAZOWY,3
+6.07,Трек / Шинопровод + 2 светильника,construction,KLEJ_MONTAZOWY,3
+6.08,"Монтаж электрофурнитуры с рамкой (розетки, выключатели, элементы управления)",construction,KLEJ_MONTAZOWY,3
+6.09,Электрический обогреватель,construction,KLEJ_MONTAZOWY,3
+6.10,Электромагнитный клапан воды,construction,KLEJ_MONTAZOWY,3
+6.10,Электромагнитный клапан воды,construction,WKRET_KOLEK_MONTAZOWY,7
+7.01,Гидроизоляция пола,construction,KLEJ_DO_PLYTEK,2
+7.01,Гидроизоляция пола,construction,NARZEDZIE_DIAMENTOWE,4
+7.01,Гидроизоляция пола,construction,SILIKON,2
+7.01,Гидроизоляция пола,finishing,FUGA_CEMENTOWA,2
+7.01,Гидроизоляция пола,finishing,FUGA_EPOKSYDOWA,3
+7.01,Гидроизоляция пола,finishing,KLEJ_DO_PLYTEK,13
+7.02,Гидроизоляция стен,construction,KLEJ_DO_PLYTEK,2
+7.02,Гидроизоляция стен,construction,NARZEDZIE_DIAMENTOWE,4
+7.02,Гидроизоляция стен,construction,SILIKON,2
+7.02,Гидроизоляция стен,finishing,FUGA_CEMENTOWA,2
+7.02,Гидроизоляция стен,finishing,FUGA_EPOKSYDOWA,3
+7.02,Гидроизоляция стен,finishing,KLEJ_DO_PLYTEK,13
+7.03,Грунтовка под плитку,construction,HYDROIZOLACJA,2
+7.03,Грунтовка под плитку,construction,KLEJ_DO_PLYTEK,2
+7.03,Грунтовка под плитку,construction,NARZEDZIE_DIAMENTOWE,4
+7.03,Грунтовка под плитку,construction,SILIKON,2
+7.03,Грунтовка под плитку,construction,TASMA_USZCZELNIAJACA,2
+7.03,Грунтовка под плитку,finishing,FUGA_CEMENTOWA,2
+7.03,Грунтовка под плитку,finishing,FUGA_EPOKSYDOWA,3
+7.03,Грунтовка под плитку,finishing,KLEJ_DO_PLYTEK,13
+7.04,Душевой поддон - резка и укладка плитки,construction,HYDROIZOLACJA,2
+7.04,Душевой поддон - резка и укладка плитки,construction,NARZEDZIE_DIAMENTOWE,4
+7.04,Душевой поддон - резка и укладка плитки,construction,TASMA_USZCZELNIAJACA,2
+7.04,Душевой поддон - резка и укладка плитки,finishing,FUGA_CEMENTOWA,2
+7.04,Душевой поддон - резка и укладка плитки,finishing,FUGA_EPOKSYDOWA,3
+7.04,Душевой поддон - резка и укладка плитки,finishing,KLEJ_DO_PLYTEK,13
+7.05,Встроенный слив - резка и укладка плитки,construction,HYDROIZOLACJA,2
+7.05,Встроенный слив - резка и укладка плитки,construction,NARZEDZIE_DIAMENTOWE,4
+7.05,Встроенный слив - резка и укладка плитки,construction,TASMA_USZCZELNIAJACA,2
+7.05,Встроенный слив - резка и укладка плитки,finishing,FUGA_CEMENTOWA,2
+7.05,Встроенный слив - резка и укладка плитки,finishing,FUGA_EPOKSYDOWA,3
+7.05,Встроенный слив - резка и укладка плитки,finishing,KLEJ_DO_PLYTEK,13
+7.06,Пол - мозаика,construction,HYDROIZOLACJA,2
+7.06,Пол - мозаика,construction,KLEJ_DO_PLYTEK,2
+7.06,Пол - мозаика,construction,NARZEDZIE_DIAMENTOWE,4
+7.06,Пол - мозаика,construction,SILIKON,2
+7.06,Пол - мозаика,construction,TASMA_USZCZELNIAJACA,2
+7.06,Пол - мозаика,finishing,FUGA_CEMENTOWA,2
+7.06,Пол - мозаика,finishing,FUGA_EPOKSYDOWA,3
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",construction,HYDROIZOLACJA,2
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",construction,KLEJ_DO_PLYTEK,2
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",construction,NARZEDZIE_DIAMENTOWE,4
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",construction,SILIKON,2
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",construction,TASMA_USZCZELNIAJACA,2
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",finishing,FUGA_CEMENTOWA,2
+7.07,"Пол - мелкий керамогранит 6х6, 25х25",finishing,FUGA_EPOKSYDOWA,3
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",construction,HYDROIZOLACJA,2
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",construction,KLEJ_DO_PLYTEK,2
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",construction,NARZEDZIE_DIAMENTOWE,4
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",construction,SILIKON,2
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",construction,TASMA_USZCZELNIAJACA,2
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",finishing,FUGA_CEMENTOWA,2
+7.08,"Пол - керамогранит, средний формат 30х30, 60х60",finishing,FUGA_EPOKSYDOWA,3
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",construction,HYDROIZOLACJA,2
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",construction,KLEJ_DO_PLYTEK,2
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",construction,NARZEDZIE_DIAMENTOWE,4
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",construction,SILIKON,2
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",construction,TASMA_USZCZELNIAJACA,2
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",finishing,FUGA_CEMENTOWA,2
+7.09,"Пол - крупноформатный керамогранит 60x120, 120x120",finishing,FUGA_EPOKSYDOWA,3
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",construction,HYDROIZOLACJA,2
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",construction,KLEJ_DO_PLYTEK,2
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",construction,NARZEDZIE_DIAMENTOWE,4
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",construction,SILIKON,2
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",construction,TASMA_USZCZELNIAJACA,2
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",finishing,FUGA_CEMENTOWA,2
+7.10,"Пол - керамогранит очень большого формата 120x240, 100x300",finishing,FUGA_EPOKSYDOWA,3
+7.11,Стены - мозаика,construction,HYDROIZOLACJA,2
+7.11,Стены - мозаика,construction,KLEJ_DO_PLYTEK,2
+7.11,Стены - мозаика,construction,NARZEDZIE_DIAMENTOWE,4
+7.11,Стены - мозаика,construction,SILIKON,2
+7.11,Стены - мозаика,construction,TASMA_USZCZELNIAJACA,2
+7.11,Стены - мозаика,finishing,FUGA_CEMENTOWA,2
+7.11,Стены - мозаика,finishing,FUGA_EPOKSYDOWA,3
+7.12,"Стены - мелкая плитка 6х6, 25х25",construction,HYDROIZOLACJA,2
+7.12,"Стены - мелкая плитка 6х6, 25х25",construction,KLEJ_DO_PLYTEK,2
+7.12,"Стены - мелкая плитка 6х6, 25х25",construction,NARZEDZIE_DIAMENTOWE,4
+7.12,"Стены - мелкая плитка 6х6, 25х25",construction,SILIKON,2
+7.12,"Стены - мелкая плитка 6х6, 25х25",construction,TASMA_USZCZELNIAJACA,2
+7.12,"Стены - мелкая плитка 6х6, 25х25",finishing,FUGA_CEMENTOWA,2
+7.12,"Стены - мелкая плитка 6х6, 25х25",finishing,FUGA_EPOKSYDOWA,3
+7.13,"Стены - плитка, средний формат 30x30, 60x60",construction,HYDROIZOLACJA,2
+7.13,"Стены - плитка, средний формат 30x30, 60x60",construction,KLEJ_DO_PLYTEK,2
+7.13,"Стены - плитка, средний формат 30x30, 60x60",construction,NARZEDZIE_DIAMENTOWE,4
+7.13,"Стены - плитка, средний формат 30x30, 60x60",construction,SILIKON,2
+7.13,"Стены - плитка, средний формат 30x30, 60x60",construction,TASMA_USZCZELNIAJACA,2
+7.13,"Стены - плитка, средний формат 30x30, 60x60",finishing,FUGA_CEMENTOWA,2
+7.13,"Стены - плитка, средний формат 30x30, 60x60",finishing,FUGA_EPOKSYDOWA,3
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",construction,HYDROIZOLACJA,2
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",construction,KLEJ_DO_PLYTEK,2
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",construction,NARZEDZIE_DIAMENTOWE,4
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",construction,SILIKON,2
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",construction,TASMA_USZCZELNIAJACA,2
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",finishing,FUGA_CEMENTOWA,2
+7.14,"Стены - крупноформатная плитка 60x120, 120x120",finishing,FUGA_EPOKSYDOWA,3
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",construction,HYDROIZOLACJA,2
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",construction,KLEJ_DO_PLYTEK,2
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",construction,NARZEDZIE_DIAMENTOWE,4
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",construction,SILIKON,2
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",construction,TASMA_USZCZELNIAJACA,2
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",finishing,FUGA_CEMENTOWA,2
+7.15,"Стены - плитка очень большого формата, например, 120x240, 100x300",finishing,FUGA_EPOKSYDOWA,3
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",construction,HYDROIZOLACJA,2
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",construction,KLEJ_DO_PLYTEK,2
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",construction,NARZEDZIE_DIAMENTOWE,4
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",construction,SILIKON,2
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",construction,TASMA_USZCZELNIAJACA,2
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",finishing,FUGA_CEMENTOWA,2
+7.16,"Плитка по мп. (плинтус, полка, углубление) мелкий формат до 25cm",finishing,FUGA_EPOKSYDOWA,3
+7.17,Плитка по мп. ср. формат 30-90cm,construction,HYDROIZOLACJA,2
+7.17,Плитка по мп. ср. формат 30-90cm,construction,KLEJ_DO_PLYTEK,2
+7.17,Плитка по мп. ср. формат 30-90cm,construction,NARZEDZIE_DIAMENTOWE,4
+7.17,Плитка по мп. ср. формат 30-90cm,construction,SILIKON,2
+7.17,Плитка по мп. ср. формат 30-90cm,construction,TASMA_USZCZELNIAJACA,2
+7.17,Плитка по мп. ср. формат 30-90cm,finishing,FUGA_CEMENTOWA,2
+7.17,Плитка по мп. ср. формат 30-90cm,finishing,FUGA_EPOKSYDOWA,3
+7.18,Плитка по мп. крупн. формат >90,construction,HYDROIZOLACJA,2
+7.18,Плитка по мп. крупн. формат >90,construction,KLEJ_DO_PLYTEK,2
+7.18,Плитка по мп. крупн. формат >90,construction,NARZEDZIE_DIAMENTOWE,4
+7.18,Плитка по мп. крупн. формат >90,construction,SILIKON,2
+7.18,Плитка по мп. крупн. формат >90,construction,TASMA_USZCZELNIAJACA,2
+7.18,Плитка по мп. крупн. формат >90,finishing,FUGA_CEMENTOWA,2
+7.18,Плитка по мп. крупн. формат >90,finishing,FUGA_EPOKSYDOWA,3
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),construction,HYDROIZOLACJA,2
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),construction,KLEJ_DO_PLYTEK,2
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),construction,NARZEDZIE_DIAMENTOWE,4
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),construction,SILIKON,2
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),construction,TASMA_USZCZELNIAJACA,2
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),finishing,FUGA_EPOKSYDOWA,3
+7.19,Затирка швов для плитки - формат от 30х30 (цементный шов),finishing,KLEJ_DO_PLYTEK,13
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),construction,HYDROIZOLACJA,2
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),construction,KLEJ_DO_PLYTEK,2
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),construction,NARZEDZIE_DIAMENTOWE,4
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),construction,SILIKON,2
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),construction,TASMA_USZCZELNIAJACA,2
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),finishing,FUGA_CEMENTOWA,2
+7.20,Затирка швов для плитки - формат от 30х30 (эпоксидный шов),finishing,KLEJ_DO_PLYTEK,13
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),construction,HYDROIZOLACJA,2
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),construction,KLEJ_DO_PLYTEK,2
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),construction,NARZEDZIE_DIAMENTOWE,4
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),construction,SILIKON,2
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),construction,TASMA_USZCZELNIAJACA,2
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),finishing,FUGA_EPOKSYDOWA,3
+7.21,Затирка швов для плитки - формат до 30х30 (цементный шов),finishing,KLEJ_DO_PLYTEK,13
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),construction,HYDROIZOLACJA,2
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),construction,KLEJ_DO_PLYTEK,2
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),construction,NARZEDZIE_DIAMENTOWE,4
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),construction,SILIKON,2
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),construction,TASMA_USZCZELNIAJACA,2
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),finishing,FUGA_CEMENTOWA,2
+7.22,Затирка швов для плитки - формат до 30х30 (эпоксидный шов),finishing,KLEJ_DO_PLYTEK,13
+7.23,Затирка наружных углов эпоксидной затиркой,construction,HYDROIZOLACJA,2
+7.23,Затирка наружных углов эпоксидной затиркой,construction,KLEJ_DO_PLYTEK,2
+7.23,Затирка наружных углов эпоксидной затиркой,construction,NARZEDZIE_DIAMENTOWE,4
+7.23,Затирка наружных углов эпоксидной затиркой,construction,SILIKON,2
+7.23,Затирка наружных углов эпоксидной затиркой,construction,TASMA_USZCZELNIAJACA,2
+7.23,Затирка наружных углов эпоксидной затиркой,finishing,FUGA_CEMENTOWA,2
+7.23,Затирка наружных углов эпоксидной затиркой,finishing,KLEJ_DO_PLYTEK,13
+7.24,Шлифовка плитки под 45° формат до 30,construction,HYDROIZOLACJA,2
+7.24,Шлифовка плитки под 45° формат до 30,construction,KLEJ_DO_PLYTEK,2
+7.24,Шлифовка плитки под 45° формат до 30,construction,SILIKON,2
+7.24,Шлифовка плитки под 45° формат до 30,construction,TASMA_USZCZELNIAJACA,2
+7.24,Шлифовка плитки под 45° формат до 30,finishing,FUGA_CEMENTOWA,2
+7.24,Шлифовка плитки под 45° формат до 30,finishing,FUGA_EPOKSYDOWA,3
+7.24,Шлифовка плитки под 45° формат до 30,finishing,KLEJ_DO_PLYTEK,13
+7.25,Шлифовка плитки под 45° формат от 30,construction,HYDROIZOLACJA,2
+7.25,Шлифовка плитки под 45° формат от 30,construction,KLEJ_DO_PLYTEK,2
+7.25,Шлифовка плитки под 45° формат от 30,construction,SILIKON,2
+7.25,Шлифовка плитки под 45° формат от 30,construction,TASMA_USZCZELNIAJACA,2
+7.25,Шлифовка плитки под 45° формат от 30,finishing,FUGA_CEMENTOWA,2
+7.25,Шлифовка плитки под 45° формат от 30,finishing,FUGA_EPOKSYDOWA,3
+7.25,Шлифовка плитки под 45° формат от 30,finishing,KLEJ_DO_PLYTEK,13
+7.26,Фабричный рез,construction,HYDROIZOLACJA,2
+7.26,Фабричный рез,construction,KLEJ_DO_PLYTEK,2
+7.26,Фабричный рез,construction,SILIKON,2
+7.26,Фабричный рез,construction,TASMA_USZCZELNIAJACA,2
+7.26,Фабричный рез,finishing,FUGA_CEMENTOWA,2
+7.26,Фабричный рез,finishing,FUGA_EPOKSYDOWA,3
+7.26,Фабричный рез,finishing,KLEJ_DO_PLYTEK,13
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,construction,HYDROIZOLACJA,2
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,construction,KLEJ_DO_PLYTEK,2
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,construction,SILIKON,2
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,construction,TASMA_USZCZELNIAJACA,2
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,finishing,FUGA_CEMENTOWA,2
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,finishing,FUGA_EPOKSYDOWA,3
+7.27,Сверление отверстия в плитках диаметром свыше 15 мм,finishing,KLEJ_DO_PLYTEK,13
+7.28,Нанесение силикона,construction,HYDROIZOLACJA,2
+7.28,Нанесение силикона,construction,KLEJ_DO_PLYTEK,2
+7.28,Нанесение силикона,construction,NARZEDZIE_DIAMENTOWE,4
+7.28,Нанесение силикона,construction,SILIKON,2
+7.28,Нанесение силикона,construction,TASMA_USZCZELNIAJACA,2
+7.28,Нанесение силикона,finishing,FUGA_CEMENTOWA,2
+7.28,Нанесение силикона,finishing,FUGA_EPOKSYDOWA,3
+7.28,Нанесение силикона,finishing,KLEJ_DO_PLYTEK,13
+8.01,Грунтовка потолков - откосы,construction,GLADZ_GIPSOWA,10
+8.01,Грунтовка потолков - откосы,construction,GLADZ_GOTOWA_MASA,10
+8.01,Грунтовка потолков - откосы,construction,GLADZ_POLIMEROWA,10
+8.01,Грунтовка потолков - откосы,construction,PAPIER_SCIERNY,3
+8.02,Грунтовка потолков,construction,GLADZ_GIPSOWA,10
+8.02,Грунтовка потолков,construction,GLADZ_GOTOWA_MASA,10
+8.02,Грунтовка потолков,construction,GLADZ_POLIMEROWA,10
+8.02,Грунтовка потолков,construction,PAPIER_SCIERNY,3
+8.03,Грунтовка стен,construction,GLADZ_GIPSOWA,10
+8.03,Грунтовка стен,construction,GLADZ_GOTOWA_MASA,10
+8.03,Грунтовка стен,construction,GLADZ_POLIMEROWA,10
+8.03,Грунтовка стен,construction,PAPIER_SCIERNY,3
+8.04,Шлифовка штукатурки - Откосы,construction,GLADZ_GIPSOWA,10
+8.04,Шлифовка штукатурки - Откосы,construction,GLADZ_GOTOWA_MASA,10
+8.04,Шлифовка штукатурки - Откосы,construction,GLADZ_POLIMEROWA,10
+8.04,Шлифовка штукатурки - Откосы,construction,GRUNT_UNIWERSALNY,3
+8.05,Шлифовка штукатурки - Потолок,construction,GLADZ_GIPSOWA,10
+8.05,Шлифовка штукатурки - Потолок,construction,GLADZ_GOTOWA_MASA,10
+8.05,Шлифовка штукатурки - Потолок,construction,GLADZ_POLIMEROWA,10
+8.05,Шлифовка штукатурки - Потолок,construction,GRUNT_UNIWERSALNY,3
+8.06,Шлифовка штукатурки - Стены,construction,GLADZ_GIPSOWA,10
+8.06,Шлифовка штукатурки - Стены,construction,GLADZ_GOTOWA_MASA,10
+8.06,Шлифовка штукатурки - Стены,construction,GLADZ_POLIMEROWA,10
+8.06,Шлифовка штукатурки - Стены,construction,GRUNT_UNIWERSALNY,3
+8.07,Шпатлевка х1 - Откосы,construction,GRUNT_UNIWERSALNY,3
+8.07,Шпатлевка х1 - Откосы,construction,PAPIER_SCIERNY,3
+8.08,Шпатлевка х1 - Потолок,construction,GRUNT_UNIWERSALNY,3
+8.08,Шпатлевка х1 - Потолок,construction,PAPIER_SCIERNY,3
+8.09,Шпатлевка х1 - Стены,construction,GRUNT_UNIWERSALNY,3
+8.09,Шпатлевка х1 - Стены,construction,PAPIER_SCIERNY,3
+8.10,Шпатлевка х2 - Откосы (Q3),construction,GRUNT_UNIWERSALNY,3
+8.10,Шпатлевка х2 - Откосы (Q3),construction,PAPIER_SCIERNY,3
+8.11,Шпатлевка х2 - Потолок (Q3),construction,GRUNT_UNIWERSALNY,3
+8.11,Шпатлевка х2 - Потолок (Q3),construction,PAPIER_SCIERNY,3
+8.12,Шпатлевка х2 - Стены (Q3),construction,GRUNT_UNIWERSALNY,3
+8.12,Шпатлевка х2 - Стены (Q3),construction,PAPIER_SCIERNY,3
+8.13,Шпатлевка х3 - Откосы (Q4),construction,GRUNT_UNIWERSALNY,3
+8.13,Шпатлевка х3 - Откосы (Q4),construction,PAPIER_SCIERNY,3
+8.14,Шпатлевка х3 - Потолок (Q4),construction,GRUNT_UNIWERSALNY,3
+8.14,Шпатлевка х3 - Потолок (Q4),construction,PAPIER_SCIERNY,3
+8.15,Шпатлевка х3 - Стены (Q4),construction,GRUNT_UNIWERSALNY,3
+8.15,Шпатлевка х3 - Стены (Q4),construction,PAPIER_SCIERNY,3
+8.16,Шпатлевка после прокладки провода,construction,GRUNT_UNIWERSALNY,3
+8.16,Шпатлевка после прокладки провода,construction,PAPIER_SCIERNY,3
+9.01,Малярные работы на высоте. Использование лесов,construction,AKRYL,3
+9.01,Малярные работы на высоте. Использование лесов,construction,GRUNT_MALARSKI,7
+9.01,Малярные работы на высоте. Использование лесов,construction,KLEJ_DO_TAPET,3
+9.01,Малярные работы на высоте. Использование лесов,construction,KLEJ_MONTAZOWY,4
+9.01,Малярные работы на высоте. Использование лесов,finishing,FARBA_DEKORACYJNA,7
+9.01,Малярные работы на высоте. Использование лесов,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.01,Малярные работы на высоте. Использование лесов,finishing,LAMELE_SCIENNE,2
+9.01,Малярные работы на высоте. Использование лесов,finishing,SZTUKATERIA,2
+9.02,Покраска в белый цвет - откосы,construction,AKRYL,3
+9.02,Покраска в белый цвет - откосы,construction,KLEJ_DO_TAPET,3
+9.02,Покраска в белый цвет - откосы,construction,KLEJ_MONTAZOWY,4
+9.02,Покраска в белый цвет - откосы,construction,TASMA_MALARSKA,2
+9.02,Покраска в белый цвет - откосы,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.02,Покраска в белый цвет - откосы,finishing,LAMELE_SCIENNE,2
+9.02,Покраска в белый цвет - откосы,finishing,SZTUKATERIA,2
+9.03,Покраска в белый цвет - потолок,construction,AKRYL,3
+9.03,Покраска в белый цвет - потолок,construction,KLEJ_DO_TAPET,3
+9.03,Покраска в белый цвет - потолок,construction,KLEJ_MONTAZOWY,4
+9.03,Покраска в белый цвет - потолок,construction,TASMA_MALARSKA,2
+9.03,Покраска в белый цвет - потолок,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.03,Покраска в белый цвет - потолок,finishing,LAMELE_SCIENNE,2
+9.03,Покраска в белый цвет - потолок,finishing,SZTUKATERIA,2
+9.04,Покраска в белый или один светлый цвет - стены,construction,AKRYL,3
+9.04,Покраска в белый или один светлый цвет - стены,construction,KLEJ_DO_TAPET,3
+9.04,Покраска в белый или один светлый цвет - стены,construction,KLEJ_MONTAZOWY,4
+9.04,Покраска в белый или один светлый цвет - стены,construction,TASMA_MALARSKA,2
+9.04,Покраска в белый или один светлый цвет - стены,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.04,Покраска в белый или один светлый цвет - стены,finishing,LAMELE_SCIENNE,2
+9.04,Покраска в белый или один светлый цвет - стены,finishing,SZTUKATERIA,2
+9.05,Покраска в цвет - откосы,construction,AKRYL,3
+9.05,Покраска в цвет - откосы,construction,KLEJ_DO_TAPET,3
+9.05,Покраска в цвет - откосы,construction,KLEJ_MONTAZOWY,4
+9.05,Покраска в цвет - откосы,construction,TASMA_MALARSKA,2
+9.05,Покраска в цвет - откосы,finishing,FARBA_DEKORACYJNA,7
+9.05,Покраска в цвет - откосы,finishing,LAMELE_SCIENNE,2
+9.05,Покраска в цвет - откосы,finishing,SZTUKATERIA,2
+9.06,Покраска в цвет - потолок,construction,AKRYL,3
+9.06,Покраска в цвет - потолок,construction,KLEJ_DO_TAPET,3
+9.06,Покраска в цвет - потолок,construction,KLEJ_MONTAZOWY,4
+9.06,Покраска в цвет - потолок,construction,TASMA_MALARSKA,2
+9.06,Покраска в цвет - потолок,finishing,FARBA_DEKORACYJNA,7
+9.06,Покраска в цвет - потолок,finishing,LAMELE_SCIENNE,2
+9.06,Покраска в цвет - потолок,finishing,SZTUKATERIA,2
+9.07,Покраска в цвет - стены,construction,AKRYL,3
+9.07,Покраска в цвет - стены,construction,KLEJ_DO_TAPET,3
+9.07,Покраска в цвет - стены,construction,KLEJ_MONTAZOWY,4
+9.07,Покраска в цвет - стены,construction,TASMA_MALARSKA,2
+9.07,Покраска в цвет - стены,finishing,LAMELE_SCIENNE,2
+9.07,Покраска в цвет - стены,finishing,SZTUKATERIA,2
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),construction,AKRYL,3
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),construction,GRUNT_MALARSKI,7
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),construction,KLEJ_DO_TAPET,3
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),construction,KLEJ_MONTAZOWY,4
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),finishing,FARBA_DEKORACYJNA,7
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),finishing,LAMELE_SCIENNE,2
+9.08,Покраска более одного цвета в комнате (разбивка работ на этапы и дополнительная оклейка),finishing,SZTUKATERIA,2
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",construction,AKRYL,3
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",construction,KLEJ_DO_TAPET,3
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",construction,KLEJ_MONTAZOWY,4
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",construction,TASMA_MALARSKA,2
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",finishing,LAMELE_SCIENNE,2
+9.09,"Отделка торца лестницы (обклейка, штукатурка, грунтовка, шпаклевка, покраска)",finishing,SZTUKATERIA,2
+9.10,Нанесение акрила в углах,construction,GRUNT_MALARSKI,7
+9.10,Нанесение акрила в углах,construction,KLEJ_DO_TAPET,3
+9.10,Нанесение акрила в углах,construction,KLEJ_MONTAZOWY,4
+9.10,Нанесение акрила в углах,construction,TASMA_MALARSKA,2
+9.10,Нанесение акрила в углах,finishing,FARBA_DEKORACYJNA,7
+9.10,Нанесение акрила в углах,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.10,Нанесение акрила в углах,finishing,LAMELE_SCIENNE,2
+9.10,Нанесение акрила в углах,finishing,SZTUKATERIA,2
+9.11,Декоративная штукатурка,construction,AKRYL,3
+9.11,Декоративная штукатурка,construction,GRUNT_MALARSKI,7
+9.11,Декоративная штукатурка,construction,KLEJ_DO_TAPET,3
+9.11,Декоративная штукатурка,construction,KLEJ_MONTAZOWY,4
+9.11,Декоративная штукатурка,construction,TASMA_MALARSKA,2
+9.11,Декоративная штукатурка,finishing,FARBA_DEKORACYJNA,7
+9.11,Декоративная штукатурка,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.11,Декоративная штукатурка,finishing,LAMELE_SCIENNE,2
+9.11,Декоративная штукатурка,finishing,SZTUKATERIA,2
+9.12,Флизелиновые обои,construction,AKRYL,3
+9.12,Флизелиновые обои,construction,GRUNT_MALARSKI,7
+9.12,Флизелиновые обои,construction,KLEJ_MONTAZOWY,4
+9.12,Флизелиновые обои,construction,TASMA_MALARSKA,2
+9.12,Флизелиновые обои,finishing,FARBA_DEKORACYJNA,7
+9.12,Флизелиновые обои,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.12,Флизелиновые обои,finishing,LAMELE_SCIENNE,2
+9.12,Флизелиновые обои,finishing,SZTUKATERIA,2
+9.13,Виниловые обои,construction,AKRYL,3
+9.13,Виниловые обои,construction,GRUNT_MALARSKI,7
+9.13,Виниловые обои,construction,KLEJ_MONTAZOWY,4
+9.13,Виниловые обои,construction,TASMA_MALARSKA,2
+9.13,Виниловые обои,finishing,FARBA_DEKORACYJNA,7
+9.13,Виниловые обои,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.13,Виниловые обои,finishing,LAMELE_SCIENNE,2
+9.13,Виниловые обои,finishing,SZTUKATERIA,2
+9.14,Настенный войлок,construction,AKRYL,3
+9.14,Настенный войлок,construction,GRUNT_MALARSKI,7
+9.14,Настенный войлок,construction,KLEJ_MONTAZOWY,4
+9.14,Настенный войлок,construction,TASMA_MALARSKA,2
+9.14,Настенный войлок,finishing,FARBA_DEKORACYJNA,7
+9.14,Настенный войлок,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.14,Настенный войлок,finishing,LAMELE_SCIENNE,2
+9.14,Настенный войлок,finishing,SZTUKATERIA,2
+9.15,Молдинги стеновые с акрилом и покраской,construction,GRUNT_MALARSKI,7
+9.15,Молдинги стеновые с акрилом и покраской,construction,KLEJ_DO_TAPET,3
+9.15,Молдинги стеновые с акрилом и покраской,construction,TASMA_MALARSKA,2
+9.15,Молдинги стеновые с акрилом и покраской,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.15,Молдинги стеновые с акрилом и покраской,finishing,LAMELE_SCIENNE,2
+9.16,Молдинги потолочные с акрилом и покраской,construction,GRUNT_MALARSKI,7
+9.16,Молдинги потолочные с акрилом и покраской,construction,KLEJ_DO_TAPET,3
+9.16,Молдинги потолочные с акрилом и покраской,construction,TASMA_MALARSKA,2
+9.16,Молдинги потолочные с акрилом и покраской,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.16,Молдинги потолочные с акрилом и покраской,finishing,LAMELE_SCIENNE,2
+9.17,Настенные планки на подложке,construction,AKRYL,3
+9.17,Настенные планки на подложке,construction,GRUNT_MALARSKI,7
+9.17,Настенные планки на подложке,construction,KLEJ_DO_TAPET,3
+9.17,Настенные планки на подложке,construction,TASMA_MALARSKA,2
+9.17,Настенные планки на подложке,finishing,FARBA_DEKORACYJNA,7
+9.17,Настенные планки на подложке,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.17,Настенные планки на подложке,finishing,SZTUKATERIA,2
+9.18,Настенные планки,construction,AKRYL,3
+9.18,Настенные планки,construction,GRUNT_MALARSKI,7
+9.18,Настенные планки,construction,KLEJ_DO_TAPET,3
+9.18,Настенные планки,construction,TASMA_MALARSKA,2
+9.18,Настенные планки,finishing,FARBA_DEKORACYJNA,7
+9.18,Настенные планки,finishing,FARBA_DEKORACYJNA_KOLOR,3
+9.18,Настенные планки,finishing,SZTUKATERIA,2

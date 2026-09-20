@@ -1,0 +1,336 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 follow-up (Requirement 7.8 / R7.3 finishing branch): seed the FINISHING
+        analog-group material TYPES referenced by the finishing rows of
+        FOR-04-RESEARCH-material-norms/work-material-norms.csv so the consumption seed
+        (069) resolves the finishing branch instead of inserting nothing (closing the
+        finishing вилка = 0 gap).
+
+        PROBLEM this closes:
+          069's finishing INSERT...SELECT resolves each finishing row's CSV `material_type`
+          against the FOR-04-16 `material_types` dictionary BY CODE. The CSV finishing
+          `material_type` values are UPPER_SNAKE analog codes (e.g. KLEJ_DO_PLYTEK) that are
+          NOT present in `material_types` (which uses lowercase semantic codes such as
+          `laminat`, `winyl`). So EVERY finishing (row, package) pair was unresolved and
+          inserted no row — the finishing money range collapsed to 0 for every work.
+
+        WHAT this changeset does:
+          Inserts the distinct finishing analog TYPES with `code` = the verbatim UPPER_SNAKE
+          CSV value, so 069's finishing sub-selects (`... material_types tp WHERE tp.code =
+          '<UPPER_SNAKE>'`) now resolve. Only the TYPE dictionary is seeded here; concrete
+          finishing materials are a separate concern (the analog batch may still be empty,
+          which is a valid 0..0 band per R4.6 — but the consumption ROWS now exist and carry
+          a non-null finishing_material_type_id, which is what R7.3/R7.8 require).
+
+        SCHEMA of material_types (046-create-material-types.xml / MaterialTypeEntity):
+          columns id, code (NOT NULL unique), name_ru (NOT NULL), name_pl (NOT NULL),
+          active (NOT NULL default true), + 4 audit columns. There is NO category FK or any
+          other non-null reference on material_types, so no category linkage is needed;
+          each row supplies code + name_ru + name_pl + active=true (audit created_date
+          defaults to NOW(), created_by set to the seed marker).
+
+        ORDERING (critical): this file's <include> is registered in changelog.xml IMMEDIATELY
+        BEFORE the 069 include, i.e. ...067, 068, 070, 069. On a FRESH database the finishing
+        types therefore exist before 069 runs, so 069's finishing INSERT...SELECT rows now
+        resolve and the finishing consumption rows are inserted. (069 is guarded by
+        MARK_RAN on created_by='seed:for-04-19'; since a fresh DB has no such rows, 069 runs
+        and its finishing inserts resolve.)
+
+        IDEMPOTENCY (R7.6): each insert is guarded by
+          <preConditions onFail="MARK_RAN"><sqlCheck expectedResult="0">
+            SELECT COUNT(*) FROM material_types WHERE code='<CODE>'</sqlCheck></preConditions>
+        so a re-run against an already-seeded database inserts nothing. Codes that already
+        exist in material_types (none of the 21 currently do) would simply MARK_RAN.
+
+        DISTINCT FINISHING TYPES PARSED FROM work-material-norms.csv (branch=finishing):
+          615 CSV rows parsed; 96 finishing rows; 21 distinct finishing material_type codes
+          (rows per code):
+            KLEJ_DO_PLYTEK (26), FARBA_DEKORACYJNA (15), PANEL_WINYLOWY (8),
+            FARBA_DEKORACYJNA_KOLOR (6), FUGA_EPOKSYDOWA (6), FUGA_CEMENTOWA (4),
+            LISTWA_PRZYPODLOGOWA (4), PODKLAD_PODLOGOWY (4), SZTUKATERIA (3),
+            DESKA_WARSTWOWA (2), FARBA (2), FILC_SCIENNY (2), FOLIA_PAROIZOLACYJNA (2),
+            LAMELE_SCIENNE (2), PANEL_LAMINOWANY (2), SILIKON (2), TYNK_DEKORACYJNY (2),
+            PODKLAD (1), TAPETA_FLIZELINOWA (1), TAPETA_WINYLOWA (1), TASMA_MALARSKA (1).
+          Total finishing type rows to seed: 21 (all NEW — none present in material_types).
+    -->
+
+    <changeSet id="070-seed-finishing-material-types-research-DESKA_WARSTWOWA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'DESKA_WARSTWOWA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="DESKA_WARSTWOWA"/>
+            <column name="name_ru" value="Инженерная доска"/>
+            <column name="name_pl" value="Deska warstwowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FARBA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FARBA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FARBA"/>
+            <column name="name_ru" value="Краска"/>
+            <column name="name_pl" value="Farba"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FARBA_DEKORACYJNA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FARBA_DEKORACYJNA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FARBA_DEKORACYJNA"/>
+            <column name="name_ru" value="Декоративная краска"/>
+            <column name="name_pl" value="Farba dekoracyjna"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FARBA_DEKORACYJNA_KOLOR" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FARBA_DEKORACYJNA_KOLOR'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FARBA_DEKORACYJNA_KOLOR"/>
+            <column name="name_ru" value="Декоративная краска (колерованная)"/>
+            <column name="name_pl" value="Farba dekoracyjna kolorowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FILC_SCIENNY" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FILC_SCIENNY'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FILC_SCIENNY"/>
+            <column name="name_ru" value="Стеновой войлок"/>
+            <column name="name_pl" value="Filc ścienny"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FOLIA_PAROIZOLACYJNA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FOLIA_PAROIZOLACYJNA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FOLIA_PAROIZOLACYJNA"/>
+            <column name="name_ru" value="Пароизоляционная плёнка"/>
+            <column name="name_pl" value="Folia paroizolacyjna"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FUGA_CEMENTOWA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FUGA_CEMENTOWA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FUGA_CEMENTOWA"/>
+            <column name="name_ru" value="Цементная затирка"/>
+            <column name="name_pl" value="Fuga cementowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-FUGA_EPOKSYDOWA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'FUGA_EPOKSYDOWA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="FUGA_EPOKSYDOWA"/>
+            <column name="name_ru" value="Эпоксидная затирка"/>
+            <column name="name_pl" value="Fuga epoksydowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-KLEJ_DO_PLYTEK" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'KLEJ_DO_PLYTEK'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="KLEJ_DO_PLYTEK"/>
+            <column name="name_ru" value="Клей для плитки"/>
+            <column name="name_pl" value="Klej do płytek"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-LAMELE_SCIENNE" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'LAMELE_SCIENNE'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="LAMELE_SCIENNE"/>
+            <column name="name_ru" value="Стеновые ламели (панели)"/>
+            <column name="name_pl" value="Lamele ścienne"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-LISTWA_PRZYPODLOGOWA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'LISTWA_PRZYPODLOGOWA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="LISTWA_PRZYPODLOGOWA"/>
+            <column name="name_ru" value="Напольный плинтус"/>
+            <column name="name_pl" value="Listwa przypodłogowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-PANEL_LAMINOWANY" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'PANEL_LAMINOWANY'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="PANEL_LAMINOWANY"/>
+            <column name="name_ru" value="Ламинированные панели"/>
+            <column name="name_pl" value="Panele laminowane"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-PANEL_WINYLOWY" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'PANEL_WINYLOWY'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="PANEL_WINYLOWY"/>
+            <column name="name_ru" value="Виниловые панели (SPC)"/>
+            <column name="name_pl" value="Panele winylowe"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-PODKLAD" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'PODKLAD'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="PODKLAD"/>
+            <column name="name_ru" value="Грунт-подложка (акриловая)"/>
+            <column name="name_pl" value="Podkład"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-PODKLAD_PODLOGOWY" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'PODKLAD_PODLOGOWY'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="PODKLAD_PODLOGOWY"/>
+            <column name="name_ru" value="Напольная подложка"/>
+            <column name="name_pl" value="Podkład podłogowy"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-SILIKON" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'SILIKON'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="SILIKON"/>
+            <column name="name_ru" value="Силикон (санитарный)"/>
+            <column name="name_pl" value="Silikon"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-SZTUKATERIA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'SZTUKATERIA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="SZTUKATERIA"/>
+            <column name="name_ru" value="Лепнина (декоративные молдинги)"/>
+            <column name="name_pl" value="Sztukateria"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-TAPETA_FLIZELINOWA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'TAPETA_FLIZELINOWA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="TAPETA_FLIZELINOWA"/>
+            <column name="name_ru" value="Флизелиновые обои"/>
+            <column name="name_pl" value="Tapeta flizelinowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-TAPETA_WINYLOWA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'TAPETA_WINYLOWA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="TAPETA_WINYLOWA"/>
+            <column name="name_ru" value="Виниловые обои"/>
+            <column name="name_pl" value="Tapeta winylowa"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-TASMA_MALARSKA" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'TASMA_MALARSKA'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="TASMA_MALARSKA"/>
+            <column name="name_ru" value="Малярная лента"/>
+            <column name="name_pl" value="Taśma malarska"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="070-seed-finishing-material-types-research-TYNK_DEKORACYJNY" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM material_types WHERE code = 'TYNK_DEKORACYJNY'</sqlCheck>
+        </preConditions>
+        <insert tableName="material_types">
+            <column name="code" value="TYNK_DEKORACYJNY"/>
+            <column name="name_ru" value="Декоративная штукатурка"/>
+            <column name="name_pl" value="Tynk dekoracyjny"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="seed:for-04-19"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

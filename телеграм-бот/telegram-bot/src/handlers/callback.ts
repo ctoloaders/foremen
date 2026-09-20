@@ -4,8 +4,9 @@ import { ConversationStep, ConversationState } from "../state/machine.js";
 import { downloadFile } from "../services/telegram.js";
 import { extractTextFromPages } from "../services/ocr.js";
 import { parseReceipt } from "../services/gemini.js";
-import { uploadPhotos, formatPhotoLinks } from "../services/drive.js";
+import { formatPhotoLinks } from "../services/drive.js";
 import { appendReceiptRow } from "../services/sheets.js";
+import { uploadReceiptArtifact } from "../services/receipt-upload.js";
 import { sessionLog } from "../services/session-log.js";
 import { withRetry } from "../utils/retry.js";
 import { logger } from "../utils/logger.js";
@@ -112,13 +113,18 @@ export function createOcrCallbackHandler(bot: Bot) {
         files.push({ buffer, mimeType });
       }
 
-      // 2. Upload all photos to Drive (with retry)
+      // 2. Upload to Drive (with retry).
+      //    Preferred path: reprocess pages (crop + deskew) into ONE multi-page PDF.
+      //    On any reprocess/PDF failure, fall back to uploading the original photos.
       let links: string[];
       try {
-        const result = await withRetry(() =>
-          uploadPhotos(state.projectDriveUrl!, state.storeName!, state.sum!, files)
+        links = await uploadReceiptArtifact(
+          state.projectDriveUrl!,
+          state.storeName!,
+          state.sum!,
+          files,
+          { telegramId },
         );
-        links = result.links;
       } catch (err: any) {
         logger.error("Drive upload failed (OCR flow)", { telegramId, error: err.message });
         if (state.sessionId) {

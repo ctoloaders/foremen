@@ -1,0 +1,132 @@
+cat_id,category,branch,type_code,works_using_type,works_in_cat_with_norms
+1,"Подготовительные работы, демонтажи",construction,WOREK_NA_GRUZ,6,6
+1,"Подготовительные работы, демонтажи",construction,TARCZA_TNACA,5,5
+1,"Подготовительные работы, демонтажи",construction,ZAPRAWA_NAPRAWCZA,4,4
+1,"Подготовительные работы, демонтажи",construction,PIANKA_MONTAZOWA,2,2
+1,"Подготовительные работы, демонтажи",construction,FOLIA_OCHRONNA,1,1
+1,"Подготовительные работы, демонтажи",construction,GLADZ_GIPSOWA,1,1
+1,"Подготовительные работы, демонтажи",construction,GRUNT_UNIWERSALNY,1,1
+1,"Подготовительные работы, демонтажи",construction,NAROZNIK_OCHRONNY,1,1
+1,"Подготовительные работы, демонтажи",construction,TASMA_MALARSKA,1,1
+1,"Подготовительные работы, демонтажи",construction,TASMA_TYNKARSKA,1,1
+1,"Подготовительные работы, демонтажи",construction,TEKTURA_OCHRONNA,1,1
+1,"Подготовительные работы, демонтажи",construction,ZAPRAWA_MURARSKA,1,1
+1,"Подготовительные работы, демонтажи",construction,ZAPRAWA_TYNKARSKA,1,1
+2,Конструкции и ГК,construction,MASA_SPOINOWA,13,13
+2,Конструкции и ГК,construction,PROFIL_GK,13,13
+2,Конструкции и ГК,construction,PLYTA_GK,11,11
+2,Конструкции и ГК,construction,WKRET_GK,8,8
+2,Конструкции и ГК,construction,ZAPRAWA_MURARSKA,6,6
+2,Конструкции и ГК,construction,KATOWNIK_ALUMINIOWY,4,4
+2,Конструкции и ГК,construction,PLYTA_GK_IMPREGNOWANA,4,4
+2,Конструкции и ГК,construction,BELKA_NADPROZOWA,3,3
+2,Конструкции и ГК,construction,BLOCZEK_KOMORKOWY,1,1
+2,Конструкции и ГК,construction,GRUNT_UNIWERSALNY,1,1
+2,Конструкции и ГК,construction,MIESZANKA_BETONOWA,1,1
+2,Конструкции и ГК,construction,NAROZNIK_PAPIEROWY,1,1
+2,Конструкции и ГК,construction,PLYTA_OSB,1,1
+2,Конструкции и ГК,construction,TASMA_SPOINOWA,1,1
+2,Конструкции и ГК,construction,WELNA_AKUSTYCZNA,1,1
+2,Конструкции и ГК,construction,ZAPRAWA_KLEJ_BLOCZKI,1,1
+3,Сантехника черновая,construction,USZCZELNIENIE_GWINTU,4,4
+3,Сантехника черновая,construction,ZAPRAWA_MONTAZOWA,4,4
+3,Сантехника черновая,construction,KSZTALTKI_PEX,3,3
+3,Сантехника черновая,construction,KSZTALTKI_PP,3,3
+3,Сантехника черновая,construction,BATERIA_PODTYNKOWA,2,2
+3,Сантехника черновая,construction,KSZTALTKI_KANALIZACYJNE,2,2
+3,Сантехника черновая,construction,RURA_KANALIZACYJNA_PVC,2,2
+3,Сантехника черновая,construction,TARCZA_TNACA,2,2
+3,Сантехника черновая,construction,ZASLEPKA,2,2
+3,Сантехника черновая,construction,KLEJ_MONTAZOWY,1,1
+3,Сантехника черновая,construction,ODPLYW_LINIOWY,1,1
+3,Сантехника черновая,construction,ODPLYW_PUNKTOWY,1,1
+3,Сантехника черновая,construction,RURA_PEX,1,1
+3,Сантехника черновая,construction,RURA_PP,1,1
+3,Сантехника черновая,construction,STELAZ_PODTYNKOWY,1,1
+3,Сантехника черновая,construction,UCHWYT_OBEJMA,1,1
+3,Сантехника черновая,construction,ZAPRAWA_TYNKARSKA,1,1
+4,Сантехника чистовая,construction,SILIKON_SANITARNY,13,13
+4,Сантехника чистовая,construction,TASMA_TEFLONOWA,11,11
+4,Сантехника чистовая,construction,USZCZELKI,11,11
+4,Сантехника чистовая,construction,KOLKI_SRUBY_MONTAZOWE,7,7
+4,Сантехника чистовая,construction,PAKULY_PASTA,3,3
+4,Сантехника чистовая,construction,KLEJ_MONTAZOWY,1,1
+4,Сантехника чистовая,construction,WEZYK_PRZYLACZENIOWY,1,1
+4,Сантехника чистовая,construction,ZAWOR_KATOWY,1,1
+5,Электрика черновая,construction,PUSZKA_PODTYNKOWA,11,11
+5,Электрика черновая,construction,GIPS_SZYBKOWIAZACY,9,9
+5,Электрика черновая,construction,KABEL_ELEKTRYCZNY,8,8
+5,Электрика черновая,construction,PESZEL_RURKA,5,5
+5,Электрика черновая,construction,ZAPRAWA_MONTAZOWA,5,5
+5,Электрика черновая,construction,TARCZA_TNACA,3,3
+5,Электрика черновая,construction,KLEJ_SAMOPOZIOMUJACY,2,2
+5,Электрика черновая,construction,GLADZ_GIPSOWA,1,1
+6,Электрика чистовая,construction,WKRET_KOLEK_MONTAZOWY,7,7
+6,Электрика чистовая,construction,ZLACZKA_INSTALACYJNA,7,7
+6,Электрика чистовая,construction,KLEJ_MONTAZOWY,3,3
+6,Электрика чистовая,construction,CYNA_LUTOWNICZA,1,1
+6,Электрика чистовая,construction,SILIKON,1,1
+6,Электрика чистовая,construction,TASMA_IZOLACYJNA,1,1
+6,Электрика чистовая,construction,TOPNIK_LUTOWNICZY,1,1
+7,Плиточные работы,finishing,KLEJ_DO_PLYTEK,13,13
+7,Плиточные работы,construction,NARZEDZIE_DIAMENTOWE,4,4
+7,Плиточные работы,finishing,FUGA_EPOKSYDOWA,3,3
+7,Плиточные работы,finishing,FUGA_CEMENTOWA,2,2
+7,Плиточные работы,construction,HYDROIZOLACJA,2,2
+7,Плиточные работы,construction,KLEJ_DO_PLYTEK,2,2
+7,Плиточные работы,construction,SILIKON,2,2
+7,Плиточные работы,construction,TASMA_USZCZELNIAJACA,2,2
+7,Плиточные работы,construction,GRUNT_UNIWERSALNY,1,1
+7,Плиточные работы,finishing,SILIKON,1,1
+8,"Шпаклёвка, подготовка основания",construction,GLADZ_GIPSOWA,10,10
+8,"Шпаклёвка, подготовка основания",construction,GLADZ_GOTOWA_MASA,10,10
+8,"Шпаклёвка, подготовка основания",construction,GLADZ_POLIMEROWA,10,10
+8,"Шпаклёвка, подготовка основания",construction,GRUNT_UNIWERSALNY,3,3
+8,"Шпаклёвка, подготовка основания",construction,PAPIER_SCIERNY,3,3
+9,"Малярные работы, лепнина, декор",finishing,FARBA_DEKORACYJNA,7,7
+9,"Малярные работы, лепнина, декор",construction,GRUNT_MALARSKI,7,7
+9,"Малярные работы, лепнина, декор",construction,KLEJ_MONTAZOWY,4,4
+9,"Малярные работы, лепнина, декор",construction,AKRYL,3,3
+9,"Малярные работы, лепнина, декор",finishing,FARBA_DEKORACYJNA_KOLOR,3,3
+9,"Малярные работы, лепнина, декор",construction,KLEJ_DO_TAPET,3,3
+9,"Малярные работы, лепнина, декор",finishing,LAMELE_SCIENNE,2,2
+9,"Малярные работы, лепнина, декор",finishing,SZTUKATERIA,2,2
+9,"Малярные работы, лепнина, декор",construction,TASMA_MALARSKA,2,2
+9,"Малярные работы, лепнина, декор",finishing,FILC_SCIENNY,1,1
+9,"Малярные работы, лепнина, декор",finishing,TAPETA_FLIZELINOWA,1,1
+9,"Малярные работы, лепнина, декор",finishing,TAPETA_WINYLOWA,1,1
+9,"Малярные работы, лепнина, декор",finishing,TYNK_DEKORACYJNY,1,1
+10,Полы,construction,AKRYL,2,2
+10,Полы,construction,KLEJ_MONTAZOWY,2,2
+10,Полы,construction,LISTWA_DYLATACYJNA,2,2
+10,Полы,finishing,LISTWA_PRZYPODLOGOWA,2,2
+10,Полы,construction,PAPIER_SCIERNY,2,2
+10,Полы,construction,FOLIA_OCHRONNA,1,1
+10,Полы,construction,GRUNT_UNIWERSALNY,1,1
+10,Полы,construction,JASTRYCH_CEMENTOWY,1,1
+10,Полы,construction,TASMA_MALARSKA,1,1
+10,Полы,construction,TEKTURA_OCHRONNA,1,1
+10,Полы,construction,WYLEWKA_SAMOPOZIOMUJACA,1,1
+11,Столярка,construction,KOLKI,4,4
+11,Столярка,construction,WKRETY,4,4
+11,Столярка,construction,SILIKON,3,3
+11,Столярка,construction,KLEJ_MONTAZOWY,2,2
+11,Столярка,construction,KLINY,2,2
+11,Столярка,construction,PIANA_MONTAZOWA,2,2
+11,Столярка,construction,AKRYL,1,1
+11,Столярка,finishing,FARBA,1,1
+11,Столярка,construction,OBRZEZE,1,1
+11,Столярка,construction,PAPIER_SCIERNY,1,1
+11,Столярка,finishing,PODKLAD,1,1
+11,Столярка,finishing,TASMA_MALARSKA,1,1
+12,Дополнения,construction,WKRET_KOLEK_MONTAZOWY,6,6
+12,Дополнения,construction,SILIKON,5,5
+12,Дополнения,construction,KLEJ_MONTAZOWY,4,4
+12,Дополнения,construction,KLEJ_DO_LUSTER,3,3
+12,Дополнения,construction,PIANKA_MONTAZOWA,3,3
+12,Дополнения,construction,TASMA_DWUSTRONNA,2,2
+12,Дополнения,construction,ZAPRAWA_MONTAZOWA,2,2
+12,Дополнения,construction,AKRYL,1,1
+12,Дополнения,finishing,FARBA_DEKORACYJNA,1,1
+12,Дополнения,construction,SYFON_WEZYK,1,1
+13,Прочее / координация / нестандартное,construction,MATERIALY_POMOCNICZE,1,1

@@ -1,0 +1,59 @@
+type_code,package,model,unit,price_gross_pln,price_basis,retailer,link,source
+# Web-researched (castorama.pl, headless Playwright, 2026-09-20) products for the 16 finishing types with 0 catalog materials.
+# price_basis: szt=per piece, m=per running metre, l=per litre, m2=per square metre. price_gross_pln = observed shelf (brutto) price.
+# For types already covered by norms CSV refs (10-...csv) with real producer links, those refs are reused verbatim and marked source=norms-csv.
+# --- TASMA_MALARSKA (new web) ---
+TASMA_MALARSKA,budget,Taśma malarska Mako 30 mm x 50 m,szt,4.98,szt,castorama,https://www.castorama.pl/tasma-malarska-mako-30-mm-x-50-m/5907652120443_CAPL.prd,web-castorama
+TASMA_MALARSKA,norm,Taśma malarska Scley niebieska 38 mm x 50 m,szt,17.98,szt,castorama,https://www.castorama.pl/tasma-malarska-scley-niebieska-38-mm-x-50-m/5905061104276_CAPL.prd,web-castorama
+TASMA_MALARSKA,lux,Taśma malarska Tesa niebieska 50 mm x 50 m,szt,29.98,szt,castorama,https://www.castorama.pl/tasma-malarska-tesa-niebieska-50-mm-x-50-m/4042448281043_CAPL.prd,web-castorama
+# --- TAPETA_FLIZELINOWA (new web) ---
+TAPETA_FLIZELINOWA,budget,Tapeta flizelinowa Jad szara,m2,5.20,m,castorama,https://www.castorama.pl/tapeta-flizelinowa-jad-szara/5059340409498_CAPL.prd,web-castorama
+TAPETA_FLIZELINOWA,norm,Tapeta flizelinowa GoodHome Onagre biała,m2,6.00,m,castorama,https://www.castorama.pl/tapeta-flizelinowa-goodhome-onagre-biala/3663602562474_CAPL.prd,web-castorama
+TAPETA_FLIZELINOWA,lux,Tapeta flizelinowa GoodHome Lolite kremowa,m2,7.70,m,castorama,https://www.castorama.pl/tapeta-flizelinowa-goodhome-lolite-kremowa/5059340409436_CAPL.prd,web-castorama
+# --- TAPETA_WINYLOWA (new web) ---
+TAPETA_WINYLOWA,budget,Tapeta winylowa na flizelinie Beton beżowy,m2,4.30,m,castorama,https://www.castorama.pl/tapeta-winylowa-na-flizelinie-beton-bezowy/4000441939538_CAPL.prd,web-castorama
+TAPETA_WINYLOWA,norm,Tapeta winylowa na flizelinie GoodHome Tille beżowa,m2,5.20,m,castorama,https://www.castorama.pl/tapeta-winylowa-na-flizelinie-goodhome-tille-bezowa/3663602559276_CAPL.prd,web-castorama
+TAPETA_WINYLOWA,lux,Tapeta winylowa na flizelinie GoodHome Drave beżowa,m2,9.00,m,castorama,https://www.castorama.pl/tapeta-winylowa-na-flizelinie-goodhome-drave-bezowa/3663602560159_CAPL.prd,web-castorama
+# --- FILC_SCIENNY (new web; PL market sells as lamele-on-felt panels) ---
+FILC_SCIENNY,budget,Lamel ścienny na czarnym filcu Marbet WOODLINE SLIM 270x30 cm,szt,69.99,szt,castorama,https://www.castorama.pl/departments/lamel-cienny-na-czarnym-filcu-6l-marbet-design-woodline-slim-270x30-cm-loft-1-szt-/5904617323598_CAPL.prd,web-castorama
+FILC_SCIENNY,norm,Lamel ścienny na filcu Radex 265 x 24.5 cm dąb Saragossa,szt,118.00,szt,castorama,https://www.castorama.pl/lamel-scienny-na-filcu-radex-265-x-24-5-cm-dab-saragossa/5905982391052_CAPL.prd,web-castorama
+FILC_SCIENNY,lux,Panel lamelowy ścienny na filcu Flat MDF 40 x 260 cm kaszmir,m2,151.92,m2,castorama,https://www.castorama.pl/panel-lamelowy-scienny-na-filcu-flat-mdf-40-x-260-cm-kaszmir/5906295190196_CAPL.prd,web-castorama
+# --- PODKLAD (new web; universal primer/grunt) ---
+PODKLAD,budget,Emulsja gruntująca Volden 5 l,l,14.98,szt,castorama,https://www.castorama.pl/emulsja-gruntujaca-volden-5-l/5906340222544_CAPL.prd,web-castorama
+PODKLAD,norm,Grunt uniwersalny Knauf 5 l,l,35.48,szt,castorama,https://www.castorama.pl/grunt-uniwersalny-knauf-5-l/5901793357737_CAPL.prd,web-castorama
+PODKLAD,lux,Grunt głęboko penetrujący Ceresit CT17 5 l,l,51.98,szt,castorama,https://www.castorama.pl/grunt-gleboko-penetrujacy-ceresit-ct17-5-l/5900089617050_CAPL.prd,web-castorama
+# --- FARBA (partial web; needs cheaper budget white) ---
+FARBA,norm,Farba lateksowa Beckers Interio Pro biała 5 l,l,148.00,szt,castorama,https://www.castorama.pl/farba-lateksowa-beckers-interio-pro-biala-5-l/7311237111708_CAPL.prd,web-castorama
+FARBA,lux,Farba Lateksowa Premium Q-Cover Super Biała Głęboki Mat 5L,l,160.08,szt,castorama,https://www.castorama.pl/departments/farba-lateksowa-premium-plamoodporna-do-cian-i-sufit-w-q-cover-super-bia-a-g-boki-mat-5l/5905748028116_CAPL.prd,web-castorama
+# === Second pass (castorama.pl, 2026-09-20): real retail products+prices to replace producer landing pages ===
+# --- FARBA (budget closed) ---
+FARBA,budget,Farba lateksowa Śnieżka Eko Plus biała 10 l,l,108.00,szt,castorama,https://www.castorama.pl/farba-lateksowa-sniezka-eko-plus-biala-10-l/5903973205982_CAPL.prd,web-castorama
+# --- KLEJ_DO_PLYTEK (real retail) ---
+KLEJ_DO_PLYTEK,budget,Klej do płytek Mapei M-Klej 22.5 kg,kg,27.98,szt,castorama,https://www.castorama.pl/klej-do-plytek-mapei-m-klej-22-5-kg/8022452245817_CAPL.prd,web-castorama
+KLEJ_DO_PLYTEK,norm,Klej Atlas Plus Nowy 20 kg,kg,64.98,szt,castorama,https://www.castorama.pl/klej-atlas-plus-nowy-20-kg/5905400488562_CAPL.prd,web-castorama
+KLEJ_DO_PLYTEK,lux,Klej wysokoelastyczny Mapei Keraflex Extra S1 22.5 kg,kg,69.98,szt,castorama,https://www.castorama.pl/klej-wysokoelastyczny-mapei-keraflex-extra-s1-zero-22-5-kg-szary/8022452248078_CAPL.prd,web-castorama
+# --- FUGA_CEMENTOWA (real retail) ---
+FUGA_CEMENTOWA,budget,Fuga ceramiczna Atlas 211 cementowy 2 kg,kg,39.98,szt,castorama,https://www.castorama.pl/fuga-ceramiczna-atlas-211-cementowy-2-kg/5905400572834_CAPL.prd,web-castorama
+FUGA_CEMENTOWA,norm,Fuga elastyczna Sopro Saphir beżowy 32 2 kg,kg,40.98,szt,castorama,https://www.castorama.pl/fuga-elastyczna-sopro-saphir-bezowy-32-2-kg/5901740951735_CAPL.prd,web-castorama
+FUGA_CEMENTOWA,lux,Fuga elastyczna Sopro DF10 biała 2 kg,kg,61.98,szt,castorama,https://www.castorama.pl/fuga-elastyczna-sopro-df10-biala-10-2-kg/5901740010425_CAPL.prd,web-castorama
+# --- FUGA_EPOKSYDOWA (real retail) ---
+FUGA_EPOKSYDOWA,budget,Fuga epoksydowa Atlas 020 beż 2 kg,kg,69.98,szt,castorama,https://www.castorama.pl/fuga-epoksydowa-atlas-020-bez-2-kg/5905400275124_CAPL.prd,web-castorama
+FUGA_EPOKSYDOWA,norm,JAKA FUGA epoksydowa Biała 1 kg,kg,79.90,szt,castorama,https://www.castorama.pl/departments/jaka-fuga-epoksydowa-fuga-bia-a-do-p-ytek-i-mozaik-1kg-1-szt-/5903990309854_CAPL.prd,web-castorama
+FUGA_EPOKSYDOWA,lux,JAKA FUGA epoksydowa metalizowana Złota Gold 1 kg,kg,139.90,szt,castorama,https://www.castorama.pl/departments/jaka-fuga-epoksydowa-metalizowana-fuga-z-ota-gold-1kg-1-szt-/5903990310164_CAPL.prd,web-castorama
+# --- SILIKON (real retail) ---
+SILIKON,budget,Silikon sanitarny Volden 280 ml biały,szt,13.48,szt,castorama,https://www.castorama.pl/silikon-sanitarny-volden-280-ml-bialy/5059340045054_CAPL.prd,web-castorama
+SILIKON,norm,Silikon sanitarny Soudal 280 ml biały,szt,19.98,szt,castorama,https://www.castorama.pl/silikon-sanitarny-soudal-280-ml-bialy/5411183157064_CAPL.prd,web-castorama
+SILIKON,lux,Silikon sanitarny Ceresit CS 25 biały 280 ml,szt,49.98,szt,castorama,https://www.castorama.pl/silikon-sanitarny-ceresit-cs-25-bialy-280-ml/8691451080554_CAPL.prd,web-castorama
+# --- LISTWA_PRZYPODLOGOWA (real retail) ---
+LISTWA_PRZYPODLOGOWA,budget,Listwa przypodłogowa PCV GoodHome Duo 23x59x2200 biała,mb,23.98,szt,castorama,https://www.castorama.pl/listwa-przypodlogowa-pcv-goodhome-duo-23-x-59-x-2200-mm-biala/3663602530855_CAPL.prd,web-castorama
+LISTWA_PRZYPODLOGOWA,norm,Listwa przypodłogowa MDF Foge LB1 biały 8 cm 2 mb,mb,34.98,szt,castorama,https://www.castorama.pl/listwa-przypodlogowa-mdf-foge-lb1-polmat-bialy-8-cm-2-mb/5908283371167_CAPL.prd,web-castorama
+LISTWA_PRZYPODLOGOWA,lux,Listwa przypodłogowa VOX Espumo 80 mm biała,mb,42.98,szt,castorama,https://www.castorama.pl/listwa-przypodlogowa-vox-espumo-80-mm-biala/5905952286586_CAPL.prd,web-castorama
+# --- SZTUKATERIA (real retail) ---
+SZTUKATERIA,budget,Sztukateria ścienna PS 25x15 mm QUEST 200 cm biały,mb,23.95,szt,castorama,https://www.castorama.pl/departments/sztukateria-cienna-z-polistyrenu-ps-25x15-mm-quest-sztywne-listwy-wyko-czeniowe-boazeria-angielska-200-cm-bia-y-1-szt-/5908056570001_CAPL.prd,web-castorama
+SZTUKATERIA,norm,Sztukateria ścienna PS 60x20 mm QUEST 200 cm biały,mb,40.95,szt,castorama,https://www.castorama.pl/departments/sztukateria-cienna-z-polistyrenu-ps-60x20-mm-quest-sztywne-listwy-wyko-czeniowe-boazeria-angielska-200-cm-bia-y-1-szt-/5908056570025_CAPL.prd,web-castorama
+SZTUKATERIA,lux,Sztukateria Ścienna Listwa VERDICO Ramka DP1 59x99 cm,mb,67.90,szt,castorama,https://www.castorama.pl/departments/sztukateria-cienna-listwa-verdico-bia-a-ramka-gotowa-dp1-59x99cm-zestaw-1-szt-/5902186643680_CAPL.prd,web-castorama
+# --- LAMELE_SCIENNE (real retail) ---
+LAMELE_SCIENNE,budget,Panel lamelowy ścienny Stegu Linea Select MDF 265x24.5,m2,99.98,szt,castorama,https://www.castorama.pl/panel-lamelowy-scienny-stegu-linea-select-mdf-265-x-24-5-x-1-9-cm-dab-czarny/5907762319416_CAPL.prd,web-castorama
+LAMELE_SCIENNE,norm,Panel lamelowy ścienny Verta Line 300x2600 saragossa 0.78 m2,m2,88.18,m2,castorama,https://www.castorama.pl/panel-lamelowy-scienny-verta-line-300-x-2600-cm-saragossa-0-78-m2/5906295192794_CAPL.prd,web-castorama
+LAMELE_SCIENNE,lux,Panel lamelowy ścienny MDF 270x60 kaszmir,m2,268.00,szt,castorama,https://www.castorama.pl/panel-lamelowy-scienny-mdf-270-x-60-cm-kaszmir/5907859049516_CAPL.prd,web-castorama
+# --- FARBA_DEKORACYJNA / FARBA_DEKORACYJNA_KOLOR / TYNK_DEKORACYJNY: kept from norms-csv producer refs (Śnieżka/Dekoral/Tikkurila/Magnat) ---

@@ -4,7 +4,7 @@ import { ConversationStep } from "../state/machine.js";
 import { validateSum, validateText } from "../utils/validators.js";
 import { compareSums } from "../utils/sum-compare.js";
 import { downloadFile } from "../services/telegram.js";
-import { uploadPhoto } from "../services/drive.js";
+import { uploadReceiptArtifact } from "../services/receipt-upload.js";
 import { appendReceiptRow } from "../services/sheets.js";
 import { sessionLog } from "../services/session-log.js";
 import { logger } from "../utils/logger.js";
@@ -148,39 +148,38 @@ async function saveReceipt(ctx: Context, bot: Bot, state: any) {
   try {
     await ctx.reply("⏳ Сохраняю...");
 
-    // Download photo from Telegram
-    const { buffer, mimeType } = await downloadFile(bot, state.photoFileId);
+    // Download all pages from Telegram. Prefer the multi-page photoFileIds; fall back to the
+    // legacy single photoFileId for backward compatibility.
+    const fileIds: string[] =
+      state.photoFileIds && state.photoFileIds.length > 0
+        ? state.photoFileIds
+        : state.photoFileId
+        ? [state.photoFileId]
+        : [];
 
-    // Upload to Drive (Shared Drive)
+    const files: Array<{ buffer: Buffer; mimeType: string }> = [];
+    for (const fileId of fileIds) {
+      const { buffer, mimeType } = await downloadFile(bot, fileId);
+      files.push({ buffer, mimeType });
+    }
+
+    // Reprocess into a single multi-page PDF and upload to Drive (with fallback to
+    // uploading original photos). Shared with the OCR callback flow.
     let photoLink: string;
     try {
-      const result = await uploadPhoto(
+      const links = await uploadReceiptArtifact(
         state.projectDriveUrl,
         state.storeName,
         state.sum,
-        buffer,
-        mimeType
+        files,
+        { telegramId },
       );
-      photoLink = result.webViewLink;
+      photoLink = links.join("\n");
     } catch (err: any) {
       logger.error("Drive upload failed", { telegramId, error: err.message });
-      // Retry once
-      await new Promise(r => setTimeout(r, 2000));
-      try {
-        const result = await uploadPhoto(
-          state.projectDriveUrl,
-          state.storeName,
-          state.sum,
-          buffer,
-          mimeType
-        );
-        photoLink = result.webViewLink;
-      } catch (err2: any) {
-        logger.error("Drive upload retry failed", { telegramId, error: err2.message });
-        if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err2, { step: state.step, sum: state.sum });
-        await ctx.reply("❌ Ошибка загрузки фото. Попробуйте ещё раз (/start)");
-        return;
-      }
+      if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err, { step: state.step, sum: state.sum });
+      await ctx.reply("❌ Ошибка загрузки фото. Попробуйте ещё раз (/start)");
+      return;
     }
 
     // Write to Sheets

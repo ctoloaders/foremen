@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-17 (Track 3): the ConstructionMaterial operational entity plus its
+        ManyToMany join to offer packages.
+
+        057a creates construction_materials (columns mirror ConstructionMaterialEntity)
+        with its six reference FKs; producer/seller FKs are nullable, the rest NOT NULL.
+        057b creates the construction_material_packages join table with a composite PK
+        on (construction_material_id, offer_package_id) and both FKs ON DELETE CASCADE,
+        following the FOR-04-12b work_package_prices join pattern (changeset 044).
+        Both sub-changesets are idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="057a-create-construction-materials" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="construction_materials"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="construction_materials">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="producer_id" type="BIGINT"/>
+            <column name="seller_id" type="BIGINT"/>
+            <column name="unit_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="purchase_price" type="NUMERIC(12,2)"/>
+            <column name="retail_gross" type="NUMERIC(12,2)"/>
+            <column name="retail_net" type="NUMERIC(12,2)"/>
+            <column name="website" type="VARCHAR(255)"/>
+            <column name="image" type="VARCHAR(512)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            constraintName="fk_construction_materials_type"
+            baseTableName="construction_materials"
+            baseColumnNames="type_id"
+            referencedTableName="construction_material_types"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_construction_materials_producer"
+            baseTableName="construction_materials"
+            baseColumnNames="producer_id"
+            referencedTableName="material_producers"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_construction_materials_seller"
+            baseTableName="construction_materials"
+            baseColumnNames="seller_id"
+            referencedTableName="material_sellers"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_construction_materials_unit"
+            baseTableName="construction_materials"
+            baseColumnNames="unit_id"
+            referencedTableName="measurement_units"
+            referencedColumnNames="id"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_construction_materials_currency"
+            baseTableName="construction_materials"
+            baseColumnNames="currency_id"
+            referencedTableName="currencies"
+            referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- 057b: construction_material_packages join table. Composite PK on both
+         columns; both FKs ON DELETE CASCADE (deleting a material or an offer
+         package removes its join rows), per the FOR-04-12b join pattern. -->
+    <changeSet id="057b-create-construction-material-packages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="construction_material_packages"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="construction_material_packages">
+            <column name="construction_material_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addPrimaryKey
+            tableName="construction_material_packages"
+            columnNames="construction_material_id, offer_package_id"
+            constraintName="pk_construction_material_packages"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_cmp_construction_material"
+            baseTableName="construction_material_packages"
+            baseColumnNames="construction_material_id"
+            referencedTableName="construction_materials"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_cmp_offer_package"
+            baseTableName="construction_material_packages"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

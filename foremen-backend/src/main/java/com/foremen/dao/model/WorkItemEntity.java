@@ -1,6 +1,11 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -25,6 +30,10 @@ public class WorkItemEntity extends BaseEntity {
 
     @Column(name = "name_pl", nullable = false)
     private String namePL;
+
+    /** Stable natural key from the Excel positional {@code LP} (e.g. {@code 1.01}); nullable, unique among non-null values. */
+    @Column(name = "code")
+    private String code;
 
     @Column(nullable = false)
     private boolean active = true;

@@ -205,7 +205,7 @@ class RoomCrudIT {
         long id = createRoom(project.getId(), roomType.getId(), "To delete", "5.00");
 
         mockMvc.perform(delete("/api/rooms/" + id))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(get("/api/rooms/" + id))
                 .andExpect(status().isNotFound());

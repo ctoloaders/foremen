@@ -1,0 +1,17 @@
+norm_code,resolution,catalog_type_code,catalog_materials,note
+LISTWA_PRZYPODLOGOWA,remap_disputed,styrodur,8,sporno: styrodur vs napolnyy plintus
+PODKLAD,remap_to_catalog,podklad,3,tochnyy analog: podklad
+FARBA,seed_materials,,0,kraska - net
+FARBA_DEKORACYJNA,seed_materials,,0,dekor kraska - net
+FARBA_DEKORACYJNA_KOLOR,seed_materials,,0,dekor kraska kolor - net
+FILC_SCIENNY,seed_materials,,0,stenovoy voylok - net
+FUGA_CEMENTOWA,seed_materials,,0,cem zatirka - net
+FUGA_EPOKSYDOWA,seed_materials,,0,epoks zatirka - net
+KLEJ_DO_PLYTEK,seed_materials,,0,klej do plytek - net klassa v kataloge
+LAMELE_SCIENNE,seed_materials,,0,stenovye lameli - net
+SILIKON,seed_materials,,0,silikon - net
+SZTUKATERIA,seed_materials,,0,lepnina - net
+TAPETA_FLIZELINOWA,seed_materials,,0,flizelin oboi - net
+TAPETA_WINYLOWA,seed_materials,,0,vinil oboi - net
+TASMA_MALARSKA,seed_materials,,0,malyarnaya lenta - net
+TYNK_DEKORACYJNY,seed_materials,,0,dekor shtukaturka - net

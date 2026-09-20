@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-19 (task 8.1): idempotent seed of the material units introduced by the
+        research artifact FOR-04-RESEARCH-material-norms/new-measurement-units.csv that
+        are not already present in MEASUREMENT_UNITS (seeded by 019).
+
+        The CSV lists: kg, l, m2, szt, mb. Of these, m2 / szt / mb are already seeded by
+        019-seed-measurement-units-resource.xml, so the genuinely new units are kg and l.
+        Each insert is guarded by its own <preConditions onFail="MARK_RAN"> + <sqlCheck
+        expectedResult="0"> on the unit code, so a re-run (or running against a database
+        that already has the unit) inserts nothing.
+
+        Registered LAST in changelog.xml and BEFORE the material / consumption seeds so the
+        numerator units the norms reference exist.
+    -->
+
+    <!-- kg — mass of bulk materials/mortars (masonry, repair, plaster mortar, gladz) -->
+    <changeSet id="064-seed-measurement-unit-kg" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM measurement_units WHERE code = 'kg'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="measurement_units">
+            <column name="code" value="kg"/>
+            <column name="name_ru" value="килограмм"/>
+            <column name="name_pl" value="kilogram"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <!-- l — volume of liquid materials (primer) -->
+    <changeSet id="064-seed-measurement-unit-l" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM measurement_units WHERE code = 'l'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="measurement_units">
+            <column name="code" value="l"/>
+            <column name="name_ru" value="литр"/>
+            <column name="name_pl" value="litr"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>
