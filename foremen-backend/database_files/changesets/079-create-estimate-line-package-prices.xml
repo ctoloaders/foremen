@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-03 (Requirements 4, 5): EstimateLinePackagePrice — the denormalized
+        per-package project price snapshot copied from the FOR-04-12b catalog at add-time.
+        One row per (line, offer package existing at add-time); carries a discount
+        placeholder and derives an effective unit price.
+
+        Columns mirror EstimateLinePackagePriceEntity (design §4.2, §4.4):
+          - line_id               : owner FK to estimate_lines, NOT NULL; ON DELETE CASCADE
+                                    (deleting the line removes its per-package prices).
+          - offer_package_id      : FK to offer_packages, NOT NULL; ON DELETE RESTRICT (a
+                                    package referenced by a captured price cannot be
+                                    silently removed).
+          - work_package_price_id : PROVENANCE FK to work_package_prices, NULLABLE,
+                                    ON DELETE SET NULL (R4.4, R4.5 + design §4.4): lineage
+                                    only, never drives value; a catalog delete nulls the
+                                    pointer without touching the copied value and without
+                                    deleting the row.
+          - original_unit_price   : NUMERIC(12,2) NULLABLE — the copied catalog value; NULL
+                                    when the package is unpriced at add-time (R4.7).
+          - discount_kind         : VARCHAR(20) NULLABLE from { PERCENT, ABSOLUTE } (R5.1).
+          - discount_value        : NUMERIC(12,4) NULLABLE — the discount placeholder (R5).
+          - unit_price            : NUMERIC(12,2) NULLABLE — the DERIVED effective price
+                                    = applyDiscount(original_unit_price, kind, value)
+                                    (R5.2, R5.3); NULL when unpriced.
+          - unpriced              : BOOLEAN NOT NULL default FALSE — TRUE when the resolver
+                                    returned empty and prices are NULL (R4.7).
+        Plus the four BaseEntity audit columns.
+
+        UNIQUE (line_id, offer_package_id): exactly one row per (line, package) (R4.2).
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="079-create-estimate-line-package-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_line_package_prices"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_line_package_prices">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="line_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- provenance only, nullable (survives a catalog delete). -->
+            <column name="work_package_price_id" type="BIGINT"/>
+            <column name="original_unit_price" type="NUMERIC(12,2)"/>
+            <column name="discount_kind" type="VARCHAR(20)"/>
+            <column name="discount_value" type="NUMERIC(12,4)"/>
+            <column name="unit_price" type="NUMERIC(12,2)"/>
+            <column name="unpriced" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Exactly one row per (line, package) (R4.2). -->
+        <addUniqueConstraint
+            constraintName="uk_elpp_line_package"
+            tableName="estimate_line_package_prices"
+            columnNames="line_id, offer_package_id"/>
+
+        <!-- OWNER FK: deleting the line removes its per-package prices. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elpp_line"
+            baseTableName="estimate_line_package_prices"
+            baseColumnNames="line_id"
+            referencedTableName="estimate_lines"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Package reference FK: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elpp_offer_package"
+            baseTableName="estimate_line_package_prices"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- PROVENANCE FK: ON DELETE SET NULL — lineage pointer only, never drives value
+             (R4.4, R4.5; design §4.4). -->
+        <addForeignKeyConstraint
+            constraintName="fk_elpp_work_package_price"
+            baseTableName="estimate_line_package_prices"
+            baseColumnNames="work_package_price_id"
+            referencedTableName="work_package_prices"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

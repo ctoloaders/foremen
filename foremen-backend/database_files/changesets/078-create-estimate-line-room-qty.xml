@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-03 (Requirement 3): EstimateLineRoomQty — the per-room quantity split of a
+        line; the owning line's quantity is the sum across its rooms.
+
+        Columns mirror EstimateLineRoomQtyEntity (design §4.2):
+          - line_id  : owner FK to estimate_lines, NOT NULL; ON DELETE CASCADE (deleting
+                       the line removes its room quantities).
+          - room_id  : FK to rooms, NOT NULL; ON DELETE RESTRICT (a room referenced by a
+                       quantity cannot be silently removed). The cross-project rule
+                       (room.project = line.estimate.project, R3.6) is enforced at the
+                       write path (task 8.3), not by a DB constraint.
+          - quantity : NUMERIC(12,4), CHECK (quantity >= 0) — non-negativity (R3.2).
+        Plus the four BaseEntity audit columns.
+
+        The CHECK is added via a raw ALTER inside this tableExists-guarded changeSet, so a
+        re-run (which is MARK_RAN'd on the whole changeSet) does not re-add it.
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="078-create-estimate-line-room-qty" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_line_room_qty"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_line_room_qty">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="line_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="room_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="NUMERIC(12,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting the line removes its room quantities. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrq_line"
+            baseTableName="estimate_line_room_qty"
+            baseColumnNames="line_id"
+            referencedTableName="estimate_lines"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Room reference FK: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrq_room"
+            baseTableName="estimate_line_room_qty"
+            baseColumnNames="room_id"
+            referencedTableName="rooms"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Non-negative quantity (R3.2). -->
+        <sql>
+            ALTER TABLE estimate_line_room_qty
+                ADD CONSTRAINT ck_elrq_quantity_non_negative CHECK (quantity >= 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE estimate_line_room_qty
+                    DROP CONSTRAINT IF EXISTS ck_elrq_quantity_non_negative;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

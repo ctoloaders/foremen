@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-03 (Requirement 6): EstimateLinePackagePriceHistory — the append-only
+        change-capture skeleton for a per-package project price. A row is written on every
+        change to original_unit_price, discount, or effective unit_price; prior rows are
+        never updated or deleted (R6.1, R6.2, R6.3).
+
+        Columns mirror EstimateLinePackagePriceHistoryEntity (design §4.2):
+          - package_price_id    : FK to estimate_line_package_prices, NOT NULL; ON DELETE
+                                  CASCADE (a price and its history are removed together).
+          - original_unit_price : NUMERIC(12,2) NULLABLE — snapshot of the captured value.
+          - discount_kind       : VARCHAR(20) NULLABLE from { PERCENT, ABSOLUTE }.
+          - discount_value      : NUMERIC(12,4) NULLABLE — snapshot of the discount.
+          - unit_price          : NUMERIC(12,2) NULLABLE — snapshot of the effective price.
+          - changed_by          : VARCHAR(255) NULLABLE — who made the change.
+          - changed_at          : TIMESTAMP NOT NULL default NOW() — when it was captured.
+        Plus the four BaseEntity audit columns (the entity extends BaseEntity; changed_by /
+        changed_at are the domain change-capture fields distinct from the audit columns).
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="080-create-estimate-line-package-price-history" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_line_package_price_history"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_line_package_price_history">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="package_price_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_unit_price" type="NUMERIC(12,2)"/>
+            <column name="discount_kind" type="VARCHAR(20)"/>
+            <column name="discount_value" type="NUMERIC(12,4)"/>
+            <column name="unit_price" type="NUMERIC(12,2)"/>
+            <column name="changed_by" type="VARCHAR(255)"/>
+            <column name="changed_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: a price and its history are removed together. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elpph_package_price"
+            baseTableName="estimate_line_package_price_history"
+            baseColumnNames="package_price_id"
+            referencedTableName="estimate_line_package_prices"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

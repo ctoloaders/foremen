@@ -86,4 +86,16 @@
     <include file="database_files/changesets/074-seed-posadzki-floor-norms.xml"/>
     <include file="database_files/changesets/075-normalize-stored-prices.xml"/>
 
+    <!-- FOR-05-03: estimate core schema. -->
+    <include file="database_files/changesets/076-create-estimates.xml"/>
+    <include file="database_files/changesets/077-create-estimate-lines.xml"/>
+    <include file="database_files/changesets/078-create-estimate-line-room-qty.xml"/>
+    <include file="database_files/changesets/079-create-estimate-line-package-prices.xml"/>
+    <include file="database_files/changesets/080-create-estimate-line-package-price-history.xml"/>
+
+    <!-- FOR-05-03: ESTIMATE ABAC resource seed + role-matrix grants. MUST be registered
+         LAST so it runs after all other FOR-05-03 changesets (incl. the parallel package
+         price changesets 079/080). Idempotent via onFail="MARK_RAN" preconditions. -->
+    <include file="database_files/changesets/081-seed-estimate-resource.xml"/>
+
 </databaseChangeLog>

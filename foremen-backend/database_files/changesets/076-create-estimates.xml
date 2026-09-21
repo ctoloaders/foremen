@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-03 (Requirement 1): the Estimate aggregate — one Estimate per Project (1:1).
+
+        Columns mirror EstimateEntity (design §4.2):
+          - project_id  : owner FK to projects, UNIQUE to enforce the 1:1 invariant
+                          (R1.1, R1.6); ON DELETE CASCADE so deleting a project removes
+                          its estimate.
+          - currency_id : FK to currencies, NOT NULL, defaulted to PLN at the service
+                          layer on create (R1.2); ON DELETE RESTRICT (currencies are
+                          reference data).
+          - vat_rate_id : FK to vat_rates, nullable (R8.3 uses coalesce(rate, 0));
+                          ON DELETE RESTRICT.
+          - status      : VARCHAR(20) default 'DRAFT' from { DRAFT, PRICED, APPROVED,
+                          SIGNED } (R1.3).
+          - total_net / total_vat / total_gross : derived money columns (R1.4, R8),
+                          never hand-entered; default 0 so a fresh (line-less) estimate
+                          reads 0 totals (R8.5).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via tableExists + MARK_RAN: a re-run against an existing table makes
+        no schema change.
+    -->
+
+    <changeSet id="076-create-estimates" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimates"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimates">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"
+                    unique="true" uniqueConstraintName="uk_estimates_project"/>
+            </column>
+            <column name="currency_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vat_rate_id" type="BIGINT"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_net" type="NUMERIC(12,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_vat" type="NUMERIC(12,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_gross" type="NUMERIC(12,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its estimate. -->
+        <addForeignKeyConstraint
+            constraintName="fk_estimates_project"
+            baseTableName="estimates"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Reference-data FKs: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_estimates_currency"
+            baseTableName="estimates"
+            baseColumnNames="currency_id"
+            referencedTableName="currencies"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_estimates_vat_rate"
+            baseTableName="estimates"
+            baseColumnNames="vat_rate_id"
+            referencedTableName="vat_rates"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>

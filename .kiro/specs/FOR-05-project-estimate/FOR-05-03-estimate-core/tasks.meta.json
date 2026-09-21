@@ -1,0 +1,844 @@
+{
+  "pbtResults": {
+    "9.3 Write property test for MAX-fallback copy correctness": {
+      "status": "passed",
+      "lastRunTimestamp": 1789990917585
+    },
+    "7.6 Write property test for non-negative quantities": {
+      "status": "passed",
+      "lastRunTimestamp": 1789990918364
+    }
+  },
+  "executionHistory": {
+    "1.1 Create `estimates`, `estimate_lines`, `estimate_line_room_qty` changesets": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372188
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986393335
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986648277
+      }
+    ],
+    "1.2 Create `estimate_line_package_prices` + `estimate_line_package_price_history` changesets": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372330
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986659741
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986895389
+      }
+    ],
+    "1.3 Write Testcontainers migration test for the five tables": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372420
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986912196
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987291093
+      }
+    ],
+    "2.1 Author idempotent `NNN-seed-estimate-resource.xml`, registered LAST in changelog": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372461
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986661634
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986896794
+      }
+    ],
+    "2.2 Write Testcontainers idempotent-seed test": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372556
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987297344
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987497963
+      }
+    ],
+    "3.1 Implement `EstimateStatus` and `DiscountKind` enums": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372589
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986394568
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986649712
+      }
+    ],
+    "3.2 Write unit test for enum i18n labels": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372620
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986662596
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986898045
+      }
+    ],
+    "4.1 Implement `EstimateEntity`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372651
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986907247
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987292260
+      }
+    ],
+    "4.2 Implement `EstimateLineEntity`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372675
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986908345
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987293559
+      }
+    ],
+    "4.3 Implement `EstimateLineRoomQtyEntity`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372708
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986909728
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987294882
+      }
+    ],
+    "4.4 Implement `EstimateLinePackagePriceEntity` and `EstimateLinePackagePriceHistoryEntity`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372772
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986911111
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987296483
+      }
+    ],
+    "5.1 Create service models + DAO/service DTOs for the four entities": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372803
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987515624
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987830080
+      }
+    ],
+    "5.2 Implement MapStruct mappers with derived columns ignored inbound": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372836
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987837270
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994031222
+      }
+    ],
+    "5.3 Write unit test asserting inbound derived fields are ignored": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372868
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989773204
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990165295
+      }
+    ],
+    "6. Checkpoint — schema, seed, entities, mappers compile": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372894
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994046029
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994144398
+      }
+    ],
+    "7.1 Implement `applyDiscount(originalUnitPrice, discountKind, discountValue)`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372925
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987838635
+      }
+    ],
+    "7.2 Write property test for discount derivation": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372952
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989774401
+      }
+    ],
+    "7.3 Implement `EstimateRecomputeService.recomputeEstimate(estimate)`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986372983
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987840154
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990426129
+      }
+    ],
+    "7.4 Write property test for line value derivation": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373008
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989775355
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990746054
+      }
+    ],
+    "7.5 Write property test for total derivation": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373036
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989776298
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990961098
+      }
+    ],
+    "7.6 Write property test for non-negative quantities": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373060
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989777235
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990958115
+      }
+    ],
+    "8.1 Implement `DraftGateGuard.assertDraft(estimate)`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373089
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987841455
+      }
+    ],
+    "8.2 Write property test for the DRAFT gate": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373118
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990201332
+      }
+    ],
+    "8.3 Implement cross-project room validation (`validateRoomQty`)": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373151
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989612325
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989757302
+      }
+    ],
+    "8.4 Write property test for cross-project rejection": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373185
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990202228
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990746468
+      }
+    ],
+    "9.1 Implement `snapshotForLine(line)` reading the FOR-04-12b `EffectivePriceResolver`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373223
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989797178
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990168292
+      }
+    ],
+    "9.2 Write property test for snapshot completeness at add-time": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373253
+      }
+    ],
+    "9.3 Write property test for MAX-fallback copy correctness": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373285
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990958854
+      }
+    ],
+    "9.4 Write property test for provenance FK never driving value": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373353
+      }
+    ],
+    "9.5 Write property test for snapshot immutability under catalog change": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373376
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990960839
+      }
+    ],
+    "10.1 Implement append-only `captureHistory(packagePrice)` on price changes": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373406
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990746311
+      }
+    ],
+    "10.2 Write property test for price-history capture": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373436
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990975477
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991591949
+      }
+    ],
+    "11. Checkpoint — derivation, snapshot, gate, history pass": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373468
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994145256
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994232750
+      }
+    ],
+    "12.1 Implement `EstimateService` with `getOrCreateForProject`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373499
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990976572
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991237006
+      }
+    ],
+    "12.2 Write property test for single estimate per project": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373525
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991615333
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991945804
+      }
+    ],
+    "12.3 Implement `EstimateLineService`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373565
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990977691
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991593327
+      }
+    ],
+    "12.4 Implement `EstimateLineRoomQtyService`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373622
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990978633
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991590500
+      }
+    ],
+    "12.5 Implement `EstimateLinePackagePriceService`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373651
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990979590
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991592539
+      }
+    ],
+    "13.1 Implement `EstimateController` and `EstimateLineController`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373684
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991616307
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991943863
+      }
+    ],
+    "13.2 Implement `EstimateLineRoomQtyController` and `EstimateLinePackagePriceController`": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373708
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991617304
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991945149
+      }
+    ],
+    "14.1 Add error + label message keys to the i18n bundles": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373741
+      },
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987842604
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994032011
+      }
+    ],
+    "14.2 Write unit test asserting message-bundle PL/RU parity": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373768
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789989798138
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990167264
+      }
+    ],
+    "15.1 Wire services, snapshot, recompute, gate, and controllers end-to-end": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373793
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991973495
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789992443723
+      }
+    ],
+    "15.2 Write Testcontainers integration test — startup with annotated controllers": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373826
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789992450724
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789993990894
+      }
+    ],
+    "15.3 Write Testcontainers end-to-end integration test": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373857
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789992451790
+      }
+    ],
+    "16. Author test-cases.md": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373892
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789992452569
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789993991619
+      }
+    ],
+    "17. Final checkpoint — affected tests pass": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986373923
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994239021
+      },
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789996487680
+      }
+    ],
+    "3. Enums with i18n labels": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789986898082
+      }
+    ],
+    "1. Database schema — five estimate tables (Liquibase)": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987291141
+      }
+    ],
+    "4. JPA entities": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987296534
+      }
+    ],
+    "2. `ESTIMATE` ABAC resource seed (entity-creation checklist)": [
+      {
+        "executionId": "7834e4cf-3e86-4213-84b3-3f184c95d0d5",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789987498122
+      }
+    ],
+    "8. `DraftGateGuard` and cross-project room validation": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990746535
+      }
+    ],
+    "9. `PackagePriceSnapshotService` (copy-at-add-time)": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990960959
+      }
+    ],
+    "7. Pure derivation logic": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789990961131
+      }
+    ],
+    "10. Price-history capture skeleton": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991592193
+      }
+    ],
+    "13. Controllers annotated `@PermissionResource(\"ESTIMATE\")`": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991945269
+      }
+    ],
+    "12. Project-scoped services": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789991945845
+      }
+    ],
+    "15. Integration and wiring": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789993991011
+      }
+    ],
+    "5. DTOs, service models, and MapStruct mappers": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994031265
+      }
+    ],
+    "14. i18n message keys (PL/RU parity)": [
+      {
+        "executionId": "87b55905-fab9-408a-80b4-1aa608e7e1ee",
+        "chatSessionId": "sess_4c6d97a1-c880-4e68-8529-2c0c49ef27bb",
+        "timestamp": 1789994032078
+      }
+    ]
+  }
+}

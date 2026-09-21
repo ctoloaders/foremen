@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-03 (Requirement 2): the EstimateLine — one line per catalog work added to
+        the estimate, carrying a frozen (denormalized) unit-price snapshot and a derived
+        quantity / net value.
+
+        Columns mirror EstimateLineEntity (design §4.2):
+          - estimate_id  : owner FK to estimates, NOT NULL; ON DELETE CASCADE (deleting
+                           the estimate removes its lines).
+          - work_item_id : FK to work_items, NOT NULL; ON DELETE RESTRICT (a catalog work
+                           referenced by a line cannot be silently removed).
+          - work_price_id: PROVENANCE FK to work_prices, NULLABLE, ON DELETE SET NULL
+                           (R2.4, R2.5 + design §4.4): lineage only, never drives value; a
+                           catalog delete nulls the pointer without touching unit_price and
+                           without deleting the line.
+          - unit_id      : FK to measurement_units, NOT NULL; ON DELETE RESTRICT.
+          - line_no      : INTEGER ordinal of the line.
+          - comment      : nullable free text.
+          - unit_price   : NUMERIC(12,2) — the frozen snapshot source of truth (R2.3).
+          - quantity     : NUMERIC(12,4) DERIVED = sum of room quantities (R2.6, R3.3);
+                           default 0 so a line with no room qtys reads 0 (R3.4).
+          - value_net    : NUMERIC(12,2) DERIVED = unit_price * quantity (R2.7, R8.1);
+                           default 0.
+        Plus the four BaseEntity audit columns.
+
+        Derived columns (quantity, value_net) are ignored on inbound payloads at the
+        mapper layer (task 5.2); they carry defaults here so a freshly-inserted line is
+        well-formed before the first recompute.
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="077-create-estimate-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_lines"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="estimate_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- provenance only, nullable (survives a catalog delete). -->
+            <column name="work_price_id" type="BIGINT"/>
+            <column name="unit_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="line_no" type="INTEGER"/>
+            <column name="comment" type="VARCHAR(1024)"/>
+            <column name="unit_price" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="NUMERIC(12,4)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="value_net" type="NUMERIC(12,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting the estimate removes its lines. -->
+        <addForeignKeyConstraint
+            constraintName="fk_estimate_lines_estimate"
+            baseTableName="estimate_lines"
+            baseColumnNames="estimate_id"
+            referencedTableName="estimates"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Catalog reference FKs: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_estimate_lines_work_item"
+            baseTableName="estimate_lines"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_estimate_lines_unit"
+            baseTableName="estimate_lines"
+            baseColumnNames="unit_id"
+            referencedTableName="measurement_units"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- PROVENANCE FK: ON DELETE SET NULL — lineage pointer only, never drives value
+             (R2.4, R2.5; design §4.4). -->
+        <addForeignKeyConstraint
+            constraintName="fk_estimate_lines_work_price"
+            baseTableName="estimate_lines"
+            baseColumnNames="work_price_id"
+            referencedTableName="work_prices"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>
