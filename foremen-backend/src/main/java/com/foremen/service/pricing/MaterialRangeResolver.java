@@ -14,8 +14,9 @@ import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.service.pricing.MaterialBatchLookup.BatchKey;
 
 /**
- * Computes the FOR-04-19 <b>money price-range (вилка)</b> per {@code (work item, offer package)},
- * split into a <b>construction</b> and a <b>finishing</b> branch (Requirement 4). Nothing is ever
+ * Computes the FOR-04-19 <b>money price-range (вилка)</b> per work item (package-less per
+ * FOR-05-04 Requirement 7.2), split into a <b>construction</b> and a <b>finishing</b> branch
+ * (Requirement 4). Nothing is ever
  * stored: the ranges are derived at read time from already-loaded consumption rows plus the analog
  * {@link TypeBatch}es supplied by {@link MaterialBatchLookup}.
  *
@@ -100,9 +101,10 @@ public class MaterialRangeResolver {
     }
 
     /**
-     * A provider of the analog {@link TypeBatch} for a {@code (offerPackageId, materialTypeId, branch)}
-     * key. Backed at runtime by the map {@link MaterialBatchLookup#load(Collection)} returns; the
-     * property tests supply an in-memory implementation.
+     * A provider of the analog {@link TypeBatch} for a {@code (materialTypeId, branch)} key
+     * (package-less per FOR-05-04 Requirement 7.2). Backed at runtime by the map
+     * {@link MaterialBatchLookup#load(Collection)} returns; the property tests supply an in-memory
+     * implementation.
      */
     @FunctionalInterface
     public interface BatchProvider {
@@ -110,7 +112,7 @@ public class MaterialRangeResolver {
          * Returns the analog batch for the given key, or {@code null} when none was loaded (treated
          * as an empty batch ⇒ {@code 0..0}).
          */
-        TypeBatch batchFor(Long offerPackageId, Long materialTypeId, ConsumptionBranch branch);
+        TypeBatch batchFor(Long materialTypeId, ConsumptionBranch branch);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -154,13 +156,11 @@ public class MaterialRangeResolver {
      * never summed across units — only money (Requirement 4.5). Distinct-type batching folds
      * repeated types once (Requirement 4.2).
      *
-     * @param offerPackageId the offer package the rows belong to (drives batch resolution)
      * @param rowsOfBranch   the consumption rows of a single branch (may be {@code null}/empty)
      * @param batches        the analog-batch provider
      * @return the branch money range, or {@code 0..0} when the branch is empty
      */
-    public static MoneyRange branchRange(Long offerPackageId,
-                                         Collection<ConsumptionRowInput> rowsOfBranch,
+    public static MoneyRange branchRange(Collection<ConsumptionRowInput> rowsOfBranch,
                                          BatchProvider batches) {
         if (rowsOfBranch == null || rowsOfBranch.isEmpty()) {
             return MoneyRange.ZERO;
@@ -181,7 +181,7 @@ public class MaterialRangeResolver {
             ConsumptionBranch branch = row.branch();
             TypeBatch batch = (batches == null)
                     ? null
-                    : batches.batchFor(offerPackageId, row.materialTypeId(), branch);
+                    : batches.batchFor(row.materialTypeId(), branch);
             perType.put(row.materialTypeId(), typeBatchRange(row.normQty(), batch));
         }
 
@@ -204,27 +204,23 @@ public class MaterialRangeResolver {
      * finishing range, each an explicit {@link MoneyRange#ZERO} when its branch is empty
      * (Requirement 4.1, 4.4).
      *
-     * @param offerPackageId       the offer package the rows belong to
-     * @param rowsForWorkPackage   all consumption rows for the {@code (work, package)} (both branches)
+     * @param rowsForWork          all consumption rows for the work item (both branches)
      * @param batches              the analog-batch provider
      * @return both branch money ranges (never {@code null}, each sub-range never {@code null})
      */
-    public static BranchRanges compute(Long offerPackageId,
-                                       Collection<ConsumptionRowInput> rowsForWorkPackage,
+    public static BranchRanges compute(Collection<ConsumptionRowInput> rowsForWork,
                                        BatchProvider batches) {
         Map<ConsumptionBranch, List<ConsumptionRowInput>> byBranch = new LinkedHashMap<>();
-        if (rowsForWorkPackage != null) {
-            for (ConsumptionRowInput row : rowsForWorkPackage) {
+        if (rowsForWork != null) {
+            for (ConsumptionRowInput row : rowsForWork) {
                 if (row == null || row.branch() == null) {
                     continue;
                 }
                 byBranch.computeIfAbsent(row.branch(), k -> new java.util.ArrayList<>()).add(row);
             }
         }
-        MoneyRange construction = branchRange(
-                offerPackageId, byBranch.get(ConsumptionBranch.construction), batches);
-        MoneyRange finishing = branchRange(
-                offerPackageId, byBranch.get(ConsumptionBranch.finishing), batches);
+        MoneyRange construction = branchRange(byBranch.get(ConsumptionBranch.construction), batches);
+        MoneyRange finishing = branchRange(byBranch.get(ConsumptionBranch.finishing), batches);
         return new BranchRanges(construction, finishing);
     }
 
@@ -237,18 +233,16 @@ public class MaterialRangeResolver {
         return typeBatchRange(normQty, batch);
     }
 
-    /** @see #branchRange(Long, Collection, BatchProvider) */
-    public MoneyRange branchRangeFor(Long offerPackageId,
-                                     Collection<ConsumptionRowInput> rowsOfBranch,
+    /** @see #branchRange(Collection, BatchProvider) */
+    public MoneyRange branchRangeFor(Collection<ConsumptionRowInput> rowsOfBranch,
                                      BatchProvider batches) {
-        return branchRange(offerPackageId, rowsOfBranch, batches);
+        return branchRange(rowsOfBranch, batches);
     }
 
-    /** @see #compute(Long, Collection, BatchProvider) */
-    public BranchRanges computeFor(Long offerPackageId,
-                                   Collection<ConsumptionRowInput> rowsForWorkPackage,
+    /** @see #compute(Collection, BatchProvider) */
+    public BranchRanges computeFor(Collection<ConsumptionRowInput> rowsForWork,
                                    BatchProvider batches) {
-        return compute(offerPackageId, rowsForWorkPackage, batches);
+        return compute(rowsForWork, batches);
     }
 
     /**
@@ -262,7 +256,6 @@ public class MaterialRangeResolver {
     public static BatchProvider providerOf(Map<BatchKey, TypeBatch> loaded) {
         Function<BatchKey, TypeBatch> lookup =
                 (loaded == null) ? key -> null : loaded::get;
-        return (offerPackageId, materialTypeId, branch) ->
-                lookup.apply(new BatchKey(offerPackageId, materialTypeId, branch));
+        return (materialTypeId, branch) -> lookup.apply(new BatchKey(materialTypeId, branch));
     }
 }

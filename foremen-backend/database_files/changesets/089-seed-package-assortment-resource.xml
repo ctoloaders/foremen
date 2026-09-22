@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-04 (R6.1, R8.1): seed the PACKAGE_ASSORTMENT ABAC resource (covers
+         assortment_groups + assortment_line_items) and its role-matrix grants.
+         Idempotent: every changeSet is guarded by an onFail="MARK_RAN" precondition
+         so a re-run against an already-seeded database inserts nothing. Registered
+         LAST in changelog.xml. -->
+
+    <!-- Seed PACKAGE_ASSORTMENT resource into resources table -->
+    <changeSet id="089-seed-package-assortment-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PACKAGE_ASSORTMENT'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="PACKAGE_ASSORTMENT"/>
+            <column name="name_ru" value="Ассортимент пакетов"/>
+            <column name="name_pl" value="Asortyment pakietów"/>
+            <column name="description_ru" value="Ассортимент материалов пакета (мин/сред/макс цена и кол-во на референсную квартиру)"/>
+            <column name="description_pl" value="Asortyment materiałów pakietu (cena min/śr/maks i ilość dla referencyjnego mieszkania)"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on PACKAGE_ASSORTMENT resource -->
+    <changeSet id="089-seed-package-assortment-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'PACKAGE_ASSORTMENT'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ on PACKAGE_ASSORTMENT resource -->
+    <changeSet id="089-seed-package-assortment-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'PACKAGE_ASSORTMENT'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on PACKAGE_ASSORTMENT resource -->
+    <changeSet id="089-seed-package-assortment-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'PACKAGE_ASSORTMENT'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on PACKAGE_ASSORTMENT resource -->
+    <changeSet id="089-seed-package-assortment-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'PACKAGE_ASSORTMENT'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'PACKAGE_ASSORTMENT';
+        </sql>
+    </changeSet>
+
+    <!--
+        WORKER and CLIENT receive NO grant on PACKAGE_ASSORTMENT here (design §5 matrix:
+        WORKER = none, CLIENT = none). DELETE is ADMIN-only: only the ADMIN grant above
+        includes it. Custom (non-system) roles receive no grant here.
+    -->
+
+</databaseChangeLog>

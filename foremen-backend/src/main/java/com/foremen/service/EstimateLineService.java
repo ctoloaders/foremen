@@ -1,6 +1,5 @@
 package com.foremen.service;
 
-import java.util.List;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
@@ -9,16 +8,14 @@ import org.springframework.stereotype.Service;
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.EstimateDao;
 import com.foremen.dao.EstimateLineDao;
-import com.foremen.dao.EstimateLinePackagePriceDao;
+import com.foremen.dao.WorkPriceDao;
 import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
-import com.foremen.dao.model.EstimateLinePackagePriceEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.estimate.DraftGateGuard;
 import com.foremen.service.estimate.EstimateRecomputeService;
-import com.foremen.service.estimate.PackagePriceSnapshotService;
 import com.foremen.service.model.EstimateLineServiceExtendedModel;
 import com.foremen.service.model.EstimateLineServiceModel;
 import com.foremen.service.model.mapper.EstimateLineServiceMapper;
@@ -45,11 +42,17 @@ import jakarta.persistence.EntityManager;
  * before any write, rejecting with {@code 409 error.estimate.locked} once the estimate is past
  * {@code DRAFT}.
  *
- * <p><b>Snapshot copy at add-time (R4.1).</b> {@link #afterCreate(EstimateLineEntity)} calls
- * {@link PackagePriceSnapshotService#snapshotForLine(EstimateLineEntity)} to build one
- * per-package project price row for every {@code OfferPackage} existing right now, persists each
- * row, and then calls {@link PackagePriceSnapshotService#captureHistory} on each persisted row to
- * write its initial price-history entry (R6.2).
+ * <p><b>Single-price copy (FOR-05-04 task 17.1, R5.1, R5.2).</b> The {@code EstimateLinePackagePrice}
+ * per-package snapshot vertical this service used to call into on
+ * {@link #afterCreate(EstimateLineEntity)} has been retired (FOR-05-04, Requirements 8.2, 8.6).
+ * On create, {@link #afterCreate(EstimateLineEntity)} unconditionally overwrites
+ * {@code EstimateLine.unitPrice} with the line's work item's single {@code WorkPrice.netPrice}
+ * (R5.1) and sets {@code EstimateLine.workPrice} to that same row as a provenance FK only — the
+ * copied value, not the FK, is the source of truth (mirrors the entity Javadoc contract). No
+ * {@code EstimateLinePackagePrice} rows are created; that vertical no longer exists (R5.2). WHEN
+ * the work item is unpriced (no {@code WorkPriceEntity} row), the line's {@code unitPrice} stays
+ * whatever the caller supplied and {@code workPrice} stays unset — this spec does not fabricate a
+ * catalog price for an unpriced work (mirrors the "never fabricate a value" principle, R7.5).
  *
  * <p><b>Recompute (R2.6, R2.7, R8).</b> Every free-edit write (create/update/delete) that changes
  * quantity or price reloads the full estimate graph (lines + their room quantities) and runs
@@ -69,10 +72,9 @@ public class EstimateLineService
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
     private final EstimateDao estimateDao;
-    private final EstimateLinePackagePriceDao estimateLinePackagePriceDao;
     private final DraftGateGuard draftGateGuard;
     private final EstimateRecomputeService estimateRecomputeService;
-    private final PackagePriceSnapshotService packagePriceSnapshotService;
+    private final WorkPriceDao workPriceDao;
 
     public EstimateLineService(EstimateLineDao estimateLineDao,
                                 EstimateLineServiceMapper estimateLineServiceMapper,
@@ -80,20 +82,18 @@ public class EstimateLineService
                                 AuditLogDao auditLogDao,
                                 EntityManager entityManager,
                                 EstimateDao estimateDao,
-                                EstimateLinePackagePriceDao estimateLinePackagePriceDao,
                                 DraftGateGuard draftGateGuard,
                                 EstimateRecomputeService estimateRecomputeService,
-                                PackagePriceSnapshotService packagePriceSnapshotService) {
+                                WorkPriceDao workPriceDao) {
         this.estimateLineDao = estimateLineDao;
         this.estimateLineServiceMapper = estimateLineServiceMapper;
         this.projectAccessCache = projectAccessCache;
         this.auditLogDao = auditLogDao;
         this.entityManager = entityManager;
         this.estimateDao = estimateDao;
-        this.estimateLinePackagePriceDao = estimateLinePackagePriceDao;
         this.draftGateGuard = draftGateGuard;
         this.estimateRecomputeService = estimateRecomputeService;
-        this.packagePriceSnapshotService = packagePriceSnapshotService;
+        this.workPriceDao = workPriceDao;
     }
 
     // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---
@@ -178,24 +178,37 @@ public class EstimateLineService
         recomputeAndPersist(estimateId);
     }
 
-    // --- Snapshot copy at add-time + recompute (R2.6, R2.7, R4.1, R6.2, R8) ---
+    // --- Recompute (R2.6, R2.7, R8) ---
 
     /**
-     * Post-create hook (R4.1, R6.2, R8): builds the per-package price snapshot for the just-created
-     * line via {@link PackagePriceSnapshotService#snapshotForLine(EstimateLineEntity)}, persists
-     * each row, captures its initial price-history entry, and recomputes the owning estimate's
-     * lines/totals so the new line's quantity/value and the estimate totals are up to date.
+     * Post-create hook (R5.1, R5.2, R8): copies the line's work item's single catalog price onto
+     * {@code entity.unitPrice}/{@code entity.workPrice} (FOR-05-04 task 17.1), then recomputes the
+     * owning estimate's lines/totals so the new line's quantity/value and the estimate totals
+     * reflect the copied price. The copy happens first so {@code EstimateRecomputeService} — which
+     * reads {@code line.getUnitPrice()} to derive {@code valueNet} — sees the catalog price, not
+     * whatever placeholder the caller supplied. No {@code EstimateLinePackagePrice} rows are
+     * created (that vertical is retired, R5.2).
      */
     @Override
     public void afterCreate(EstimateLineEntity entity) {
-        List<EstimateLinePackagePriceEntity> snapshotRows = packagePriceSnapshotService.snapshotForLine(entity);
-        for (EstimateLinePackagePriceEntity row : snapshotRows) {
-            EstimateLinePackagePriceEntity saved = estimateLinePackagePriceDao.save(row);
-            packagePriceSnapshotService.captureHistory(saved);
-        }
-        getEntityManager().flush();
-
+        copySingleWorkPrice(entity);
         recomputeAndPersist(entity.getEstimate().getId());
+    }
+
+    /**
+     * Copies the entity's work item's single {@link WorkPriceEntity#getNetPrice()} onto
+     * {@code entity.unitPrice} and sets {@code entity.workPrice} to that row as a provenance FK
+     * only (R5.1). The catalog price unconditionally overwrites whatever {@code unitPrice} the
+     * caller supplied, mirroring the retired per-package snapshot's original at-add-time copy
+     * behavior. WHEN the work item has no {@link WorkPriceEntity} (unpriced), this method leaves
+     * {@code unitPrice}/{@code workPrice} untouched rather than fabricating a catalog price.
+     */
+    private void copySingleWorkPrice(EstimateLineEntity entity) {
+        workPriceDao.findByWorkItemId(entity.getWorkItem().getId())
+                .ifPresent(workPrice -> {
+                    entity.setUnitPrice(workPrice.getNetPrice());
+                    entity.setWorkPrice(workPrice);
+                });
     }
 
     /**

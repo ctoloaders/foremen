@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04 (R8.1, R8.2, R8.4, R8.6): retire the FOR-05-03 per-package project price
+        vertical (estimate_line_package_prices + estimate_line_package_price_history) in
+        full — its source, work_package_prices, no longer holds a per-package price after
+        082's collapse to a single work price. EstimateLine.unitPrice becomes the line's
+        only price (R5.1); no replacement table is created here.
+
+        Archive-before-drop (R8.4): every row of both tables is copied into a same-shaped
+        `*_archive` table (with archived_at) before either table is dropped, so a resolution
+        dispute can be checked against the original per-package snapshots.
+
+        Four ordered changesets, each idempotent via preConditions onFail="MARK_RAN":
+          083a - create estimate_line_package_prices_archive; INSERT...SELECT every
+                 estimate_line_package_prices row + archived_at.
+          083b - create estimate_line_package_price_history_archive; INSERT...SELECT every
+                 estimate_line_package_price_history row + archived_at.
+          083c - drop estimate_line_package_price_history (child; FK's to
+                 estimate_line_package_prices) — dropped BEFORE its parent so the parent
+                 drop never hits a dangling FK.
+          083d - drop estimate_line_package_prices (parent), now that both tables' data is
+                 archived and the child has been dropped.
+
+        The retirement of the /api/estimate-line-package-prices controller/service/DAO
+        (R8.6) is a code-only change tracked by a separate task; this changeset only
+        retires the schema.
+    -->
+
+    <!-- 083a: archive every estimate_line_package_prices row before anything is dropped. -->
+    <changeSet id="083a-create-estimate-line-package-prices-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_line_package_prices_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_line_package_prices_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="line_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_package_price_id" type="BIGINT"/>
+            <column name="original_unit_price" type="NUMERIC(12,2)"/>
+            <column name="discount_kind" type="VARCHAR(20)"/>
+            <column name="discount_value" type="NUMERIC(12,4)"/>
+            <column name="unit_price" type="NUMERIC(12,2)"/>
+            <column name="unpriced" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 083a-2: populate the archive from the still-present estimate_line_package_prices
+         table. Runs only while the source table still exists; NOT EXISTS guards
+         re-insertion so a re-run (or a re-migrate before 083d has dropped the source)
+         inserts nothing new. -->
+    <changeSet id="083a-populate-estimate-line-package-prices-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="estimate_line_package_prices"/>
+                <tableExists tableName="estimate_line_package_prices_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO estimate_line_package_prices_archive
+                (original_id, line_id, offer_package_id, work_package_price_id,
+                 original_unit_price, discount_kind, discount_value, unit_price, unpriced,
+                 created_date, created_by, updated_date, updated_by, archived_at)
+            SELECT elpp.id, elpp.line_id, elpp.offer_package_id, elpp.work_package_price_id,
+                   elpp.original_unit_price, elpp.discount_kind, elpp.discount_value,
+                   elpp.unit_price, elpp.unpriced,
+                   elpp.created_date, elpp.created_by, elpp.updated_date, elpp.updated_by,
+                   NOW()
+            FROM estimate_line_package_prices elpp
+            WHERE NOT EXISTS (
+                SELECT 1 FROM estimate_line_package_prices_archive elppa
+                WHERE elppa.original_id = elpp.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 083b: archive every estimate_line_package_price_history row before anything is
+         dropped. -->
+    <changeSet id="083b-create-estimate-line-package-price-history-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_line_package_price_history_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_line_package_price_history_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="package_price_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="original_unit_price" type="NUMERIC(12,2)"/>
+            <column name="discount_kind" type="VARCHAR(20)"/>
+            <column name="discount_value" type="NUMERIC(12,4)"/>
+            <column name="unit_price" type="NUMERIC(12,2)"/>
+            <column name="changed_by" type="VARCHAR(255)"/>
+            <column name="changed_at" type="TIMESTAMP"/>
+            <column name="created_date" type="TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 083b-2: populate the history archive from the still-present
+         estimate_line_package_price_history table. Runs only while the source table still
+         exists; NOT EXISTS guards re-insertion. -->
+    <changeSet id="083b-populate-estimate-line-package-price-history-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="estimate_line_package_price_history"/>
+                <tableExists tableName="estimate_line_package_price_history_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO estimate_line_package_price_history_archive
+                (original_id, package_price_id, original_unit_price, discount_kind,
+                 discount_value, unit_price, changed_by, changed_at,
+                 created_date, created_by, updated_date, updated_by, archived_at)
+            SELECT elpph.id, elpph.package_price_id, elpph.original_unit_price,
+                   elpph.discount_kind, elpph.discount_value, elpph.unit_price,
+                   elpph.changed_by, elpph.changed_at,
+                   elpph.created_date, elpph.created_by, elpph.updated_date, elpph.updated_by,
+                   NOW()
+            FROM estimate_line_package_price_history elpph
+            WHERE NOT EXISTS (
+                SELECT 1 FROM estimate_line_package_price_history_archive elppha
+                WHERE elppha.original_id = elpph.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 083c: drop estimate_line_package_price_history (child; FKs to
+         estimate_line_package_prices) BEFORE its parent, now that its data is archived
+         (083b). Guarded so the drop only proceeds once the history archive has been
+         populated with at least as many rows as the live table (or the live table is
+         already empty), so data is never dropped before it has a home. -->
+    <changeSet id="083c-drop-estimate-line-package-price-history" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="estimate_line_package_price_history"/>
+                <tableExists tableName="estimate_line_package_price_history_archive"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM estimate_line_package_price_history elpph
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM estimate_line_package_price_history_archive elppha
+                        WHERE elppha.original_id = elpph.id
+                    )
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <dropTable tableName="estimate_line_package_price_history" cascadeConstraints="true"/>
+    </changeSet>
+
+    <!-- 083d: drop estimate_line_package_prices (parent), now that its data is archived
+         (083a) and its child table has been dropped (083c). Guarded the same way: the drop
+         only proceeds once the archive has been populated with at least as many rows as
+         the live table. -->
+    <changeSet id="083d-drop-estimate-line-package-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="estimate_line_package_prices"/>
+                <tableExists tableName="estimate_line_package_prices_archive"/>
+                <not>
+                    <tableExists tableName="estimate_line_package_price_history"/>
+                </not>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM estimate_line_package_prices elpp
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM estimate_line_package_prices_archive elppa
+                        WHERE elppa.original_id = elpp.id
+                    )
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <dropTable tableName="estimate_line_package_prices" cascadeConstraints="true"/>
+    </changeSet>
+
+</databaseChangeLog>

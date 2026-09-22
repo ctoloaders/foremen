@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04 (Requirement 2): WorkVolumeFormula — a work item's optional default volume
+        formula, expressed over the 14 room-dimension variables (FOR-05-02), constants,
+        arithmetic, and simple conditionals (IFS/COUNTIF), plus cross-work references (R3).
+
+        Columns mirror WorkVolumeFormulaEntity (design §Component 2):
+          - work_item_id : owner FK to work_items, NOT NULL, UNIQUE (0..1 formula per work,
+                           R2.1, R2.5); ON DELETE CASCADE (deleting the work removes its
+                           formula — it is an owned catalog extension of the work, not an
+                           independent resource, per design §ABAC).
+          - source_text  : TEXT NOT NULL — human-readable source, kept for editing/audit
+                           (R2.6).
+          - parsed_ast   : JSONB NOT NULL — the validated parsed form, so repeated
+                           evaluation does not need to re-parse (R2.6).
+        Plus the four BaseEntity audit columns.
+
+        UNIQUE (work_item_id): exactly 0..1 row per work item (R2.1, R2.5).
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="085-create-work-volume-formulas" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_volume_formulas"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_volume_formulas">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="source_text" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parsed_ast" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Exactly 0..1 formula per work item (R2.1, R2.5). -->
+        <addUniqueConstraint
+            constraintName="uk_work_volume_formulas_work_item"
+            tableName="work_volume_formulas"
+            columnNames="work_item_id"/>
+
+        <!-- OWNER FK: deleting the work item removes its default formula (owned catalog
+             extension, not an independent resource). -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_volume_formulas_work_item"
+            baseTableName="work_volume_formulas"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

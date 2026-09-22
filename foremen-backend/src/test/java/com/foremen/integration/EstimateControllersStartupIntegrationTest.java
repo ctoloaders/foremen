@@ -20,15 +20,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.foremen.controller.EstimateController;
 import com.foremen.controller.EstimateLineController;
-import com.foremen.controller.EstimateLinePackagePriceController;
 import com.foremen.controller.EstimateLineRoomQtyController;
 import com.foremen.testsupport.MockMvcSecurityConfig;
 
 /**
- * Startup/wiring integration test for the four FOR-05-03 estimate controllers
- * ({@link EstimateController}, {@link EstimateLineController}, {@link EstimateLineRoomQtyController},
- * {@link EstimateLinePackagePriceController}), all annotated class-level with
- * {@code @PermissionResource("ESTIMATE")} (Requirement 9.3).
+ * Startup/wiring integration test for the three FOR-05-03 estimate controllers
+ * ({@link EstimateController}, {@link EstimateLineController}, {@link EstimateLineRoomQtyController}),
+ * all annotated class-level with {@code @PermissionResource("ESTIMATE")} (Requirement 9.3).
  *
  * <p>Mirrors the repo's established {@code @SpringBootTest(MOCK)} + {@code @AutoConfigureMockMvc} +
  * {@code @Testcontainers} + {@code @ActiveProfiles("integration-test")} harness (see
@@ -37,22 +35,25 @@ import com.foremen.testsupport.MockMvcSecurityConfig;
  * schema against a Testcontainers PostgreSQL instance.
  *
  * <p>The full application context registers every {@code @RestController} in the app, not just the
- * four estimate ones. Simply booting {@code @SpringBootTest} successfully is therefore already strong
+ * three estimate ones. Simply booting {@code @SpringBootTest} successfully is therefore already strong
  * evidence that {@code PermissionAnnotationValidator} (a {@code SmartInitializingSingleton}) did not
- * fail application startup due to a half-annotated controller/handler — including the four new
- * estimate controllers, none of which override an inherited CRUD {@code default} method without a
- * matching {@code @PermissionOperation}, and whose bespoke non-CRUD handlers
- * ({@code EstimateController#getOrCreateForProject},
- * {@code EstimateLinePackagePriceController#history}) each carry an explicit method-level
+ * fail application startup due to a half-annotated controller/handler — including these estimate
+ * controllers, none of which override an inherited CRUD {@code default} method without a matching
+ * {@code @PermissionOperation}, and whose bespoke non-CRUD handler
+ * ({@code EstimateController#getOrCreateForProject}) carries an explicit method-level
  * {@code @RequiresPermission}.
+ *
+ * <p>The FOR-05-03 {@code EstimateLinePackagePriceController} (and its
+ * {@code /api/estimate-line-package-prices} routes, including {@code /{id}/history}) has been
+ * retired (FOR-05-04, Requirements 8.2, 8.6) and is intentionally no longer asserted here.
  *
  * <p>Beyond the bare context-loads assertion, this test:
  * <ol>
- *   <li>asserts each of the four estimate controller beans is present in the context, so the test
+ *   <li>asserts each of the three estimate controller beans is present in the context, so the test
  *       specifically documents that these controllers (not just some other controller) were
  *       exercised;</li>
  *   <li>issues an authenticated ({@code ROLE_ADMIN}) {@code GET} list request against each of the
- *       four {@code /api/estimate*} routes via {@link MockMvc} and asserts a non-5xx status,
+ *       three {@code /api/estimate*} routes via {@link MockMvc} and asserts a non-5xx status,
  *       confirming the routes are live and the ABAC interceptor resolves correctly for ADMIN.</li>
  * </ol>
  *
@@ -88,16 +89,15 @@ class EstimateControllersStartupIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
-    @DisplayName("Application context loads with all four ESTIMATE controllers registered as beans")
-    void contextLoads_withAllFourEstimateControllerBeans() {
+    @DisplayName("Application context loads with all three ESTIMATE controllers registered as beans")
+    void contextLoads_withAllThreeEstimateControllerBeans() {
         // The context loading at all (via @SpringBootTest) already proves
         // PermissionAnnotationValidator found no half-annotated controller across the whole app,
-        // including these four. Resolving each bean explicitly documents that these specific
+        // including these three. Resolving each bean explicitly documents that these specific
         // controllers were the ones exercised, not just "some" controller.
         assertThat(applicationContext.getBean(EstimateController.class)).isNotNull();
         assertThat(applicationContext.getBean(EstimateLineController.class)).isNotNull();
         assertThat(applicationContext.getBean(EstimateLineRoomQtyController.class)).isNotNull();
-        assertThat(applicationContext.getBean(EstimateLinePackagePriceController.class)).isNotNull();
     }
 
     @Test
@@ -124,11 +124,4 @@ class EstimateControllersStartupIntegrationTest {
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isLessThan(500));
     }
 
-    @Test
-    @DisplayName("GET /api/estimate-line-package-prices as ADMIN resolves through ABAC without a 5xx")
-    @WithMockUser(roles = "ADMIN")
-    void listEstimateLinePackagePrices_asAdmin_isNotServerError() throws Exception {
-        mockMvc.perform(get("/api/estimate-line-package-prices"))
-                .andExpect(result -> assertThat(result.getResponse().getStatus()).isLessThan(500));
-    }
 }

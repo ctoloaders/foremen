@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04 (Requirement 6.1, 6.2, 6.7): assortment_line_items — one curated catalog
+        row within an assortment_groups group (e.g. "Miska WC" under "Sanitariat/łazienka"),
+        carrying min/avg/max price PER offer package and a quantity assumed against the
+        fixed 50 m^2 reference apartment (`qty_ref50`), mirroring the `Zestawienie` sheet.
+
+        Columns:
+          - assortment_group_id : owner FK to assortment_groups, NOT NULL; ON DELETE CASCADE
+                                   (deleting the group removes its line items).
+          - offer_package_id    : FK to offer_packages, NOT NULL; ON DELETE RESTRICT (a
+                                   package referenced by a line item cannot be silently
+                                   removed) — per-package min/avg/max price row (R6.2).
+          - name_ru / name_pl   : i18n line-item name.
+          - min_price / avg_price / max_price : NUMERIC(12,2), nullable per design (the
+                                   zł/m^2 contribution is computed from avg_price x
+                                   qty_ref50; min/max are exposed for the review band).
+          - qty_ref50           : NUMERIC(12,4) NOT NULL — quantity vs the 50 m^2 reference
+                                   apartment (R6.2, R6.3).
+          - typical_material_id : PROVENANCE FK to materials, NULLABLE, ON DELETE SET NULL
+                                   (R6.6, R6.7): assistive "typical product" link only, never
+                                   drives the stored min/avg/max price; a catalog delete
+                                   nulls the pointer without touching the line item.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="088-create-assortment-line-items" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_line_items"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_line_items">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="assortment_group_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="min_price" type="NUMERIC(12,2)"/>
+            <column name="avg_price" type="NUMERIC(12,2)"/>
+            <column name="max_price" type="NUMERIC(12,2)"/>
+            <column name="qty_ref50" type="NUMERIC(12,4)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- provenance only, nullable (survives a catalog delete). -->
+            <column name="typical_material_id" type="BIGINT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting the group removes its line items. -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_line_items_group"
+            baseTableName="assortment_line_items"
+            baseColumnNames="assortment_group_id"
+            referencedTableName="assortment_groups"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Package reference FK: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_line_items_offer_package"
+            baseTableName="assortment_line_items"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- PROVENANCE FK: ON DELETE SET NULL — assistive "typical product" link only,
+             never drives min/avg/max price (R6.6, R6.7). -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_line_items_typical_material"
+            baseTableName="assortment_line_items"
+            baseColumnNames="typical_material_id"
+            referencedTableName="materials"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

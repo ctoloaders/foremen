@@ -1,5 +1,14 @@
 package com.foremen.service.pricing;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.foremen.controller.model.AnalogMaterialDto;
 import com.foremen.controller.model.MoneyRangeDto;
 import com.foremen.controller.model.RefDto;
@@ -13,14 +22,6 @@ import com.foremen.dao.model.MaterialSellerEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.WorkMaterialConsumptionEntity;
 import com.foremen.service.pricing.MaterialRangeResolver.MoneyRange;
-import org.springframework.context.i18n.LocaleContextHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
 
 /**
  * Enriches the FOR-04-19 consumption READ path so the drill-in returns real per-material data
@@ -40,11 +41,12 @@ import java.util.Locale;
  * </ol>
  *
  * <p>The full analog materials are loaded through a targeted, index-friendly DAO query
- * ({@code findActiveByPackageAndTypes}) filtered by the row's {@code (offerPackage, type)} and
- * eagerly fetching {@code producer}/{@code seller}/{@code unit}/{@code type}, so a single row's
- * enrichment issues at most one query per branch (no lazy-load per material). The type-level range
- * uses the SAME loaded batch's non-null {@code retailNet}s, so the band and the per-material costs
- * are always consistent for the row.
+ * ({@code findActiveByTypes}) filtered by the row's material {@code type} — package-less per
+ * FOR-05-04 Requirement 7.2, since {@code WorkMaterialConsumption} no longer carries an
+ * {@code offerPackage} dimension — and eagerly fetching {@code producer}/{@code seller}/
+ * {@code unit}/{@code type}, so a single row's enrichment issues at most one query per branch (no
+ * lazy-load per material). The type-level range uses the SAME loaded batch's non-null
+ * {@code retailNet}s, so the band and the per-material costs are always consistent for the row.
  *
  * <p>These fields are read-time computed and NEVER persisted or audited (they are absent from the
  * {@code WorkMaterialConsumptionService.serializeEntity} snapshot). Producer/seller/unit names are
@@ -91,11 +93,10 @@ public class WorkMaterialConsumptionEnrichmentResolver {
         if (entity == null) {
             return empty();
         }
-        Long offerPackageId = entity.getOfferPackage() == null ? null : entity.getOfferPackage().getId();
         ConsumptionBranch branch = entity.getBranch();
         Long typeId = materialTypeId(entity);
         BigDecimal normQty = entity.getNormQty();
-        if (offerPackageId == null || branch == null || typeId == null) {
+        if (branch == null || typeId == null) {
             return empty();
         }
 
@@ -105,7 +106,7 @@ public class WorkMaterialConsumptionEnrichmentResolver {
 
         if (branch == ConsumptionBranch.construction) {
             for (ConstructionMaterialEntity material :
-                    constructionMaterialDao.findActiveByPackageAndTypes(offerPackageId, List.of(typeId))) {
+                    constructionMaterialDao.findActiveByTypes(List.of(typeId))) {
                 if (material == null) {
                     continue;
                 }
@@ -124,7 +125,7 @@ public class WorkMaterialConsumptionEnrichmentResolver {
             }
         } else if (branch == ConsumptionBranch.finishing) {
             for (FinishingMaterialEntity material :
-                    finishingMaterialDao.findActiveByPackageAndTypes(offerPackageId, List.of(typeId))) {
+                    finishingMaterialDao.findActiveByTypes(List.of(typeId))) {
                 if (material == null) {
                     continue;
                 }
@@ -145,7 +146,7 @@ public class WorkMaterialConsumptionEnrichmentResolver {
 
         // The band uses the SAME batch's priced retailNets, so it is consistent with the per-material
         // costs above; an empty/unpriced batch yields the explicit 0..0 (Requirement 4.2, 4.6).
-        TypeBatch batch = new TypeBatch(offerPackageId, typeId, branch, retailNets);
+        TypeBatch batch = new TypeBatch(typeId, branch, retailNets);
         MoneyRange range = MaterialRangeResolver.typeBatchRange(normQty, batch);
         return new Enrichment(new MoneyRangeDto(range.min(), range.max()), materials);
     }

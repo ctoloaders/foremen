@@ -1,24 +1,36 @@
 package com.foremen.service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.AdminDao;
+import com.foremen.dao.EstimateDao;
 import com.foremen.dao.EstimateLineRoomQtyDao;
 import com.foremen.dao.RoomDao;
+import com.foremen.dao.WorkPackageOverrideDao;
+import com.foremen.dao.WorkVolumeFormulaDao;
 import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
 import com.foremen.dao.model.EstimateLineRoomQtyEntity;
+import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.WorkPackageOverrideEntity;
+import com.foremen.dao.model.WorkVolumeFormulaEntity;
+import com.foremen.dao.model.formula.FormulaAst;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.estimate.DraftGateGuard;
 import com.foremen.service.estimate.EstimateLineRoomQtyValidator;
 import com.foremen.service.estimate.EstimateRecomputeService;
+import com.foremen.service.formula.FormulaRoomQtyDeriver;
+import com.foremen.service.formula.FormulaRoomQtyDeriver.DerivationTrace;
 import com.foremen.service.model.EstimateLineRoomQtyServiceExtendedModel;
 import com.foremen.service.model.EstimateLineRoomQtyServiceModel;
 import com.foremen.service.model.mapper.EstimateLineRoomQtyServiceMapper;
@@ -73,6 +85,9 @@ public class EstimateLineRoomQtyService
     private final EstimateLineRoomQtyValidator estimateLineRoomQtyValidator;
     private final DraftGateGuard draftGateGuard;
     private final EstimateRecomputeService estimateRecomputeService;
+    private final EstimateDao estimateDao;
+    private final WorkVolumeFormulaDao workVolumeFormulaDao;
+    private final WorkPackageOverrideDao workPackageOverrideDao;
 
     public EstimateLineRoomQtyService(EstimateLineRoomQtyDao estimateLineRoomQtyDao,
                                        EstimateLineRoomQtyServiceMapper estimateLineRoomQtyServiceMapper,
@@ -82,7 +97,10 @@ public class EstimateLineRoomQtyService
                                        RoomDao roomDao,
                                        EstimateLineRoomQtyValidator estimateLineRoomQtyValidator,
                                        DraftGateGuard draftGateGuard,
-                                       EstimateRecomputeService estimateRecomputeService) {
+                                       EstimateRecomputeService estimateRecomputeService,
+                                       EstimateDao estimateDao,
+                                       WorkVolumeFormulaDao workVolumeFormulaDao,
+                                       WorkPackageOverrideDao workPackageOverrideDao) {
         this.estimateLineRoomQtyDao = estimateLineRoomQtyDao;
         this.estimateLineRoomQtyServiceMapper = estimateLineRoomQtyServiceMapper;
         this.projectAccessCache = projectAccessCache;
@@ -92,6 +110,9 @@ public class EstimateLineRoomQtyService
         this.estimateLineRoomQtyValidator = estimateLineRoomQtyValidator;
         this.draftGateGuard = draftGateGuard;
         this.estimateRecomputeService = estimateRecomputeService;
+        this.estimateDao = estimateDao;
+        this.workVolumeFormulaDao = workVolumeFormulaDao;
+        this.workPackageOverrideDao = workPackageOverrideDao;
     }
 
     // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---
@@ -247,5 +268,143 @@ public class EstimateLineRoomQtyService
         EstimateEntity estimate = line.getEstimate();
         estimateRecomputeService.recomputeEstimate(estimate);
         entityManager.flush();
+    }
+
+    // --- Formula-driven derivation (FOR-05-04 task 20.1, R4.2, R5.2, R5.3, R5.4, R5.5) ---
+
+    /**
+     * Derives (creates/updates) {@link EstimateLineRoomQtyEntity#getQuantity()} for every
+     * estimate line in {@code room}'s owning project's estimate whose work item has an
+     * applicable formula (a package override formula for {@code activePackageId} if present,
+     * else the work's default volume formula — the §6.5 {@code applicableFormula} precedence
+     * rule, R4.2/R5.3), leaving every other line's room quantity — including any line whose work
+     * has no applicable formula — exactly as hand-entered (R5.4).
+     *
+     * <p>This is the wiring point connecting {@code EstimateLineService}'s single-price copy to
+     * {@link FormulaRoomQtyDeriver} (task 20.1): design.md §6.4/§6.5 define the pure derivation
+     * algorithm but do not specify a REST trigger for it, so this is exposed as a plain service
+     * method a caller (a future controller action, a room-save hook, or task 20.3's end-to-end
+     * test) invokes explicitly with the room and the package context to derive for — the least
+     * invasive wiring that still satisfies "connect EstimateLineService -&gt; FormulaRoomQtyDeriver"
+     * without inventing an endpoint design.md does not specify.
+     *
+     * <p>Every work present in the room (i.e. every work referenced by one of the room's
+     * project's estimate lines) that has ANY formula (default or override, whether or not it
+     * turns out to be the winning one for {@code activePackageId}) is included in the reference
+     * graph passed to {@link FormulaRoomQtyDeriver#deriveForRoom}, so a formula's cross-work
+     * {@code WorkRef} to a same-room work resolves correctly (R3.1, R3.2) even when the
+     * referenced work's own formula is not the one ultimately applied for this call (its
+     * resolved value is still in the graph the referencing formula observes).
+     *
+     * @param roomId          the room to derive room quantities for
+     * @param activePackageId the {@link OfferPackageEntity} id of the estimate's active package
+     *                        context, or {@code null} if there is none (package override formulas
+     *                        are then never applicable and only default formulas are used)
+     * @return the {@link DerivationTrace} for every work ref that was derived (empty if no line
+     *         in the room has an applicable formula)
+     */
+    @Transactional
+    public Map<String, DerivationTrace> deriveRoomQuantitiesForRoom(Long roomId, Long activePackageId) {
+        RoomEntity room = resolveRoom(roomId);
+        EstimateEntity estimate = estimateDao.findByProjectId(room.getProject().getId())
+                .orElseThrow(() -> new ForemenApiException(
+                        HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "projectId", room.getProject().getId()));
+        draftGateGuard.assertDraft(estimate);
+
+        // Every estimate line whose work item carries ANY formula (default or override) — the
+        // room-scoped reference-graph universe (R3.1, R3.2) — keyed by WorkItem.code.
+        Map<String, EstimateLineEntity> lineByWorkRef = new HashMap<>();
+        Map<String, WorkVolumeFormulaEntity> defaultFormulaByWorkRef = new HashMap<>();
+        Map<String, WorkPackageOverrideEntity> overrideByWorkRef = new HashMap<>();
+
+        for (EstimateLineEntity line : estimate.getLines()) {
+            String code = line.getWorkItem().getCode();
+            if (code == null || code.isBlank()) {
+                continue;
+            }
+            Long workItemId = line.getWorkItem().getId();
+            WorkVolumeFormulaEntity defaultFormula = workVolumeFormulaDao.findByWorkItemId(workItemId).orElse(null);
+            WorkPackageOverrideEntity override = activePackageId == null ? null
+                    : workPackageOverrideDao.findByWorkItemIdAndOfferPackageId(workItemId, activePackageId)
+                            .orElse(null);
+            if (defaultFormula == null && (override == null || override.getOverrideParsedAst() == null)) {
+                continue; // no formula at all for this work -> hand entry stays (R5.4)
+            }
+            lineByWorkRef.put(code, line);
+            if (defaultFormula != null) {
+                defaultFormulaByWorkRef.put(code, defaultFormula);
+            }
+            if (override != null) {
+                overrideByWorkRef.put(code, override);
+            }
+        }
+
+        if (lineByWorkRef.isEmpty()) {
+            return Map.of();
+        }
+
+        // §6.5 applicableFormula precedence per work ref: override wins, else default (R4.2, R5.3).
+        Map<String, FormulaAst> applicableFormulas = new HashMap<>();
+        Map<String, String> applicableFormulaSources = new HashMap<>();
+        for (Map.Entry<String, EstimateLineEntity> entry : lineByWorkRef.entrySet()) {
+            String code = entry.getKey();
+            FormulaAst applicable = FormulaRoomQtyDeriver.resolveApplicableFormula(
+                    overrideByWorkRef.get(code), defaultFormulaByWorkRef.get(code));
+            if (applicable == null) {
+                continue;
+            }
+            applicableFormulas.put(code, applicable);
+            WorkPackageOverrideEntity override = overrideByWorkRef.get(code);
+            if (override != null && override.getOverrideParsedAst() != null) {
+                applicableFormulaSources.put(code, override.getOverrideSourceText());
+            } else {
+                applicableFormulaSources.put(code, defaultFormulaByWorkRef.get(code).getSourceText());
+            }
+        }
+
+        Map<String, DerivationTrace> traces =
+                FormulaRoomQtyDeriver.deriveForRoom(room, applicableFormulas, applicableFormulaSources);
+
+        for (Map.Entry<String, DerivationTrace> entry : traces.entrySet()) {
+            EstimateLineEntity line = lineByWorkRef.get(entry.getKey());
+            upsertDerivedRoomQty(line, room, entry.getValue().resolvedValue());
+        }
+
+        if (!traces.isEmpty()) {
+            estimateRecomputeService.recomputeEstimate(estimate);
+            entityManager.flush();
+        }
+
+        return traces;
+    }
+
+    /**
+     * Creates or updates the {@code (line, room)} {@link EstimateLineRoomQtyEntity} with a
+     * formula-derived {@code quantity}. A work with no applicable formula never reaches this
+     * method (its hand-entered row, if any, is left untouched — R5.4).
+     */
+    private void upsertDerivedRoomQty(EstimateLineEntity line, RoomEntity room, BigDecimal derivedQuantity) {
+        EstimateLineRoomQtyEntity existing = null;
+        for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+            if (roomQty.getRoom() != null && roomQty.getRoom().getId().equals(room.getId())) {
+                existing = roomQty;
+                break;
+            }
+        }
+        if (existing != null) {
+            existing.setQuantity(derivedQuantity);
+            estimateLineRoomQtyDao.save(existing);
+        } else {
+            EstimateLineRoomQtyEntity created = new EstimateLineRoomQtyEntity();
+            created.setLine(line);
+            created.setRoom(room);
+            created.setQuantity(derivedQuantity);
+            estimateLineRoomQtyDao.save(created);
+            // EstimateRecomputeService.recomputeEstimate reads line.getRoomQtys() — a
+            // newly-persisted row is invisible to that already-loaded in-memory collection
+            // unless added here explicitly, so the subsequent recompute (called right after this
+            // method returns, still in the same transaction) sees the freshly derived quantity.
+            line.getRoomQtys().add(created);
+        }
     }
 }

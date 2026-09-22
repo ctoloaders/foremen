@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04 (R1.1, R1.2, R1.4, R8.1, R8.3, R8.4): retire the FOR-04-12b per-package
+        catalog price (work_package_prices, one row per (work_price, offer_package)) back
+        into a single catalog price per work item on work_prices (currency_id, net_price),
+        the FOR-04-12 shape work_prices had before 044 fanned it out into packages — but
+        WITHOUT reintroducing valid_from/valid_to (R1.2; temporal resolution stays owned by
+        ProjectServicePrice, FOR-05-14).
+
+        Archive-before-drop (R8.4): every work_package_prices row is copied into
+        work_package_prices_archive (with archived_at + the resolution_rule applied) before
+        the table is dropped, so a resolution dispute can be checked against the original
+        per-package figures.
+
+        Three ordered changesets, each idempotent via preConditions onFail="MARK_RAN":
+          082a - create work_package_prices_archive; INSERT...SELECT every
+                 work_package_prices row + archived_at + resolution_rule='MAX_NETPRICE'.
+          082b - add currency_id/net_price back onto work_prices; backfill net_price to the
+                 per-work MAX netPrice across its work_package_prices rows (R1.5, R8.3) and
+                 currency_id from that winning (MAX net_price) row's currency.
+          082c - drop work_package_prices (and its FKs/constraints), now that its data is
+                 archived and folded into work_prices.
+    -->
+
+    <!-- 082a: archive every work_package_prices row before anything is dropped. -->
+    <changeSet id="082a-create-work-package-prices-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_package_prices_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_package_prices_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_price_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="net_price" type="NUMERIC(12,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resolution_rule" type="VARCHAR(64)" defaultValue="MAX_NETPRICE">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 082a-2: populate the archive from the still-present work_package_prices table.
+         Runs only while the source table still exists; NOT EXISTS guards re-insertion so a
+         re-run (or a re-migrate before 082c has dropped the source) inserts nothing new. -->
+    <changeSet id="082a-populate-work-package-prices-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="work_package_prices"/>
+                <tableExists tableName="work_package_prices_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO work_package_prices_archive
+                (original_id, work_price_id, offer_package_id, currency_id, net_price,
+                 created_date, created_by, updated_date, updated_by, archived_at, resolution_rule)
+            SELECT wpp.id, wpp.work_price_id, wpp.offer_package_id, wpp.currency_id, wpp.net_price,
+                   wpp.created_date, wpp.created_by, wpp.updated_date, wpp.updated_by,
+                   NOW(), 'MAX_NETPRICE'
+            FROM work_package_prices wpp
+            WHERE NOT EXISTS (
+                SELECT 1 FROM work_package_prices_archive wppa
+                WHERE wppa.original_id = wpp.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 082b: add currency_id/net_price back onto work_prices (R1.1; no valid_from/valid_to,
+         R1.2), then backfill from the archived (or still-live) work_package_prices rows using
+         the MAX-netPrice resolution rule (R1.5, R8.3): net_price is the per-work MAX net_price
+         across its package prices, and currency_id comes from that winning row's currency. -->
+    <changeSet id="082b-add-work-prices-currency-and-net-price" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="work_prices" columnName="net_price"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="work_prices">
+            <column name="currency_id" type="BIGINT"/>
+            <column name="net_price" type="NUMERIC(12,2)"/>
+        </addColumn>
+
+        <addForeignKeyConstraint
+            constraintName="fk_work_prices_currency"
+            baseTableName="work_prices"
+            baseColumnNames="currency_id"
+            referencedTableName="currencies"
+            referencedColumnNames="id"/>
+
+        <!-- Backfill net_price = MAX(net_price) per work_price_id, from whichever source is
+             still present (prefer the live table if it hasn't been dropped yet; otherwise the
+             archive), so this changeset stays correct regardless of run order relative to 082c. -->
+        <sql>
+            UPDATE work_prices wp
+            SET net_price = winner.net_price,
+                currency_id = winner.currency_id
+            FROM (
+                SELECT DISTINCT ON (src.work_price_id)
+                       src.work_price_id, src.net_price, src.currency_id
+                FROM (
+                    SELECT work_price_id, net_price, currency_id FROM work_package_prices
+                    UNION ALL
+                    SELECT work_price_id, net_price, currency_id FROM work_package_prices_archive
+                ) src
+                ORDER BY src.work_price_id, src.net_price DESC
+            ) winner
+            WHERE wp.id = winner.work_price_id
+              AND wp.net_price IS NULL;
+        </sql>
+    </changeSet>
+
+    <!-- 082b-2: enforce NOT NULL on the backfilled columns once every work_prices row has a
+         value. Separate changeset so a partially-migrated database (a work with no
+         work_package_prices row at all, which should not occur but is guarded defensively)
+         does not abort the whole migration; guarded to run only when both columns are already
+         nullable and no NULLs remain. -->
+    <changeSet id="082b-notnull-work-prices-currency-and-net-price" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <columnExists tableName="work_prices" columnName="net_price"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM work_prices WHERE net_price IS NULL OR currency_id IS NULL
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            ALTER TABLE work_prices ALTER COLUMN net_price SET NOT NULL;
+            ALTER TABLE work_prices ALTER COLUMN currency_id SET NOT NULL;
+        </sql>
+    </changeSet>
+
+    <!-- 082c: drop work_package_prices (and its FKs/constraints) now that every row is
+         archived (082a) and folded into work_prices (082b). Only runs once the NOT NULL
+         backfill has succeeded, so the source data is never dropped before it has a home. -->
+    <changeSet id="082c-drop-work-package-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="work_package_prices"/>
+                <columnExists tableName="work_prices" columnName="net_price"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM work_prices WHERE net_price IS NULL OR currency_id IS NULL
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <dropTable tableName="work_package_prices" cascadeConstraints="true"/>
+    </changeSet>
+
+</databaseChangeLog>

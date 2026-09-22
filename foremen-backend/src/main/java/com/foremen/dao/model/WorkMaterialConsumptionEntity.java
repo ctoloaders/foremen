@@ -1,16 +1,23 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-
 /**
- * A single work-catalog material-consumption norm (FOR-04-19): one
- * {@code (work item, offer package, material TYPE)} row binding a {@link WorkItemEntity} to how much
- * of a material analog GROUP it consumes per one work-unit, in a given offer package.
+ * A single work-catalog material-consumption norm (FOR-04-19, collapsed by FOR-05-04 R7.2): one
+ * {@code (work item, material TYPE, branch)} row binding a {@link WorkItemEntity} to how much
+ * of a material analog GROUP it consumes per one work-unit, uniformly across all offer packages.
  *
  * <p>The row references a material TYPE (the analog group), never a concrete material — exactly one
  * of {@link #constructionMaterialType} / {@link #finishingMaterialType} is non-null, matching
@@ -28,10 +35,6 @@ public class WorkMaterialConsumptionEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "work_item_id", nullable = false)
     private WorkItemEntity workItem;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "offer_package_id", nullable = false)
-    private OfferPackageEntity offerPackage;
 
     /** The numerator unit of the norm (kg/l/m²/m³/szt), distinct from the work item's own unit. */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04 (R7.2, R7.3, R8.1, R8.3, R8.4): collapse the FOR-04-19 per-package
+        material-consumption norm (work_material_consumptions, one row per (work_item,
+        offer_package, material_type, branch)) down to a single norm row per (work_item,
+        material_type, branch), with no offer_package dimension. Unlike work_prices
+        (082), WorkMaterialConsumption's table/entity/resolvers are KEPT — only the
+        offer_package_id FK/column is dropped after the per-package rows are archived and
+        deduped (R7.1, R8.2).
+
+        Archive-before-drop (R8.4): every work_material_consumptions row (pre-collapse) is
+        copied into work_material_consumptions_pkg_archive (with archived_at +
+        resolution_rule='MAX_NORMQTY') before any row is deleted or the column dropped, so a
+        resolution dispute can be checked against the original per-package figures.
+
+        Three ordered changesets, each idempotent via preConditions onFail="MARK_RAN":
+          084a - create work_material_consumptions_pkg_archive; INSERT...SELECT every
+                 work_material_consumptions row + archived_at +
+                 resolution_rule='MAX_NORMQTY'.
+          084b - dedupe: for each (work_item_id, material_type_id, branch) group (material
+                 type being whichever of construction_material_type_id /
+                 finishing_material_type_id is non-null per the XOR+branch rule), keep
+                 exactly one row — the one with norm_qty = MAX(norm_qty) across the
+                 packages in that group — and delete the other (losing) rows. Naturally
+                 idempotent: a re-run finds each group already collapsed to one row and
+                 deletes nothing.
+          084c - drop the offer_package_id FK + column from work_material_consumptions
+                 (R7.2), now that its data is archived (084a) and deduped (084b).
+    -->
+
+    <!-- 084a: archive every work_material_consumptions row before anything is deleted. -->
+    <changeSet id="084a-create-work-material-consumptions-pkg-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_material_consumptions_pkg_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_material_consumptions_pkg_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="material_unit_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="branch" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="construction_material_type_id" type="BIGINT"/>
+            <column name="finishing_material_type_id" type="BIGINT"/>
+            <column name="norm_qty" type="NUMERIC(12,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="waste_pct" type="NUMERIC(5,2)"/>
+            <column name="justification_ru" type="TEXT"/>
+            <column name="justification_pl" type="TEXT"/>
+            <column name="source_type" type="VARCHAR(32)"/>
+            <column name="source_doc" type="VARCHAR(255)"/>
+            <column name="source_url" type="VARCHAR(1024)"/>
+            <column name="source_ref" type="VARCHAR(255)"/>
+            <column name="created_date" type="TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resolution_rule" type="VARCHAR(64)" defaultValue="MAX_NORMQTY">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 084a-2: populate the archive from the still-present work_material_consumptions
+         table. Runs only while offer_package_id (the pre-collapse column) still exists;
+         NOT EXISTS guards re-insertion so a re-run inserts nothing new. -->
+    <changeSet id="084a-populate-work-material-consumptions-pkg-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="work_material_consumptions"/>
+                <columnExists tableName="work_material_consumptions" columnName="offer_package_id"/>
+                <tableExists tableName="work_material_consumptions_pkg_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO work_material_consumptions_pkg_archive
+                (original_id, work_item_id, offer_package_id, material_unit_id, branch,
+                 construction_material_type_id, finishing_material_type_id, norm_qty,
+                 waste_pct, justification_ru, justification_pl, source_type, source_doc,
+                 source_url, source_ref, created_date, created_by, updated_date, updated_by,
+                 archived_at, resolution_rule)
+            SELECT wmc.id, wmc.work_item_id, wmc.offer_package_id, wmc.material_unit_id,
+                   wmc.branch, wmc.construction_material_type_id, wmc.finishing_material_type_id,
+                   wmc.norm_qty, wmc.waste_pct, wmc.justification_ru, wmc.justification_pl,
+                   wmc.source_type, wmc.source_doc, wmc.source_url, wmc.source_ref,
+                   wmc.created_date, wmc.created_by, wmc.updated_date, wmc.updated_by,
+                   NOW(), 'MAX_NORMQTY'
+            FROM work_material_consumptions wmc
+            WHERE NOT EXISTS (
+                SELECT 1 FROM work_material_consumptions_pkg_archive wmca
+                WHERE wmca.original_id = wmc.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 084b: dedupe to one row per (work_item_id, material_type_id, branch), keeping the
+         MAX-norm_qty row per group (R7.3, R8.3) and deleting the losing rows. The grouping
+         key folds construction_material_type_id and finishing_material_type_id into a
+         single COALESCE'd "material type" column since the XOR+branch rule guarantees
+         exactly one of the two is non-null per row. Ties on norm_qty are broken by the
+         lowest id so the kept row is deterministic. Naturally idempotent: once each group
+         has exactly one row left, the DELETE's subquery matches nothing on a re-run. -->
+    <changeSet id="084b-dedupe-work-material-consumptions-by-max-normqty" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="work_material_consumptions"/>
+                <columnExists tableName="work_material_consumptions" columnName="offer_package_id"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            DELETE FROM work_material_consumptions wmc
+            WHERE wmc.id NOT IN (
+                SELECT winner.id FROM (
+                    SELECT DISTINCT ON (
+                        w.work_item_id,
+                        COALESCE(w.construction_material_type_id, w.finishing_material_type_id),
+                        w.branch
+                    ) w.id
+                    FROM work_material_consumptions w
+                    ORDER BY
+                        w.work_item_id,
+                        COALESCE(w.construction_material_type_id, w.finishing_material_type_id),
+                        w.branch,
+                        w.norm_qty DESC,
+                        w.id ASC
+                ) winner
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 084c: drop the offer_package_id FK + column from work_material_consumptions
+         (R7.2), now that every row is archived (084a) and deduped to one row per
+         (work_item, material_type, branch) (084b). Guarded so it only runs once the
+         column still exists. -->
+    <changeSet id="084c-drop-work-material-consumptions-offer-package" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="work_material_consumptions" columnName="offer_package_id"/>
+        </preConditions>
+
+        <dropForeignKeyConstraint
+            baseTableName="work_material_consumptions"
+            constraintName="fk_wmc_offer_package"/>
+
+        <dropColumn tableName="work_material_consumptions" columnName="offer_package_id"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,28 +1,26 @@
 package com.foremen.service.model.mapper;
 
-import com.foremen.dao.model.DiscountKind;
-import com.foremen.dao.model.EstimateEntity;
-import com.foremen.dao.model.EstimateLineEntity;
-import com.foremen.dao.model.EstimateLinePackagePriceEntity;
-import com.foremen.dao.model.EstimateStatus;
-import com.foremen.service.model.EstimateLinePackagePriceServiceExtendedModel;
-import com.foremen.service.model.EstimateLineServiceExtendedModel;
-import com.foremen.service.model.EstimateServiceExtendedModel;
-import jakarta.persistence.EntityManager;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.mock;
+
+import com.foremen.dao.model.EstimateEntity;
+import com.foremen.dao.model.EstimateLineEntity;
+import com.foremen.dao.model.EstimateStatus;
+import com.foremen.service.model.EstimateLineServiceExtendedModel;
+import com.foremen.service.model.EstimateServiceExtendedModel;
+
+import jakarta.persistence.EntityManager;
 
 /**
  * Unit tests asserting that the MapStruct {@code @Mapping(target = "...", ignore = true)}
  * annotations on the FOR-05-03 estimate write mappers ({@code EstimateServiceMapper},
- * {@code EstimateLineServiceMapper}, {@code EstimateLinePackagePriceServiceMapper}) correctly drop
- * the derivation-only columns when mapping an inbound write model onto its entity.
+ * {@code EstimateLineServiceMapper}) correctly drop the derivation-only columns when mapping an
+ * inbound write model onto its entity.
  *
  * <p>Each test feeds a write model with the derived/snapshot field(s) populated with a non-null,
  * non-default sentinel value and asserts the mapped entity does not carry that value through — i.e.
@@ -97,40 +95,6 @@ class EstimateDerivedFieldsIgnoredMapperTest {
 
         assertThat(target.getQuantity()).isEqualTo(new BigDecimal("3.0000"));
         assertThat(target.getValueNet()).isEqualTo(new BigDecimal("30.00"));
-    }
-
-    @Test
-    @DisplayName("EstimateLinePackagePriceServiceMapper: inbound originalUnitPrice/unitPrice/unpriced are ignored")
-    void estimateLinePackagePriceMapper_ignoresInboundSnapshotFields() throws Exception {
-        EstimateLinePackagePriceServiceMapper mapper = new EstimateLinePackagePriceServiceMapperImpl();
-        injectEntityManager(mapper, EstimateLinePackagePriceServiceMapper.class);
-
-        EstimateLinePackagePriceServiceExtendedModel source = new EstimateLinePackagePriceServiceExtendedModel();
-        source.setDiscountKind(DiscountKind.PERCENT);
-        source.setDiscountValue(new BigDecimal("10"));
-        source.setOriginalUnitPrice(new BigDecimal("500.00"));
-        source.setUnitPrice(new BigDecimal("450.00"));
-        source.setUnpriced(true);
-
-        EstimateLinePackagePriceEntity created = mapper.toCreateDaoModel(source);
-
-        assertThat(created.getOriginalUnitPrice()).isNull();
-        assertThat(created.getUnitPrice()).isNull();
-        assertThat(created.isUnpriced()).isFalse();
-        // Client-owned discount placeholder fields map through normally.
-        assertThat(created.getDiscountKind()).isEqualTo(DiscountKind.PERCENT);
-        assertThat(created.getDiscountValue()).isEqualTo(new BigDecimal("10"));
-
-        EstimateLinePackagePriceEntity target = new EstimateLinePackagePriceEntity();
-        target.setOriginalUnitPrice(new BigDecimal("200.00"));
-        target.setUnitPrice(new BigDecimal("180.00"));
-        target.setUnpriced(false);
-
-        mapper.updateFields(source, target);
-
-        assertThat(target.getOriginalUnitPrice()).isEqualTo(new BigDecimal("200.00"));
-        assertThat(target.getUnitPrice()).isEqualTo(new BigDecimal("180.00"));
-        assertThat(target.isUnpriced()).isFalse();
     }
 
     /**

@@ -1,0 +1,7 @@
+package com.foremen.controller.model;
+
+/**
+ * Update response for a {@code WorkVolumeFormula} row: echoes the work item and its
+ * human-readable {@code sourceText}. Mapped from {@code WorkVolumeFormulaServiceExtendedModel}.
+ */
+public record WorkVolumeFormulaUpdateResponse(Long workItemId, String sourceText) {}

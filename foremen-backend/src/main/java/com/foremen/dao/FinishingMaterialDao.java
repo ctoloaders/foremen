@@ -28,12 +28,14 @@ public interface FinishingMaterialDao extends AdminDao<FinishingMaterialEntity, 
     List<FinishingMaterialEntity> findByActiveTrueAndRetailNetNotNull();
 
     /**
-     * Loads the FULL analog batch for the FOR-04-19 consumption drill-in (Requirement 5.4): every
-     * ACTIVE finishing material of one of the given types ({@code type.id IN :typeIds}) that belongs
-     * to the given offer package ({@code :offerPackageId} present in its {@code packages} set).
-     * Unlike {@link #findByActiveTrueAndRetailNetNotNull()} this does NOT filter on {@code retailNet}:
-     * an unpriced material still appears in the drill-in list (with a {@code null} cost) while being
-     * excluded from the type-level band's MIN/MAX by the range computation.
+     * Loads the FULL analog batch for the FOR-04-19 consumption drill-in (Requirement 5.4,
+     * package-less per FOR-05-04 Requirement 7.2): every ACTIVE finishing material of one of the
+     * given types ({@code type.id IN :typeIds}), regardless of which offer package(s) it belongs to
+     * — {@code WorkMaterialConsumption} no longer carries an {@code offerPackage} dimension, so the
+     * analog batch is no longer filtered by package. Unlike {@link #findByActiveTrueAndRetailNetNotNull()}
+     * this does NOT filter on {@code retailNet}: an unpriced material still appears in the drill-in
+     * list (with a {@code null} cost) while being excluded from the type-level band's MIN/MAX by the
+     * range computation.
      *
      * <p>The {@code type}, {@code material} (the display name source), {@code producer} and
      * {@code unit} associations are fetched eagerly via an {@link EntityGraph} so the enrichment
@@ -42,16 +44,13 @@ public interface FinishingMaterialDao extends AdminDao<FinishingMaterialEntity, 
      * for a deterministic drill-in list. An empty {@code typeIds} yields an empty list without a
      * query.
      *
-     * @param offerPackageId the row's offer package id
-     * @param typeIds        the analog-group finishing material type ids to load
-     * @return the active finishing materials of those types in that package, with
+     * @param typeIds the analog-group finishing material type ids to load
+     * @return the active finishing materials of those types, with
      *         {@code type}/{@code material}/{@code producer}/{@code unit} initialized
      */
     @EntityGraph(attributePaths = {"type", "material", "producer", "unit"})
-    @Query("SELECT DISTINCT m FROM FinishingMaterialEntity m JOIN m.packages p "
-            + "WHERE m.active = true AND p.id = :offerPackageId AND m.type.id IN :typeIds "
+    @Query("SELECT DISTINCT m FROM FinishingMaterialEntity m "
+            + "WHERE m.active = true AND m.type.id IN :typeIds "
             + "ORDER BY m.id")
-    List<FinishingMaterialEntity> findActiveByPackageAndTypes(
-            @Param("offerPackageId") Long offerPackageId,
-            @Param("typeIds") List<Long> typeIds);
+    List<FinishingMaterialEntity> findActiveByTypes(@Param("typeIds") List<Long> typeIds);
 }

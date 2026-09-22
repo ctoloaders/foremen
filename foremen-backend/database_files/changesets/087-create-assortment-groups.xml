@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04 (Requirement 6.1): assortment_groups — a curated grouping of finishing/
+        fixture line items (e.g. "Sanitariat/łazienka", "Podłoga", "Płytki - Gres"), mirroring
+        the `Zestawienie` workbook's group rows. Not project-scoped (global catalog); no
+        `code`/`active` columns are required by the design — just i18n name + sort order +
+        the four BaseEntity audit columns.
+
+        Idempotent via tableExists + MARK_RAN.
+    -->
+
+    <changeSet id="087-create-assortment-groups" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_groups"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_groups">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

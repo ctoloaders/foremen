@@ -18,9 +18,8 @@ import com.foremen.dao.model.EstimateLineRoomQtyEntity;
  * {@code EffectivePriceResolver}/{@code EstimateLineRoomQtyValidator} convention: it holds no
  * state and performs no I/O — it only mutates the entity graph passed to it in place. It does
  * not persist anything itself; the caller's transaction (a future {@code EstimateLineService}/
- * {@code EstimateLineRoomQtyService}/{@code EstimateLinePackagePriceService} write path, task 12)
- * is responsible for saving the mutated {@link EstimateEntity} and its {@link EstimateLineEntity}
- * rows once this method returns.
+ * {@code EstimateLineRoomQtyService} write path, task 12) is responsible for saving the mutated
+ * {@link EstimateEntity} and its {@link EstimateLineEntity} rows once this method returns.
  *
  * <p>Rule (Requirements 2.6, 2.7, 3.3, 3.4, 8.1, 8.2, 8.3, 8.5; design §6.1):
  * <ol>

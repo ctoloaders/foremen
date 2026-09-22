@@ -27,19 +27,19 @@ public interface WorkMaterialConsumptionDao extends AdminDao<WorkMaterialConsump
     /**
      * Loads ALL consumption rows for the given set of {@code workItem.id}s in ONE {@code IN} query,
      * eagerly fetching the associations the {@code WorkCatalogAggregationResolver} needs to build the
-     * per-package money range without a lazy-load per row (no N+1): the owning {@code workItem}, the
-     * {@code offerPackage} (to key the pivot by {@code offerPackage.id} and to build the analog-batch
-     * {@code BatchKey}), and BOTH nullable material-type references
-     * ({@code constructionMaterialType} / {@code finishingMaterialType}) whose non-null one supplies
-     * the batch's {@code materialTypeId}.
+     * per-package money range without a lazy-load per row (no N+1): the owning {@code workItem}, and
+     * BOTH nullable material-type references ({@code constructionMaterialType} /
+     * {@code finishingMaterialType}) whose non-null one supplies the batch's {@code materialTypeId}.
+     * The {@code offerPackage} FK was dropped from the entity (FOR-05-04 R7.2) — a consumption row now
+     * applies uniformly across every offer package.
      *
      * <p>An empty {@code workItemIds} yields an empty list without issuing a query.
      *
      * @param workItemIds the work-item ids of the page being aggregated
      * @return every consumption row whose {@code workItem.id} is in {@code workItemIds}, with
-     *         {@code workItem}, {@code offerPackage} and the two type references initialized
+     *         {@code workItem} and the two type references initialized
      */
-    @EntityGraph(attributePaths = {"workItem", "offerPackage", "constructionMaterialType", "finishingMaterialType"})
+    @EntityGraph(attributePaths = {"workItem", "constructionMaterialType", "finishingMaterialType"})
     @Query("SELECT c FROM WorkMaterialConsumptionEntity c WHERE c.workItem.id IN :workItemIds")
     List<WorkMaterialConsumptionEntity> findByWorkItemIdIn(@Param("workItemIds") Collection<Long> workItemIds);
 }

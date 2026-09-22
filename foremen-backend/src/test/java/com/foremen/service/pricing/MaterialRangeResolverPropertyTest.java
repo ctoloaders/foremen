@@ -49,8 +49,7 @@ import net.jqwik.api.Tag;
 class MaterialRangeResolverPropertyTest {
 
     // A bounded universe so type ids collide frequently within a branch (exercising distinct-type
-    // batching) and packages repeat across rows.
-    private static final long OFFER_PACKAGE_ID = 100L;
+    // batching).
     private static final long[] TYPE_IDS = {1L, 2L, 3L};
 
     // ---------------------------------------------------------------------------------------------
@@ -65,7 +64,7 @@ class MaterialRangeResolverPropertyTest {
         BatchProvider provider = scenario.provider();
         List<ConsumptionRowInput> rows = scenario.rows();
 
-        BranchRanges ranges = MaterialRangeResolver.compute(OFFER_PACKAGE_ID, rows, provider);
+        BranchRanges ranges = MaterialRangeResolver.compute(rows, provider);
 
         // ---- Oracle: recompute each branch range independently from the generated inputs. ----
         MoneyRange expectedConstruction = oracleBranchRange(scenario, ConsumptionBranch.construction);
@@ -104,8 +103,7 @@ class MaterialRangeResolverPropertyTest {
     void typeBatchRangeExcludesNullsAndCollapsesSingleton(
             @ForAll("normQty") BigDecimal normQty,
             @ForAll("retailNetsWithNulls") List<BigDecimal> retailNets) {
-        TypeBatch batch = new TypeBatch(
-                OFFER_PACKAGE_ID, TYPE_IDS[0], ConsumptionBranch.construction, retailNets);
+        TypeBatch batch = new TypeBatch(TYPE_IDS[0], ConsumptionBranch.construction, retailNets);
 
         MoneyRange range = MaterialRangeResolver.typeBatchRange(normQty, batch);
 
@@ -139,8 +137,8 @@ class MaterialRangeResolverPropertyTest {
         BatchProvider provider = scenario.provider();
         List<ConsumptionRowInput> rows = scenario.rows();
 
-        BranchRanges first = MaterialRangeResolver.compute(OFFER_PACKAGE_ID, rows, provider);
-        BranchRanges second = MaterialRangeResolver.compute(OFFER_PACKAGE_ID, rows, provider);
+        BranchRanges first = MaterialRangeResolver.compute(rows, provider);
+        BranchRanges second = MaterialRangeResolver.compute(rows, provider);
 
         assertMoneyRangeEquals(second.construction(), first.construction());
         assertMoneyRangeEquals(second.finishing(), first.finishing());
@@ -203,16 +201,13 @@ class MaterialRangeResolverPropertyTest {
                     Map<TypeBranchKey, List<BigDecimal>> batchesByTypeBranch) {
 
         BatchProvider provider() {
-            return (offerPackageId, materialTypeId, branch) -> {
-                if (!OFFER_PACKAGE_ID_EQUALS(offerPackageId)) {
-                    return null;
-                }
+            return (materialTypeId, branch) -> {
                 List<BigDecimal> retailNets =
                         batchesByTypeBranch.get(new TypeBranchKey(materialTypeId, branch));
                 if (retailNets == null) {
                     return null; // no batch loaded -> resolver treats as empty (0..0)
                 }
-                return new TypeBatch(offerPackageId, materialTypeId, branch, retailNets);
+                return new TypeBatch(materialTypeId, branch, retailNets);
             };
         }
 
@@ -223,10 +218,6 @@ class MaterialRangeResolverPropertyTest {
                 return List.of();
             }
             return retailNets.stream().filter(v -> v != null).toList();
-        }
-
-        private static boolean OFFER_PACKAGE_ID_EQUALS(Long id) {
-            return id != null && id == OFFER_PACKAGE_ID;
         }
     }
 

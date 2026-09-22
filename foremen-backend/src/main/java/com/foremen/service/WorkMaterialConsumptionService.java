@@ -1,5 +1,12 @@
 package com.foremen.service;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.foremen.dao.ConstructionMaterialTypeDao;
 import com.foremen.dao.MaterialTypeDao;
@@ -20,13 +27,8 @@ import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.WorkMaterialConsumptionServiceExtendedModel;
 import com.foremen.service.model.WorkMaterialConsumptionServiceModel;
 import com.foremen.service.model.mapper.WorkMaterialConsumptionServiceMapper;
-import jakarta.persistence.EntityManager;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import jakarta.persistence.EntityManager;
 
 /**
  * CRUD service for {@link WorkMaterialConsumptionEntity} (FOR-04-19, task 3.2).
@@ -322,7 +324,6 @@ public class WorkMaterialConsumptionService
         snap.put("justificationPL", entity.getJustificationPL());
 
         snap.put("workItem", workItemName(entity.getWorkItem()));
-        snap.put("offerPackage", offerPackageName(entity.getOfferPackage()));
         snap.put("materialUnit", unitName(entity.getMaterialUnit()));
         snap.put("materialType", materialTypeName(entity));
         return snap;

@@ -1,0 +1,1131 @@
+{
+  "pbtResults": {
+    "9.4 Write property test for package zł/m² computation": {
+      "status": "passed",
+      "lastRunTimestamp": 1790062356964
+    },
+    "9.2 Write property test for MAX-collapse correctness": {
+      "status": "passed",
+      "lastRunTimestamp": 1790062027008
+    },
+    "8.6 Write property test for cycle rejection at save": {
+      "status": "passed",
+      "lastRunTimestamp": 1790062983398
+    },
+    "8.3 Write property test for formula parse/validate round-trip": {
+      "status": "passed",
+      "lastRunTimestamp": 1790063017059
+    },
+    "14.3 Write property test for three-part work cost with no fabricated fallback": {
+      "status": "passed",
+      "lastRunTimestamp": 1790065081967
+    }
+  },
+  "executionHistory": {
+    "1.1 Author `082-archive-and-collapse-work-prices.xml`, registered in changelog": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853176
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060868555
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061019522
+      }
+    ],
+    "1.2 Write Testcontainers migration test for the work-price collapse": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853256
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061028389
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061281917
+      }
+    ],
+    "2.1 Author `083-archive-and-drop-estimate-line-package-prices.xml`, registered in changelog": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853361
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061029417
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061281051
+      }
+    ],
+    "2.2 Write Testcontainers migration test for the ELPP retirement": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853402
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061567223
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061852499
+      }
+    ],
+    "3.1 Author `084-collapse-work-material-consumptions-package.xml`, registered in changelog": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853437
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061030502
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061279954
+      }
+    ],
+    "3.2 Write Testcontainers migration test for the consumption collapse": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853471
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061568281
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061851385
+      }
+    ],
+    "4.1 Author `085-create-work-volume-formulas.xml` and `086-create-work-package-overrides.xml`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853505
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060869345
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061020603
+      }
+    ],
+    "4.2 Author `087-create-assortment-groups.xml` and `088-create-assortment-line-items.xml`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853537
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060869639
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061021719
+      }
+    ],
+    "4.3 Write Testcontainers migration test for the four new tables": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853573
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061031685
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061278504
+      }
+    ],
+    "5.1 Author idempotent `089-seed-package-assortment-resource.xml`, registered LAST in changelog": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853617
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061569724
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061848237
+      }
+    ],
+    "5.2 Write Testcontainers idempotent-seed test": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853654
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062763677
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063136061
+      }
+    ],
+    "6. Checkpoint — all migrations apply idempotently": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853700
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790068201115
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790071677356
+      }
+    ],
+    "7.1 Implement the `FormulaAst` node model (jsonb-serializable)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853737
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060870069
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061018049
+      }
+    ],
+    "7.2 Write unit test for AST JSON round-trip": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853782
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061032718
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061277451
+      }
+    ],
+    "8.1 Implement `FormulaParser.parse(source)`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853808
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061299686
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061562289
+      }
+    ],
+    "8.2 Implement `FormulaValidator.validate(ast, knownWorkRefs)`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853850
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061571234
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061849198
+      }
+    ],
+    "8.3 Write property test for formula parse/validate round-trip": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853884
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062764819
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063132061
+      }
+    ],
+    "8.4 Implement `FormulaEvaluationPlanner.planOrder(roomFormulas)`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853918
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061857815
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062385585
+      }
+    ],
+    "8.5 Write property test for deterministic order respecting references": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853954
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062765856
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063133378
+      }
+    ],
+    "8.6 Write property test for cycle rejection at save": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060853987
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062767023
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063134157
+      }
+    ],
+    "8.7 Implement `FormulaEvaluator.evaluate(ast, vars, resolvedVolumeOf)`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854020
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061858915
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062386528
+      }
+    ],
+    "8.8 Write property test for absent reference resolving to zero": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854054
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062767736
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063135165
+      }
+    ],
+    "9.1 Implement the `collapseToSingle` MAX rule as a pure helper": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854088
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061300650
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061560482
+      }
+    ],
+    "9.2 Write property test for MAX-collapse correctness": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854156
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061860064
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062384570
+      }
+    ],
+    "9.3 Implement `PackageZlM2Resolver` (pure)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854201
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061301800
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061561456
+      }
+    ],
+    "9.4 Write property test for package zł/m² computation": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854257
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061861116
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062388570
+      }
+    ],
+    "9.5 Write property test for typical product never driving the value": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854327
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061862150
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062387615
+      }
+    ],
+    "10. Checkpoint — formula engine and pure resolvers pass": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854377
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790071692083
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790071816297
+      }
+    ],
+    "11.1 Collapse `WorkPriceEntity` to the single-price shape": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854410
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062403743
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062758444
+      }
+    ],
+    "11.2 Remove `WorkPackagePriceEntity` and drop `EffectivePriceResolver` from the read path": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854456
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063149073
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063793359
+      }
+    ],
+    "11.3 Remove the `EstimateLinePackagePrice*` code vertical": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854506
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063150167
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063792313
+      }
+    ],
+    "11.4 Write property test for single price read with no fallback": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854594
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063821602
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064391410
+      }
+    ],
+    "12.1 Implement `WorkVolumeFormulaEntity`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854635
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063151929
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063789209
+      }
+    ],
+    "12.2 Implement `WorkPackageOverrideEntity`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854674
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063152344
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063790192
+      }
+    ],
+    "12.3 Write unit test for override carrying no price": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854708
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063820535
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064394683
+      }
+    ],
+    "13.1 Implement `AssortmentGroupEntity`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854755
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061302737
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061559119
+      }
+    ],
+    "13.2 Implement `AssortmentLineItemEntity`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854787
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061572122
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061850280
+      }
+    ],
+    "14.1 Remove `offerPackage` from `WorkMaterialConsumptionEntity`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854819
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063153247
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063791226
+      }
+    ],
+    "14.2 Adjust `MaterialRangeResolver` / `WorkCatalogAggregationResolver` to the package-less shape": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854854
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063817947
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064390425
+      }
+    ],
+    "14.3 Write property test for three-part work cost with no fabricated fallback": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854900
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064858266
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065179170
+      }
+    ],
+    "15.1 Create service models + DAO/service DTOs for the new/changed entities": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854959
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063822588
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064393742
+      }
+    ],
+    "15.2 Implement MapStruct mappers with derived/assistive fields handled correctly": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060854992
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064859251
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065180578
+      }
+    ],
+    "15.3 Write unit test asserting parsed-AST and typical-product are handled per contract": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855038
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065394114
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065654641
+      }
+    ],
+    "16. Checkpoint — entities, mappers, resolvers compile": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855076
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790071820867
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790071908578
+      }
+    ],
+    "17.1 Copy the single work price into `EstimateLine.unitPrice` on create": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855110
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064860685
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065175884
+      }
+    ],
+    "17.2 Implement `FormulaRoomQtyDeriver.deriveForRoom(room, applicableFormulas)`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855159
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065190246
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065388421
+      }
+    ],
+    "17.3 Write property test for package override precedence": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855224
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065395208
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065655753
+      }
+    ],
+    "17.4 Write unit test for formula-vs-hand-entry fallback and derivation trace": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855289
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065396310
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065656796
+      }
+    ],
+    "18.1 Implement `AssortmentGroupService` and `AssortmentLineItemService`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855327
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064861730
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065178334
+      }
+    ],
+    "18.2 Implement `AssortmentGroupController` and `AssortmentLineItemController`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855366
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065397363
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065653547
+      }
+    ],
+    "18.3 Annotate the formula/override controllers under `WORK_ITEMS`": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855418
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064400693
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064851145
+      }
+    ],
+    "19.1 Add formula + assortment error/label keys to the i18n bundles": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855484
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063819518
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064392627
+      }
+    ],
+    "19.2 Write unit test asserting message-bundle PL/RU parity": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855518
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064862667
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065176956
+      }
+    ],
+    "20.1 Wire the formula engine, single-price copy, deriver, and assortment end-to-end": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855554
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065398570
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790066085074
+      }
+    ],
+    "20.2 Write Testcontainers startup test with retired + new controllers": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855603
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790066091841
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790066237059
+      }
+    ],
+    "20.3 Write Testcontainers end-to-end integration test": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855648
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790066092541
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790067862920
+      }
+    ],
+    "21. Author test-cases.md": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855687
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790067870029
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790068176005
+      }
+    ],
+    "22. Final checkpoint — affected tests pass": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790060855755
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790071912969
+      },
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790072685276
+      }
+    ],
+    "7. Formula AST model and JSON persistence": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061277542
+      }
+    ],
+    "4. Migration — new tables for formula engine, overrides, and assortment (Liquibase)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061278564
+      }
+    ],
+    "1. Migration — archive + collapse work prices to a single price (Liquibase)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061281956
+      }
+    ],
+    "13. New assortment entities — group and line item": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061850319
+      }
+    ],
+    "3. Migration — collapse the material-consumption package dimension (Liquibase)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061851430
+      }
+    ],
+    "2. Migration — retire the estimate-line per-package price vertical (Liquibase)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790061852540
+      }
+    ],
+    "9. Pure MAX-collapse and package zł/m² resolver": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790062388625
+      }
+    ],
+    "8. Pure formula engine — parser, validator, planner, evaluator": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063135220
+      }
+    ],
+    "5. `PACKAGE_ASSORTMENT` ABAC resource seed (entity-creation checklist)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790063136109
+      }
+    ],
+    "11. Collapse `WorkPriceEntity` and remove the retired price entities": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064391456
+      }
+    ],
+    "12. New catalog entities — volume formula and package override": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790064394737
+      }
+    ],
+    "19. i18n message keys (PL/RU parity)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065177003
+      }
+    ],
+    "14. Collapse `WorkMaterialConsumptionEntity` and adjust resolvers (kept)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065179208
+      }
+    ],
+    "18. Assortment services and controllers (ABAC `PACKAGE_ASSORTMENT`)": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065653620
+      }
+    ],
+    "15. DTOs, service models, and MapStruct mappers": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065654695
+      }
+    ],
+    "17. Estimate line integration — single-price copy and formula-derived quantity": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790065656834
+      }
+    ],
+    "20. Integration and wiring": [
+      {
+        "executionId": "f45a67a2-dd79-487d-9736-80c242765d42",
+        "chatSessionId": "sess_a2fbeb11-cafc-402d-80ec-78244b20a65a",
+        "timestamp": 1790067863040
+      }
+    ]
+  }
+}

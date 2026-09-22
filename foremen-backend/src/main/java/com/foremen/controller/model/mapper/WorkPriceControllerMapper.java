@@ -1,21 +1,26 @@
 package com.foremen.controller.model.mapper;
 
+import org.mapstruct.Mapper;
+
 import com.foremen.config.mapper.ForemenMapperConfig;
-import com.foremen.controller.model.*;
+import com.foremen.controller.model.WorkPriceCreateRequest;
+import com.foremen.controller.model.WorkPriceCreateResponse;
+import com.foremen.controller.model.WorkPriceDtoExtendedModel;
+import com.foremen.controller.model.WorkPriceDtoModel;
+import com.foremen.controller.model.WorkPriceUpdateRequest;
+import com.foremen.controller.model.WorkPriceUpdateResponse;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.model.WorkPriceServiceExtendedModel;
 import com.foremen.service.model.WorkPriceServiceModel;
-import org.mapstruct.Mapper;
 
 /**
- * Controller mapper for the package-based {@code WorkPrice} aggregator.
+ * Controller mapper for the single-price {@code WorkPrice} row (FOR-05-04, Requirement 1).
  *
- * <p>Request/response shapes carry the {@code packagePrices} upsert list, and the list DTO carries the
- * {@code prices} map. All fields line up by name between the controller DTOs and the service models
- * ({@code WorkPriceServiceExtendedModel} = {@code (workItemId, packagePrices)}), so MapStruct maps them
- * automatically. The base interface's {@code toServiceExtendedModel} carries an {@code id}-ignore
- * mapping that no longer applies (the extended service model has no {@code id}), so both write
- * conversions are overridden here without it.
+ * <p>Request/response shapes carry {@code workItemId}/{@code currencyId}/{@code netPrice} directly,
+ * lining up by name with {@code WorkPriceServiceExtendedModel} (= {@code (workItemId, currencyId,
+ * netPrice)}), so MapStruct maps them automatically. The base interface's {@code toServiceExtendedModel}
+ * carries an {@code id}-ignore mapping that no longer applies (the extended service model has no
+ * {@code id}), so both write conversions are overridden here without it.
  */
 @Mapper(config = ForemenMapperConfig.class)
 public interface WorkPriceControllerMapper extends ControllerToServiceMapper<

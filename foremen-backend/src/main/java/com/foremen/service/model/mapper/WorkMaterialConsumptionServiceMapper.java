@@ -96,7 +96,6 @@ public abstract class WorkMaterialConsumptionServiceMapper
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "workItem", expression = "java(workItemRef(source.getWorkItemId()))")
-    @Mapping(target = "offerPackage", expression = "java(offerPackageRef(source.getOfferPackageId()))")
     @Mapping(target = "materialUnit", expression = "java(materialUnitRef(source.getMaterialUnitId()))")
     @Mapping(target = "constructionMaterialType",
             expression = "java(constructionMaterialTypeRef(source.getConstructionMaterialTypeId()))")
@@ -107,7 +106,6 @@ public abstract class WorkMaterialConsumptionServiceMapper
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "workItem", expression = "java(workItemRef(source.getWorkItemId()))")
-    @Mapping(target = "offerPackage", expression = "java(offerPackageRef(source.getOfferPackageId()))")
     @Mapping(target = "materialUnit", expression = "java(materialUnitRef(source.getMaterialUnitId()))")
     @Mapping(target = "constructionMaterialType",
             expression = "java(constructionMaterialTypeRef(source.getConstructionMaterialTypeId()))")
@@ -139,7 +137,7 @@ public abstract class WorkMaterialConsumptionServiceMapper
     @Mapping(target = "materials", ignore = true)
     @Mapping(target = "justification", ignore = true)
     @Mapping(target = "workItemId", source = "workItem.id")
-    @Mapping(target = "offerPackageId", source = "offerPackage.id")
+    @Mapping(target = "offerPackageId", ignore = true)
     @Mapping(target = "materialUnitId", source = "materialUnit.id")
     @Mapping(target = "constructionMaterialTypeId", source = "constructionMaterialType.id")
     @Mapping(target = "finishingMaterialTypeId", source = "finishingMaterialType.id")
@@ -160,7 +158,6 @@ public abstract class WorkMaterialConsumptionServiceMapper
                                     WorkMaterialConsumptionEntity source) {
         boolean ru = isRussianLocale();
         target.setWorkItem(workItemRef(source.getWorkItem(), ru));
-        target.setOfferPackage(ref(source.getOfferPackage(), ru));
         target.setMaterialUnit(ref(source.getMaterialUnit(), ru));
         target.setConstructionMaterialType(ref(source.getConstructionMaterialType(), ru));
         target.setFinishingMaterialType(ref(source.getFinishingMaterialType(), ru));
@@ -181,7 +178,6 @@ public abstract class WorkMaterialConsumptionServiceMapper
                                             WorkMaterialConsumptionEntity source) {
         boolean ru = isRussianLocale();
         target.setWorkItem(workItemRef(source.getWorkItem(), ru));
-        target.setOfferPackage(ref(source.getOfferPackage(), ru));
         target.setMaterialUnit(ref(source.getMaterialUnit(), ru));
         target.setConstructionMaterialType(ref(source.getConstructionMaterialType(), ru));
         target.setFinishingMaterialType(ref(source.getFinishingMaterialType(), ru));

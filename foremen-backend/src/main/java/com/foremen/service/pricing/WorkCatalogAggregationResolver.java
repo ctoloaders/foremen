@@ -1,110 +1,100 @@
 package com.foremen.service.pricing;
 
-import com.foremen.dao.WorkMaterialConsumptionDao;
-import com.foremen.dao.WorkPriceDao;
-import com.foremen.dao.model.ConsumptionBranch;
-import com.foremen.dao.model.WorkMaterialConsumptionEntity;
-import com.foremen.dao.model.WorkPackagePriceEntity;
-import com.foremen.dao.model.WorkPriceEntity;
-import com.foremen.service.pricing.MaterialBatchLookup.BatchKey;
-import com.foremen.service.pricing.MaterialRangeResolver.BatchProvider;
-import com.foremen.service.pricing.MaterialRangeResolver.BranchRanges;
-import com.foremen.service.pricing.MaterialRangeResolver.ConsumptionRowInput;
-import com.foremen.service.pricing.MaterialRangeResolver.MoneyRange;
-import com.foremen.service.pricing.SeededOfferPackages.OfferPackageInfo;
-import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.foremen.dao.WorkMaterialConsumptionDao;
+import com.foremen.dao.WorkPriceDao;
+import com.foremen.dao.model.ConsumptionBranch;
+import com.foremen.dao.model.WorkMaterialConsumptionEntity;
+import com.foremen.dao.model.WorkPriceEntity;
+import com.foremen.service.pricing.MaterialBatchLookup.BatchKey;
+import com.foremen.service.pricing.MaterialRangeResolver.BatchProvider;
+import com.foremen.service.pricing.MaterialRangeResolver.BranchRanges;
+import com.foremen.service.pricing.MaterialRangeResolver.ConsumptionRowInput;
+import com.foremen.service.pricing.MaterialRangeResolver.MoneyRange;
+
 /**
- * Assembles the FOR-04-19 work-catalog pivot: per {@link com.foremen.dao.model.WorkItemEntity} a
- * {@code Map<Long /*offerPackageId*&#47;, PackageCell>} carrying, for every seeded offer package, the
- * THREE prices for that {@code (work, package)} (Requirement 5.1):
+ * Assembles the FOR-04-19 work-catalog aggregation, collapsed to a package-less shape by FOR-05-04
+ * (Requirement 7.1): per {@link com.foremen.dao.model.WorkItemEntity} a single {@link WorkCostCell}
+ * carrying the THREE parts of a work item's total estimate cost (Requirement 7.4):
  * <ol>
- *   <li><b>(a) labour price</b> — the existing FOR-04-12b {@code WorkPackagePrice} net price for
- *       that work + package, resolved (not recomputed) via {@link EffectivePriceResolver} over the
- *       work item's {@code WorkPrice.packagePrices};</li>
+ *   <li><b>(a) labour price</b> — the work item's single {@code WorkPrice.netPrice} (FOR-05-04,
+ *       Requirement 1), read directly with no per-package resolution;</li>
  *   <li><b>(b) construction range</b> and <b>(c) finishing range</b> — the branch money ranges from
  *       {@link MaterialRangeResolver#compute}, each an explicit {@link MoneyRange#ZERO} when its
- *       branch has no consumption for the {@code (work, package)} (Requirement 5.1, 5.2).</li>
+ *       branch has no consumption for the work item (Requirement 7.5 — no fabricated fallback; a
+ *       branch is either norm-covered or explicitly unpriced).</li>
  * </ol>
+ *
+ * <p>Neither {@code WorkMaterialConsumption} nor {@code WorkPrice} carry an offer-package dimension
+ * any more (FOR-05-04 Requirements 1.1, 7.2), so there is exactly ONE labour price and ONE pair of
+ * branch ranges per work item — the former per-seeded-package pivot is gone.
  *
  * <p>The aggregation is built for a WHOLE page of work items at once so it never triggers an N+1
  * (Requirement 5.3 keeps the list paginated over distinct work items — nothing here splits a row):
  * <ul>
  *   <li>the page's consumption rows load in ONE {@code IN} query
  *       ({@link WorkMaterialConsumptionDao#findByWorkItemIdIn});</li>
- *   <li>the page's work-price aggregators load in ONE {@code IN} query
+ *   <li>the page's work-price rows load in ONE {@code IN} query
  *       ({@link WorkPriceDao#findByWorkItemIdIn});</li>
  *   <li>the analog batches load via {@link MaterialBatchLookup#load} (one query per branch).</li>
  * </ul>
  *
- * <p>The result contains one {@link PackageCell} per (work item × seeded package) even when the work
- * item has neither a price nor any consumption for a package: the labour price is then {@code null}
- * (unpriced) and both ranges are the explicit {@code 0..0} the frontend renders as {@code 0}.
+ * <p>The result contains one {@link WorkCostCell} per work item even when the work item has neither
+ * a price nor any consumption: the labour price is then {@code null} (unpriced) and both ranges are
+ * the explicit {@code 0..0} the frontend renders as {@code 0}.
  */
 @Component
 public class WorkCatalogAggregationResolver {
 
     /**
-     * The three prices surfaced for one {@code (work item, offer package)} on the work-catalog pivot.
+     * The three cost parts surfaced for one work item on the work-catalog view (Requirement 7.4).
      *
-     * @param offerPackageId the seeded offer package this cell is for (the pivot key)
-     * @param labourPrice    the FOR-04-12b effective labour net price, or {@code null} when the work
-     *                       item is unpriced
-     * @param construction   the construction-branch material money range (never {@code null};
-     *                       {@code 0..0} when the branch has no consumption)
-     * @param finishing      the finishing-branch material money range (never {@code null};
-     *                       {@code 0..0} when the branch has no consumption)
+     * @param labourPrice  the work item's single net price, or {@code null} when the work item is
+     *                     unpriced
+     * @param construction the construction-branch material money range (never {@code null};
+     *                     {@code 0..0} when the branch has no consumption)
+     * @param finishing    the finishing-branch material money range (never {@code null};
+     *                     {@code 0..0} when the branch has no consumption)
      */
-    public record PackageCell(Long offerPackageId,
-                              BigDecimal labourPrice,
-                              MoneyRange construction,
-                              MoneyRange finishing) {
+    public record WorkCostCell(BigDecimal labourPrice, MoneyRange construction, MoneyRange finishing) {
     }
 
     private final WorkMaterialConsumptionDao consumptionDao;
     private final WorkPriceDao workPriceDao;
     private final MaterialBatchLookup materialBatchLookup;
-    private final EffectivePriceResolver effectivePriceResolver;
-    private final SeededOfferPackages seededOfferPackages;
 
     public WorkCatalogAggregationResolver(WorkMaterialConsumptionDao consumptionDao,
                                           WorkPriceDao workPriceDao,
-                                          MaterialBatchLookup materialBatchLookup,
-                                          EffectivePriceResolver effectivePriceResolver,
-                                          SeededOfferPackages seededOfferPackages) {
+                                          MaterialBatchLookup materialBatchLookup) {
         this.consumptionDao = consumptionDao;
         this.workPriceDao = workPriceDao;
         this.materialBatchLookup = materialBatchLookup;
-        this.effectivePriceResolver = effectivePriceResolver;
-        this.seededOfferPackages = seededOfferPackages;
     }
 
     /**
-     * Builds the pivot for a page of work items: {@code workItemId -> (offerPackageId -> PackageCell)}.
+     * Builds the per-work-item cost cell for a page of work items: {@code workItemId -> WorkCostCell}.
      *
-     * <p>For each work item and each seeded offer package the returned inner map holds a
-     * {@link PackageCell} carrying the labour price (or {@code null} when unpriced) and both branch
-     * ranges (each {@code 0..0} when the branch has no consumption). Every work item in
-     * {@code workItemIds} is present in the outer map (with an entry per seeded package), so the
-     * frontend can render every pivot cell.
+     * <p>Every work item in {@code workItemIds} is present in the returned map (labour price
+     * {@code null} and both ranges {@code 0..0} when the work item has neither a price nor any
+     * consumption), so the frontend can render every row.
      *
      * @param workItemIds the ids of the work items on the current page (may be {@code null}/empty)
-     * @return the pivot map, keyed by work-item id then offer-package id
+     * @return the map, keyed by work-item id
      */
     @Transactional(readOnly = true)
-    public Map<Long, Map<Long, PackageCell>> resolve(Collection<Long> workItemIds) {
-        Map<Long, Map<Long, PackageCell>> result = new LinkedHashMap<>();
+    public Map<Long, WorkCostCell> resolve(Collection<Long> workItemIds) {
+        Map<Long, WorkCostCell> result = new LinkedHashMap<>();
         if (workItemIds == null || workItemIds.isEmpty()) {
             return result;
         }
@@ -120,68 +110,56 @@ public class WorkCatalogAggregationResolver {
             return result;
         }
 
-        List<OfferPackageInfo> packages = seededOfferPackages.all();
-
-        // ---- ONE IN query: consumption rows for the whole page, grouped (workItemId, offerPackageId).
+        // ---- ONE IN query: consumption rows for the whole page, grouped by workItemId (no
+        // offerPackage dimension left on the entity, R7.2).
         List<WorkMaterialConsumptionEntity> rows = consumptionDao.findByWorkItemIdIn(ids);
-        Map<Long, Map<Long, List<ConsumptionRowInput>>> consumptionByWorkAndPackage = new LinkedHashMap<>();
-        Set<BatchKey> batchKeys = new LinkedHashSet<>();
+        Map<Long, List<ConsumptionRowInput>> consumptionByWork = new LinkedHashMap<>();
         for (WorkMaterialConsumptionEntity row : rows) {
             if (row == null || row.getWorkItem() == null || row.getWorkItem().getId() == null
-                    || row.getOfferPackage() == null || row.getOfferPackage().getId() == null
                     || row.getBranch() == null) {
                 continue;
             }
             Long workItemId = row.getWorkItem().getId();
-            Long offerPackageId = row.getOfferPackage().getId();
             Long typeId = materialTypeId(row);
             if (typeId == null) {
                 continue; // XOR guaranteed at the write path; skip a malformed row defensively
             }
-            consumptionByWorkAndPackage
-                    .computeIfAbsent(workItemId, k -> new LinkedHashMap<>())
-                    .computeIfAbsent(offerPackageId, k -> new ArrayList<>())
+            consumptionByWork
+                    .computeIfAbsent(workItemId, k -> new ArrayList<>())
                     .add(new ConsumptionRowInput(row.getBranch(), typeId, row.getNormQty()));
-            batchKeys.add(new BatchKey(offerPackageId, typeId, row.getBranch()));
+        }
+
+        // The analog-batch keys are built across every (type, branch) pair seen in the page's
+        // consumption rows — no package axis (R7.2).
+        Set<BatchKey> batchKeys = new LinkedHashSet<>();
+        for (List<ConsumptionRowInput> workRows : consumptionByWork.values()) {
+            for (ConsumptionRowInput rowInput : workRows) {
+                batchKeys.add(new BatchKey(rowInput.materialTypeId(), rowInput.branch()));
+            }
         }
 
         // ---- Analog batches (one query per branch present) → a pure BatchProvider for the resolver.
         BatchProvider batchProvider =
                 MaterialRangeResolver.providerOf(materialBatchLookup.load(batchKeys));
 
-        // ---- ONE IN query: work-price aggregators for the whole page, indexed by workItemId.
-        Map<Long, List<WorkPackagePriceEntity>> pricesByWorkItem = new LinkedHashMap<>();
+        // ---- ONE IN query: single work-price rows for the whole page, indexed by workItemId.
+        Map<Long, BigDecimal> labourPriceByWorkItem = new LinkedHashMap<>();
         for (WorkPriceEntity workPrice : workPriceDao.findByWorkItemIdIn(ids)) {
             if (workPrice == null || workPrice.getWorkItem() == null
                     || workPrice.getWorkItem().getId() == null) {
                 continue;
             }
-            pricesByWorkItem.put(workPrice.getWorkItem().getId(), workPrice.getPackagePrices());
+            labourPriceByWorkItem.put(workPrice.getWorkItem().getId(), workPrice.getNetPrice());
         }
 
-        // ---- Build one PackageCell per (work item × seeded package).
+        // ---- Build one WorkCostCell per work item.
         for (Long workItemId : ids) {
-            Map<Long, List<ConsumptionRowInput>> byPackage =
-                    consumptionByWorkAndPackage.getOrDefault(workItemId, Map.of());
-            List<WorkPackagePriceEntity> packagePrices = pricesByWorkItem.get(workItemId);
+            List<ConsumptionRowInput> rowsForWork = consumptionByWork.getOrDefault(workItemId, List.of());
+            BigDecimal labourPrice = labourPriceByWorkItem.get(workItemId);
 
-            Map<Long, PackageCell> cells = new LinkedHashMap<>();
-            for (OfferPackageInfo pkg : packages) {
-                Long offerPackageId = pkg.id();
+            BranchRanges ranges = MaterialRangeResolver.compute(rowsForWork, batchProvider);
 
-                BigDecimal labourPrice = effectivePriceResolver
-                        .resolve(packagePrices, pkg.code())
-                        .orElse(null);
-
-                List<ConsumptionRowInput> rowsForPackage =
-                        byPackage.getOrDefault(offerPackageId, List.of());
-                BranchRanges ranges =
-                        MaterialRangeResolver.compute(offerPackageId, rowsForPackage, batchProvider);
-
-                cells.put(offerPackageId, new PackageCell(
-                        offerPackageId, labourPrice, ranges.construction(), ranges.finishing()));
-            }
-            result.put(workItemId, Collections.unmodifiableMap(cells));
+            result.put(workItemId, new WorkCostCell(labourPrice, ranges.construction(), ranges.finishing()));
         }
 
         return result;

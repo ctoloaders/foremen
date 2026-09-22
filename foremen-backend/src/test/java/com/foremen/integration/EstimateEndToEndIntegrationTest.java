@@ -46,7 +46,6 @@ import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
-import com.foremen.dao.model.WorkPackagePriceEntity;
 import com.foremen.dao.model.WorkPriceEntity;
 
 import jakarta.persistence.EntityManager;
@@ -54,9 +53,13 @@ import jakarta.persistence.PersistenceContext;
 
 /**
  * End-to-end integration test for FOR-05-03 (task 15.3): create project → get-or-create estimate →
- * add line (snapshot copies package prices) → add room qty (totals recompute) → catalog price edit
- * does NOT move the snapshot → advance status past DRAFT → free edit blocked with
+ * add line → add room qty (totals recompute) → advance status past DRAFT → free edit blocked with
  * {@code error.estimate.locked}.
+ *
+ * <p>The FOR-05-03 per-package price snapshot vertical ({@code EstimateLinePackagePrice*}) that
+ * this test used to exercise between line-add and room-qty-add has been retired (FOR-05-04,
+ * Requirements 8.2, 8.6); the snapshot-copy and catalog-price-does-not-move-the-snapshot
+ * assertions have been removed accordingly.
  *
  * <p>Mirrors the repo's established {@code @SpringBootTest(MOCK)} + {@code @AutoConfigureMockMvc} +
  * {@code @Testcontainers} + {@code @ActiveProfiles("integration-test")} harness (see
@@ -75,7 +78,7 @@ import jakarta.persistence.PersistenceContext;
  * row this test created (in FK order) after each test, so the suite re-runs without manual DB
  * cleanup.
  *
- * <p>Validates: Requirements 1.5, 4.1, 4.5, 8.1, 8.2, 7.2
+ * <p>Validates: Requirements 1.5, 8.1, 8.2, 7.2
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
@@ -86,7 +89,6 @@ class EstimateEndToEndIntegrationTest {
     private static final String ESTIMATES_PATH = "/api/estimates";
     private static final String ESTIMATE_LINES_PATH = "/api/estimate-lines";
     private static final String ESTIMATE_LINE_ROOM_QTY_PATH = "/api/estimate-line-room-qty";
-    private static final String ESTIMATE_LINE_PACKAGE_PRICES_PATH = "/api/estimate-line-package-prices";
 
     private static final AtomicLong COUNTER = new AtomicLong();
 
@@ -158,20 +160,10 @@ class EstimateEndToEndIntegrationTest {
 
     @AfterEach
     void cleanUp() {
-        // FK order: estimate_line_package_prices/estimate_line_room_qty/estimate_lines/estimates are
-        // removed transitively by the project delete cascade paths not being relied upon here — this
-        // test deletes explicitly, deepest-first, then the catalog fixtures, then the room/project.
+        // FK order: estimate_line_room_qty/estimate_lines/estimates are removed transitively by the
+        // project delete cascade paths not being relied upon here — this test deletes explicitly,
+        // deepest-first, then the catalog fixtures, then the room/project.
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            entityManager.createQuery(
-                            "delete from EstimateLinePackagePriceHistoryEntity h where h.packagePrice.line.estimate"
-                                    + ".project.id in (select pr.id from ProjectEntity pr where pr.name like :p)")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
-            entityManager.createQuery(
-                            "delete from EstimateLinePackagePriceEntity p where p.line.estimate.project.id in "
-                                    + "(select pr.id from ProjectEntity pr where pr.name like :p)")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
             entityManager.createQuery(
                             "delete from EstimateLineRoomQtyEntity rq where rq.line.estimate.project.id in "
                                     + "(select pr.id from ProjectEntity pr where pr.name like :p)")
@@ -193,10 +185,6 @@ class EstimateEndToEndIntegrationTest {
                     .setParameter("p", "%" + runId + "%")
                     .executeUpdate();
             entityManager.createQuery("delete from ProjectEntity pr where pr.name like :p")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
-            entityManager.createQuery(
-                            "delete from WorkPackagePriceEntity wpp where wpp.workPrice.workItem.code like :p")
                     .setParameter("p", "%" + runId + "%")
                     .executeUpdate();
             entityManager.createQuery("delete from WorkPriceEntity wp where wp.workItem.code like :p")
@@ -225,9 +213,8 @@ class EstimateEndToEndIntegrationTest {
 
     @Test
     @DisplayName("Full estimate lifecycle: create project -> get-or-create estimate -> add line "
-            + "(snapshot copies package price) -> add room qty (totals recompute) -> catalog price "
-            + "edit does not move the snapshot -> DRAFT gate blocks further free edits")
-    void estimateLifecycle_createLineRoomQtySnapshotAndDraftGate() throws Exception {
+            + "-> add room qty (totals recompute) -> DRAFT gate blocks further free edits")
+    void estimateLifecycle_createLineRoomQtyAndDraftGate() throws Exception {
         String token = adminAccessToken();
 
         // --- Fixtures: currency, unit, offer package, work category/item/price, project, room ---
@@ -237,9 +224,7 @@ class EstimateEndToEndIntegrationTest {
         WorkCategoryEntity workCategory = persistWorkCategory();
         WorkItemEntity workItem = persistWorkItem(workCategory, unit);
         BigDecimal catalogPrice = new BigDecimal("150.00");
-        WorkPriceEntity workPrice = persistWorkPrice(workItem);
-        WorkPackagePriceEntity workPackagePrice =
-                persistWorkPackagePrice(workPrice, offerPackage, currency, catalogPrice);
+        WorkPriceEntity workPrice = persistWorkPrice(workItem, offerPackage, currency, catalogPrice);
 
         ProjectEntity project = persistProject();
         RoomTypeEntity roomType = persistRoomType();
@@ -270,7 +255,7 @@ class EstimateEndToEndIntegrationTest {
                 .as("a repeated get-or-create call must resolve to the same estimate id")
                 .isEqualTo(estimateId);
 
-        // --- 2) Add a line referencing the priced work item -> snapshot copies the package price ---
+        // --- 2) Add a line referencing the priced work item ---
         BigDecimal lineUnitPrice = new BigDecimal("150.00");
         EstimateLineCreateBody lineBody = new EstimateLineCreateBody(
                 estimateId, workItem.getId(), workPrice.getId(), unit.getId(), 1, "e2e line", lineUnitPrice);
@@ -284,38 +269,6 @@ class EstimateEndToEndIntegrationTest {
                 .isEqualTo(200);
         JsonNode lineJson = objectMapper.readTree(createLineResult.getResponse().getContentAsString());
         long lineId = lineJson.path("id").asLong();
-
-        // A per-package price snapshot row exists for the line's package, copied from the catalog.
-        // Reads through the /extended list endpoint (EstimateLinePackagePriceServiceExtendedModel),
-        // deliberately avoiding the plain /find (EstimateLinePackagePriceServiceModel) endpoint,
-        // whose offerPackageName @AfterMapping touches a lazy OfferPackageEntity association outside
-        // any open session/transaction under this profile's open-in-view=false — a pre-existing gap
-        // in that unrelated mapper, out of scope for this end-to-end test.
-        MvcResult packagePricesResult = mockMvc.perform(get(ESTIMATE_LINE_PACKAGE_PRICES_PATH + "/extended")
-                        .header("Authorization", "Bearer " + token)
-                        .param("query", "line.id==" + lineId)
-                        .param("page", "0")
-                        .param("size", "50"))
-                .andReturn();
-        assertThat(packagePricesResult.getResponse().getStatus())
-                .as("GET /api/estimate-line-package-prices/extended filtered by line must succeed (200)")
-                .isEqualTo(200);
-        JsonNode packagePricesPage = objectMapper.readTree(packagePricesResult.getResponse().getContentAsString());
-        JsonNode packagePriceRows = packagePricesPage.path("content");
-        assertThat(packagePriceRows.size())
-                .as("exactly one per-package price row must exist for the line's single offer package")
-                .isEqualTo(1);
-        JsonNode packagePriceRow = packagePriceRows.get(0);
-        long packagePriceId = packagePriceRow.path("id").asLong();
-        assertThat(packagePriceRow.path("originalUnitPrice").decimalValue())
-                .as("the snapshot's originalUnitPrice must equal the catalog price copied at add-time")
-                .isEqualByComparingTo(catalogPrice);
-        assertThat(packagePriceRow.path("unitPrice").decimalValue())
-                .as("with no discount, the effective unitPrice must equal originalUnitPrice")
-                .isEqualByComparingTo(catalogPrice);
-        assertThat(packagePriceRow.path("unpriced").asBoolean())
-                .as("the snapshot must be priced (resolver found the catalog price)")
-                .isFalse();
 
         // --- 3) Add a room quantity for the line -> line.quantity/valueNet + estimate totals recompute ---
         BigDecimal roomQty = new BigDecimal("4.50");
@@ -351,25 +304,7 @@ class EstimateEndToEndIntegrationTest {
                 .as("estimate.totalNet must equal the sum of line valueNet after the room-qty add (R8.2)")
                 .isEqualByComparingTo(expectedValueNet);
 
-        // --- 4) Catalog price edit does NOT move the already-created snapshot (R4.5) ---
-        mutateCatalogPrice(workPackagePrice.getId(), new BigDecimal("999.00"));
-
-        MvcResult packagePriceAfterCatalogEditResult = mockMvc.perform(
-                        get(ESTIMATE_LINE_PACKAGE_PRICES_PATH + "/" + packagePriceId)
-                                .header("Authorization", "Bearer " + token))
-                .andReturn();
-        JsonNode packagePriceAfterCatalogEditJson =
-                objectMapper.readTree(packagePriceAfterCatalogEditResult.getResponse().getContentAsString());
-        assertThat(packagePriceAfterCatalogEditJson.path("originalUnitPrice").decimalValue())
-                .as("a later catalog price edit must NOT move the already-created snapshot's "
-                        + "originalUnitPrice (R4.5)")
-                .isEqualByComparingTo(catalogPrice);
-        assertThat(packagePriceAfterCatalogEditJson.path("unitPrice").decimalValue())
-                .as("a later catalog price edit must NOT move the already-created snapshot's "
-                        + "effective unitPrice (R4.5)")
-                .isEqualByComparingTo(catalogPrice);
-
-        // --- 5) Advance the estimate's status past DRAFT ---
+        // --- 4) Advance the estimate's status past DRAFT ---
         EstimateUpdateBody advanceStatusBody = new EstimateUpdateBody(currency.getId(), null, "PRICED");
         MvcResult advanceStatusResult = mockMvc.perform(
                         org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -386,7 +321,7 @@ class EstimateEndToEndIntegrationTest {
                 .as("the estimate's status must now be PRICED (past DRAFT)")
                 .isEqualTo("PRICED");
 
-        // --- 6) A further free edit is now blocked with 409 error.estimate.locked (R7.2) ---
+        // --- 5) A further free edit is now blocked with 409 error.estimate.locked (R7.2) ---
         EstimateLineRoomQtyCreateBody blockedRoomQtyBody =
                 new EstimateLineRoomQtyCreateBody(lineId, room.getId(), new BigDecimal("1.00"));
         MvcResult blockedResult = mockMvc.perform(post(ESTIMATE_LINE_ROOM_QTY_PATH)
@@ -469,24 +404,13 @@ class EstimateEndToEndIntegrationTest {
         return workItemDao.save(item);
     }
 
-    private WorkPriceEntity persistWorkPrice(WorkItemEntity workItem) {
+    private WorkPriceEntity persistWorkPrice(WorkItemEntity workItem, OfferPackageEntity offerPackage,
+                                             CurrencyEntity currency, BigDecimal netPrice) {
         WorkPriceEntity workPrice = new WorkPriceEntity();
         workPrice.setWorkItem(workItem);
+        workPrice.setCurrency(currency);
+        workPrice.setNetPrice(netPrice);
         return workPriceDao.save(workPrice);
-    }
-
-    private WorkPackagePriceEntity persistWorkPackagePrice(WorkPriceEntity workPrice, OfferPackageEntity offerPackage,
-                                                            CurrencyEntity currency, BigDecimal netPrice) {
-        return new TransactionTemplate(transactionManager).execute(status -> {
-            WorkPackagePriceEntity price = new WorkPackagePriceEntity();
-            price.setWorkPrice(workPrice);
-            price.setOfferPackage(offerPackage);
-            price.setCurrency(currency);
-            price.setNetPrice(netPrice);
-            entityManager.persist(price);
-            entityManager.flush();
-            return price;
-        });
     }
 
     private ProjectEntity persistProject() {
@@ -511,15 +435,6 @@ class EstimateEndToEndIntegrationTest {
         room.setRoomType(roomType);
         room.setLabel("E2E Room " + runId);
         return roomDao.save(room);
-    }
-
-    /** Mutates the catalog's per-package price directly (simulating a later catalog edit, R4.5). */
-    private void mutateCatalogPrice(Long workPackagePriceId, BigDecimal newNetPrice) {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            WorkPackagePriceEntity price = entityManager.find(WorkPackagePriceEntity.class, workPackagePriceId);
-            price.setNetPrice(newNetPrice);
-            entityManager.merge(price);
-        });
     }
 
     // ------------------------------------------------------------------

@@ -1,13 +1,10 @@
 package com.foremen.controller.model;
 
-import java.util.Map;
+import java.math.BigDecimal;
 
 /**
- * Row DTO for the work-prices catalog. The row unit is a {@code WorkPrice} (work item aggregator).
- *
- * <p>The per-package effective prices are flattened into {@code prices}, a map keyed by offer package
- * {@code code} (e.g. {@code budget}/START, {@code norm}/COMFORT, {@code lux}/PRESTIGE). The frontend
- * renders one pivot column per seeded package from this map. Unpriced packages omit their key.
+ * Row DTO for the work-prices catalog. The row unit is a {@code WorkPrice}: a work item's single
+ * catalog price (FOR-05-04, Requirement 1) — no per-package pivot.
  */
 public record WorkPriceDtoModel(Long id, Long workItemId, String workItemName,
-                                Map<String, PackagePriceDto> prices) {}
+                                Long currencyId, String currencyCode, BigDecimal netPrice) {}

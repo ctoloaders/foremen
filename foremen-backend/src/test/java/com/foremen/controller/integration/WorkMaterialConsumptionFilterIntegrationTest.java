@@ -1,5 +1,27 @@
 package com.foremen.controller.integration;
 
+import java.math.BigDecimal;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
 import com.foremen.dao.ConstructionMaterialTypeDao;
 import com.foremen.dao.MaterialTypeDao;
 import com.foremen.dao.MeasurementUnitDao;
@@ -16,30 +38,9 @@ import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.dao.model.WorkMaterialConsumptionEntity;
 import com.foremen.testsupport.MockMvcSecurityConfig;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Import;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-
-import java.math.BigDecimal;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Integration test for the FOR-04-19 work-catalog material-consumption <b>reference filters</b>
@@ -201,7 +202,6 @@ class WorkMaterialConsumptionFilterIntegrationTest {
             ConstructionMaterialTypeEntity type, BigDecimal normQty) {
         WorkMaterialConsumptionEntity row = new WorkMaterialConsumptionEntity();
         row.setWorkItem(workItem);
-        row.setOfferPackage(offerPackage);
         row.setMaterialUnit(materialUnit);
         row.setBranch(ConsumptionBranch.construction);
         row.setConstructionMaterialType(type);
@@ -218,7 +218,6 @@ class WorkMaterialConsumptionFilterIntegrationTest {
             MaterialTypeEntity type, BigDecimal normQty) {
         WorkMaterialConsumptionEntity row = new WorkMaterialConsumptionEntity();
         row.setWorkItem(workItem);
-        row.setOfferPackage(offerPackage);
         row.setMaterialUnit(materialUnit);
         row.setBranch(ConsumptionBranch.finishing);
         row.setFinishingMaterialType(type);

@@ -1,0 +1,54 @@
+kind,norm_code,catalog_code,unified_code,status,norm_rows,catalog_materials,name_pl,name_ru
+CAT_ORPHAN,,akcesoria,akcesoria,unused-by-norms,0,1,Akcesoria,Аксессуары
+CAT_ORPHAN,,bateria_umywalkowa,bateria_umywalkowa,unused-by-norms,0,32,Bateria umywalkowa,Смеситель для умывальника
+CAT_ORPHAN,,bateria_wannowo_prysznicowa_z_kompletem,bateria_wannowo_prysznicowa_z_kompletem,unused-by-norms,0,18,Bateria wannowo-prysznicowa z kompletem natryskowym,Смеситель ванна-душ с душевым комплектом
+CAT_ORPHAN,,baterie_prysznicowe_wannowe,baterie_prysznicowe_wannowe,unused-by-norms,0,2,Baterie prysznicowe / wannowe,Смесители душевые/ванновые
+CAT_ORPHAN,,bezprzylgowe,bezprzylgowe,unused-by-norms,0,33,Bezprzylgowe,Дверь скрытого притвора
+CAT_ORPHAN,,brodzik_kabina,brodzik_kabina,unused-by-norms,0,3,Brodzik + kabina,Поддон + кабина
+CAT_ORPHAN,,brodzik_prysznicowy,brodzik_prysznicowy,unused-by-norms,0,4,Brodzik prysznicowy,Душевой поддон
+CAT_ORPHAN,,deska_jodelka,deska_jodelka,unused-by-norms,0,8,Deska jódełka,Доска ёлочка
+CAT_ORPHAN,,deska_prosta,deska_prosta,unused-by-norms,0,4,Deska prosta,Доска прямая
+CAT_ORPHAN,,klamki_drzwi,klamki_drzwi,unused-by-norms,0,30,Klamki drzwi,Дверные ручки
+CAT_ORPHAN,,laminat,laminat,unused-by-norms,0,8,Laminat,Ламинат
+CAT_ORPHAN,,miska_wc,miska_wc,unused-by-norms,0,29,Miska WC,Унитаз (чаша)
+CAT_ORPHAN,,odplyw_liniowy,odplyw_liniowy,unused-by-norms,0,3,Odpływ liniowy,Линейный трап
+CAT_ORPHAN,,oscieznica,oscieznica,unused-by-norms,0,21,Ośczieżnica,Дверная коробка
+CAT_ORPHAN,,parawan_nawannowy,parawan_nawannowy,unused-by-norms,0,4,Parawan nawannowy,Шторка на ванну
+CAT_ORPHAN,,plytka_podlogowa,plytka_podlogowa,unused-by-norms,0,37,płytka podłogowa,Плитка напольная
+CAT_ORPHAN,,plytka_scienna,plytka_scienna,unused-by-norms,0,69,płytka ścienna,Плитка настенная
+CAT_ORPHAN,,plytka_scienno_podlogowa,plytka_scienno_podlogowa,unused-by-norms,0,53,płytka ścienno - podłogowa,Плитка настенно-напольная
+CAT_ORPHAN,,podklad_klej_grunt,podklad_klej_grunt,unused-by-norms,0,2,"Podkład (klej, grunt)","Подложка (клей, грунт)"
+CAT_ORPHAN,,przycisk,przycisk,unused-by-norms,0,17,Przycisk,Кнопка смыва
+CAT_ORPHAN,,przylgowe,przylgowe,unused-by-norms,0,4,Przylgowe,Дверь притворная
+CAT_ORPHAN,,rozety_drzwi,rozety_drzwi,unused-by-norms,0,10,Rozety drzwi,Дверные розетки
+CAT_ORPHAN,,sciana_kabina_prysznicowa,sciana_kabina_prysznicowa,unused-by-norms,0,7,Ściana / kabina prysznicowa,Стенка / душевая кабина
+CAT_ORPHAN,,stelaz_podtynkowy,stelaz_podtynkowy,unused-by-norms,0,6,Stelaż podtynkowy,Инсталляция скрытого монтажа
+CAT_ORPHAN,,styrodur,styrodur,unused-by-norms,0,8,Styrodur,Стиродур (плинтус)
+CAT_ORPHAN,,syfon_od_wanny,syfon_od_wanny,unused-by-norms,0,2,Syfon od wanny,Сифон для ванны
+CAT_ORPHAN,,ukryte,ukryte,unused-by-norms,0,5,Ukryte,Скрытая (дверь)
+CAT_ORPHAN,,umywalka_nablatowa,umywalka_nablatowa,unused-by-norms,0,25,Umywalka nablatowa,Умывальник накладной
+CAT_ORPHAN,,umywalka_podblatowa,umywalka_podblatowa,unused-by-norms,0,10,Umywalka podblatowa,Умывальник подстольный
+CAT_ORPHAN,,umywalka_scienna,umywalka_scienna,unused-by-norms,0,1,Umywalka ścienna,Умывальник настенный
+CAT_ORPHAN,,umywalka_scienna_nablatowa,umywalka_scienna_nablatowa,unused-by-norms,0,1,Umywalka ścienna-nablatowa,Умывальник настенный-накладной
+CAT_ORPHAN,,umywalka_wpuszczana,umywalka_wpuszczana,unused-by-norms,0,18,Umywalka wpuszczana,Умывальник врезной
+CAT_ORPHAN,,wanna,wanna,unused-by-norms,0,16,Wanna,Ванна
+CAT_ORPHAN,,winyl,winyl,unused-by-norms,0,8,Winyl,Винил
+CAT_ORPHAN,,winyl_jodelka,winyl_jodelka,unused-by-norms,0,8,Winyl jódełka,Винил ёлочка
+CAT_ORPHAN,,winyl_prosty,winyl_prosty,unused-by-norms,0,4,Winyl prosty,Винил прямой
+CAT_ORPHAN,,zestaw_prysznicowy,zestaw_prysznicowy,unused-by-norms,0,14,Zestaw prysznicowy,Душевой набор
+NORM_ORPHAN,FARBA,,FARBA,no-catalog-material,3,0,Farba,Краска
+NORM_ORPHAN,FARBA_DEKORACYJNA,,FARBA_DEKORACYJNA,no-catalog-material,22,0,Farba dekoracyjna,Декоративная краска
+NORM_ORPHAN,FARBA_DEKORACYJNA_KOLOR,,FARBA_DEKORACYJNA_KOLOR,no-catalog-material,8,0,Farba dekoracyjna kolorowa,Декоративная краска (колерованная)
+NORM_ORPHAN,FILC_SCIENNY,,FILC_SCIENNY,no-catalog-material,3,0,Filc ścienny,Стеновой войлок
+NORM_ORPHAN,FUGA_CEMENTOWA,,FUGA_CEMENTOWA,no-catalog-material,6,0,Fuga cementowa,Цементная затирка
+NORM_ORPHAN,FUGA_EPOKSYDOWA,,FUGA_EPOKSYDOWA,no-catalog-material,9,0,Fuga epoksydowa,Эпоксидная затирка
+NORM_ORPHAN,KLEJ_DO_PLYTEK,,KLEJ_DO_PLYTEK,no-catalog-material,39,0,Klej do płytek,Клей для плитки
+NORM_ORPHAN,LAMELE_SCIENNE,,LAMELE_SCIENNE,no-catalog-material,6,0,Lamele ścienne,Стеновые ламели (панели)
+NORM_ORPHAN,SILIKON,,SILIKON,no-catalog-material,3,0,Silikon,Силикон (санитарный)
+NORM_ORPHAN,SZTUKATERIA,,SZTUKATERIA,no-catalog-material,6,0,Sztukateria,Лепнина (декоративные молдинги)
+NORM_ORPHAN,TAPETA_FLIZELINOWA,,TAPETA_FLIZELINOWA,no-catalog-material,3,0,Tapeta flizelinowa,Флизелиновые обои
+NORM_ORPHAN,TAPETA_WINYLOWA,,TAPETA_WINYLOWA,no-catalog-material,3,0,Tapeta winylowa,Виниловые обои
+NORM_ORPHAN,TASMA_MALARSKA,,TASMA_MALARSKA,no-catalog-material,2,0,Taśma malarska,Малярная лента
+NORM_ORPHAN,TYNK_DEKORACYJNY,,TYNK_DEKORACYJNY,no-catalog-material,3,0,Tynk dekoracyjny,Декоративная штукатурка
+PAIR,LISTWA_PRZYPODLOGOWA,styrodur,(disputed-not-merged),semantic-disputed,6,8,Listwa przypodłogowa,Напольный плинтус
+PAIR,PODKLAD,podklad,podklad,exact,2,3,Podkład,Грунт-подложка (акриловая)
