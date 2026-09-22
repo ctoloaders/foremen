@@ -2,7 +2,6 @@ package com.foremen.controller.model;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Response returned after updating a construction material. Mirrors
@@ -18,13 +17,11 @@ public record ConstructionMaterialUpdateResponse(
         RefDto type,
         RefDto producer,
         RefDto seller,
-        List<RefDto> packages,
         RefDto unit,
         RefDto currency,
         Long typeId,
         Long producerId,
         Long sellerId,
-        Set<Long> offerPackageIds,
         Long unitId,
         Long currencyId,
         BigDecimal purchasePrice,

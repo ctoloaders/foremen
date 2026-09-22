@@ -1,9 +1,9 @@
 package com.foremen.controller.model;
 
-import com.foremen.dao.model.ConsumptionBranch;
-
 import java.math.BigDecimal;
 import java.util.List;
+
+import com.foremen.dao.model.ConsumptionBranch;
 
 /**
  * Extended DTO for a {@code WorkMaterialConsumption} norm (drives the edit form; also the single-read
@@ -26,7 +26,6 @@ public record WorkMaterialConsumptionDtoExtendedModel(
         String branchLabel,
         RefDto materialType,
         Long workItemId,
-        Long offerPackageId,
         Long materialUnitId,
         Long constructionMaterialTypeId,
         Long finishingMaterialTypeId,

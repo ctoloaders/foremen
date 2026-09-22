@@ -3,7 +3,6 @@ package com.foremen.controller.integration;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -270,7 +269,9 @@ class WorkMaterialConsumptionDrillInIntegrationTest {
         material.setCurrency(currency);
         material.setRetailNet(retailNet);
         material.setActive(true);
-        material.setPackages(Set.of(packages));
+        // FOR-05-04-UI (task 2.1): the construction_material_packages M:N was collapsed, so
+        // ConstructionMaterialEntity no longer carries a package binding. The varargs are retained
+        // for call-site compatibility but are no longer assigned to the material.
         return constructionMaterialDao.save(material);
     }
 

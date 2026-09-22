@@ -1,0 +1,595 @@
+{
+  "pbtResults": {
+    "2.2 Write property test for the re-keyed resolver (jqwik, ≥100 iterations)": {
+      "status": "passed",
+      "lastRunTimestamp": 1790094971336
+    }
+  },
+  "executionHistory": {
+    "1.1 Author the Liquibase changeset and register it last in the changelog": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570095
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089583176
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089974368
+      }
+    ],
+    "1.2 Write Liquibase migration integration test": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570152
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790092764949
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093046411
+      }
+    ],
+    "2.1 Re-key `PriceRangeResolver` and `PriceRangeEntry` to type only": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570187
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089587456
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089975620
+      }
+    ],
+    "2.2 Write property test for the re-keyed resolver (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570218
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790092766322
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093046266
+      }
+    ],
+    "2.3 Write example unit tests for the resolver": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570293
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790092767684
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093047886
+      }
+    ],
+    "3.1 Remove the M:N and clean the DTOs/requests/mappers": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570320
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090457044
+      }
+    ],
+    "3.2 Write DTO/mapper unit tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570350
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093414547
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093651011
+      }
+    ],
+    "4.1 Drop the dead `@NotNull offerPackageId` and its resolution": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570383
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090458263
+      }
+    ],
+    "4.2 Write consumption write-path unit tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570412
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093415977
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093652469
+      }
+    ],
+    "5. Checkpoint — backend collapse compiles and its tests pass": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570434
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094305258
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094483036
+      }
+    ],
+    "6.1 Re-type the work-item row and render three cost columns": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570461
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089591963
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089977126
+      }
+    ],
+    "6.2 Write work-catalog list component tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570533
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790092769101
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093048950
+      }
+    ],
+    "7.1 Seed `selectedLabel` from the list row": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570553
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089593212
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089978495
+      }
+    ],
+    "7.2 Write work-item edit select tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570585
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790092770141
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093043614
+      }
+    ],
+    "8.1 Re-type and render three columns": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570611
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089594294
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089979514
+      }
+    ],
+    "8.2 Write prices list component test": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570636
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093055689
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093404132
+      }
+    ],
+    "9.1 Re-type the contract and rebuild the form": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570666
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089985920
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090444631
+      }
+    ],
+    "9.2 Write prices form component tests (incl. the hang regression)": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570698
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093057092
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093405501
+      }
+    ],
+    "10.1 Remove packages column/multi-select; render one type-keyed range per row": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570726
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089987298
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090447879
+      }
+    ],
+    "10.2 Write construction-materials component tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570750
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093058033
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093406958
+      }
+    ],
+    "11. Checkpoint — re-aligned frontend screens compile and their tests pass": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570784
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094306324
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094484229
+      }
+    ],
+    "12.1 Scaffold the assortment feature and mirror the backend DTO types": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570814
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089988845
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090448935
+      }
+    ],
+    "12.2 Implement group + line-item CRUD, grouped rendering, and provenance-only typical product": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570861
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090459894
+      }
+    ],
+    "12.3 Implement the zł/m² readout with recompute-on-change semantics": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570893
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093417398
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093653559
+      }
+    ],
+    "12.4 Write assortment component tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570915
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093662158
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094017663
+      }
+    ],
+    "13.1 Mirror the formula DTO types and add the editors to the work-item edit flow": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570946
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089990054
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090446629
+      }
+    ],
+    "13.2 Enforce present-override-implies-member and translate the five error keys": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089570983
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090461302
+      }
+    ],
+    "13.3 Write formula UI component tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089571018
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093663553
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094018934
+      }
+    ],
+    "14.1 Gate the assortment route and wire entry points": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089571086
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093059398
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093407967
+      }
+    ],
+    "14.2 Add all new/changed locale keys to both `pl.json` and `ru.json`": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089571131
+      },
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790090462546
+      }
+    ],
+    "14.3 Write route-gating and locale-parity tests": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089571162
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093664533
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094020091
+      }
+    ],
+    "15. Author test-cases.md": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089571197
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094025454
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094280518
+      }
+    ],
+    "16. Final checkpoint — full verification and per-repo commits": [
+      {
+        "executionId": "54e1c2e5-159b-423b-8499-dbf1c00a51ac",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790089571234
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790094492283
+      },
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790095443218
+      }
+    ],
+    "7. Frontend: work-item edit selects show names, not ids (R2)": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093043683
+      }
+    ],
+    "1. Backend: construction-material collapse migration (archive-before-drop, idempotent)": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093046457
+      }
+    ],
+    "2. Backend: re-key the price-range resolver and DTO by construction-material type": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093047937
+      }
+    ],
+    "6. Frontend: works catalog list shows the single cost cell (R1)": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093048984
+      }
+    ],
+    "8. Frontend: prices list flat row (R3)": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093404197
+      }
+    ],
+    "9. Frontend: prices form single-price, loads without hanging (R4)": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093405544
+      }
+    ],
+    "10. Frontend: construction materials drop the package dimension (R5, frontend half)": [
+      {
+        "executionId": "88bfa914-9339-4e05-97e1-e3fd300831a8",
+        "chatSessionId": "sess_682f239e-fad7-4cfb-b729-f50d32dc6d99",
+        "timestamp": 1790093406985
+      }
+    ]
+  }
+}

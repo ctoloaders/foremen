@@ -1,9 +1,9 @@
 package com.foremen.controller.model;
 
-import com.foremen.dao.model.ConsumptionBranch;
-
 import java.math.BigDecimal;
 import java.util.List;
+
+import com.foremen.dao.model.ConsumptionBranch;
 
 /**
  * Response returned after creating a {@code WorkMaterialConsumption} norm. Mirrors
@@ -21,7 +21,6 @@ public record WorkMaterialConsumptionCreateResponse(
         String branchLabel,
         RefDto materialType,
         Long workItemId,
-        Long offerPackageId,
         Long materialUnitId,
         Long constructionMaterialTypeId,
         Long finishingMaterialTypeId,

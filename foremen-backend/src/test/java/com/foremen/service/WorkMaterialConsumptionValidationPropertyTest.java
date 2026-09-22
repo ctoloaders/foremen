@@ -1,21 +1,29 @@
 package com.foremen.service;
 
+import java.math.BigDecimal;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.mockito.Mockito;
+import org.springframework.http.HttpStatus;
+
 import com.foremen.dao.ConstructionMaterialTypeDao;
 import com.foremen.dao.MaterialTypeDao;
 import com.foremen.dao.MeasurementUnitDao;
-import com.foremen.dao.OfferPackageDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkMaterialConsumptionDao;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
 import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.MaterialTypeEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
-import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.WorkMaterialConsumptionServiceExtendedModel;
 import com.foremen.service.model.mapper.WorkMaterialConsumptionServiceMapper;
+
 import jakarta.persistence.EntityManager;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
@@ -24,15 +32,6 @@ import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import net.jqwik.api.Tag;
-import org.mockito.Mockito;
-import org.springframework.http.HttpStatus;
-
-import java.math.BigDecimal;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Property-based test for {@link WorkMaterialConsumptionService} write-path validation
@@ -41,7 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  *
  * <p>The write path is {@link WorkMaterialConsumptionService#validateCreate}/{@code validateUpdate},
  * both delegating to the private {@code normalize(...)} step. Normalization (a) requires
- * {@code workItemId}/{@code offerPackageId}/{@code branch}/{@code materialUnitId}/{@code normQty}
+ * {@code workItemId}/{@code branch}/{@code materialUnitId}/{@code normQty}
  * and EXACTLY ONE material-type id matching {@code branch}, (b) real-loads each supplied reference,
  * (c) range-checks {@code normQty} within {@code [0, 99999999.9999]}, and (d) enforces the XOR +
  * branch-match rule — throwing a {@link ForemenApiException} (naming the offending field) BEFORE
@@ -67,7 +66,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
 
     /** The single set of reference ids the mocked DAOs treat as existing rows. */
     private static final long VALID_WORK_ITEM_ID = 1L;
-    private static final long VALID_OFFER_PACKAGE_ID = 2L;
     private static final long VALID_MATERIAL_UNIT_ID = 3L;
     private static final long VALID_CONSTRUCTION_TYPE_ID = 4L;
     private static final long VALID_FINISHING_TYPE_ID = 5L;
@@ -122,7 +120,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
     @Provide
     Arbitrary<Candidate> candidates() {
         Arbitrary<Presence> workItem = referencePresence();
-        Arbitrary<Presence> offerPackage = referencePresence();
         Arbitrary<Presence> materialUnit = referencePresence();
         Arbitrary<Boolean> branchPresent = Arbitraries.of(true, false);
         Arbitrary<ConsumptionBranch> branch = Arbitraries.of(ConsumptionBranch.construction, ConsumptionBranch.finishing);
@@ -132,10 +129,10 @@ class WorkMaterialConsumptionValidationPropertyTest {
         Arbitrary<TypeValidity> typeValidity = Arbitraries.of(TypeValidity.values());
         Arbitrary<NormQty> normQty = normQtyArbitrary();
 
-        return Combinators.combine(workItem, offerPackage, materialUnit, branchPresent, branch,
+        return Combinators.combine(workItem, materialUnit, branchPresent, branch,
                         typeCombo, typeValidity, normQty)
-                .as((wi, op, mu, bp, br, tc, tv, nq) ->
-                        new Candidate(wi, op, mu, bp, br, tc, tv.constructionValid(), tv.finishingValid(), nq));
+                .as((wi, mu, bp, br, tc, tv, nq) ->
+                        new Candidate(wi, mu, bp, br, tc, tv.constructionValid(), tv.finishingValid(), nq));
     }
 
     /** A reference id is absent (null), valid (seeded), or dangling (present but not seeded). */
@@ -209,7 +206,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
      */
     private static final class Candidate {
         private final Presence workItem;
-        private final Presence offerPackage;
         private final Presence materialUnit;
         private final boolean branchPresent;
         private final ConsumptionBranch branch;
@@ -218,11 +214,10 @@ class WorkMaterialConsumptionValidationPropertyTest {
         private final boolean finishingTypeValid;
         private final NormQty normQty;
 
-        Candidate(Presence workItem, Presence offerPackage, Presence materialUnit,
+        Candidate(Presence workItem, Presence materialUnit,
                   boolean branchPresent, ConsumptionBranch branch, TypeCombo typeCombo,
                   boolean constructionTypeValid, boolean finishingTypeValid, NormQty normQty) {
             this.workItem = workItem;
-            this.offerPackage = offerPackage;
             this.materialUnit = materialUnit;
             this.branchPresent = branchPresent;
             this.branch = branch;
@@ -235,7 +230,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
         WorkMaterialConsumptionServiceExtendedModel toModel() {
             WorkMaterialConsumptionServiceExtendedModel m = new WorkMaterialConsumptionServiceExtendedModel();
             m.setWorkItemId(idFor(workItem, VALID_WORK_ITEM_ID, DANGLING_ID_FLOOR));
-            m.setOfferPackageId(idFor(offerPackage, VALID_OFFER_PACKAGE_ID, DANGLING_ID_FLOOR + 1));
             m.setMaterialUnitId(idFor(materialUnit, VALID_MATERIAL_UNIT_ID, DANGLING_ID_FLOOR + 2));
             m.setBranch(branchPresent ? branch : null);
             if (typeCombo == TypeCombo.CONSTRUCTION_ONLY || typeCombo == TypeCombo.BOTH) {
@@ -271,7 +265,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
 
         private boolean requiredFieldsPresent() {
             return workItem != Presence.ABSENT
-                    && offerPackage != Presence.ABSENT
                     && materialUnit != Presence.ABSENT
                     && normQty.value() != null
                     && branchPresent;
@@ -287,7 +280,7 @@ class WorkMaterialConsumptionValidationPropertyTest {
         }
 
         private boolean referencesExist() {
-            if (workItem != Presence.VALID || offerPackage != Presence.VALID || materialUnit != Presence.VALID) {
+            if (workItem != Presence.VALID || materialUnit != Presence.VALID) {
                 return false;
             }
             // Only the type id that is set (per the XOR) is loaded; validity is checked here.
@@ -306,12 +299,9 @@ class WorkMaterialConsumptionValidationPropertyTest {
          * {@code resolveReferences} → {@code validateNormQty}.
          */
         String expectedField() {
-            // 1. Required fields (workItemId, offerPackageId, materialUnitId, normQty, branch).
+            // 1. Required fields (workItemId, materialUnitId, normQty, branch).
             if (workItem == Presence.ABSENT) {
                 return "workItemId";
-            }
-            if (offerPackage == Presence.ABSENT) {
-                return "offerPackageId";
             }
             if (materialUnit == Presence.ABSENT) {
                 return "materialUnitId";
@@ -337,9 +327,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
             // 3. Reference resolution (mandatory first, then the set type id).
             if (workItem != Presence.VALID) {
                 return "workItemId";
-            }
-            if (offerPackage != Presence.VALID) {
-                return "offerPackageId";
             }
             if (materialUnit != Presence.VALID) {
                 return "materialUnitId";
@@ -370,7 +357,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
 
         Fixture() {
             WorkItemDao workItemDao = Mockito.mock(WorkItemDao.class);
-            OfferPackageDao offerPackageDao = Mockito.mock(OfferPackageDao.class);
             MeasurementUnitDao measurementUnitDao = Mockito.mock(MeasurementUnitDao.class);
             ConstructionMaterialTypeDao constructionMaterialTypeDao =
                     Mockito.mock(ConstructionMaterialTypeDao.class);
@@ -378,8 +364,6 @@ class WorkMaterialConsumptionValidationPropertyTest {
 
             Mockito.when(workItemDao.findById(VALID_WORK_ITEM_ID))
                     .thenReturn(Optional.of(new WorkItemEntity()));
-            Mockito.when(offerPackageDao.findById(VALID_OFFER_PACKAGE_ID))
-                    .thenReturn(Optional.of(new OfferPackageEntity()));
             Mockito.when(measurementUnitDao.findById(VALID_MATERIAL_UNIT_ID))
                     .thenReturn(Optional.of(new MeasurementUnitEntity()));
             Mockito.when(constructionMaterialTypeDao.findById(VALID_CONSTRUCTION_TYPE_ID))
@@ -394,7 +378,7 @@ class WorkMaterialConsumptionValidationPropertyTest {
                     Mockito.mock(WorkMaterialConsumptionServiceMapper.class),
                     Mockito.mock(AuditLogDao.class),
                     Mockito.mock(EntityManager.class),
-                    workItemDao, offerPackageDao, measurementUnitDao,
+                    workItemDao, measurementUnitDao,
                     constructionMaterialTypeDao, materialTypeDao);
         }
 

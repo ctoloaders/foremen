@@ -1,24 +1,15 @@
 package com.foremen.controller.integration;
 
-import com.foremen.dao.ConstructionMaterialTypeDao;
-import com.foremen.dao.CurrencyDao;
-import com.foremen.dao.MaterialProducerDao;
-import com.foremen.dao.MaterialSellerDao;
-import com.foremen.dao.MeasurementUnitDao;
-import com.foremen.dao.OfferPackageDao;
-import com.foremen.dao.model.ConstructionMaterialTypeEntity;
-import com.foremen.dao.model.CurrencyEntity;
-import com.foremen.dao.model.MaterialProducerEntity;
-import com.foremen.dao.model.MaterialSellerEntity;
-import com.foremen.dao.model.MeasurementUnitEntity;
-import com.foremen.dao.model.OfferPackageEntity;
-import com.foremen.testsupport.MockMvcSecurityConfig;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.nullValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,19 +18,31 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
+import com.foremen.dao.ConstructionMaterialTypeDao;
+import com.foremen.dao.CurrencyDao;
+import com.foremen.dao.MaterialProducerDao;
+import com.foremen.dao.MaterialSellerDao;
+import com.foremen.dao.MeasurementUnitDao;
+import com.foremen.dao.model.ConstructionMaterialTypeEntity;
+import com.foremen.dao.model.CurrencyEntity;
+import com.foremen.dao.model.MaterialProducerEntity;
+import com.foremen.dao.model.MaterialSellerEntity;
+import com.foremen.dao.model.MeasurementUnitEntity;
+import com.foremen.testsupport.MockMvcSecurityConfig;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Integration tests for {@code ConstructionMaterialController} CRUD operations (FOR-04-17, task 15.2).
@@ -49,20 +52,25 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * DDL, {@code @Import(MockMvcSecurityConfig.class)}, {@code @WithMockUser(roles="ADMIN")},
  * {@code @Transactional} rollback for isolation.
  * <p>
+ * FOR-05-04-UI (Requirement 5) collapsed the material-side package dimension, so there is no longer
+ * any package binding on the construction-material write path or in its DTOs. These scenarios were
+ * re-aligned with the collapsed contract: request bodies no longer carry {@code offerPackageIds},
+ * responses no longer expose {@code offerPackageIds}, and the {@code packages.id} collection filter
+ * was removed.
+ * <p>
  * Covers:
  * <ul>
  *   <li>CRUD against {@code /api/construction-materials} with a required {@code type}, optional
- *       {@code producer}/{@code seller}, and a required {@code packages} set (≥ 1);</li>
- *   <li>empty-{@code packages} rejection (client-error, nothing persisted) — Requirement 4.2/4.3;</li>
- *   <li>reference filters {@code type.id} and {@code packages.id} on the list endpoint riding the
- *       FOR-04-01 query grammar — Requirement 4.9;</li>
+ *       {@code producer}/{@code seller};</li>
+ *   <li>reference filter {@code type.id} on the list endpoint riding the FOR-04-01 query grammar
+ *       — Requirement 4.9;</li>
  *   <li>i18n {@code name} resolution ({@code Accept-Language: ru} → nameRU, {@code pl}/absent →
  *       namePL) — Requirement 4.8.</li>
  * </ul>
  * <p>
  * Mandatory references (a {@code ConstructionMaterialType}, a {@code MeasurementUnit}, a
- * {@code Currency}, and ≥ 1 {@code OfferPackage}) plus optional {@code MaterialProducer}/
- * {@code MaterialSeller} are seeded per-test in {@link #seedReferences()}.
+ * {@code Currency}) plus optional {@code MaterialProducer}/{@code MaterialSeller} are seeded
+ * per-test in {@link #seedReferences()}.
  * <p>
  * Validates Requirements 12.2, 4.9.
  */
@@ -106,9 +114,6 @@ class ConstructionMaterialControllerIntegrationTest {
     private CurrencyDao currencyDao;
 
     @Autowired
-    private OfferPackageDao offerPackageDao;
-
-    @Autowired
     private MaterialProducerDao producerDao;
 
     @Autowired
@@ -122,8 +127,6 @@ class ConstructionMaterialControllerIntegrationTest {
     private Long typeId2;
     private Long unitId;
     private Long currencyId;
-    private Long packageId;
-    private Long packageId2;
     private Long producerId;
     private Long sellerId;
 
@@ -164,22 +167,6 @@ class ConstructionMaterialControllerIntegrationTest {
         currency.setActive(true);
         currencyId = currencyDao.save(currency).getId();
 
-        OfferPackageEntity pkg = new OfferPackageEntity();
-        pkg.setCode("cm_pkg_" + u);
-        pkg.setOrderNo(1);
-        pkg.setNameRU("Пакет A");
-        pkg.setNamePL("Pakiet A");
-        pkg.setActive(true);
-        packageId = offerPackageDao.save(pkg).getId();
-
-        OfferPackageEntity pkg2 = new OfferPackageEntity();
-        pkg2.setCode("cm_pkg2_" + u);
-        pkg2.setOrderNo(2);
-        pkg2.setNameRU("Пакет B");
-        pkg2.setNamePL("Pakiet B");
-        pkg2.setActive(true);
-        packageId2 = offerPackageDao.save(pkg2).getId();
-
         MaterialProducerEntity producer = new MaterialProducerEntity();
         producer.setCode("cm_prod_" + u);
         producer.setNameRU("Производитель");
@@ -200,7 +187,7 @@ class ConstructionMaterialControllerIntegrationTest {
     // --- CREATE ---
 
     @Test
-    @DisplayName("POST /api/construction-materials - creates a material with required type + packages, optional producer/seller")
+    @DisplayName("POST /api/construction-materials - creates a material with required type, optional producer/seller")
     void createMaterial_returnsCreatedMaterial() throws Exception {
         mockMvc.perform(post("/api/construction-materials")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -211,13 +198,12 @@ class ConstructionMaterialControllerIntegrationTest {
                                     "typeId": %d,
                                     "producerId": %d,
                                     "sellerId": %d,
-                                    "offerPackageIds": [%d],
                                     "unitId": %d,
                                     "currencyId": %d,
                                     "retailNet": 100.00,
                                     "active": true
                                 }
-                                """.formatted(typeId, producerId, sellerId, packageId, unitId, currencyId)))
+                                """.formatted(typeId, producerId, sellerId, unitId, currencyId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").isNumber())
                 // The create/update response carries the raw reference ids (the localized RefDto
@@ -227,7 +213,6 @@ class ConstructionMaterialControllerIntegrationTest {
                 .andExpect(jsonPath("$.sellerId").value(sellerId))
                 .andExpect(jsonPath("$.unitId").value(unitId))
                 .andExpect(jsonPath("$.currencyId").value(currencyId))
-                .andExpect(jsonPath("$.offerPackageIds[?(@ == " + packageId + ")]").exists())
                 .andExpect(jsonPath("$.active").value(true));
     }
 
@@ -241,34 +226,15 @@ class ConstructionMaterialControllerIntegrationTest {
                                     "nameRU": "Краска серая",
                                     "namePL": "Farba szara",
                                     "typeId": %d,
-                                    "offerPackageIds": [%d],
                                     "unitId": %d,
                                     "currencyId": %d
                                 }
-                                """.formatted(typeId, packageId, unitId, currencyId)))
+                                """.formatted(typeId, unitId, currencyId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").isNumber())
                 .andExpect(jsonPath("$.typeId").value(typeId))
                 .andExpect(jsonPath("$.producerId").value(nullValue()))
                 .andExpect(jsonPath("$.sellerId").value(nullValue()));
-    }
-
-    @Test
-    @DisplayName("POST /api/construction-materials - empty packages set is rejected with a client error")
-    void createMaterial_emptyPackages_returnsClientError() throws Exception {
-        mockMvc.perform(post("/api/construction-materials")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "nameRU": "Краска",
-                                    "namePL": "Farba",
-                                    "typeId": %d,
-                                    "offerPackageIds": [],
-                                    "unitId": %d,
-                                    "currencyId": %d
-                                }
-                                """.formatted(typeId, unitId, currencyId)))
-                .andExpect(status().is4xxClientError());
     }
 
     @Test
@@ -280,11 +246,10 @@ class ConstructionMaterialControllerIntegrationTest {
                                 {
                                     "nameRU": "Краска",
                                     "namePL": "Farba",
-                                    "offerPackageIds": [%d],
                                     "unitId": %d,
                                     "currencyId": %d
                                 }
-                                """.formatted(packageId, unitId, currencyId)))
+                                """.formatted(unitId, currencyId)))
                 .andExpect(status().is4xxClientError());
     }
 
@@ -293,15 +258,14 @@ class ConstructionMaterialControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/construction-materials/{id} - returns extended DTO with raw reference ids")
     void findMaterialById_returnsExtendedModel() throws Exception {
-        Long id = createMaterial("Грунтовка", "Grunt", typeId, packageId);
+        Long id = createMaterial("Грунтовка", "Grunt", typeId);
 
         mockMvc.perform(get("/api/construction-materials/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(id))
                 .andExpect(jsonPath("$.typeId").value(typeId))
                 .andExpect(jsonPath("$.unitId").value(unitId))
-                .andExpect(jsonPath("$.currencyId").value(currencyId))
-                .andExpect(jsonPath("$.offerPackageIds[?(@ == " + packageId + ")]").exists());
+                .andExpect(jsonPath("$.currencyId").value(currencyId));
     }
 
     @Test
@@ -312,9 +276,9 @@ class ConstructionMaterialControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /api/construction-materials/{id} - updates names, references and packages")
+    @DisplayName("PUT /api/construction-materials/{id} - updates names and references")
     void updateMaterial_updatesFields() throws Exception {
-        Long id = createMaterial("старое имя", "stara nazwa", typeId, packageId);
+        Long id = createMaterial("старое имя", "stara nazwa", typeId);
 
         mockMvc.perform(put("/api/construction-materials/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -323,29 +287,27 @@ class ConstructionMaterialControllerIntegrationTest {
                                     "nameRU": "новое имя",
                                     "namePL": "nowa nazwa",
                                     "typeId": %d,
-                                    "offerPackageIds": [%d, %d],
                                     "unitId": %d,
                                     "currencyId": %d,
                                     "retailNet": 250.00,
                                     "active": false
                                 }
-                                """.formatted(typeId2, packageId, packageId2, unitId, currencyId)))
+                                """.formatted(typeId2, unitId, currencyId)))
                 .andExpect(status().isOk())
-                // The update response carries the raw reference ids + active (RefDto refs + name and
-                // the resolved package set are read-path concerns, verified via the follow-up GET).
+                // The update response carries the raw reference ids + active (RefDto refs + name are
+                // read-path concerns, verified via the follow-up GET).
                 .andExpect(jsonPath("$.typeId").value(typeId2))
                 .andExpect(jsonPath("$.active").value(false));
 
         entityManager.flush();
         entityManager.clear();
 
-        // Confirm the update persisted via the single-read extended DTO: the raw reference ids,
-        // both packages, and the flipped active flag.
+        // Confirm the update persisted via the single-read extended DTO: the raw reference ids and
+        // the flipped active flag.
         mockMvc.perform(get("/api/construction-materials/" + id))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.typeId").value(typeId2))
-                .andExpect(jsonPath("$.active").value(false))
-                .andExpect(jsonPath("$.offerPackageIds.length()").value(2));
+                .andExpect(jsonPath("$.active").value(false));
 
         // The localized name (PL fallback) is verified on the list endpoint, whose list DTO resolves
         // the i18n name.
@@ -357,29 +319,9 @@ class ConstructionMaterialControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("PUT /api/construction-materials/{id} - update with an empty packages set is rejected")
-    void updateMaterial_emptyPackages_returnsClientError() throws Exception {
-        Long id = createMaterial("имя", "nazwa", typeId, packageId);
-
-        mockMvc.perform(put("/api/construction-materials/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                    "nameRU": "имя",
-                                    "namePL": "nazwa",
-                                    "typeId": %d,
-                                    "offerPackageIds": [],
-                                    "unitId": %d,
-                                    "currencyId": %d
-                                }
-                                """.formatted(typeId, unitId, currencyId)))
-                .andExpect(status().is4xxClientError());
-    }
-
-    @Test
     @DisplayName("DELETE /api/construction-materials/{id} - deletes; subsequent read is 404")
     void deleteMaterial_returns204ThenNotFound() throws Exception {
-        Long id = createMaterial("удаляемая", "usuwana", typeId, packageId);
+        Long id = createMaterial("удаляемая", "usuwana", typeId);
 
         mockMvc.perform(delete("/api/construction-materials/" + id))
                 .andExpect(status().isNoContent());
@@ -393,29 +335,12 @@ class ConstructionMaterialControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/construction-materials?query=type.id==... - filters by type reference")
     void listFilteredByTypeId_returnsOnlyMatching() throws Exception {
-        Long matching = createMaterial("тип-1", "typ-1", typeId, packageId);
-        Long other = createMaterial("тип-2", "typ-2", typeId2, packageId);
+        Long matching = createMaterial("тип-1", "typ-1", typeId);
+        Long other = createMaterial("тип-2", "typ-2", typeId2);
         entityManager.flush();
 
         mockMvc.perform(get("/api/construction-materials")
                         .param("query", "type.id==" + typeId)
-                        .param("page", "0")
-                        .param("size", "50"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[?(@.id == " + matching + ")]").exists())
-                .andExpect(jsonPath("$.content[?(@.id == " + other + ")]").doesNotExist());
-    }
-
-    @Test
-    @DisplayName("GET /api/construction-materials?query=packages.id==... - filters by package (collection path) reference")
-    void listFilteredByPackageId_returnsOnlyMatching() throws Exception {
-        // 'matching' belongs to packageId2; 'other' belongs only to packageId.
-        Long matching = createMaterial("пакет-1", "pakiet-1", typeId, packageId2);
-        Long other = createMaterial("пакет-2", "pakiet-2", typeId, packageId);
-        entityManager.flush();
-
-        mockMvc.perform(get("/api/construction-materials")
-                        .param("query", "packages.id==" + packageId2)
                         .param("page", "0")
                         .param("size", "50"))
                 .andExpect(status().isOk())
@@ -428,7 +353,7 @@ class ConstructionMaterialControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/construction-materials - Accept-Language: ru resolves name to nameRU")
     void listWithRussianLocale_resolvesNameToRU() throws Exception {
-        Long id = createMaterial("Шпаклёвка", "Szpachla", typeId, packageId);
+        Long id = createMaterial("Шпаклёвка", "Szpachla", typeId);
         entityManager.flush();
 
         mockMvc.perform(get("/api/construction-materials")
@@ -442,7 +367,7 @@ class ConstructionMaterialControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/construction-materials - Accept-Language: pl resolves name to namePL")
     void listWithPolishLocale_resolvesNameToPL() throws Exception {
-        Long id = createMaterial("Шпаклёвка", "Szpachla", typeId, packageId);
+        Long id = createMaterial("Шпаклёвка", "Szpachla", typeId);
         entityManager.flush();
 
         mockMvc.perform(get("/api/construction-materials")
@@ -456,7 +381,7 @@ class ConstructionMaterialControllerIntegrationTest {
     @Test
     @DisplayName("GET /api/construction-materials - absent Accept-Language falls back to namePL")
     void listWithoutLocale_fallsBackToPL() throws Exception {
-        Long id = createMaterial("Краска", "Farba", typeId, packageId);
+        Long id = createMaterial("Краска", "Farba", typeId);
         entityManager.flush();
 
         mockMvc.perform(get("/api/construction-materials")
@@ -470,9 +395,9 @@ class ConstructionMaterialControllerIntegrationTest {
 
     /**
      * Creates a construction material via the API and returns its generated id. Uses the given type
-     * and a single package plus the shared seeded {@code unitId}/{@code currencyId}.
+     * plus the shared seeded {@code unitId}/{@code currencyId}.
      */
-    private Long createMaterial(String nameRU, String namePL, Long typeId, Long packageId) throws Exception {
+    private Long createMaterial(String nameRU, String namePL, Long typeId) throws Exception {
         String body = mockMvc.perform(post("/api/construction-materials")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -480,12 +405,11 @@ class ConstructionMaterialControllerIntegrationTest {
                                     "nameRU": "%s",
                                     "namePL": "%s",
                                     "typeId": %d,
-                                    "offerPackageIds": [%d],
                                     "unitId": %d,
                                     "currencyId": %d,
                                     "retailNet": 100.00
                                 }
-                                """.formatted(nameRU, namePL, typeId, packageId, unitId, currencyId)))
+                                """.formatted(nameRU, namePL, typeId, unitId, currencyId)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return com.jayway.jsonpath.JsonPath.parse(body).read("$.id", Long.class);

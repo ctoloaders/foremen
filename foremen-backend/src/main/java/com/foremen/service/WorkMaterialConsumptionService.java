@@ -11,14 +11,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.foremen.dao.ConstructionMaterialTypeDao;
 import com.foremen.dao.MaterialTypeDao;
 import com.foremen.dao.MeasurementUnitDao;
-import com.foremen.dao.OfferPackageDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkMaterialConsumptionDao;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
 import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.MaterialTypeEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
-import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.dao.model.WorkMaterialConsumptionEntity;
 import com.foremen.exception.ForemenApiException;
@@ -43,10 +41,10 @@ import jakarta.persistence.EntityManager;
  * {@code RoomService.resolveReferences}). Fired inside the generic {@link AdminService} create/update
  * transaction <em>before</em> the mapper turns the model into (or onto) the entity, normalization:
  * <ol>
- *   <li>requires {@code workItemId}, {@code offerPackageId}, {@code branch}, {@code materialUnitId},
+ *   <li>requires {@code workItemId}, {@code branch}, {@code materialUnitId},
  *       {@code normQty}, and EXACTLY ONE material-type id — a missing required field is rejected with
  *       a field-identifying {@code 400} (Requirements 3.2, 3.3);</li>
- *   <li>real-loads each supplied reference ({@code workItemId}/{@code offerPackageId}/
+ *   <li>real-loads each supplied reference ({@code workItemId}/
  *       {@code materialUnitId} and whichever type id is set), rejecting a dangling id with a
  *       field-identifying {@code 404 error.entity.not.found} (Requirement 3.4);</li>
  *   <li>range-checks {@code normQty} within {@code [0, 99999999.9999]} (incl. negative), rejecting an
@@ -91,7 +89,6 @@ public class WorkMaterialConsumptionService
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
     private final WorkItemDao workItemDao;
-    private final OfferPackageDao offerPackageDao;
     private final MeasurementUnitDao measurementUnitDao;
     private final ConstructionMaterialTypeDao constructionMaterialTypeDao;
     private final MaterialTypeDao materialTypeDao;
@@ -101,7 +98,6 @@ public class WorkMaterialConsumptionService
                                           AuditLogDao auditLogDao,
                                           EntityManager entityManager,
                                           WorkItemDao workItemDao,
-                                          OfferPackageDao offerPackageDao,
                                           MeasurementUnitDao measurementUnitDao,
                                           ConstructionMaterialTypeDao constructionMaterialTypeDao,
                                           MaterialTypeDao materialTypeDao) {
@@ -110,7 +106,6 @@ public class WorkMaterialConsumptionService
         this.auditLogDao = auditLogDao;
         this.entityManager = entityManager;
         this.workItemDao = workItemDao;
-        this.offerPackageDao = offerPackageDao;
         this.measurementUnitDao = measurementUnitDao;
         this.constructionMaterialTypeDao = constructionMaterialTypeDao;
         this.materialTypeDao = materialTypeDao;
@@ -172,13 +167,12 @@ public class WorkMaterialConsumptionService
 
     /**
      * Requires the mandatory scalar/reference fields present — {@code workItemId},
-     * {@code offerPackageId}, {@code branch}, {@code materialUnitId}, {@code normQty} — rejecting a
+     * {@code branch}, {@code materialUnitId}, {@code normQty} — rejecting a
      * missing one with a field-identifying {@code 400} (Requirements 3.2, 3.3). The exactly-one
      * material-type requirement is enforced by {@link #validateMaterialTypeBranch}.
      */
     private void validateRequiredFields(WorkMaterialConsumptionServiceExtendedModel model) {
         requirePresent("workItemId", model.getWorkItemId());
-        requirePresent("offerPackageId", model.getOfferPackageId());
         requirePresent("materialUnitId", model.getMaterialUnitId());
         requirePresent("normQty", model.getNormQty());
         if (model.getBranch() == null) {
@@ -219,14 +213,13 @@ public class WorkMaterialConsumptionService
 
     /**
      * Real-loads each supplied reference so a dangling id is caught here (Requirement 3.4): the
-     * mandatory {@code workItemId}/{@code offerPackageId}/{@code materialUnitId}, and whichever
+     * mandatory {@code workItemId}/{@code materialUnitId}, and whichever
      * material-type id is set (existence of exactly one is already asserted by
      * {@link #validateMaterialTypeBranch}). Existence is asserted with a real load rather than a lazy
      * reference.
      */
     private void resolveReferences(WorkMaterialConsumptionServiceExtendedModel model) {
         requireExisting("workItemId", model.getWorkItemId(), id -> workItemDao.findById(id).isPresent());
-        requireExisting("offerPackageId", model.getOfferPackageId(), id -> offerPackageDao.findById(id).isPresent());
         requireExisting("materialUnitId", model.getMaterialUnitId(),
                 id -> measurementUnitDao.findById(id).isPresent());
 
@@ -271,7 +264,7 @@ public class WorkMaterialConsumptionService
     //
     // The generic AdminService audit path serializes the whole WorkMaterialConsumptionEntity with the
     // shared audit ObjectMapper. That would dump the nested @ManyToOne reference entities
-    // (workItem/offerPackage/materialUnit/construction+finishingMaterialType) as full nested JSON and
+    // (workItem/materialUnit/construction+finishingMaterialType) as full nested JSON and
     // risk lazy-init/cycles.
     //
     // Following the FinishingMaterialService/WorkPriceService pattern, this service overrides ONLY the
@@ -330,13 +323,6 @@ public class WorkMaterialConsumptionService
     }
 
     private static String workItemName(WorkItemEntity e) {
-        if (e == null) {
-            return null;
-        }
-        return firstNonBlank(e.getNamePL(), e.getNameRU(), e.getCode());
-    }
-
-    private static String offerPackageName(OfferPackageEntity e) {
         if (e == null) {
             return null;
         }

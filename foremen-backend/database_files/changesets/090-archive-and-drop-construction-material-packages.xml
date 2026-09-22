@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI (R5.4, R5.9, R8.8, R8.9): the deferred material-side collapse.
+        ConstructionMaterial no longer carries a per-package binding; its price range is
+        keyed by construction-material TYPE only. This changeset genuinely removes the
+        package dimension from the material side by retiring the construction_material_packages
+        M:N join table (created in 057b), mirroring the archive-before-drop pattern used by
+        082 (work_package_prices) and 083 (estimate_line_package_prices).
+
+        construction_material_packages has a composite PK on
+        (construction_material_id, offer_package_id) and no surrogate id, so the archive
+        snapshots the two natural-key columns plus archived_at; the NOT EXISTS guard keys
+        re-insertion off that pair.
+
+        Two ordered changesets, each idempotent via preConditions onFail="MARK_RAN":
+          090a - create construction_material_packages_archive; INSERT...SELECT every
+                 construction_material_packages row + NOW() as archived_at.
+          090b - drop construction_material_packages (and its FKs), now that its data is
+                 archived, guarded so a re-run against an already-collapsed database makes
+                 no schema/data change (R5.9, R8.9).
+    -->
+
+    <!-- 090a: create the archive table before anything is dropped. Idempotent: the
+         createTable is skipped once the archive table already exists. -->
+    <changeSet id="090a-create-construction-material-packages-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="construction_material_packages_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="construction_material_packages_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="construction_material_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 090a-2: populate the archive from the still-present construction_material_packages
+         table. Runs only while the source table still exists; NOT EXISTS on the natural key
+         pair guards re-insertion so a re-run (or a re-migrate before 090b has dropped the
+         source) inserts nothing new. -->
+    <changeSet id="090a-populate-construction-material-packages-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="construction_material_packages"/>
+                <tableExists tableName="construction_material_packages_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO construction_material_packages_archive
+                (construction_material_id, offer_package_id, archived_at)
+            SELECT cmp.construction_material_id, cmp.offer_package_id, NOW()
+            FROM construction_material_packages cmp
+            WHERE NOT EXISTS (
+                SELECT 1 FROM construction_material_packages_archive cmpa
+                WHERE cmpa.construction_material_id = cmp.construction_material_id
+                  AND cmpa.offer_package_id = cmp.offer_package_id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 090b: drop construction_material_packages (and its FKs) now that every row is
+         archived (090a). Guarded so the drop only proceeds once the archive holds every
+         live row (or the live table is already empty), so data is never dropped before it
+         has a home; the tableExists precondition makes a re-run against an already-collapsed
+         database a no-op (R5.9, R8.9). -->
+    <changeSet id="090b-drop-construction-material-packages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="construction_material_packages"/>
+                <tableExists tableName="construction_material_packages_archive"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM construction_material_packages cmp
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM construction_material_packages_archive cmpa
+                        WHERE cmpa.construction_material_id = cmp.construction_material_id
+                          AND cmpa.offer_package_id = cmp.offer_package_id
+                    )
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <dropTable tableName="construction_material_packages" cascadeConstraints="true"/>
+    </changeSet>
+
+</databaseChangeLog>

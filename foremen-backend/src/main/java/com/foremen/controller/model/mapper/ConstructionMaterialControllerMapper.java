@@ -1,5 +1,10 @@
 package com.foremen.controller.model.mapper;
 
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
+import org.springframework.beans.factory.annotation.Autowired;
+
 import com.foremen.config.mapper.ForemenMapperConfig;
 import com.foremen.controller.model.ConstructionMaterialCreateRequest;
 import com.foremen.controller.model.ConstructionMaterialCreateResponse;
@@ -11,10 +16,6 @@ import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.image.ImageStorage;
 import com.foremen.service.model.ConstructionMaterialServiceExtendedModel;
 import com.foremen.service.model.ConstructionMaterialServiceModel;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
-import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * Controller mapper for the construction-material vertical (FOR-04-17, task 5.2).
@@ -80,7 +81,6 @@ public abstract class ConstructionMaterialControllerMapper implements Controller
     @Mapping(target = "seller", ignore = true)
     @Mapping(target = "unit", ignore = true)
     @Mapping(target = "currency", ignore = true)
-    @Mapping(target = "packages", ignore = true)
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "imageUrl", expression = "java(toCdnUrl(source.getImage()))")
     @Mapping(target = "priceRanges", ignore = true)
@@ -92,7 +92,6 @@ public abstract class ConstructionMaterialControllerMapper implements Controller
     @Mapping(target = "seller", ignore = true)
     @Mapping(target = "unit", ignore = true)
     @Mapping(target = "currency", ignore = true)
-    @Mapping(target = "packages", ignore = true)
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "imageUrl", expression = "java(toCdnUrl(source.getImage()))")
     @Mapping(target = "priceRanges", ignore = true)
@@ -104,7 +103,6 @@ public abstract class ConstructionMaterialControllerMapper implements Controller
     @Mapping(target = "seller", ignore = true)
     @Mapping(target = "unit", ignore = true)
     @Mapping(target = "currency", ignore = true)
-    @Mapping(target = "packages", ignore = true)
     @Mapping(target = "name", ignore = true)
     @Mapping(target = "imageUrl", expression = "java(toCdnUrl(source.getImage()))")
     @Mapping(target = "priceRanges", ignore = true)

@@ -1,10 +1,17 @@
 package com.foremen.service.pricing;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.foremen.dao.model.ConstructionMaterialEntity;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
-import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.service.pricing.PriceRangeResolver.PriceRange;
-import com.foremen.service.pricing.PriceRangeResolver.PriceRangeKey;
+
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
 import net.jqwik.api.Combinators;
@@ -13,249 +20,160 @@ import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import net.jqwik.api.Tag;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
- * Property-based tests for {@link PriceRangeResolver} (FOR-04-17, Property 1 —
- * "Price range is the MIN..MAX of qualifying retail-net").
+ * Property-based test for the re-keyed {@link PriceRangeResolver} (FOR-05-04-UI, task 2.2).
  *
- * <p>The resolver is a pure, deterministic, in-memory function keyed by the pair
- * ({@link OfferPackageEntity}, {@link ConstructionMaterialTypeEntity}). For a pair
- * (package {@code P}, type {@code T}) the range is the MIN..MAX of {@code retailNet} across all
- * <b>active</b> materials whose {@code type == T}, whose {@code packages} contain {@code P}, and
- * whose {@code retailNet} is non-null (Requirement 6.1, 6.2). A multi-package material fans out to
- * each of its packages (Requirement 6.3); null {@code retailNet} is excluded (Requirement 6.5); an
- * unqualified pair yields an empty range {@code PriceRange(null, null)} (Requirement 6.6); and the
- * computation is deterministic (Requirement 6.7). These tests recompute each expected range
- * independently from the generated inputs (an oracle) rather than reusing the resolver's own logic.
+ * <p>After the material-side package collapse (Requirement 5.3, 5.7) the construction-material price
+ * range is keyed by construction-material <b>type</b> only: the range for a type {@code T} is the
+ * {@code MIN..MAX} of {@code retailNet} across exactly the materials that are active, have a
+ * non-null {@code retailNet}, and have {@code type == T}; it is {@code null..null} when no such
+ * material exists (no fabricated fallback); and it does not depend on, and is not keyed by, any
+ * offer-package assignment.
  *
- * <p>No Spring context and no database — the resolver is exercised via {@code new
- * PriceRangeResolver()} over in-memory {@link ConstructionMaterialEntity} instances whose ids,
- * type, packages, active flag and retailNet are set through Lombok setters.
+ * <p>Because the collapsed {@link ConstructionMaterialEntity} carries no package field at all, the
+ * resolver cannot read a package binding — package-independence is structural. This test makes that
+ * explicit by generating an irrelevant-by-design package assignment alongside each material and
+ * asserting the computed range is invariant under any change to that assignment (it is never fed to
+ * the resolver, so the result is identical by construction).
  *
- * <p>Feature: FOR-04-17-construction-materials, Property 1
+ * <p>Feature: FOR-05-04-UI-estimate-packages-changes, Property 1: Construction-material price range
+ * is type-keyed, package-independent, unfabricated
  *
- * <p><b>Validates: Requirements 6.1, 6.2, 6.3, 6.5, 6.6, 6.7</b>
+ * <p><b>Validates: Requirements 5.3, 5.7</b>
  */
-@Tag("Feature: FOR-04-17-construction-materials, Property 1: Price range is the MIN..MAX of qualifying retail-net")
+// Feature: FOR-05-04-UI-estimate-packages-changes, Property 1: Construction-material price range is type-keyed, package-independent, unfabricated
+@Tag("Feature: FOR-05-04-UI-estimate-packages-changes, Property 1: Construction-material price range is type-keyed, package-independent, unfabricated")
 class PriceRangeResolverPropertyTest {
 
     private final PriceRangeResolver resolver = new PriceRangeResolver();
 
-    // ------------------------------------------------------------------------------------------
-    // Property 1a: per-(package,type) MIN/MAX equal the min/max over the qualifying subset, and
-    //              fan-out across packages holds (a multi-package material contributes to each of
-    //              its packages). Non-qualifying materials (inactive / null retailNet) are excluded.
-    // Validates: Requirements 6.1, 6.2, 6.3, 6.5
-    // ------------------------------------------------------------------------------------------
+    /**
+     * Property 1: for every generated type the resolved range equals MIN..MAX of the qualifying
+     * {@code retailNet} (active, non-null {@code retailNet}) and {@code null..null} when none
+     * qualify — and it never depends on any offer-package assignment.
+     *
+     * <p>Feature: FOR-05-04-UI-estimate-packages-changes, Property 1: Construction-material price
+     * range is type-keyed, package-independent, unfabricated
+     *
+     * <p><b>Validates: Requirements 5.3, 5.7</b>
+     */
+    @Property(tries = 100)
+    @Tag("Feature: FOR-05-04-UI-estimate-packages-changes, Property 1: Construction-material price range is type-keyed, package-independent, unfabricated")
+    void rangeIsTypeKeyedPackageIndependentAndUnfabricated(
+            @ForAll("materialSpecs") List<MaterialSpec> specs) {
 
-    @Property(tries = 200)
-    @Tag("Feature: FOR-04-17-construction-materials, Property 1: Price range is the MIN..MAX of qualifying retail-net")
-    void rangeEqualsMinMaxOverQualifyingSubset(@ForAll("materialSets") List<ConstructionMaterialEntity> materials) {
-        Map<PriceRangeKey, PriceRange> computed = resolver.compute(materials);
+        List<ConstructionMaterialEntity> materials = new ArrayList<>();
+        for (MaterialSpec spec : specs) {
+            materials.add(spec.toEntity());
+        }
 
-        // Every (package, type) pair reachable from the inputs — qualifying or not.
-        Set<PriceRangeKey> allPairs = allReachablePairs(materials);
+        // Independently recompute the expected MIN..MAX per type from the qualifying materials
+        // (active AND non-null retailNet), ignoring package assignment entirely.
+        Map<Long, BigDecimal> expectedMin = new HashMap<>();
+        Map<Long, BigDecimal> expectedMax = new HashMap<>();
+        for (MaterialSpec spec : specs) {
+            if (!spec.active || spec.retailNet == null) {
+                continue;
+            }
+            expectedMin.merge(spec.typeId, spec.retailNet, BigDecimal::min);
+            expectedMax.merge(spec.typeId, spec.retailNet, BigDecimal::max);
+        }
 
-        for (PriceRangeKey key : allPairs) {
-            List<BigDecimal> qualifying = qualifyingRetailNets(
-                    materials, key.offerPackageId(), key.constructionMaterialTypeId());
-
-            PriceRange range = computed.getOrDefault(key, PriceRange.EMPTY);
-
-            if (qualifying.isEmpty()) {
-                // Requirement 6.6: no qualifying material → empty range.
-                assertThat(range).isEqualTo(PriceRange.EMPTY);
+        // Every generated type id must resolve to the expected range (R5.3: type-keyed).
+        for (MaterialSpec spec : specs) {
+            PriceRange actual = resolver.rangeFor(materials, spec.typeId);
+            if (expectedMin.containsKey(spec.typeId)) {
+                assertThat(actual.min()).isEqualByComparingTo(expectedMin.get(spec.typeId));
+                assertThat(actual.max()).isEqualByComparingTo(expectedMax.get(spec.typeId));
             } else {
-                BigDecimal expectedMin = qualifying.stream().reduce(BigDecimal::min).orElseThrow();
-                BigDecimal expectedMax = qualifying.stream().reduce(BigDecimal::max).orElseThrow();
-                // Requirements 6.1, 6.2, 6.3, 6.5: MIN/MAX over the qualifying (fanned-out) subset.
-                assertThat(range.min()).isEqualByComparingTo(expectedMin);
-                assertThat(range.max()).isEqualByComparingTo(expectedMax);
+                // R5.7: no qualifying material -> null..null, no fabricated fallback.
+                assertThat(actual.min()).isNull();
+                assertThat(actual.max()).isNull();
             }
         }
 
-        // The resolver never invents a pair that has no qualifying material.
-        for (PriceRangeKey key : computed.keySet()) {
-            assertThat(qualifyingRetailNets(
-                    materials, key.offerPackageId(), key.constructionMaterialTypeId()))
-                    .isNotEmpty();
+        // R5.7: a type that appears in NO material at all is an empty range, never fabricated.
+        Long absentTypeId = 999_999L;
+        PriceRange absent = resolver.rangeFor(materials, absentTypeId);
+        assertThat(absent.min()).isNull();
+        assertThat(absent.max()).isNull();
+
+        // R5.3/R5.7: package-independence. The resolver reads only type/retailNet/active; the
+        // generated package assignment is never wired into the entity, so mutating each spec's
+        // package assignment and recomputing yields the identical result. Rebuild the material list
+        // with every package assignment flipped and assert the resolved ranges are unchanged.
+        List<ConstructionMaterialEntity> repackaged = new ArrayList<>();
+        for (MaterialSpec spec : specs) {
+            repackaged.add(spec.withFlippedPackage().toEntity());
+        }
+        for (MaterialSpec spec : specs) {
+            PriceRange original = resolver.rangeFor(materials, spec.typeId);
+            PriceRange afterRepackage = resolver.rangeFor(repackaged, spec.typeId);
+            assertThat(rangeEquals(original, afterRepackage))
+                    .as("range for type %d must be invariant under package reassignment", spec.typeId)
+                    .isTrue();
         }
     }
 
-    // ------------------------------------------------------------------------------------------
-    // Property 1b: null retailNet is excluded, and an explicitly unqualified pair gives an empty
-    //              range PriceRange(null, null) via rangeFor.
-    // Validates: Requirements 6.5, 6.6
-    // ------------------------------------------------------------------------------------------
+    private static boolean rangeEquals(PriceRange a, PriceRange b) {
+        return nullSafeEquals(a.min(), b.min()) && nullSafeEquals(a.max(), b.max());
+    }
 
-    @Property(tries = 200)
-    @Tag("Feature: FOR-04-17-construction-materials, Property 1: Price range is the MIN..MAX of qualifying retail-net")
-    void nullRetailNetExcludedAndUnqualifiedPairIsEmpty(
-            @ForAll("materialSets") List<ConstructionMaterialEntity> materials,
-            @ForAll("packageIds") long packageId,
-            @ForAll("typeIds") long typeId) {
-        PriceRange range = resolver.rangeFor(materials, packageId, typeId);
-
-        List<BigDecimal> qualifying = qualifyingRetailNets(materials, packageId, typeId);
-
-        if (qualifying.isEmpty()) {
-            assertThat(range).isEqualTo(PriceRange.EMPTY);
-            assertThat(range.min()).isNull();
-            assertThat(range.max()).isNull();
-        } else {
-            assertThat(range.min()).isNotNull();
-            assertThat(range.max()).isNotNull();
+    private static boolean nullSafeEquals(BigDecimal a, BigDecimal b) {
+        if (a == null || b == null) {
+            return a == b;
         }
-
-        // No material with a null retailNet ever contributes to the qualifying oracle set.
-        long nullRetailContributions = materials.stream()
-                .filter(m -> m.isActive() && m.getRetailNet() == null)
-                .count();
-        // Sanity: the oracle above never counted them (it filters retailNet != null) — assert the
-        // resolver agrees by re-deriving from only the non-null-retailNet actives.
-        assertThat(qualifying).allMatch(v -> v != null);
-        assertThat(nullRetailContributions).isGreaterThanOrEqualTo(0);
+        return a.compareTo(b) == 0;
     }
 
     // ------------------------------------------------------------------------------------------
-    // Property 1c: min <= max for every produced range.
-    // Validates: Requirement 6.1
-    // ------------------------------------------------------------------------------------------
-
-    @Property(tries = 200)
-    @Tag("Feature: FOR-04-17-construction-materials, Property 1: Price range is the MIN..MAX of qualifying retail-net")
-    void minNeverExceedsMax(@ForAll("materialSets") List<ConstructionMaterialEntity> materials) {
-        Map<PriceRangeKey, PriceRange> computed = resolver.compute(materials);
-
-        for (PriceRange range : computed.values()) {
-            assertThat(range.min()).isNotNull();
-            assertThat(range.max()).isNotNull();
-            assertThat(range.min()).isLessThanOrEqualTo(range.max());
-        }
-    }
-
-    // ------------------------------------------------------------------------------------------
-    // Property 1d: the computation is deterministic — a repeated computation is identical.
-    // Validates: Requirement 6.7
-    // ------------------------------------------------------------------------------------------
-
-    @Property(tries = 200)
-    @Tag("Feature: FOR-04-17-construction-materials, Property 1: Price range is the MIN..MAX of qualifying retail-net")
-    void computationIsDeterministic(@ForAll("materialSets") List<ConstructionMaterialEntity> materials) {
-        Map<PriceRangeKey, PriceRange> first = resolver.compute(materials);
-        Map<PriceRangeKey, PriceRange> second = resolver.compute(materials);
-
-        assertThat(second).isEqualTo(first);
-    }
-
-    // ------------------------------------------------------------------------------------------
-    // Oracle helpers — recompute the expected qualifying set independently of the resolver.
+    // Generators
     // ------------------------------------------------------------------------------------------
 
     /**
-     * The retailNet values that qualify for pair (packageId, typeId): active materials whose type id
-     * matches, whose packages contain the package id, and whose retailNet is non-null.
+     * A flat spec for a construction material varying the four axes that matter to the property:
+     * {@code type}, {@code retailNet} (incl. {@code null}), {@code active}, and an
+     * irrelevant-by-design {@code offerPackageId} (never fed to the resolver).
      */
-    private static List<BigDecimal> qualifyingRetailNets(
-            List<ConstructionMaterialEntity> materials, Long packageId, Long typeId) {
-        List<BigDecimal> values = new ArrayList<>();
-        for (ConstructionMaterialEntity m : materials) {
-            if (!m.isActive() || m.getRetailNet() == null) {
-                continue;
-            }
-            if (m.getType() == null || m.getType().getId() == null
-                    || !m.getType().getId().equals(typeId)) {
-                continue;
-            }
-            boolean containsPackage = m.getPackages().stream()
-                    .anyMatch(p -> p != null && packageId.equals(p.getId()));
-            if (containsPackage) {
-                values.add(m.getRetailNet());
-            }
+    private record MaterialSpec(Long typeId, BigDecimal retailNet, boolean active, Long offerPackageId) {
+
+        MaterialSpec withFlippedPackage() {
+            // Any change to the package assignment; the value is irrelevant to the resolver.
+            return new MaterialSpec(typeId, retailNet, active, offerPackageId + 1);
         }
-        return values;
-    }
 
-    /** Every (package id, type id) pair reachable from any material's packages × its type. */
-    private static Set<PriceRangeKey> allReachablePairs(List<ConstructionMaterialEntity> materials) {
-        Set<PriceRangeKey> pairs = new HashSet<>();
-        for (ConstructionMaterialEntity m : materials) {
-            if (m.getType() == null || m.getType().getId() == null) {
-                continue;
-            }
-            Long typeId = m.getType().getId();
-            for (OfferPackageEntity p : m.getPackages()) {
-                if (p != null && p.getId() != null) {
-                    pairs.add(new PriceRangeKey(p.getId(), typeId));
-                }
-            }
+        ConstructionMaterialEntity toEntity() {
+            ConstructionMaterialTypeEntity type = new ConstructionMaterialTypeEntity();
+            type.setId(typeId);
+            type.setCode("TYPE-" + typeId);
+            type.setNameRU("type-ru-" + typeId);
+            type.setNamePL("type-pl-" + typeId);
+
+            ConstructionMaterialEntity material = new ConstructionMaterialEntity();
+            material.setType(type);
+            material.setNameRU("mat-ru");
+            material.setNamePL("mat-pl");
+            material.setRetailNet(retailNet);
+            material.setActive(active);
+            return material;
         }
-        return pairs;
     }
-
-    // ------------------------------------------------------------------------------------------
-    // Generators — a bounded universe of types and packages so pairs collide frequently, with
-    // random active flags, random (incl. null) retailNet, and random multi-package memberships.
-    // ------------------------------------------------------------------------------------------
-
-    private static final long[] TYPE_IDS = {1L, 2L, 3L};
-    private static final long[] PACKAGE_IDS = {10L, 20L, 30L, 40L};
 
     @Provide
-    Arbitrary<List<ConstructionMaterialEntity>> materialSets() {
-        return material().list().ofMinSize(0).ofMaxSize(12);
-    }
-
-    private Arbitrary<ConstructionMaterialEntity> material() {
-        Arbitrary<Long> typeId = Arbitraries.of(TYPE_IDS[0], TYPE_IDS[1], TYPE_IDS[2]);
+    Arbitrary<List<MaterialSpec>> materialSpecs() {
+        // Constrain type ids to a small pool so multiple materials collide on the same type, giving
+        // the MIN..MAX fold something to fold over.
+        Arbitrary<Long> typeIds = Arbitraries.longs().between(1L, 5L);
+        // retailNet includes null (unpriced) and non-null values; scale 2 mirrors the column.
+        Arbitrary<BigDecimal> retailNet = Arbitraries.bigDecimals()
+                .between(new BigDecimal("0.00"), new BigDecimal("100000.00"))
+                .ofScale(2)
+                .injectNull(0.25);
         Arbitrary<Boolean> active = Arbitraries.of(true, false);
-        // retailNet: null (~1 in 4) or a non-negative BigDecimal with two decimals.
-        Arbitrary<Optional<BigDecimal>> retailNet = Arbitraries.oneOf(
-                Arbitraries.just(Optional.<BigDecimal>empty()),
-                Arbitraries.longs().between(0, 9_999_999)
-                        .map(cents -> Optional.of(BigDecimal.valueOf(cents, 2))));
-        // A membership: a non-empty subset of PACKAGE_IDS.
-        Arbitrary<Set<Long>> packageIds = Arbitraries.of(
-                        PACKAGE_IDS[0], PACKAGE_IDS[1], PACKAGE_IDS[2], PACKAGE_IDS[3])
-                .set().ofMinSize(1).ofMaxSize(PACKAGE_IDS.length);
+        Arbitrary<Long> offerPackageIds = Arbitraries.longs().between(1L, 10L);
 
-        return Combinators.combine(typeId, active, retailNet, packageIds)
-                .as((tId, isActive, net, pkgIds) -> {
-                    ConstructionMaterialTypeEntity type = new ConstructionMaterialTypeEntity();
-                    type.setId(tId);
-
-                    Set<OfferPackageEntity> packages = new HashSet<>();
-                    for (Long pkgId : pkgIds) {
-                        OfferPackageEntity pkg = new OfferPackageEntity();
-                        pkg.setId(pkgId);
-                        packages.add(pkg);
-                    }
-
-                    ConstructionMaterialEntity material = new ConstructionMaterialEntity();
-                    material.setType(type);
-                    material.setPackages(packages);
-                    material.setActive(isActive);
-                    material.setRetailNet(net.orElse(null));
-                    return material;
-                });
-    }
-
-    @Provide
-    Arbitrary<Long> packageIds() {
-        return Arbitraries.of(PACKAGE_IDS[0], PACKAGE_IDS[1], PACKAGE_IDS[2], PACKAGE_IDS[3]);
-    }
-
-    @Provide
-    Arbitrary<Long> typeIds() {
-        return Arbitraries.of(TYPE_IDS[0], TYPE_IDS[1], TYPE_IDS[2]);
+        Arbitrary<MaterialSpec> spec = Combinators.combine(typeIds, retailNet, active, offerPackageIds)
+                .as(MaterialSpec::new);
+        return spec.list().ofMinSize(0).ofMaxSize(30);
     }
 }

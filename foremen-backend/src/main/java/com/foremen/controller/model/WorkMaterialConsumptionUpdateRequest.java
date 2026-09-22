@@ -1,13 +1,14 @@
 package com.foremen.controller.model;
 
+import java.math.BigDecimal;
+
 import com.foremen.dao.model.ConsumptionBranch;
+
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
-import java.math.BigDecimal;
 
 /**
  * Update payload for a {@code WorkMaterialConsumption} norm. Structurally identical to
@@ -18,7 +19,6 @@ import java.math.BigDecimal;
  * (task 3.2).
  *
  * @param workItemId                 mandatory work-item reference
- * @param offerPackageId             mandatory offer-package reference
  * @param branch                     mandatory branch (construction / finishing)
  * @param materialUnitId             mandatory numerator material-unit reference
  * @param constructionMaterialTypeId construction analog-group type (set iff branch == construction)
@@ -34,7 +34,6 @@ import java.math.BigDecimal;
  */
 public record WorkMaterialConsumptionUpdateRequest(
     @NotNull Long workItemId,
-    @NotNull Long offerPackageId,
     @NotNull ConsumptionBranch branch,
     @NotNull Long materialUnitId,
     Long constructionMaterialTypeId,

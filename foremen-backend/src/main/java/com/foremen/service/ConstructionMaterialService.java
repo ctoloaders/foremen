@@ -1,5 +1,15 @@
 package com.foremen.service;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.foremen.dao.ConstructionMaterialDao;
 import com.foremen.dao.ConstructionMaterialTypeDao;
@@ -7,14 +17,12 @@ import com.foremen.dao.CurrencyDao;
 import com.foremen.dao.MaterialProducerDao;
 import com.foremen.dao.MaterialSellerDao;
 import com.foremen.dao.MeasurementUnitDao;
-import com.foremen.dao.OfferPackageDao;
 import com.foremen.dao.model.ConstructionMaterialEntity;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
 import com.foremen.dao.model.CurrencyEntity;
 import com.foremen.dao.model.MaterialProducerEntity;
 import com.foremen.dao.model.MaterialSellerEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
-import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
@@ -22,18 +30,8 @@ import com.foremen.service.image.ImageStorage;
 import com.foremen.service.model.ConstructionMaterialServiceExtendedModel;
 import com.foremen.service.model.ConstructionMaterialServiceModel;
 import com.foremen.service.model.mapper.ConstructionMaterialServiceMapper;
-import jakarta.persistence.EntityManager;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import jakarta.persistence.EntityManager;
 
 /**
  * CRUD service for {@link ConstructionMaterialEntity} (FOR-04-17, task 5.2).
@@ -48,12 +46,9 @@ import java.util.Set;
  * model into (or onto) the entity, normalization:
  * <ol>
  *   <li>resolves-and-loads every reference — mandatory {@code typeId}/{@code unitId}/
- *       {@code currencyId} and optional {@code producerId}/{@code sellerId} plus each
- *       {@code offerPackageId} — rejecting a null-or-dangling mandatory id, or a non-null dangling
- *       optional id, with a field-identifying {@code 404 error.entity.not.found} (Requirements 4.3,
- *       4.4);</li>
- *   <li>rejects an empty {@code offerPackageIds} with a {@code 400} naming {@code packages}
- *       (Requirements 4.2, 5.1);</li>
+ *       {@code currencyId} and optional {@code producerId}/{@code sellerId} — rejecting a
+ *       null-or-dangling mandatory id, or a non-null dangling optional id, with a field-identifying
+ *       {@code 404 error.entity.not.found} (Requirements 4.3, 4.4);</li>
  *   <li>range-checks the three prices within {@code [0.00, 9999999999.99]}, rejecting an
  *       out-of-range value with a {@code 400} naming the field (Requirement 4.5) — a defensive
  *       re-check of the request-level {@code @DecimalMin}/{@code @DecimalMax};</li>
@@ -63,7 +58,7 @@ import java.util.Set;
  * </ol>
  * Every rejection throws before persistence, so the enclosing transaction rolls back and nothing is
  * written (Requirements 4.3–4.6). The managed {@code type}/{@code producer}/{@code seller}/
- * {@code unit}/{@code currency} references and the {@code packages} set are attached to the entity by
+ * {@code unit}/{@code currency} references are attached to the entity by
  * {@link ConstructionMaterialServiceMapper} once normalization has asserted their existence.
  *
  * <p><b>Image orphan cleanup.</b> Following {@code MaterialProducerService}, the write path reclaims
@@ -82,9 +77,6 @@ public class ConstructionMaterialService
 
     /** Message code for a missing/dangling reference (404). */
     static final String ENTITY_NOT_FOUND_MESSAGE = "error.entity.not.found";
-
-    /** Message code for an empty {@code packages} set (400). */
-    static final String PACKAGES_REQUIRED_MESSAGE = "error.construction.material.packages.required";
 
     /** Message code for a price outside {@code [0, 9999999999.99]} (400). */
     static final String PRICE_RANGE_MESSAGE = "error.construction.material.price.range";
@@ -111,7 +103,6 @@ public class ConstructionMaterialService
     private final MaterialSellerDao sellerDao;
     private final MeasurementUnitDao unitDao;
     private final CurrencyDao currencyDao;
-    private final OfferPackageDao offerPackageDao;
 
     public ConstructionMaterialService(ConstructionMaterialDao dao,
                                        ConstructionMaterialServiceMapper mapper,
@@ -122,8 +113,7 @@ public class ConstructionMaterialService
                                        MaterialProducerDao producerDao,
                                        MaterialSellerDao sellerDao,
                                        MeasurementUnitDao unitDao,
-                                       CurrencyDao currencyDao,
-                                       OfferPackageDao offerPackageDao) {
+                                       CurrencyDao currencyDao) {
         this.dao = dao;
         this.mapper = mapper;
         this.auditLogDao = auditLogDao;
@@ -134,7 +124,6 @@ public class ConstructionMaterialService
         this.sellerDao = sellerDao;
         this.unitDao = unitDao;
         this.currencyDao = currencyDao;
-        this.offerPackageDao = offerPackageDao;
     }
 
     // --- CRUD plumbing ---
@@ -178,14 +167,12 @@ public class ConstructionMaterialService
     }
 
     /**
-     * Shared create/update normalization. Resolves-and-validates every reference, rejects an empty
-     * package set, and range/length-checks the prices and {@code website}. Every rejection throws a
-     * {@link ForemenApiException} before any write, so the enclosing transaction rolls back with
-     * nothing persisted.
+     * Shared create/update normalization. Resolves-and-validates every reference and range/length-
+     * checks the prices and {@code website}. Every rejection throws a {@link ForemenApiException}
+     * before any write, so the enclosing transaction rolls back with nothing persisted.
      */
     private void normalize(ConstructionMaterialServiceExtendedModel model) {
         resolveReferences(model);
-        validatePackages(model);
         validatePrices(model);
         validateWebsite(model);
     }
@@ -193,9 +180,9 @@ public class ConstructionMaterialService
     /**
      * Resolves-and-loads every reference. The mandatory {@code typeId}/{@code unitId}/
      * {@code currencyId} are rejected when null or dangling; the optional {@code producerId}/
-     * {@code sellerId} allow a null value but reject a non-null dangling id; and every
-     * {@code offerPackageId} must resolve to an existing row (Requirements 4.3, 4.4). Existence is
-     * asserted with a real load rather than a lazy reference so a dangling id is caught here.
+     * {@code sellerId} allow a null value but reject a non-null dangling id (Requirements 4.3, 4.4).
+     * Existence is asserted with a real load rather than a lazy reference so a dangling id is caught
+     * here.
      */
     private void resolveReferences(ConstructionMaterialServiceExtendedModel model) {
         requireExisting("typeId", model.getTypeId(), id -> typeDao.findById(id).isPresent());
@@ -204,15 +191,6 @@ public class ConstructionMaterialService
 
         requireExistingIfPresent("producerId", model.getProducerId(), id -> producerDao.findById(id).isPresent());
         requireExistingIfPresent("sellerId", model.getSellerId(), id -> sellerDao.findById(id).isPresent());
-
-        Set<Long> offerPackageIds = model.getOfferPackageIds();
-        if (offerPackageIds != null) {
-            for (Long offerPackageId : offerPackageIds) {
-                if (offerPackageId == null || offerPackageDao.findById(offerPackageId).isEmpty()) {
-                    throw notFound("offerPackageIds", offerPackageId);
-                }
-            }
-        }
     }
 
     /** Rejects a null or dangling mandatory reference id with a field-identifying 404. */
@@ -226,17 +204,6 @@ public class ConstructionMaterialService
     private void requireExistingIfPresent(String field, Long id, java.util.function.LongPredicate exists) {
         if (id != null && !exists.test(id)) {
             throw notFound(field, id);
-        }
-    }
-
-    /**
-     * Rejects an empty (or null) {@code offerPackageIds} — a construction material must carry at
-     * least one package (Requirements 4.2, 5.1).
-     */
-    private void validatePackages(ConstructionMaterialServiceExtendedModel model) {
-        Set<Long> offerPackageIds = model.getOfferPackageIds();
-        if (offerPackageIds == null || offerPackageIds.isEmpty()) {
-            throw new ForemenApiException(HttpStatus.BAD_REQUEST, PACKAGES_REQUIRED_MESSAGE, "packages");
         }
     }
 
@@ -339,8 +306,8 @@ public class ConstructionMaterialService
     // Audit snapshot override (custom flat snapshot).
     //
     // The generic AdminService audit path serializes the whole ConstructionMaterialEntity with the
-    // shared audit ObjectMapper. That dumps the nested @ManyToOne / @ManyToMany reference entities
-    // (type/producer/seller/unit/currency/packages) as full nested JSON and risks lazy-init/cycles.
+    // shared audit ObjectMapper. That dumps the nested @ManyToOne reference entities
+    // (type/producer/seller/unit/currency) as full nested JSON and risks lazy-init/cycles.
     //
     // Following the WorkPriceService pattern, this service overrides ONLY the single-entity
     // serialization seam (serializeEntity) so the inherited create/update/delete transactional bodies
@@ -352,10 +319,9 @@ public class ConstructionMaterialService
 
     /**
      * Cycle-free, flat single-entity audit snapshot seam. Scalars are emitted verbatim; each nested
-     * reference is flattened to a plain readable name (PL name, else RU name, else code), and
-     * {@code packages} becomes a flat {@code List<String>} of package names. Used for the CREATE-after,
-     * DELETE-before, and (via the inherited {@code serializeUpdateAfterSnapshot} default) both the
-     * before and after of an UPDATE.
+     * reference is flattened to a plain readable name (PL name, else RU name, else code). Used for
+     * the CREATE-after, DELETE-before, and (via the inherited {@code serializeUpdateAfterSnapshot}
+     * default) both the before and after of an UPDATE.
      */
     @Override
     public String serializeEntity(ConstructionMaterialEntity entity) {
@@ -391,7 +357,6 @@ public class ConstructionMaterialService
         snap.put("seller", sellerName(entity.getSeller()));
         snap.put("unit", unitName(entity.getUnit()));
         snap.put("currency", currencyName(entity.getCurrency()));
-        snap.put("packages", packageNames(entity.getPackages()));
         return snap;
     }
 
@@ -428,19 +393,6 @@ public class ConstructionMaterialService
             return null;
         }
         return firstNonBlank(e.getCode(), e.getNamePL(), e.getNameRU());
-    }
-
-    private static List<String> packageNames(Set<OfferPackageEntity> packages) {
-        if (packages == null) {
-            return null;
-        }
-        List<String> names = new ArrayList<>();
-        for (OfferPackageEntity pkg : packages) {
-            if (pkg != null) {
-                names.add(firstNonBlank(pkg.getNamePL(), pkg.getNameRU(), pkg.getCode()));
-            }
-        }
-        return names;
     }
 
     /** First non-null, non-blank value among the candidates, or {@code null} when none qualifies. */

@@ -1,13 +1,16 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "construction_materials")
@@ -33,13 +36,6 @@ public class ConstructionMaterialEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "seller_id")
     private MaterialSellerEntity seller;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-            name = "construction_material_packages",
-            joinColumns = @JoinColumn(name = "construction_material_id"),
-            inverseJoinColumns = @JoinColumn(name = "offer_package_id"))
-    private Set<OfferPackageEntity> packages = new HashSet<>();
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "unit_id", nullable = false)

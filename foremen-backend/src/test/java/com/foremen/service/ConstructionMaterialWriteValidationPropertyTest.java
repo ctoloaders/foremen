@@ -1,23 +1,30 @@
 package com.foremen.service;
 
+import java.math.BigDecimal;
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.mockito.Mockito;
+import org.springframework.http.HttpStatus;
+
 import com.foremen.dao.ConstructionMaterialDao;
 import com.foremen.dao.ConstructionMaterialTypeDao;
 import com.foremen.dao.CurrencyDao;
 import com.foremen.dao.MaterialProducerDao;
 import com.foremen.dao.MaterialSellerDao;
 import com.foremen.dao.MeasurementUnitDao;
-import com.foremen.dao.OfferPackageDao;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
 import com.foremen.dao.model.CurrencyEntity;
 import com.foremen.dao.model.MaterialProducerEntity;
 import com.foremen.dao.model.MaterialSellerEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
-import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.image.ImageStorage;
 import com.foremen.service.model.ConstructionMaterialServiceExtendedModel;
 import com.foremen.service.model.mapper.ConstructionMaterialServiceMapper;
+
 import jakarta.persistence.EntityManager;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
@@ -26,17 +33,6 @@ import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
 import net.jqwik.api.Tag;
-import net.jqwik.api.constraints.WithNull;
-import org.mockito.Mockito;
-import org.springframework.http.HttpStatus;
-
-import java.math.BigDecimal;
-import java.util.LinkedHashSet;
-import java.util.Optional;
-import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Property-based tests for {@link ConstructionMaterialService} write-path validation
@@ -45,14 +41,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * <p>The write path is {@link ConstructionMaterialService#validateCreate}/{@code validateUpdate},
  * both delegating to the private {@code normalize(...)} step. Normalization resolves-and-loads every
  * reference (mandatory {@code typeId}/{@code unitId}/{@code currencyId}, optional {@code producerId}/
- * {@code sellerId}, each {@code offerPackageId}), rejects an empty {@code offerPackageIds}, and
- * range-checks the three prices — throwing a {@link ForemenApiException} (404 for a dangling
- * reference naming the field, 400 for an out-of-range price / empty packages / long website) BEFORE
- * anything is persisted. Because {@code normalize} performs no writes, the six reference DAOs are
- * mocked to make only a fixed set of "known-valid" ids resolve, the service is constructed directly
- * with those mocks, and {@code validateCreate}/{@code validateUpdate} are driven with generated
- * models. No persistence occurs — verified by asserting the material DAO's {@code save} was never
- * invoked.
+ * {@code sellerId}) and range-checks the three prices — throwing a {@link ForemenApiException} (404
+ * for a dangling reference naming the field, 400 for an out-of-range price / long website) BEFORE
+ * anything is persisted. The material-side package dimension was collapsed by FOR-05-04-UI
+ * (Requirement 5), so there is no longer any package binding to validate. Because {@code normalize}
+ * performs no writes, the five reference DAOs are mocked to make only a fixed set of "known-valid"
+ * ids resolve, the service is constructed directly with those mocks, and
+ * {@code validateCreate}/{@code validateUpdate} are driven with generated models. No persistence
+ * occurs — verified by asserting the material DAO's {@code save} was never invoked.
  *
  * <p>Feature: FOR-04-17-construction-materials, Property 4
  *
@@ -67,7 +63,6 @@ class ConstructionMaterialWriteValidationPropertyTest {
     private static final long VALID_SELLER_ID = 3L;
     private static final long VALID_UNIT_ID = 4L;
     private static final long VALID_CURRENCY_ID = 5L;
-    private static final Set<Long> VALID_PACKAGE_IDS = Set.of(10L, 11L, 12L);
 
     /** Any id at or beyond this bound is guaranteed NOT to be one of the known-valid ids above. */
     private static final long DANGLING_ID_FLOOR = 1_000L;
@@ -123,7 +118,7 @@ class ConstructionMaterialWriteValidationPropertyTest {
 
     // ------------------------------------------------------------------------------------------
     // Property 4c: an all-valid request (references exist, prices in range, required fields
-    //              present, >= 1 package) is accepted — no exception, and still no persistence
+    //              present) is accepted — no exception, and still no persistence
     //              (normalize is a pure pre-persist check).
     // Validates: Requirements 4.3, 4.4, 4.5
     // ------------------------------------------------------------------------------------------
@@ -149,7 +144,7 @@ class ConstructionMaterialWriteValidationPropertyTest {
         return Arbitraries.longs().between(DANGLING_ID_FLOOR, Long.MAX_VALUE);
     }
 
-    /** One dangling-reference case per reference field (mandatory nullable-or-dangling + optional dangling + package). */
+    /** One dangling-reference case per reference field (mandatory nullable-or-dangling + optional dangling). */
     @Provide
     Arbitrary<DanglingCase> danglingReferenceCases() {
         Arbitrary<Long> dangling = danglingIds();
@@ -175,20 +170,11 @@ class ConstructionMaterialWriteValidationPropertyTest {
         Arbitrary<DanglingCase> sellerDangling = dangling.map(id ->
                 new DanglingCase("sellerId", m -> m.setSellerId(id)));
 
-        // A dangling id mixed into the (otherwise valid) package set.
-        Arbitrary<DanglingCase> packageDangling = dangling.map(id ->
-                new DanglingCase("offerPackageIds", m -> {
-                    Set<Long> ids = new LinkedHashSet<>(VALID_PACKAGE_IDS);
-                    ids.add(id);
-                    m.setOfferPackageIds(ids);
-                }));
-
         return Arbitraries.oneOf(
                 typeDangling, typeNull,
                 unitDangling, unitNull,
                 currencyDangling, currencyNull,
-                producerDangling, sellerDangling,
-                packageDangling);
+                producerDangling, sellerDangling);
     }
 
     /** One out-of-range price per price field (negative or above the max), on an otherwise valid model. */
@@ -207,18 +193,13 @@ class ConstructionMaterialWriteValidationPropertyTest {
         return Combinators.combine(field, outOfRange).as(PriceCase::new);
     }
 
-    /** Fully-valid write models: references from the known-valid set, in-range prices, >= 1 package. */
+    /** Fully-valid write models: references from the known-valid set, in-range prices. */
     @Provide
     Arbitrary<ConstructionMaterialServiceExtendedModel> validModels() {
         Arbitrary<Long> producer = Arbitraries.oneOf(
                 Arbitraries.just((Long) null), Arbitraries.just(VALID_PRODUCER_ID));
         Arbitrary<Long> seller = Arbitraries.oneOf(
                 Arbitraries.just((Long) null), Arbitraries.just(VALID_SELLER_ID));
-
-        // A non-empty subset of the valid package ids.
-        Arbitrary<Set<Long>> packages = Arbitraries.subsetOf(VALID_PACKAGE_IDS)
-                .filter(s -> !s.isEmpty())
-                .map(LinkedHashSet::new);
 
         Arbitrary<BigDecimal> inRangePrice = Arbitraries.bigDecimals()
                 .between(BigDecimal.ZERO, PRICE_MAX)
@@ -230,17 +211,16 @@ class ConstructionMaterialWriteValidationPropertyTest {
                 .injectNull(0.5);
 
         return Combinators.combine(
-                producer, seller, packages,
+                producer, seller,
                 inRangePrice, inRangePrice, inRangePrice,
                 website)
-                .as((prod, sell, pkgs, purchase, gross, net, site) -> {
+                .as((prod, sell, purchase, gross, net, site) -> {
                     ConstructionMaterialServiceExtendedModel m = new ConstructionMaterialServiceExtendedModel();
                     m.setNameRU("Материал");
                     m.setNamePL("Materiał");
                     m.setTypeId(VALID_TYPE_ID);
                     m.setProducerId(prod);
                     m.setSellerId(sell);
-                    m.setOfferPackageIds(pkgs);
                     m.setUnitId(VALID_UNIT_ID);
                     m.setCurrencyId(VALID_CURRENCY_ID);
                     m.setPurchasePrice(purchase);
@@ -264,7 +244,6 @@ class ConstructionMaterialWriteValidationPropertyTest {
         m.setTypeId(VALID_TYPE_ID);
         m.setProducerId(VALID_PRODUCER_ID);
         m.setSellerId(VALID_SELLER_ID);
-        m.setOfferPackageIds(new LinkedHashSet<>(VALID_PACKAGE_IDS));
         m.setUnitId(VALID_UNIT_ID);
         m.setCurrencyId(VALID_CURRENCY_ID);
         m.setPurchasePrice(new BigDecimal("10.00"));
@@ -309,7 +288,6 @@ class ConstructionMaterialWriteValidationPropertyTest {
             MaterialSellerDao sellerDao = Mockito.mock(MaterialSellerDao.class);
             MeasurementUnitDao unitDao = Mockito.mock(MeasurementUnitDao.class);
             CurrencyDao currencyDao = Mockito.mock(CurrencyDao.class);
-            OfferPackageDao offerPackageDao = Mockito.mock(OfferPackageDao.class);
 
             Mockito.when(typeDao.findById(VALID_TYPE_ID))
                     .thenReturn(Optional.of(new ConstructionMaterialTypeEntity()));
@@ -321,10 +299,6 @@ class ConstructionMaterialWriteValidationPropertyTest {
                     .thenReturn(Optional.of(new MeasurementUnitEntity()));
             Mockito.when(currencyDao.findById(VALID_CURRENCY_ID))
                     .thenReturn(Optional.of(new CurrencyEntity()));
-            for (Long packageId : VALID_PACKAGE_IDS) {
-                Mockito.when(offerPackageDao.findById(packageId))
-                        .thenReturn(Optional.of(new OfferPackageEntity()));
-            }
             // Every other id resolves to empty (the Mockito default), so any id >= DANGLING_ID_FLOOR
             // — or any known-valid id swapped onto the wrong DAO — is treated as dangling.
 
@@ -334,7 +308,7 @@ class ConstructionMaterialWriteValidationPropertyTest {
                     Mockito.mock(AuditLogDao.class),
                     Mockito.mock(EntityManager.class),
                     Mockito.mock(ImageStorage.class),
-                    typeDao, producerDao, sellerDao, unitDao, currencyDao, offerPackageDao);
+                    typeDao, producerDao, sellerDao, unitDao, currencyDao);
         }
 
         /** Normalization is a pure pre-persist check — the material DAO must never be written to. */

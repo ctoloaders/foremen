@@ -1,9 +1,28 @@
 package com.foremen.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
-import com.foremen.controller.model.*;
+import com.foremen.controller.model.ConstructionMaterialCreateRequest;
+import com.foremen.controller.model.ConstructionMaterialCreateResponse;
+import com.foremen.controller.model.ConstructionMaterialDtoExtendedModel;
+import com.foremen.controller.model.ConstructionMaterialDtoModel;
+import com.foremen.controller.model.ConstructionMaterialUpdateRequest;
+import com.foremen.controller.model.ConstructionMaterialUpdateResponse;
+import com.foremen.controller.model.PriceRangeEntry;
+import com.foremen.controller.model.RefDto;
 import com.foremen.controller.model.mapper.ConstructionMaterialControllerMapper;
 import com.foremen.dao.ConstructionMaterialDao;
 import com.foremen.dao.model.ConstructionMaterialEntity;
@@ -16,18 +35,8 @@ import com.foremen.service.model.mapper.AuditServiceMapper;
 import com.foremen.service.pricing.PriceRangeResolver;
 import com.foremen.service.pricing.PriceRangeResolver.PriceRange;
 import com.foremen.service.pricing.PriceRangeResolver.PriceRangeKey;
-import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
 
 /**
  * CRUD controller for the construction-material vertical (FOR-04-17, task 5.3).
@@ -44,28 +53,27 @@ import java.util.Map;
  * {@code PermissionAnnotationValidator} checks at startup (Requirements 9.5, 9.6).
  *
  * <p>Reference filters {@code type.id}/{@code producer.id}/{@code seller.id}/{@code unit.id}/
- * {@code currency.id}/{@code packages.id} require no extra code here: the inherited list operation
- * delegates to the FOR-04-01 {@code SpecificationBuilder}, which resolves dot-notation paths and
- * transparently turns a collection path (e.g. {@code packages.id}) into a JOIN with
- * {@code distinct} (Requirements 4.1, 4.9).
+ * {@code currency.id} require no extra code here: the inherited list operation delegates to the
+ * FOR-04-01 {@code SpecificationBuilder}, which resolves dot-notation paths (Requirements 4.1, 4.9).
  *
  * <h2>Computed price range (Requirement 6)</h2>
- * <p>Two read paths surface the computed MIN..MAX {@code retailNet} range keyed by the pair
- * ({@code OfferPackage}, {@code ConstructionMaterialType}), both derived at read time from the same
- * active-priced material set (loaded once per request via
+ * <p>Two read paths surface the computed MIN..MAX {@code retailNet} range keyed by
+ * {@code ConstructionMaterialType} only (the material-side package dimension was collapsed by
+ * FOR-05-04-UI, Requirement 5), both derived at read time from the same active-priced material set
+ * (loaded once per request via
  * {@link ConstructionMaterialDao#findByActiveTrueAndRetailNetNotNull()}) and never persisted:
  * <ul>
- *   <li>{@link #priceRanges(Long, Long)} — {@code GET /price-ranges} with optional
- *       {@code ?packageId=&typeId=}: when both are supplied it returns the single {@link PriceRange}
- *       for that pair, otherwise the full map as a list of {@link PriceRangeEntry} rows. Guarded by a
+ *   <li>{@link #priceRanges(Long)} — {@code GET /price-ranges} with optional
+ *       {@code ?typeId=}: when supplied it returns the single {@link PriceRange}
+ *       for that type, otherwise the full map as a list of {@link PriceRangeEntry} rows. Guarded by a
  *       method-level {@code @RequiresPermission("MATERIALS_CONSTRUCTION", "READ")}, which takes
  *       precedence over the class {@code @PermissionResource} + method {@code @PermissionOperation}
  *       combination for this handler and keeps the controller fully annotated for
  *       {@code PermissionAnnotationValidator} (Requirements 9.5, 9.6).</li>
  *   <li>{@link #find(Pageable, String)} — the inherited list is overridden to also stamp each
- *       returned {@link ConstructionMaterialDtoModel}'s {@code priceRanges} with the ranges for that
- *       row's own {@code (each package, its type)} pairs, computed once per request from the whole
- *       active-priced set, so the UI renders the price-range column without a second round-trip.</li>
+ *       returned {@link ConstructionMaterialDtoModel}'s {@code priceRanges} with the range for that
+ *       row's own type, computed once per request from the whole active-priced set, so the UI
+ *       renders the price-range column without a second round-trip.</li>
  * </ul>
  */
 @RestController
@@ -114,14 +122,13 @@ public class ConstructionMaterialController implements AdminController<
      * Computed price range endpoint (Requirements 6.1, 6.4, 9.5, 9.6).
      *
      * <p>Loads the active priced construction materials once
-     * ({@link ConstructionMaterialDao#findByActiveTrueAndRetailNetNotNull()}, {@code packages} +
-     * {@code type} fetched) and delegates the read-time computation to {@link PriceRangeResolver}:
+     * ({@link ConstructionMaterialDao#findByActiveTrueAndRetailNetNotNull()}, {@code type} fetched)
+     * and delegates the read-time computation to {@link PriceRangeResolver}:
      * <ul>
-     *   <li>when BOTH {@code packageId} and {@code typeId} are supplied, returns the single
-     *       {@link PriceRange} for that pair (an empty {@code PriceRange(null, null)} when no active
-     *       priced material qualifies);</li>
+     *   <li>when {@code typeId} is supplied, returns the single {@link PriceRange} for that type
+     *       (an empty {@code PriceRange(null, null)} when no active priced material qualifies);</li>
      *   <li>otherwise returns the full map as a list of {@link PriceRangeEntry} rows
-     *       {@code {offerPackageId, typeId, min, max}}.</li>
+     *       {@code {constructionMaterialTypeId, min, max}}.</li>
      * </ul>
      * The response type is {@code Object} because the two shapes differ; nothing is ever persisted
      * (Requirement 6.4). The method-level {@code @RequiresPermission} takes precedence for this
@@ -131,12 +138,11 @@ public class ConstructionMaterialController implements AdminController<
     @GetMapping("/price-ranges")
     @RequiresPermission(resource = "MATERIALS_CONSTRUCTION", operation = "READ")
     public ResponseEntity<?> priceRanges(
-            @RequestParam(name = "packageId", required = false) Long packageId,
             @RequestParam(name = "typeId", required = false) Long typeId) {
         List<ConstructionMaterialEntity> materials = constructionMaterialDao.findByActiveTrueAndRetailNetNotNull();
 
-        if (packageId != null && typeId != null) {
-            PriceRange range = priceRangeResolver.rangeFor(materials, packageId, typeId);
+        if (typeId != null) {
+            PriceRange range = priceRangeResolver.rangeFor(materials, typeId);
             return ResponseEntity.ok(range);
         }
 
@@ -145,7 +151,7 @@ public class ConstructionMaterialController implements AdminController<
             PriceRangeKey key = entry.getKey();
             PriceRange range = entry.getValue();
             rows.add(new PriceRangeEntry(
-                    key.offerPackageId(), key.constructionMaterialTypeId(), range.min(), range.max()));
+                    key.constructionMaterialTypeId(), range.min(), range.max()));
         }
         return ResponseEntity.ok(rows);
     }
@@ -153,14 +159,13 @@ public class ConstructionMaterialController implements AdminController<
     /**
      * Overrides the inherited list operation to ALSO populate each returned
      * {@link ConstructionMaterialDtoModel}'s {@code priceRanges} payload, so the UI can render the
-     * per-({@code package}, {@code type}) range column without a second round-trip (Requirements 6.1,
-     * 6.4).
+     * type-keyed range column without a second round-trip (Requirements 6.1, 6.4).
      *
      * <p>The full price-range map is computed ONCE per request from the whole active-priced material
      * set (not per row, so no N+1), then each row is indexed into it: for a row of type {@code T},
-     * for every package {@code P} in that row's {@code packages}, the {@code (P, T)} range is looked
-     * up (empty range when the pair has no qualifying material). Because {@link ConstructionMaterialDtoModel}
-     * is an immutable record, each row is rebuilt as a copy carrying its resolved {@code priceRanges}.
+     * the {@code T} range is looked up (empty range when the type has no qualifying material).
+     * Because {@link ConstructionMaterialDtoModel} is an immutable record, each row is rebuilt as a
+     * copy carrying its resolved {@code priceRanges}.
      */
     @Override
     @GetMapping
@@ -182,25 +187,18 @@ public class ConstructionMaterialController implements AdminController<
     }
 
     /**
-     * Returns a copy of {@code row} whose {@code priceRanges} is filled with the range for each
-     * {@code (package, row.type)} pair, indexed from the pre-computed {@code ranges} map. A row with
-     * no type or no packages yields an empty {@code priceRanges} list.
+     * Returns a copy of {@code row} whose {@code priceRanges} is filled with the range for the row's
+     * own type, indexed from the pre-computed {@code ranges} map. A row with no type yields an empty
+     * {@code priceRanges} list.
      */
     private ConstructionMaterialDtoModel withPriceRanges(ConstructionMaterialDtoModel row,
                                                          Map<PriceRangeKey, PriceRange> ranges) {
         List<PriceRangeEntry> rowRanges = new ArrayList<>();
         RefDto type = row.type();
-        List<RefDto> packages = row.packages();
-        if (type != null && type.id() != null && packages != null) {
+        if (type != null && type.id() != null) {
             Long typeId = type.id();
-            for (RefDto pkg : packages) {
-                if (pkg == null || pkg.id() == null) {
-                    continue;
-                }
-                PriceRange range = ranges.getOrDefault(
-                        new PriceRangeKey(pkg.id(), typeId), PriceRange.EMPTY);
-                rowRanges.add(new PriceRangeEntry(pkg.id(), typeId, range.min(), range.max()));
-            }
+            PriceRange range = ranges.getOrDefault(new PriceRangeKey(typeId), PriceRange.EMPTY);
+            rowRanges.add(new PriceRangeEntry(typeId, range.min(), range.max()));
         }
 
         return new ConstructionMaterialDtoModel(
@@ -209,7 +207,6 @@ public class ConstructionMaterialController implements AdminController<
                 row.type(),
                 row.producer(),
                 row.seller(),
-                row.packages(),
                 row.unit(),
                 row.currency(),
                 row.purchasePrice(),

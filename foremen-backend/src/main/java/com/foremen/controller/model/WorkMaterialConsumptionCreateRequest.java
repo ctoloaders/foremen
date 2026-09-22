@@ -1,19 +1,20 @@
 package com.foremen.controller.model;
 
+import java.math.BigDecimal;
+
 import com.foremen.dao.model.ConsumptionBranch;
+
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-import java.math.BigDecimal;
-
 /**
  * Create payload for a {@code WorkMaterialConsumption} norm (FOR-04-19) — one
- * {@code (work item, offer package, material TYPE)} consumption norm.
+ * {@code (work item, material TYPE)} consumption norm.
  *
- * <p>There is no {@code code} and no {@code name}. {@code workItemId}, {@code offerPackageId},
+ * <p>There is no {@code code} and no {@code name}. {@code workItemId},
  * {@code branch}, and {@code materialUnitId} are mandatory references; exactly ONE material-type id
  * ({@code constructionMaterialTypeId} XOR {@code finishingMaterialTypeId}) must be set and must match
  * {@code branch} — this XOR + branch-match rule and reference existence are validated on the service
@@ -24,7 +25,6 @@ import java.math.BigDecimal;
  * {@code sourceDoc}/{@code sourceRef} are mandatory non-blank; {@code sourceUrl} is optional (max 1024).
  *
  * @param workItemId                 mandatory work-item reference
- * @param offerPackageId             mandatory offer-package reference
  * @param branch                     mandatory branch (construction / finishing)
  * @param materialUnitId             mandatory numerator material-unit reference
  * @param constructionMaterialTypeId construction analog-group type (set iff branch == construction)
@@ -40,7 +40,6 @@ import java.math.BigDecimal;
  */
 public record WorkMaterialConsumptionCreateRequest(
     @NotNull Long workItemId,
-    @NotNull Long offerPackageId,
     @NotNull ConsumptionBranch branch,
     @NotNull Long materialUnitId,
     Long constructionMaterialTypeId,

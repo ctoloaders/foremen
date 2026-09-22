@@ -1,25 +1,11 @@
 package com.foremen.service.image;
 
-import com.foremen.dao.ConstructionMaterialDao;
-import com.foremen.dao.ConstructionMaterialTypeDao;
-import com.foremen.dao.CurrencyDao;
-import com.foremen.dao.MaterialProducerDao;
-import com.foremen.dao.MeasurementUnitDao;
-import com.foremen.dao.OfferPackageDao;
-import com.foremen.dao.model.ConstructionMaterialEntity;
-import com.foremen.dao.model.ConstructionMaterialTypeEntity;
-import com.foremen.dao.model.CurrencyEntity;
-import com.foremen.dao.model.MaterialProducerEntity;
-import com.foremen.dao.model.MeasurementUnitEntity;
-import com.foremen.dao.model.OfferPackageEntity;
-import com.foremen.service.ConstructionMaterialService;
-import com.foremen.service.model.ConstructionMaterialServiceExtendedModel;
-import com.foremen.testsupport.MockMvcSecurityConfig;
-import com.google.api.gax.paging.Page;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.BlobId;
-import com.google.cloud.storage.Storage;
-import jakarta.persistence.EntityManager;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,13 +27,25 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicLong;
+import com.foremen.dao.ConstructionMaterialDao;
+import com.foremen.dao.ConstructionMaterialTypeDao;
+import com.foremen.dao.CurrencyDao;
+import com.foremen.dao.MaterialProducerDao;
+import com.foremen.dao.MeasurementUnitDao;
+import com.foremen.dao.OfferPackageDao;
+import com.foremen.dao.model.ConstructionMaterialTypeEntity;
+import com.foremen.dao.model.CurrencyEntity;
+import com.foremen.dao.model.MeasurementUnitEntity;
+import com.foremen.dao.model.OfferPackageEntity;
+import com.foremen.service.ConstructionMaterialService;
+import com.foremen.service.model.ConstructionMaterialServiceExtendedModel;
+import com.foremen.testsupport.MockMvcSecurityConfig;
+import com.google.api.gax.paging.Page;
+import com.google.cloud.storage.Blob;
+import com.google.cloud.storage.BlobId;
+import com.google.cloud.storage.Storage;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import jakarta.persistence.EntityManager;
 
 /**
  * Integration test for the shared {@link ImageStorage} orphan-cleanup behaviour (FOR-04-17,
@@ -186,7 +184,6 @@ class ImageStorageOrphanCleanupTest {
             update.setTypeId(refs.typeId());
             update.setUnitId(refs.unitId());
             update.setCurrencyId(refs.currencyId());
-            update.setOfferPackageIds(Set.of(refs.packageId()));
             update.setImage(newKey);
             constructionMaterialService.update(materialId, update);
 
@@ -360,7 +357,6 @@ class ImageStorageOrphanCleanupTest {
         model.setTypeId(refs.typeId());
         model.setUnitId(refs.unitId());
         model.setCurrencyId(refs.currencyId());
-        model.setOfferPackageIds(Set.of(refs.packageId()));
         model.setRetailNet(new BigDecimal("10.00"));
         model.setImage(imageKey);
         model.setActive(true);

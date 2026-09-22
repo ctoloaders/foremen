@@ -37,7 +37,7 @@ import java.util.Set;
  * <p><b>Write path.</b> {@code toCreateDaoModel}/{@code updateFields} map {@code branch},
  * {@code normQty}/{@code wastePct}, the raw {@code justificationRU}/{@code justificationPL} pair and
  * the citation straight through (same field names), and turn the flat {@code workItemId}/
- * {@code offerPackageId}/{@code materialUnitId}/{@code constructionMaterialTypeId}/
+ * {@code materialUnitId}/{@code constructionMaterialTypeId}/
  * {@code finishingMaterialTypeId} into managed references via {@code getReference(...)}.
  *
  * <p><b>Read path.</b> {@code toServiceModel} leaves the {@link RefDto} references and the derived
@@ -137,7 +137,6 @@ public abstract class WorkMaterialConsumptionServiceMapper
     @Mapping(target = "materials", ignore = true)
     @Mapping(target = "justification", ignore = true)
     @Mapping(target = "workItemId", source = "workItem.id")
-    @Mapping(target = "offerPackageId", ignore = true)
     @Mapping(target = "materialUnitId", source = "materialUnit.id")
     @Mapping(target = "constructionMaterialTypeId", source = "constructionMaterialType.id")
     @Mapping(target = "finishingMaterialTypeId", source = "finishingMaterialType.id")

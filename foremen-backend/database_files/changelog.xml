@@ -134,5 +134,11 @@
          grants. MUST be registered LAST so it runs after 087/088 create the tables it
          guards. Idempotent via onFail="MARK_RAN" preconditions. -->
     <include file="database_files/changesets/089-seed-package-assortment-resource.xml"/>
+    <!-- FOR-05-04-UI (R5.4, R5.9, R8.8, R8.9): deferred material-side collapse — archive
+         every construction_material_packages row into construction_material_packages_archive,
+         then drop the M:N join table (created in 057b). Archive-before-drop, idempotent via
+         onFail="MARK_RAN" preconditions, so a re-run against an already-collapsed database
+         makes no schema/data change. Registered LAST in sequence. -->
+    <include file="database_files/changesets/090-archive-and-drop-construction-material-packages.xml"/>
 
 </databaseChangeLog>

@@ -1,23 +1,24 @@
 package com.foremen.service.model;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.foremen.controller.model.AnalogMaterialDto;
 import com.foremen.controller.model.MoneyRangeDto;
 import com.foremen.controller.model.RefDto;
 import com.foremen.dao.model.ConsumptionBranch;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Write-path (and extended-read) service model for a {@code WorkMaterialConsumption} norm
  * (FOR-04-19).
  *
  * <p>Carries the raw reference ids the write path resolves/validates and the edit form pre-selects
- * ({@code workItemId}/{@code offerPackageId}/{@code materialUnitId}/{@code constructionMaterialTypeId}/
+ * ({@code workItemId}/{@code materialUnitId}/{@code constructionMaterialTypeId}/
  * {@code finishingMaterialTypeId}), the {@code branch}, {@code normQty}/{@code wastePct}, BOTH raw
  * {@code justificationRU}/{@code justificationPL} variants (the only i18n owned by the entity), and
  * the citation. The resolved localized {@link RefDto} references, the {@code branchLabel}, the single
@@ -39,7 +40,6 @@ public class WorkMaterialConsumptionServiceExtendedModel {
     private RefDto constructionMaterialType;
     private RefDto finishingMaterialType;
     private Long workItemId;
-    private Long offerPackageId;
     private Long materialUnitId;
     private Long constructionMaterialTypeId;
     private Long finishingMaterialTypeId;
