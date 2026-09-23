@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI: retire the legacy per-line reference quantity
+        assortment_line_items.qty_ref50. The reference quantity is now a PER-GROUP
+        value (assortment_groups.reference_qty / reference_unit, added by changeset
+        094), and PackageZlM2Resolver computes the package zł/m² as
+        Σ over groups of ((Σ avg_price of the package's lines) × group.reference_qty) / 50.
+        The AssortmentLineItemEntity no longer maps qty_ref50, so the column is
+        dropped forward here (changesets 088/091 keep their original applied content
+        and checksums — this is a new forward migration, not an edit to applied history).
+
+        Idempotent: guarded by columnExists + onFail="MARK_RAN" so a re-run against a
+        database where the column is already gone changes nothing. Registered LAST.
+    -->
+
+    <changeSet id="096-drop-assortment-line-item-qty-ref50" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="assortment_line_items" columnName="qty_ref50"/>
+        </preConditions>
+
+        <dropColumn tableName="assortment_line_items" columnName="qty_ref50"/>
+    </changeSet>
+
+</databaseChangeLog>

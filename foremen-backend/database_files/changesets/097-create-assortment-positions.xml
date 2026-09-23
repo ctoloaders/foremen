@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI (assortment rework): replace the per-(group x package) free-text
+        assortment_line_items with a normalized two-table model:
+
+          assortment_positions        - GLOBAL, per group: a material-type-backed position
+                                        shared across ALL offer packages. A position REQUIRES a
+                                        material type, and a material type appears at most once
+                                        per group (UNIQUE (assortment_group_id, material_type_id)).
+          assortment_position_prices  - per position x per offer package: the min/avg/max price
+                                        row for a position under a specific package (UNIQUE
+                                        (assortment_position_id, offer_package_id)).
+
+        Columns / FKs:
+          assortment_positions
+            - assortment_group_id : owner FK to assortment_groups, NOT NULL; ON DELETE CASCADE
+                                     (deleting the group removes its positions, and via the
+                                     price FK below, their prices for ALL packages).
+            - material_type_id    : FK to material_types, NOT NULL; ON DELETE RESTRICT (a
+                                     material type referenced by a position cannot be silently
+                                     removed). A position REQUIRES a material type.
+            - sort_order          : INT, nullable — optional display order within the group.
+          assortment_position_prices
+            - assortment_position_id : owner FK to assortment_positions, NOT NULL; ON DELETE
+                                        CASCADE (deleting a position removes its price rows).
+            - offer_package_id       : FK to offer_packages, NOT NULL; ON DELETE RESTRICT.
+            - min_price / avg_price / max_price : NUMERIC(12,2), nullable per design (the
+                                        zl/m^2 contribution is computed from avg_price; a null
+                                        avg_price contributes 0 for that package).
+        Plus the four BaseEntity audit columns on each table.
+
+        Idempotent via NOT tableExists + MARK_RAN on each changeSet.
+    -->
+
+    <changeSet id="097-create-assortment-positions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_positions"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_positions">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="assortment_group_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="material_type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting the group removes its positions (ON DELETE CASCADE). -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_positions_group"
+            baseTableName="assortment_positions"
+            baseColumnNames="assortment_group_id"
+            referencedTableName="assortment_groups"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Material type reference FK: NOT NULL, ON DELETE RESTRICT. A position REQUIRES a
+             material type; a referenced material type cannot be silently removed. -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_positions_material_type"
+            baseTableName="assortment_positions"
+            baseColumnNames="material_type_id"
+            referencedTableName="material_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- A material type appears at most once per group. -->
+        <addUniqueConstraint
+            constraintName="uq_assortment_positions_group_material_type"
+            tableName="assortment_positions"
+            columnNames="assortment_group_id, material_type_id"/>
+    </changeSet>
+
+    <changeSet id="097-create-assortment-position-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_position_prices"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_position_prices">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="assortment_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="min_price" type="NUMERIC(12,2)"/>
+            <column name="avg_price" type="NUMERIC(12,2)"/>
+            <column name="max_price" type="NUMERIC(12,2)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a position removes its price rows (ON DELETE CASCADE). -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_position_prices_position"
+            baseTableName="assortment_position_prices"
+            baseColumnNames="assortment_position_id"
+            referencedTableName="assortment_positions"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Package reference FK: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_position_prices_offer_package"
+            baseTableName="assortment_position_prices"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- At most one price row per (position, package). -->
+        <addUniqueConstraint
+            constraintName="uq_assortment_position_prices_position_package"
+            tableName="assortment_position_prices"
+            columnNames="assortment_position_id, offer_package_id"/>
+    </changeSet>
+
+</databaseChangeLog>

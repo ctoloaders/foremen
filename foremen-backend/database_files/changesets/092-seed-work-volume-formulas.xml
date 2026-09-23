@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI: seed default work-volume formulas from the EBRD Matrix
+        "Oferta" sheet. Each work item is matched to its row by work_items.code
+        (the Excel LP normalized to N.MM, backfilled by changeset 063). The
+        Oferta per-room dimension columns (X..AJ) reference Wymiary rows 2..15,
+        which are the 14 room dimensions bound 1:1 to FormulaAst.ROOM_DIMENSION_VARS
+        (floorArea..ceilingHeight). Only rows whose column-X formula is a pure
+        function of those dimensions + arithmetic are seeded; group roll-ups,
+        cross-work refs, and IF/IFERROR guards are intentionally excluded.
+
+        source_text holds the human formula (bare dimension identifiers); parsed_ast
+        holds the pre-parsed AST (JSONB NOT NULL) in the exact Jackson "k"-tagged
+        shape FormulaParser produces, so the app evaluates without re-parsing.
+
+        Idempotent: guarded by onFail="MARK_RAN" (no rows yet); each insert resolves
+        the work item by code via a valueComputed subselect and is skipped when the
+        code is absent or already has a formula (UNIQUE work_item_id). Registered
+        LAST in the changelog.
+    -->
+
+    <changeSet id="092-seed-work-volume-formulas" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_volume_formulas</sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '1.01'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.01'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.02'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.04'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.05'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.07'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.08'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.10'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.11'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.13'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '8.14'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '9.02'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '9.03'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'windowHeight*2+windowWidth', '{"k":"op","op":"ADD","l":{"k":"op","op":"MUL","l":{"k":"var","name":"windowHeight"},"r":{"k":"const","v":2}},"r":{"k":"var","name":"windowWidth"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '9.05'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '9.06'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'perimeter+internalCorners*ceilingHeight', '{"k":"op","op":"ADD","l":{"k":"var","name":"perimeter"},"r":{"k":"op","op":"MUL","l":{"k":"var","name":"internalCorners"},"r":{"k":"var","name":"ceilingHeight"}}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '9.10'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.05'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.06'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.07'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.08'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.09'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.10'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.11'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.12'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'perimeter-doorWidth-wallGap-finishGap', '{"k":"op","op":"SUB","l":{"k":"op","op":"SUB","l":{"k":"op","op":"SUB","l":{"k":"var","name":"perimeter"},"r":{"k":"var","name":"doorWidth"}},"r":{"k":"var","name":"wallGap"}},"r":{"k":"var","name":"finishGap"}}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '10.15'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi WHERE wi.code = '13.02'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

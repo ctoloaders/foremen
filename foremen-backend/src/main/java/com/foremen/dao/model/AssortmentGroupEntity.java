@@ -1,6 +1,10 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -27,4 +31,16 @@ public class AssortmentGroupEntity extends BaseEntity {
 
     @Column(name = "sort_order", nullable = false)
     private Integer sortOrder;
+
+    /**
+     * The group's single reference quantity (ILOSC): applied to the sum of the group's positions'
+     * avg prices when computing the group's zł/m² contribution — {@code (Σ avgPrice × referenceQty)
+     * / 50} (FOR-05-04-UI). Defaults to 1 at the DB level.
+     */
+    @Column(name = "reference_qty", nullable = false)
+    private BigDecimal referenceQty;
+
+    /** The group's reference-quantity unit — a plain string, {@code 'szt'} or {@code 'm2'}. */
+    @Column(name = "reference_unit", nullable = false)
+    private String referenceUnit;
 }

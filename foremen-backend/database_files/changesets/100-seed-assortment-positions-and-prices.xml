@@ -1,0 +1,697 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI (assortment seed): populate the normalized assortment model
+        (assortment_positions + assortment_position_prices, created by changeset 097) from the
+        "Materiały pakiety" catalog, sheet `Zestawienie` (docs/Materiały pakiety.xlsx).
+
+        The sheet groups leaf material positions under four assortment groups and gives, per
+        offer package (Start/Budget -> 'budget', Comfort/Standard -> 'norm', LUX -> 'lux'), the
+        min / avg / max net price of each position. This changeset seeds:
+
+          - 18 assortment_positions: one per (group, material type) leaf in the sheet. Each
+            position is backed by an existing material_types row (positions REQUIRE a material
+            type, UNIQUE (group, material_type)). Group <-> sheet section mapping:
+              Sanitariat = "Sanitariat, łazienka" (9 positions: stelaż, miska WC, przycisk,
+                           umywalka, bateria umywalkowa, bateria wannowo-prysznicowa, wanna,
+                           brodzik+kabina, ściana/kabina)
+              Drzwi      = "Drzwi" (4: drzwi=przylgowe, ościeżnica, klamka, rozeta)
+              Podłoga    = "Podłoga" (3: panele=laminat, podkład/klej, listwy przypodłogowe)
+              Płytki     = "Płytki" (2: gres=płytka podłogowa, ściany=płytka ścienna)
+          - assortment_position_prices: one row per (position, offer package) that has a value
+            in the sheet, carrying the sheet's min/avg/max. Packages absent for a position
+            (e.g. Brodzik only under 'norm', Odpływ/Ściana only under 'lux') get no row.
+
+        Prices are the verbatim per-variant net figures from the `Zestawienie` leaf rows (not the
+        aggregated SUM / /m2 rows). material_type codes and group name_pl values were verified to
+        resolve to exactly one row each against the live catalog before generating this seed.
+
+        Idempotency: the changeSet is guarded by sqlCheck COUNT(*) FROM assortment_positions = 0
+        -> MARK_RAN, so a re-run against an already-populated table inserts nothing. Every INSERT
+        is additionally self-guarded with NOT EXISTS on its natural key ((group, material_type)
+        for positions; (position, package) for prices), so the seed is safe even if positions
+        were partially created by the UI. Registered LAST in sequence in changelog.xml.
+    -->
+
+    <changeSet id="100-seed-assortment-positions-and-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="assortment_positions"/>
+                <tableExists tableName="assortment_position_prices"/>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM assortment_positions</sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql><![CDATA[
+            -- position: group='Sanitariat' material_type='stelaz_podtynkowy' sort=1 (Zestawienie row 8)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 1, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'stelaz_podtynkowy'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 527.63, 527.63, 527.63, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'stelaz_podtynkowy'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 529.0, 573.0, 617.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'stelaz_podtynkowy'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 529.0, 633.0, 770.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'stelaz_podtynkowy'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='miska_wc' sort=2 (Zestawienie row 9)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 2, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'miska_wc'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 406.0, 425.0, 447.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'miska_wc'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 617.0, 774.0, 935.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'miska_wc'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 894.0, 1060.0, 1300.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'miska_wc'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='przycisk' sort=3 (Zestawienie row 10)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 3, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'przycisk'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 94.0, 128.0, 162.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'przycisk'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 113.0, 182.0, 229.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'przycisk'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 222.0, 264.0, 350.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'przycisk'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='umywalka_nablatowa' sort=4 (Zestawienie row 12)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 4, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'umywalka_nablatowa'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 159.0, 214.0, 281.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'umywalka_nablatowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 325.0, 380.0, 450.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'umywalka_nablatowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 560.0, 850.0, 1700.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'umywalka_nablatowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='bateria_umywalkowa' sort=5 (Zestawienie row 13)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 5, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'bateria_umywalkowa'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 116.0, 168.0, 240.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'bateria_umywalkowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 248.0, 320.0, 397.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'bateria_umywalkowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 365.0, 515.0, 786.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'bateria_umywalkowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='bateria_wannowo_prysznicowa_z_kompletem' sort=6 (Zestawienie row 15)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 6, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'bateria_wannowo_prysznicowa_z_kompletem'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 246.0, 290.0, 356.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'bateria_wannowo_prysznicowa_z_kompletem'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 450.0, 755.0, 1050.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'bateria_wannowo_prysznicowa_z_kompletem'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 918.0, 1292.0, 1788.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'bateria_wannowo_prysznicowa_z_kompletem'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='wanna' sort=7 (Zestawienie row 16)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 7, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'wanna'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 642.75, 950.75, 1352.75, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'wanna'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 1153.82, 1258.82, 1364.82, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'wanna'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 1898.82, 2373.82, 2842.82, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'wanna'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='brodzik_kabina' sort=8 (Zestawienie row 17)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 8, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'brodzik_kabina'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 1640.0, 1997.0, 2282.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'brodzik_kabina'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Sanitariat' material_type='sciana_kabina_prysznicowa' sort=9 (Zestawienie row 18)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 9, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Sanitariat' AND mt.code = 'sciana_kabina_prysznicowa'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 2119.0, 2232.0, 2450.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Sanitariat'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'sciana_kabina_prysznicowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Drzwi' material_type='przylgowe' sort=10 (Zestawienie row 26)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 10, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Drzwi' AND mt.code = 'przylgowe'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 465.0, 609.25, 780.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'przylgowe'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 512.0, 985.13, 1120.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'przylgowe'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 1179.0, 1773.33, 2219.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'przylgowe'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Drzwi' material_type='oscieznica' sort=11 (Zestawienie row 27)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 11, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Drzwi' AND mt.code = 'oscieznica'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 510.0, 657.5, 815.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'oscieznica'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 842.0, 981.78, 1179.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'oscieznica'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 1304.0, 1499.5, 1713.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'oscieznica'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Drzwi' material_type='klamki_drzwi' sort=12 (Zestawienie row 28)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 12, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Drzwi' AND mt.code = 'klamki_drzwi'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 81.22, 117.45, 170.99, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'klamki_drzwi'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 120.58, 175.45, 272.15, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'klamki_drzwi'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 183.0, 227.17, 324.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'klamki_drzwi'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Drzwi' material_type='rozety_drzwi' sort=13 (Zestawienie row 29)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 13, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Drzwi' AND mt.code = 'rozety_drzwi'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 71.82, 64.86, 103.03, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'rozety_drzwi'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 71.82, 64.86, 103.03, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'rozety_drzwi'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 76.0, 93.0, 110.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Drzwi'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'rozety_drzwi'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Podłoga' material_type='laminat' sort=14 (Zestawienie row 39)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 14, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Podłoga' AND mt.code = 'laminat'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 53.61, 64.0, 72.35, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'laminat'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 89.39, 101.2, 113.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'laminat'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 137.39, 223.28, 360.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'laminat'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Podłoga' material_type='podklad_klej_grunt' sort=15 (Zestawienie row 40)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 15, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Podłoga' AND mt.code = 'podklad_klej_grunt'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 26.74, 27.55, 29.18, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'podklad_klej_grunt'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 26.74, 27.55, 29.18, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'podklad_klej_grunt'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 45.52, 45.52, 45.52, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'podklad_klej_grunt'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Podłoga' material_type='listwy_przypodlogowe' sort=16 (Zestawienie row 41)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 16, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Podłoga' AND mt.code = 'listwy_przypodlogowe'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 9.01, 9.87, 10.15, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'listwy_przypodlogowe'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 10.14, 12.42, 13.53, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'listwy_przypodlogowe'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 10.14, 12.42, 13.53, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Podłoga'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'listwy_przypodlogowe'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Płytki' material_type='plytka_podlogowa' sort=17 (Zestawienie row 49)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 17, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Płytki' AND mt.code = 'plytka_podlogowa'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 38.7, 72.9, 89.4, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Płytki'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'plytka_podlogowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 72.0, 105.63, 158.04, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Płytki'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'plytka_podlogowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 137.39, 223.28, 360.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Płytki'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'plytka_podlogowa'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+
+            -- position: group='Płytki' material_type='plytka_scienna' sort=18 (Zestawienie row 55)
+            INSERT INTO assortment_positions (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT g.id, mt.id, 18, 'seed-100'
+            FROM assortment_groups g, material_types mt
+            WHERE g.name_pl = 'Płytki' AND mt.code = 'plytka_scienna'
+              AND NOT EXISTS (SELECT 1 FROM assortment_positions p
+                              WHERE p.assortment_group_id = g.id AND p.material_type_id = mt.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 38.7, 72.9, 89.4, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Płytki'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'plytka_scienna'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 72.0, 105.63, 158.04, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Płytki'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'plytka_scienna'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT p.id, op.id, 74.0, 184.71, 307.0, 'seed-100'
+            FROM assortment_positions p
+            JOIN assortment_groups g ON g.id = p.assortment_group_id AND g.name_pl = 'Płytki'
+            JOIN material_types mt ON mt.id = p.material_type_id AND mt.code = 'plytka_scienna'
+            CROSS JOIN offer_packages op
+            WHERE op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM assortment_position_prices x
+                              WHERE x.assortment_position_id = p.id AND x.offer_package_id = op.id);
+]]></sql>
+    </changeSet>
+
+</databaseChangeLog>

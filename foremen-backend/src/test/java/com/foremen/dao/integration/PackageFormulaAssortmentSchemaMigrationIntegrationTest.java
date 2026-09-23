@@ -27,17 +27,26 @@ import liquibase.resource.ClassLoaderResourceAccessor;
  * (Testcontainers) and verifies the FOR-05-04 formula-engine/package-override/assortment schema
  * introduced by changesets {@code 085}–{@code 088}:
  * <ul>
- *     <li>the four tables exist after migrate: {@code work_volume_formulas},
- *         {@code work_package_overrides}, {@code assortment_groups},
- *         {@code assortment_line_items} (Requirements 2.1, 4.1, 6.1);</li>
+ *     <li>the formula/override/assortment tables exist after migrate:
+ *         {@code work_volume_formulas}, {@code work_package_overrides}, {@code assortment_groups},
+ *         plus the reworked {@code assortment_positions} and {@code assortment_position_prices}
+ *         (Requirements 2.1, 4.1, 6.1);</li>
+ *     <li>the legacy {@code assortment_line_items} table has been dropped (099) and archived into
+ *         {@code assortment_line_items_archive};</li>
  *     <li>the {@code work_volume_formulas.work_item_id} UNIQUE constraint exists (0..1 formula per
  *         work item, Requirement 2.1);</li>
  *     <li>the {@code work_package_overrides (work_item_id, offer_package_id)} UNIQUE constraint
  *         exists (exactly one override row per pair, Requirement 4.1);</li>
- *     <li>the {@code assortment_line_items.typical_material_id} provenance FK is
- *         {@code ON DELETE SET NULL} (Requirement 6.7);</li>
- *     <li>re-running the changelog is a no-op: every 085-088 changeset is guarded by
- *         {@code tableExists} + {@code MARK_RAN}, so a second application changes no schema.</li>
+ *     <li>the {@code assortment_positions (assortment_group_id, material_type_id)} UNIQUE
+ *         constraint exists (a material type at most once per group), and the
+ *         {@code assortment_position_prices (assortment_position_id, offer_package_id)} UNIQUE
+ *         constraint exists (one price row per position × package);</li>
+ *     <li>the {@code assortment_positions.material_type_id} FK is {@code RESTRICT} / {@code NO
+ *         ACTION} and the {@code assortment_position_prices.assortment_position_id} FK is
+ *         {@code CASCADE};</li>
+ *     <li>re-running the changelog is a no-op: every changeset is guarded by
+ *         {@code tableExists}/{@code COUNT}=0 + {@code MARK_RAN}, so a second application changes
+ *         no schema.</li>
  * </ul>
  *
  * <p>Mirrors the {@code EstimateSchemaMigrationIntegrationTest} convention: run the real changelog
@@ -55,7 +64,8 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
             "work_volume_formulas",
             "work_package_overrides",
             "assortment_groups",
-            "assortment_line_items");
+            "assortment_positions",
+            "assortment_position_prices");
 
     private PostgreSQLContainer<?> postgres;
 
@@ -89,15 +99,27 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
         }
     }
 
-    // --- Requirements 2.1, 4.1, 6.1 : the four new tables exist after migrate ---
+    // --- Requirements 2.1, 4.1, 6.1 : the formula/override/assortment tables exist after migrate ---
     @Test
-    @DisplayName("Changesets 085-088 create the four new tables")
-    void createsTheFourNewTables() throws Exception {
+    @DisplayName("The formula/override/assortment tables exist after migrate")
+    void createsTheNewTables() throws Exception {
         for (String table : NEW_TABLES) {
             assertThat(tableExists(table))
                     .as("table %s exists after migrate", table)
                     .isTrue();
         }
+    }
+
+    // --- Assortment rework: the legacy assortment_line_items table is dropped and archived (099) ---
+    @Test
+    @DisplayName("Legacy assortment_line_items is dropped and archived after migrate")
+    void legacyAssortmentLineItemsIsDroppedAndArchived() throws Exception {
+        assertThat(tableExists("assortment_line_items"))
+                .as("legacy assortment_line_items table is dropped after migrate (099)")
+                .isFalse();
+        assertThat(tableExists("assortment_line_items_archive"))
+                .as("assortment_line_items_archive snapshot table exists after migrate (099)")
+                .isTrue();
     }
 
     // --- Requirement 2.1 : work_volume_formulas.work_item_id UNIQUE (0..1 formula per work) ---
@@ -118,44 +140,63 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
                 .contains(List.of("work_item_id", "offer_package_id"));
     }
 
-    // --- Requirement 6.7 : assortment_line_items.typical_material_id FK is ON DELETE SET NULL ---
+    // --- Assortment rework: (assortment_group_id, material_type_id) UNIQUE — a type at most once per group ---
     @Test
-    @DisplayName("assortment_line_items.typical_material_id provenance FK is ON DELETE SET NULL")
-    void assortmentLineItemsTypicalMaterialFkIsSetNull() throws Exception {
-        assertThat(deleteRuleForForeignKeyColumn("assortment_line_items", "typical_material_id"))
-                .as("assortment_line_items.typical_material_id FK delete rule")
-                .isEqualTo("SET NULL");
+    @DisplayName("assortment_positions (assortment_group_id, material_type_id) is UNIQUE")
+    void assortmentPositionsGroupMaterialTypeIsUnique() throws Exception {
+        assertThat(uniqueConstraintColumns("assortment_positions"))
+                .as("a UNIQUE constraint covers exactly [assortment_group_id, material_type_id]")
+                .contains(List.of("assortment_group_id", "material_type_id"));
     }
 
-    // --- Functional check on Requirement 6.7 : deleting the material nulls the FK, row survives ---
+    // --- Assortment rework: (assortment_position_id, offer_package_id) UNIQUE — one price per (position, package) ---
     @Test
-    @DisplayName("Deleting the referenced material sets typical_material_id to NULL and keeps the row")
-    void deletingTypicalMaterialNullsReferenceAndKeepsLineItem() throws Exception {
+    @DisplayName("assortment_position_prices (assortment_position_id, offer_package_id) is UNIQUE")
+    void assortmentPositionPricesPositionPackageIsUnique() throws Exception {
+        assertThat(uniqueConstraintColumns("assortment_position_prices"))
+                .as("a UNIQUE constraint covers exactly [assortment_position_id, offer_package_id]")
+                .contains(List.of("assortment_position_id", "offer_package_id"));
+    }
+
+    // --- Assortment rework: position.material_type_id FK is RESTRICT/NO ACTION; price.position_id FK is CASCADE ---
+    @Test
+    @DisplayName("assortment_positions.material_type_id FK is RESTRICT and price->position FK is CASCADE")
+    void assortmentPositionFkDeleteRules() throws Exception {
+        assertThat(deleteRuleForForeignKeyColumn("assortment_positions", "material_type_id"))
+                .as("assortment_positions.material_type_id FK delete rule")
+                .isIn("RESTRICT", "NO ACTION");
+        assertThat(deleteRuleForForeignKeyColumn("assortment_position_prices", "assortment_position_id"))
+                .as("assortment_position_prices.assortment_position_id FK delete rule")
+                .isEqualTo("CASCADE");
+    }
+
+    // --- Functional check: deleting a position cascades its price rows away (CASCADE) ---
+    @Test
+    @DisplayName("Deleting a position cascade-deletes its price rows")
+    void deletingPositionCascadeDeletesPriceRows() throws Exception {
         try (Connection c = newConnection()) {
             c.setAutoCommit(false);
             try {
                 long groupId = insertAssortmentGroup(c, "SCHEMA_TEST_GROUP");
                 long offerPackageId = firstOfferPackageId(c);
-                long materialId = insertMinimalMaterial(c, "SCHEMA_TEST_MATERIAL");
-                long lineItemId = insertAssortmentLineItem(
-                        c, groupId, offerPackageId, "SCHEMA_TEST_LINE_ITEM", materialId);
+                long materialTypeId = insertMinimalMaterialType(c, "SCHEMA_TEST_MATERIAL_TYPE");
+                long positionId = insertAssortmentPosition(c, groupId, materialTypeId);
+                long priceId = insertAssortmentPositionPrice(c, positionId, offerPackageId);
 
                 try (PreparedStatement ps =
-                        c.prepareStatement("DELETE FROM materials WHERE id = ?")) {
-                    ps.setLong(1, materialId);
+                        c.prepareStatement("DELETE FROM assortment_positions WHERE id = ?")) {
+                    ps.setLong(1, positionId);
                     ps.executeUpdate();
                 }
 
                 try (PreparedStatement ps = c.prepareStatement(
-                        "SELECT typical_material_id FROM assortment_line_items WHERE id = ?")) {
-                    ps.setLong(1, lineItemId);
+                        "SELECT COUNT(*) FROM assortment_position_prices WHERE id = ?")) {
+                    ps.setLong(1, priceId);
                     try (ResultSet rs = ps.executeQuery()) {
-                        assertThat(rs.next())
-                                .as("the assortment line item row still exists after material delete")
-                                .isTrue();
-                        assertThat(rs.getObject(1))
-                                .as("typical_material_id is NULL after the referenced material is deleted")
-                                .isNull();
+                        rs.next();
+                        assertThat(rs.getInt(1))
+                                .as("the position's price row is cascade-deleted with the position")
+                                .isZero();
                     }
                 }
             } finally {
@@ -168,7 +209,7 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
     @Test
     @DisplayName("Re-running the changelog is a no-op for the new formula/override/assortment schema")
     void reRunningChangelogIsNoOp() throws Exception {
-        // Re-apply the entire changelog. Every 085-088 changeset is guarded by tableExists +
+        // Re-apply the entire changelog. Every changeset is guarded by tableExists/COUNT=0 +
         // MARK_RAN, so a second application makes no schema change.
         runLiquibase();
 
@@ -177,19 +218,25 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
                     .as("table %s still exists after re-migrate", table)
                     .isTrue();
         }
+        assertThat(tableExists("assortment_line_items"))
+                .as("legacy assortment_line_items stays dropped after re-migrate")
+                .isFalse();
         assertThat(uniqueConstraintColumns("work_volume_formulas"))
                 .as("work_volume_formulas UNIQUE constraints unchanged after re-migrate")
                 .contains(List.of("work_item_id"));
         assertThat(uniqueConstraintColumns("work_package_overrides"))
                 .as("work_package_overrides UNIQUE constraints unchanged after re-migrate")
                 .contains(List.of("work_item_id", "offer_package_id"));
-        assertThat(deleteRuleForForeignKeyColumn("assortment_line_items", "typical_material_id"))
-                .as("assortment_line_items.typical_material_id FK delete rule unchanged after re-migrate")
-                .isEqualTo("SET NULL");
+        assertThat(uniqueConstraintColumns("assortment_positions"))
+                .as("assortment_positions UNIQUE constraints unchanged after re-migrate")
+                .contains(List.of("assortment_group_id", "material_type_id"));
+        assertThat(uniqueConstraintColumns("assortment_position_prices"))
+                .as("assortment_position_prices UNIQUE constraints unchanged after re-migrate")
+                .contains(List.of("assortment_position_id", "offer_package_id"));
     }
 
     // ---------------------------------------------------------------------
-    // Fixture helpers (minimal inserts to exercise the ON DELETE SET NULL FK)
+    // Fixture helpers (minimal inserts to exercise the new FK cascade rules)
     // ---------------------------------------------------------------------
 
     private long insertAssortmentGroup(Connection c, String namePrefix) throws Exception {
@@ -214,11 +261,11 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
     }
 
     /**
-     * Inserts a minimal {@code materials} row satisfying only its NOT NULL columns
-     * ({@code code}, {@code name_ru}, {@code name_pl}; see {@code 050-create-materials.xml}).
+     * Inserts a minimal {@code material_types} row satisfying only its NOT NULL columns
+     * ({@code code}, {@code name_ru}, {@code name_pl}; see {@code 046-create-material-types.xml}).
      */
-    private long insertMinimalMaterial(Connection c, String namePrefix) throws Exception {
-        String sql = "INSERT INTO materials (code, name_ru, name_pl) VALUES (?, ?, ?) RETURNING id";
+    private long insertMinimalMaterialType(Connection c, String namePrefix) throws Exception {
+        String sql = "INSERT INTO material_types (code, name_ru, name_pl) VALUES (?, ?, ?) RETURNING id";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, namePrefix + "_" + System.nanoTime());
             ps.setString(2, namePrefix + "_RU");
@@ -230,23 +277,28 @@ class PackageFormulaAssortmentSchemaMigrationIntegrationTest {
         }
     }
 
-    private long insertAssortmentLineItem(
-            Connection c, long groupId, long offerPackageId, String namePrefix, Long typicalMaterialId)
+    private long insertAssortmentPosition(Connection c, long groupId, long materialTypeId)
             throws Exception {
-        String sql = "INSERT INTO assortment_line_items "
-                + "(assortment_group_id, offer_package_id, name_ru, name_pl, min_price, avg_price, "
-                + "max_price, qty_ref50, typical_material_id) "
-                + "VALUES (?, ?, ?, ?, 10, 20, 30, 1, ?) RETURNING id";
+        String sql = "INSERT INTO assortment_positions (assortment_group_id, material_type_id) "
+                + "VALUES (?, ?) RETURNING id";
         try (PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, groupId);
-            ps.setLong(2, offerPackageId);
-            ps.setString(3, namePrefix + "_RU");
-            ps.setString(4, namePrefix + "_PL");
-            if (typicalMaterialId != null) {
-                ps.setLong(5, typicalMaterialId);
-            } else {
-                ps.setNull(5, java.sql.Types.BIGINT);
+            ps.setLong(2, materialTypeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getLong(1);
             }
+        }
+    }
+
+    private long insertAssortmentPositionPrice(Connection c, long positionId, long offerPackageId)
+            throws Exception {
+        String sql = "INSERT INTO assortment_position_prices "
+                + "(assortment_position_id, offer_package_id, min_price, avg_price, max_price) "
+                + "VALUES (?, ?, 10, 20, 30) RETURNING id";
+        try (PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setLong(1, positionId);
+            ps.setLong(2, offerPackageId);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getLong(1);

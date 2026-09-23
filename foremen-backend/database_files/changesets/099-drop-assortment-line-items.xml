@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI (assortment rework): retire the legacy assortment_line_items table, now
+        that 098 has migrated what it could into assortment_positions +
+        assortment_position_prices. Mirrors the archive-before-drop pattern of changeset 090:
+        snapshot every live row into assortment_line_items_archive first, then drop the table.
+
+        assortment_line_items has a surrogate id, so the archive mirrors the whole business
+        payload (group/package FKs, i18n name, min/avg/max price, typical_material_id) plus an
+        archived_at stamp; the NOT EXISTS guard keys re-insertion off the original id.
+
+        Three ordered changesets, each idempotent via preConditions onFail="MARK_RAN":
+          099a - create assortment_line_items_archive (skipped once it exists).
+          099a-2 - INSERT...SELECT every assortment_line_items row + NOW(); NOT EXISTS on the
+                   original id guards re-insertion.
+          099b - drop assortment_line_items (cascade its FKs), guarded so the drop only
+                 proceeds once every live row is archived; the tableExists precondition makes a
+                 re-run against an already-dropped database a no-op.
+    -->
+
+    <!-- 099a: create the archive table before anything is dropped. -->
+    <changeSet id="099a-create-assortment-line-items-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_line_items_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_line_items_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="line_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="assortment_group_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)"/>
+            <column name="name_pl" type="VARCHAR(255)"/>
+            <column name="min_price" type="NUMERIC(12,2)"/>
+            <column name="avg_price" type="NUMERIC(12,2)"/>
+            <column name="max_price" type="NUMERIC(12,2)"/>
+            <column name="typical_material_id" type="BIGINT"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 099a-2: populate the archive from the still-present assortment_line_items table.
+         NOT EXISTS on the original id guards re-insertion so a re-run inserts nothing new. -->
+    <changeSet id="099a-populate-assortment-line-items-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="assortment_line_items"/>
+                <tableExists tableName="assortment_line_items_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO assortment_line_items_archive
+                (line_item_id, assortment_group_id, offer_package_id, name_ru, name_pl,
+                 min_price, avg_price, max_price, typical_material_id, archived_at)
+            SELECT li.id, li.assortment_group_id, li.offer_package_id, li.name_ru, li.name_pl,
+                   li.min_price, li.avg_price, li.max_price, li.typical_material_id, NOW()
+            FROM assortment_line_items li
+            WHERE NOT EXISTS (
+                SELECT 1 FROM assortment_line_items_archive a
+                WHERE a.line_item_id = li.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- 099b: drop assortment_line_items now that every row is archived (099a-2). Guarded so
+         the drop only proceeds once the archive holds every live row (or the live table is
+         already empty); the tableExists precondition makes a re-run a no-op. -->
+    <changeSet id="099b-drop-assortment-line-items" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="assortment_line_items"/>
+                <tableExists tableName="assortment_line_items_archive"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM assortment_line_items li
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM assortment_line_items_archive a
+                        WHERE a.line_item_id = li.id
+                    )
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <dropTable tableName="assortment_line_items" cascadeConstraints="true"/>
+    </changeSet>
+
+</databaseChangeLog>

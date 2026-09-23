@@ -19,14 +19,14 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.foremen.controller.AssortmentGroupController;
-import com.foremen.controller.AssortmentLineItemController;
+import com.foremen.controller.AssortmentPositionController;
 import com.foremen.controller.WorkPackageOverrideController;
 import com.foremen.controller.WorkVolumeFormulaController;
 import com.foremen.testsupport.MockMvcSecurityConfig;
 
 /**
  * Startup/wiring integration test for the FOR-05-04 {@code PACKAGE_ASSORTMENT}/{@code
- * WORK_CATALOG} controllers ({@link AssortmentGroupController}, {@link AssortmentLineItemController},
+ * WORK_CATALOG} controllers ({@link AssortmentGroupController}, {@link AssortmentPositionController},
  * {@link WorkVolumeFormulaController}, {@link WorkPackageOverrideController}), and for the
  * retirement of the FOR-05-03 {@code EstimateLinePackagePriceController} (task 20.2, Requirement
  * 8.6).
@@ -43,7 +43,7 @@ import com.foremen.testsupport.MockMvcSecurityConfig;
  * SmartInitializingSingleton}) did not fail application startup due to a half-annotated
  * controller/handler — including these four, none of which override an inherited CRUD {@code
  * default} method without a matching {@code @PermissionOperation}, and whose one bespoke non-CRUD
- * handler ({@code AssortmentLineItemController#packageZlM2}) carries an explicit method-level
+ * handler ({@code AssortmentPositionController#packageZlM2}) carries an explicit method-level
  * {@code @RequiresPermission}.
  *
  * <p>Beyond the bare context-loads assertion, this test:
@@ -98,7 +98,7 @@ class PackageAssortmentAndFormulaControllersStartupIntegrationTest {
         // including these four. Resolving each bean explicitly documents that these specific
         // controllers were the ones exercised, not just "some" controller.
         assertThat(applicationContext.getBean(AssortmentGroupController.class)).isNotNull();
-        assertThat(applicationContext.getBean(AssortmentLineItemController.class)).isNotNull();
+        assertThat(applicationContext.getBean(AssortmentPositionController.class)).isNotNull();
         assertThat(applicationContext.getBean(WorkVolumeFormulaController.class)).isNotNull();
         assertThat(applicationContext.getBean(WorkPackageOverrideController.class)).isNotNull();
     }
@@ -112,10 +112,10 @@ class PackageAssortmentAndFormulaControllersStartupIntegrationTest {
     }
 
     @Test
-    @DisplayName("GET /api/assortment-line-items as ADMIN resolves through ABAC without a 5xx")
+    @DisplayName("GET /api/assortment-positions as ADMIN resolves through ABAC without a 5xx")
     @WithMockUser(roles = "ADMIN")
-    void listAssortmentLineItems_asAdmin_isNotServerError() throws Exception {
-        mockMvc.perform(get("/api/assortment-line-items"))
+    void listAssortmentPositions_asAdmin_isNotServerError() throws Exception {
+        mockMvc.perform(get("/api/assortment-positions"))
                 .andExpect(result -> assertThat(result.getResponse().getStatus()).isLessThan(500));
     }
 

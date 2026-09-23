@@ -3,38 +3,32 @@ package com.foremen.service.pricing;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Collection;
-import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
 /**
- * Computes the assortment's <b>package zł/m²</b> price (FOR-05-04, design §6.6
- * {@code packageZlM2}) from the assortment line items' {@code avgPrice}/{@code qtyRef50} fields,
- * grouped by assortment group id.
+ * Computes the assortment's <b>package zł/m²</b> price (FOR-05-04-UI) for a single price band
+ * (min/avg/max) from a flat list of per-position contributions.
+ *
+ * <p><b>Per-position quantity (FOR-05-04-UI per-price override).</b> Each position contributes
+ * {@code price × quantity}, where the quantity is that position's OPTIONAL per-band override, or —
+ * when the position has no override for the band — the owning group's single {@code referenceQty}
+ * (the group value is the default). The reference quantity is therefore resolved per position
+ * BEFORE it reaches this resolver; the resolver only sums {@code price × quantity} and divides by
+ * the 50 m² reference area:
+ *
+ * <pre>
+ *   packageZlM2(band) = round2( ( Σ over positions( price × quantity ) ) ÷ 50 )
+ * </pre>
+ *
+ * <p>The headline package zł/m² persisted into {@code offer_packages.zl_m2} is the <b>MAX</b> band
+ * (FOR-05-04-UI); the min/avg bands are still computed for the review range. The band selection is
+ * the caller's concern — this resolver is band-agnostic and simply sums the {@link Contribution}s
+ * it is handed.
  *
  * <p>The resolver is a pure, total, deterministic function of its inputs: it performs no I/O,
- * holds no state, and always returns the same result for the same inputs — mirroring the
- * {@link MaxCollapseRule} / {@link DiscountCalculator} convention of a stateless Spring
- * {@code @Component} exercised directly by property-based tests.
- *
- * <p>It intentionally does not depend on the {@code AssortmentGroupEntity}/
- * {@code AssortmentLineItemEntity} JPA entities (FOR-05-04 tasks 13.1/13.2, not yet available at
- * the time this resolver was authored). Instead it operates over the small {@link Line} shape
- * carrying just the fields the formula needs ({@code groupId}, {@code packageCode},
- * {@code avgPrice}, {@code qtyRef50}). Callers (e.g. {@code AssortmentGroupService}/
- * {@code AssortmentLineItemService}, task 18.1) adapt the real entities to this shape.
- *
- * <p>Rule (design §6.6, Requirement 6.3, 6.4, 6.6):
- * <ol>
- *   <li>{@code groupContribution(groupLines, pkgCode)} = round2(Σ {@code avgPrice × qtyRef50} for
- *       the group's lines restricted to {@code pkgCode}, ÷ 50).</li>
- *   <li>{@code packageZlM2(linesByGroup, pkgCode)} = round2(Σ of every group's
- *       {@code groupContribution} for {@code pkgCode}).</li>
- * </ol>
- *
- * <p>Both methods recompute their result from the collections passed in on every call — nothing
- * is cached (Requirement 6.5) — and neither reads nor requires any "typical product" field, so
- * the result is unaffected by that field's presence or absence (Requirement 6.6, 6.8).
+ * holds no state, and always returns the same result for the same inputs. A {@code null} price or
+ * {@code null} quantity in a contribution contributes 0.
  */
 @Component
 public class PackageZlM2Resolver {
@@ -43,74 +37,40 @@ public class PackageZlM2Resolver {
     private static final BigDecimal REF_AREA = BigDecimal.valueOf(50);
 
     /**
-     * A minimal, entity-independent view of an assortment line item: the fields
-     * {@link PackageZlM2Resolver} needs to compute the zł/m² contribution.
+     * One position's contribution to a package total for one band: the position's price for the
+     * band and the effective quantity to multiply it by (the per-band override, or the group's
+     * {@code referenceQty} when there is no override — resolved by the caller).
      *
-     * @param groupId     the id of the {@code AssortmentGroup} this line belongs to
-     * @param packageCode the {@code OfferPackage} code this line's prices apply to
-     * @param avgPrice    the line's average price; treated as the "line total" source per
-     *                    design §6.6 (min/max are exposed for the review band but not summed
-     *                    here)
-     * @param qtyRef50    the reference quantity for a 50 m² unit
+     * @param price    the position's price for the band; {@code null} contributes 0
+     * @param quantity the effective quantity (override or group reference qty); {@code null}
+     *                 contributes 0
      */
-    public record Line(Long groupId, String packageCode, BigDecimal avgPrice, BigDecimal qtyRef50) {
+    public record Contribution(BigDecimal price, BigDecimal quantity) {
     }
 
     /**
-     * Returns the zł/m² contribution of a single assortment group for {@code pkgCode}: the sum of
-     * {@code avgPrice × qtyRef50} over the group's lines whose {@code packageCode} matches
-     * {@code pkgCode}, divided by the 50 m² reference area and rounded to 2 decimals, HALF_UP
-     * (design §6.6, Requirement 6.3).
+     * Returns the package zł/m² for one band: {@code round2( Σ (price × quantity) ÷ 50 )} over the
+     * given contributions, HALF_UP. A {@code null} price or quantity contributes 0. Recomputed
+     * from {@code contributions} on every call — never cached (Requirement 6.5).
      *
-     * @param groupLines a single assortment group's line items (may include lines for other
-     *                   packages, which are filtered out here); {@code null} or empty yields zero
-     * @param pkgCode    the target offer package's code
-     * @return the group's zł/m² contribution for {@code pkgCode}, rounded to 2 decimals
+     * @param contributions every position's {@code (price, quantity)} for the band; {@code null}
+     *                      or empty yields zero
+     * @return the band's package zł/m², rounded to 2 decimals
      */
-    public BigDecimal groupContribution(Collection<Line> groupLines, String pkgCode) {
-        if (groupLines == null || groupLines.isEmpty() || pkgCode == null) {
+    public BigDecimal packageZlM2(Collection<Contribution> contributions) {
+        if (contributions == null || contributions.isEmpty()) {
             return round2(BigDecimal.ZERO);
         }
 
         BigDecimal sum = BigDecimal.ZERO;
-        for (Line line : groupLines) {
-            if (line == null || !pkgCode.equals(line.packageCode())) {
+        for (Contribution c : contributions) {
+            if (c == null || c.price() == null || c.quantity() == null) {
                 continue;
             }
-            BigDecimal avgPrice = line.avgPrice();
-            BigDecimal qtyRef50 = line.qtyRef50();
-            if (avgPrice == null || qtyRef50 == null) {
-                continue;
-            }
-            sum = sum.add(avgPrice.multiply(qtyRef50));
+            sum = sum.add(c.price().multiply(c.quantity()));
         }
 
         return round2(sum.divide(REF_AREA, 10, RoundingMode.HALF_UP));
-    }
-
-    /**
-     * Returns the package zł/m² price for {@code pkgCode}: the sum of {@link #groupContribution}
-     * over every group in {@code linesByGroup}, rounded to 2 decimals, HALF_UP (design §6.6,
-     * Requirement 6.4). Recomputed from {@code linesByGroup} on every call — never cached
-     * (Requirement 6.5) — and independent of any "typical product" field on the underlying line
-     * items, which this method never reads (Requirement 6.6, 6.8).
-     *
-     * @param linesByGroup the current assortment line items, keyed by {@code AssortmentGroup} id;
-     *                      {@code null} or empty yields zero
-     * @param pkgCode      the target offer package's code
-     * @return the package's zł/m² price for {@code pkgCode}, rounded to 2 decimals
-     */
-    public BigDecimal packageZlM2(Map<Long, ? extends Collection<Line>> linesByGroup, String pkgCode) {
-        if (linesByGroup == null || linesByGroup.isEmpty() || pkgCode == null) {
-            return round2(BigDecimal.ZERO);
-        }
-
-        BigDecimal total = BigDecimal.ZERO;
-        for (Collection<Line> groupLines : linesByGroup.values()) {
-            total = total.add(groupContribution(groupLines, pkgCode));
-        }
-
-        return round2(total);
     }
 
     private BigDecimal round2(BigDecimal value) {

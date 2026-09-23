@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI (assortment rework): DATA migration from assortment_line_items into the
+        new assortment_positions + assortment_position_prices tables (created by 097), BEFORE
+        the legacy table is dropped by 099.
+
+        The old model held one free-text-named row per (group, package). The new model holds
+        one material-type-backed position per group (shared across packages), each with a
+        per-package price row. The migration therefore:
+
+          098a - for each DISTINCT (assortment_group_id, matched material_type) in
+                 assortment_line_items, insert ONE assortment_positions row. A line item is
+                 matched to a material_types row by comparing its name to the material type's
+                 localized name, case-insensitive and trimmed:
+                     lower(trim(li.name_pl)) = lower(trim(mt.name_pl))
+                  OR lower(trim(li.name_ru)) = lower(trim(mt.name_ru))
+                 A line item whose name matches NO material type is SKIPPED (the new model
+                 does not fabricate a material type). No logging (Liquibase).
+
+          098b - for each migrated position, insert an assortment_position_prices row per
+                 existing per-package line item: join back through the same name-match to the
+                 position's (group, material_type), carrying the line item's offer_package_id +
+                 min/avg/max price. Because the old name is per-(group, package) but the new
+                 position is per-group, several old (group, name, package) rows fold onto one
+                 position; each becomes a distinct price row for its package.
+
+        NOTE: the currently-seeded line-item names (e.g. "Podloga (Budzet)") will match no
+        material_types row, so on the current database this migration is effectively a no-op —
+        the positions are rebuilt via the UI. The migration is still written correctly so that
+        IF names matched, they would migrate.
+
+        Idempotent: guarded by sqlCheck COUNT(*) FROM assortment_positions = 0 -> MARK_RAN, so a
+        re-run against an already-populated positions table inserts nothing. Both changesets
+        also require assortment_line_items to still exist (they run before 099 drops it).
+    -->
+
+    <changeSet id="098-migrate-line-items-to-positions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="assortment_line_items"/>
+                <tableExists tableName="assortment_positions"/>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM assortment_positions</sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO assortment_positions
+                (assortment_group_id, material_type_id, sort_order, created_by)
+            SELECT DISTINCT li.assortment_group_id, mt.id, CAST(NULL AS INTEGER), 'migration-098'
+            FROM assortment_line_items li
+            JOIN material_types mt
+              ON lower(trim(li.name_pl)) = lower(trim(mt.name_pl))
+              OR lower(trim(li.name_ru)) = lower(trim(mt.name_ru));
+        </sql>
+    </changeSet>
+
+    <changeSet id="098-migrate-line-items-to-position-prices" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="assortment_line_items"/>
+                <tableExists tableName="assortment_position_prices"/>
+                <sqlCheck expectedResult="0">SELECT COUNT(*) FROM assortment_position_prices</sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO assortment_position_prices
+                (assortment_position_id, offer_package_id, min_price, avg_price, max_price, created_by)
+            SELECT ap.id, li.offer_package_id, li.min_price, li.avg_price, li.max_price, 'migration-098'
+            FROM assortment_line_items li
+            JOIN material_types mt
+              ON lower(trim(li.name_pl)) = lower(trim(mt.name_pl))
+              OR lower(trim(li.name_ru)) = lower(trim(mt.name_ru))
+            JOIN assortment_positions ap
+              ON ap.assortment_group_id = li.assortment_group_id
+             AND ap.material_type_id = mt.id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM assortment_position_prices app
+                WHERE app.assortment_position_id = ap.id
+                  AND app.offer_package_id = li.offer_package_id
+            );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

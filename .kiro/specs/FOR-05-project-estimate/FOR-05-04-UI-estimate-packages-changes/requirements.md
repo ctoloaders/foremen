@@ -291,3 +291,90 @@ the frontend lives in a nested git repository distinct from the root repository.
 - This spec covers only the 7 reported issues and the deferred material-side collapse from FOR-05-04.
   It does not introduce new estimate-model concepts beyond aligning the frontend to the contracts
   FOR-05-04 already shipped.
+
+---
+
+## Addendum — Applied Changes (iterative, on top of the original requirements)
+
+> This section records the requirements as they evolved during implementation, layered on top of
+> the original spec above. Where a change supersedes an original clause, the addendum wins. The
+> original text is kept for traceability.
+
+### A1. Assortment data model reworked to material-type-backed positions with per-package prices
+
+The original `AssortmentLineItem` (one free-text priced row per `(group, package)`, carrying its own
+`qtyRef50`) was **replaced** by a normalized two-table model:
+
+- **AssortmentGroup** — global (not project-scoped): `nameRU`, `namePL`, `sortOrder`, and a single
+  per-group `referenceQty` + `referenceUnit` (`szt` | `m2`). The reference quantity is the group
+  default used by the zł/m² formula.
+- **AssortmentPosition** — global, one per `(group, material type)`; requires a `material_type`
+  reference (`UNIQUE (group, material_type)`), plus an optional `sortOrder`.
+- **AssortmentPositionPrice** — per `(position, offer package)`: `minPrice` / `avgPrice` / `maxPrice`
+  and OPTIONAL per-band quantity overrides `minQty` / `avgQty` / `maxQty`.
+
+The legacy `assortment_line_items` table and all its backend/frontend artifacts (entity, DTOs, DAO,
+service, form sheets, list components, schema) were archived-then-dropped and removed.
+
+### A2. Package zł/m² formula (per band) and headline band
+
+THE package zł/m² for a band SHALL be computed per position and summed:
+
+```
+groupContribution(band) = Σ over the group's positions ( price(band) × quantity(band) ) ÷ 50
+packageZlM2(band)       = Σ over the package's groups ( groupContribution(band) )
+```
+
+where `quantity(band)` is the position price row's per-band override when non-null, else the owning
+group's `referenceQty` (the default). The **headline** package zł/m² persisted into
+`offer_packages.zl_m2` and shown as the live headline SHALL be the **MAX** band (the min and avg
+bands remain computed for the review range).
+
+### A3. Per-price quantity override; 0 is legitimate; explicit clear
+
+- Each position price row MAY carry a per-band quantity override; `0` is a **legitimate** stored
+  override (it makes that band contribute nothing). Only `null` means "not overridden" (fall back to
+  the group `referenceQty`).
+- The batched Save MAY set an override to any value `≥ 0`. Clearing an override to `null` SHALL be a
+  dedicated, immediate operation via `POST /api/assortment-positions/package-clear-qty`
+  (`{ positionId, band }`, guarded by `PACKAGE_ASSORTMENT` `UPDATE`); it sets the row's `<band>_qty`
+  to `NULL` in place, recomputes the MAX headline, and is NOT tracked as an on-screen pending edit.
+- The frontend SHALL show an explicit clear (✕) control on any override input that holds a value
+  (including `0`).
+
+### A4. All-packages single screen (no package picker)
+
+The Assortment_UI SHALL render EVERY offer package at once as side-by-side price columns over the
+shared global groups/positions, with no package selector. Each package column heading SHALL show:
+the package name plus the **whole-package MAX** zł/m² (same across every group's heading for that
+package); the persisted (Zapisane) package value; and — scoped to the CURRENT group — the live
+(Bieżące) MAX and the group's min … avg range.
+
+### A5. Locale-tolerant decimal inputs
+
+Every numeric input on the Assortment_UI (prices, reference qty, per-band qty overrides) SHALL accept
+both `.` and `,` as the decimal separator and SHALL preserve a mid-typed decimal (e.g. `12,` / `12.`)
+without clobbering the entry, normalizing to a dot before emitting.
+
+### A6. Group and position inline management
+
+Each group and each position row SHALL provide an Edit action (left of Delete). Group edit updates
+`nameRU`/`namePL`/`sortOrder`/`referenceQty`/`referenceUnit`; position edit changes the backing
+material type. An empty group (no positions) SHALL still appear in the editor so positions can be
+added to it.
+
+### A7. Finishing-material price picker
+
+Each price cell SHALL provide a magnifier control opening a picker over the finishing-materials
+catalog, filtered to the cell's `material type` and `offer package` (`type.id~in~… AND
+packages.id~in~…`), sorted by price descending, with the catalog's standard filters/search/pagination
+(its own state, not tracked in the URL). The picker header SHALL show the position context (material
+type, reference qty + unit, package, current min/avg/max, and which band it will fill) and a close
+control; selecting a row SHALL offer the material's stored price fields (purchase / retail gross /
+retail net) and populate the target cell's band with the chosen value.
+
+### A8. Seeded assortment data
+
+The assortment groups, material-type-backed positions, and per-package min/avg/max prices SHALL be
+seeded from the `Materiały pakiety` catalog (`Zestawienie` sheet) via idempotent Liquibase
+changesets.

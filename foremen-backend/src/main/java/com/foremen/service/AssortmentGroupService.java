@@ -21,7 +21,7 @@ import lombok.RequiredArgsConstructor;
  * "Podłoga") is a catalog resource with no project boundary, mirroring the simplicity of
  * {@code RoomTypeService}. No extra logic beyond the generic CRUD contract is needed here; the
  * package zł/m² computation (Requirement 6.3, 6.4, 6.5, 6.8) is exposed from
- * {@link AssortmentLineItemService}, which is where the line-item data it depends on lives.
+ * {@link AssortmentPositionService}, which is where the position/price data it depends on lives.
  */
 @Service
 @RequiredArgsConstructor

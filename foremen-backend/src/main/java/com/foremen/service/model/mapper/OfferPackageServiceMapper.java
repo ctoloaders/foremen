@@ -22,10 +22,12 @@ public interface OfferPackageServiceMapper
 
     @Override
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "zlM2", ignore = true)
     OfferPackageEntity toCreateDaoModel(OfferPackageServiceExtendedModel source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "code", ignore = true)
+    @Mapping(target = "zlM2", ignore = true)
     void updateFields(OfferPackageServiceExtendedModel source, @MappingTarget OfferPackageEntity target);
 }

@@ -189,3 +189,51 @@ the user explicitly asks (warn that it takes ~20 minutes).
   ]
 }
 ```
+
+## Addendum — Follow-up tasks (iterative work on top of the original plan)
+
+These general tasks capture the assortment rework and UI iterations delivered after the original
+plan. They are recorded as completed for traceability.
+
+- [x] A1. Rework assortment to positions + per-package prices
+  - Replace `AssortmentLineItem` with `AssortmentPosition` (material-type-backed, `UNIQUE (group,
+    material_type)`) + `AssortmentPositionPrice` (per `(position, package)` min/avg/max). Add group
+    `referenceQty`/`referenceUnit` and the `offer_packages.zl_m2` cache. Archive-and-drop the legacy
+    table; migrate matching rows. Idempotent Liquibase changesets 094–100.
+  - _Requirements: A1, A8_
+
+- [x] A2. Per-price quantity overrides + MAX headline
+  - Add `min_qty`/`avg_qty`/`max_qty` (changeset 101). Rewrite `PackageZlM2Resolver` to
+    `Σ(price × qty)/50` per band; resolve effective qty (override ?? group `referenceQty`); compute
+    and persist the MAX headline. Allow override `≥ 0` (0 legitimate).
+  - _Requirements: A2, A3_
+
+- [x] A3. Clear-qty endpoint (immediate, untracked)
+  - `POST /api/assortment-positions/package-clear-qty` nulls one band's qty override in place
+    (`PACKAGE_ASSORTMENT` UPDATE); frontend clear (✕) control drops the local pending edit and calls
+    it immediately.
+  - _Requirements: A3_
+
+- [x] A4. All-packages editor (no picker) + group-scoped headings
+  - Render every package as side-by-side price columns over shared groups/positions; column heading
+    shows whole-package MAX on the name line and group-scoped Bieżące (MAX) + min…avg.
+  - _Requirements: A2, A4_
+
+- [x] A5. Group/position inline edit + empty-group visibility
+  - Edit action (left of delete) for groups and positions; empty groups still render.
+  - _Requirements: A6_
+
+- [x] A6. Locale-tolerant decimal inputs
+  - Shared `NumberInput` accepts comma/dot and preserves mid-typed decimals across the editor.
+  - _Requirements: A5_
+
+- [x] A7. Finishing-material price picker
+  - Magnifier per cell opens the finishing-materials catalog filtered by `type.id` + `packages.id`,
+    sorted by price desc; row select → price-field choice populates the cell. Per-target DataTable
+    instance to avoid stale cache/closures.
+  - _Requirements: A7_
+
+- [x] A8. Verification + i18n
+  - Backend affected-class tests green; frontend `tsc` + assortment/number-input tests pass;
+    new/changed strings provided in `pl.json` and `ru.json`.
+  - _Requirements: A2, A3, A4, A5, A6, A7_

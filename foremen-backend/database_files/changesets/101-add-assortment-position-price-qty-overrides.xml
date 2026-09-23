@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI (per-price quantity override): add an OPTIONAL per-band reference quantity to
+        each assortment_position_prices row (position x offer package). Each of min/avg/max may
+        carry its own quantity that OVERRIDES the group's single reference_qty when computing that
+        band's zł/m² contribution:
+
+            groupContribution(band) = Σ over positions( price(band) × (qty(band) ?? group.reference_qty) ) / 50
+
+        NULL means "no override" — that band falls back to the owning assortment_groups.reference_qty
+        (unchanged; the group reference qty stays as the default). No data migration is required:
+        every existing price row keeps NULL overrides and therefore behaves exactly as before.
+
+        Columns are NUMERIC(12,4) NULL, mirroring assortment_groups.reference_qty's precision.
+
+        Idempotent via NOT columnExists + MARK_RAN per column. Registered LAST in sequence.
+    -->
+
+    <changeSet id="101-add-assortment-position-price-min-qty" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="assortment_position_prices" columnName="min_qty"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="assortment_position_prices">
+            <column name="min_qty" type="NUMERIC(12,4)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="101-add-assortment-position-price-avg-qty" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="assortment_position_prices" columnName="avg_qty"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="assortment_position_prices">
+            <column name="avg_qty" type="NUMERIC(12,4)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="101-add-assortment-position-price-max-qty" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="assortment_position_prices" columnName="max_qty"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="assortment_position_prices">
+            <column name="max_qty" type="NUMERIC(12,4)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

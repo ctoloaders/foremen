@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI: seed assortment_groups + assortment_line_items from the
+        "Materiały pakiety" catalog (docs/Materiały pakiety - Lista.csv).
+
+        Groups mirror the CSV Kategoria column; line items are one curated row per
+        (offer package x group) with min/avg/max derived from the per-variant net
+        price (Cena detal netto, fallback Cena detal / m2 -> Cena detal brutto).
+        CSV package tokens Budget/Standard(=Standart)/Lux map to offer_packages
+        codes budget/norm/lux. qty_ref50 defaults to 1.0000 (the source 50/m2
+        quantity columns are empty in this export).
+
+        Idempotent: each changeSet is guarded by an onFail="MARK_RAN" precondition,
+        so a re-run against an already-seeded database inserts nothing. The line-item
+        inserts resolve group/package FKs by their natural code via valueComputed
+        subselects, so they do not depend on surrogate id ordering.
+    -->
+
+    <changeSet id="091-seed-assortment-groups" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM assortment_groups</sqlCheck>
+        </preConditions>
+        <insert tableName="assortment_groups">
+            <column name="name_ru" value="Пол"/>
+            <column name="name_pl" value="Podłoga"/>
+            <column name="sort_order" valueNumeric="10"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_groups">
+            <column name="name_ru" value="Плинтусы"/>
+            <column name="name_pl" value="Listwy przypodłogowe"/>
+            <column name="sort_order" valueNumeric="20"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_groups">
+            <column name="name_ru" value="Плитка"/>
+            <column name="name_pl" value="Płytki"/>
+            <column name="sort_order" valueNumeric="30"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_groups">
+            <column name="name_ru" value="Сантехника"/>
+            <column name="name_pl" value="Sanitariat"/>
+            <column name="sort_order" valueNumeric="40"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_groups">
+            <column name="name_ru" value="Двери"/>
+            <column name="name_pl" value="Drzwi"/>
+            <column name="sort_order" valueNumeric="50"/>
+            <column name="created_by" value="system"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="091-seed-assortment-line-items" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM assortment_line_items</sqlCheck>
+        </preConditions>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Podłoga')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'budget')"/>
+            <column name="name_ru" value="Пол (Бюджет)"/>
+            <column name="name_pl" value="Podłoga (Budżet)"/>
+            <column name="min_price" valueNumeric="26.74"/>
+            <column name="avg_price" valueNumeric="54.06"/>
+            <column name="max_price" valueNumeric="72.35"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Podłoga')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'lux')"/>
+            <column name="name_ru" value="Пол (Люкс)"/>
+            <column name="name_pl" value="Podłoga (Lux)"/>
+            <column name="min_price" valueNumeric="29.18"/>
+            <column name="avg_price" valueNumeric="229.94"/>
+            <column name="max_price" valueNumeric="568.29"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Podłoga')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'norm')"/>
+            <column name="name_ru" value="Пол (Норма)"/>
+            <column name="name_pl" value="Podłoga (Standard)"/>
+            <column name="min_price" valueNumeric="26.74"/>
+            <column name="avg_price" valueNumeric="81.11"/>
+            <column name="max_price" valueNumeric="113.0"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Listwy przypodłogowe')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'budget')"/>
+            <column name="name_ru" value="Плинтусы (Бюджет)"/>
+            <column name="name_pl" value="Listwy przypodłogowe (Budżet)"/>
+            <column name="min_price" valueNumeric="13.52"/>
+            <column name="avg_price" valueNumeric="14.8"/>
+            <column name="max_price" valueNumeric="15.23"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Listwy przypodłogowe')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'lux')"/>
+            <column name="name_ru" value="Плинтусы (Люкс)"/>
+            <column name="name_pl" value="Listwy przypodłogowe (Lux)"/>
+            <column name="min_price" valueNumeric="15.21"/>
+            <column name="avg_price" valueNumeric="18.62"/>
+            <column name="max_price" valueNumeric="20.29"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Listwy przypodłogowe')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'norm')"/>
+            <column name="name_ru" value="Плинтусы (Норма)"/>
+            <column name="name_pl" value="Listwy przypodłogowe (Standard)"/>
+            <column name="min_price" valueNumeric="15.21"/>
+            <column name="avg_price" valueNumeric="18.62"/>
+            <column name="max_price" valueNumeric="20.29"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Płytki')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'budget')"/>
+            <column name="name_ru" value="Плитка (Бюджет)"/>
+            <column name="name_pl" value="Płytki (Budżet)"/>
+            <column name="min_price" valueNumeric="38.7"/>
+            <column name="avg_price" valueNumeric="72.9"/>
+            <column name="max_price" valueNumeric="89.4"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Płytki')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'lux')"/>
+            <column name="name_ru" value="Плитка (Люкс)"/>
+            <column name="name_pl" value="Płytki (Lux)"/>
+            <column name="min_price" valueNumeric="73.91"/>
+            <column name="avg_price" valueNumeric="186.94"/>
+            <column name="max_price" valueNumeric="306.89"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Płytki')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'norm')"/>
+            <column name="name_ru" value="Плитка (Норма)"/>
+            <column name="name_pl" value="Płytki (Standard)"/>
+            <column name="min_price" valueNumeric="71.95"/>
+            <column name="avg_price" valueNumeric="105.63"/>
+            <column name="max_price" valueNumeric="158.04"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Sanitariat')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'budget')"/>
+            <column name="name_ru" value="Сантехника (Бюджет)"/>
+            <column name="name_pl" value="Sanitariat (Budżet)"/>
+            <column name="min_price" valueNumeric="94.81"/>
+            <column name="avg_price" valueNumeric="393.84"/>
+            <column name="max_price" valueNumeric="1256.91"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Sanitariat')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'lux')"/>
+            <column name="name_ru" value="Сантехника (Люкс)"/>
+            <column name="name_pl" value="Sanitariat (Lux)"/>
+            <column name="min_price" valueNumeric="178.82"/>
+            <column name="avg_price" valueNumeric="954.09"/>
+            <column name="max_price" valueNumeric="2438.98"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Sanitariat')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'norm')"/>
+            <column name="name_ru" value="Сантехника (Норма)"/>
+            <column name="name_pl" value="Sanitariat (Standard)"/>
+            <column name="min_price" valueNumeric="73.13"/>
+            <column name="avg_price" valueNumeric="593.35"/>
+            <column name="max_price" valueNumeric="1660.72"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Drzwi')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'budget')"/>
+            <column name="name_ru" value="Двери (Бюджет)"/>
+            <column name="name_pl" value="Drzwi (Budżet)"/>
+            <column name="min_price" valueNumeric="39.0"/>
+            <column name="avg_price" valueNumeric="235.31"/>
+            <column name="max_price" valueNumeric="815.0"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Drzwi')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'lux')"/>
+            <column name="name_ru" value="Двери (Люкс)"/>
+            <column name="name_pl" value="Drzwi (Lux)"/>
+            <column name="min_price" valueNumeric="39.0"/>
+            <column name="avg_price" valueNumeric="1472.12"/>
+            <column name="max_price" valueNumeric="3528.0"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="assortment_line_items">
+            <column name="assortment_group_id" valueComputed="(SELECT id FROM assortment_groups WHERE name_pl = 'Drzwi')"/>
+            <column name="offer_package_id" valueComputed="(SELECT id FROM offer_packages WHERE code = 'norm')"/>
+            <column name="name_ru" value="Двери (Норма)"/>
+            <column name="name_pl" value="Drzwi (Standard)"/>
+            <column name="min_price" valueNumeric="39.0"/>
+            <column name="avg_price" valueNumeric="498.81"/>
+            <column name="max_price" valueNumeric="1179.0"/>
+            <column name="qty_ref50" valueNumeric="1.0000"/>
+            <column name="created_by" value="system"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

@@ -312,14 +312,15 @@ export interface AssortmentLineItemDto {
   offerPackageId: number; offerPackageName: string
   name: string
   minPrice: number | null; avgPrice: number | null; maxPrice: number | null
-  qtyRef50: number                                                     // required (R6.2)
+  // reference quantity is now a per-GROUP value (referenceQty/referenceUnit on
+  // AssortmentGroup); the line item no longer carries a per-line quantity (R6.2)
   typicalProductId: number | null; typicalProductName: string | null   // provenance only (R6.4)
 }
 export interface AssortmentLineItemCreateRequest {
   assortmentGroupId: number; offerPackageId: number
   nameRU: string; namePL: string
   minPrice?: number | null; avgPrice?: number | null; maxPrice?: number | null
-  qtyRef50: number; typicalProductId?: number | null
+  typicalProductId?: number | null
 }
 export interface PackageZlM2Response { value: number }
 ```
@@ -587,3 +588,77 @@ tables.
   material-side collapse only.
 - The work-catalog consumption **drill-in** (previously reached via a pivot cell) — removed with the
   pivot columns; not reintroduced here.
+
+---
+
+## Addendum — Applied Design (as built, iterative)
+
+> Reflects the design as implemented, layered on the original above. Where it differs, the addendum
+> is authoritative; the original is retained for traceability.
+
+### Data model (backend)
+
+- `assortment_groups` — `+ reference_qty NUMERIC(12,4)`, `+ reference_unit VARCHAR(8)` (changeset
+  094). The legacy per-line `qty_ref50` was dropped (096).
+- `assortment_positions` (changeset 097) — `assortment_group_id` FK (ON DELETE CASCADE),
+  `material_type_id` FK NOT NULL (ON DELETE RESTRICT), `sort_order`, `UNIQUE (group, material_type)`.
+- `assortment_position_prices` (097) — `assortment_position_id` FK (CASCADE), `offer_package_id` FK
+  (RESTRICT), `min_price` / `avg_price` / `max_price` NUMERIC(12,2), `UNIQUE (position, package)`;
+  `+ min_qty / avg_qty / max_qty NUMERIC(12,4)` per-band overrides (changeset 101).
+- `offer_packages` — `+ zl_m2 NUMERIC(12,2)` denormalized headline cache (changeset 095).
+- Migration 098 moved matching line items → positions/prices; 099 archived + dropped
+  `assortment_line_items`; 100 seeded groups/positions/prices from the `Materiały pakiety`
+  `Zestawienie` sheet. All changesets are idempotent (NOT columnExists / NOT tableExists / sqlCheck +
+  MARK_RAN) and registered last in sequence.
+
+### Backend API (`/api/assortment-positions`, `PermissionResource("PACKAGE_ASSORTMENT")`)
+
+- Generic CRUD for `AssortmentPosition` (create/read/update/delete) — create/update carry
+  `assortmentGroupId`, `materialTypeId`, `sortOrder`.
+- `GET /package-editor?packageCode=` → `PackageAssortmentEditorResponse`: package (code, name,
+  persisted `zlM2`), the live min/avg/max TOTAL band, and every group (incl. empty groups) with its
+  `referenceQty`/`referenceUnit` and its positions carrying THIS package's prices + per-band qty
+  overrides.
+- `POST /package-save?packageCode=` → upserts each group's `referenceQty`/`referenceUnit` and each
+  position's prices + qty overrides (`≥ 0`; `null` = no override), recomputes and persists the MAX
+  headline into `offer_packages.zl_m2`.
+- `POST /package-clear-qty?packageCode=` (`{ positionId, band }`) → nulls one band's qty override in
+  place (no-op when no price row exists), recomputes the MAX headline.
+- `GET /package-zl-m2?packageCode=` → the recomputed MAX headline value (never cached).
+- `AssortmentGroup` CRUD lives at `/api/assortment-groups` (update carries name/sortOrder/qty/unit).
+
+### zł/m² resolver
+
+`PackageZlM2Resolver` is a pure, band-agnostic function: `packageZlM2(Collection<Contribution>)` where
+`Contribution(price, quantity)` and the result is `round2( Σ(price × quantity) ÷ 50 )`. The service
+resolves each position's effective quantity (override ?? group `referenceQty`) per band before
+building contributions; the headline uses the MAX band.
+
+### Frontend (`foremen-frontend`, feature `features/assortment`)
+
+- `AssortmentPage.tsx` — the all-packages editor: fetches every package's editor model
+  (`usePackageEditors` via `useQueries`), a multi-package pending store
+  (`state/multiPackageEditorStore.ts` over the reused pure `assortmentEditorReducer`), one Save-all,
+  Discard, global Undo/Redo, group/position add/edit/delete dialogs, per-package price columns with a
+  per-band price input, a dashed qty-override input with a clear (✕) control, and a magnifier opening
+  the picker.
+- `components/FinishingMaterialPickerDialog.tsx` — embeds the shared `DataTable` (per-target
+  `entityKey` `finishing-materials-picker:<typeId>:<pkgId>` + matching React `key` to avoid stale
+  cache/closures across cells), pinned by `type.id`/`packages.id`, default sort `retailNet,desc`; row
+  select → price-field choice → populate cell.
+- `state/zlM2.ts` — client mirror of the resolver: per-position `Σ(price × qty)/50`; `EffectiveGroup`
+  carries positions with per-band effective qty; headline = MAX. `state/assortmentEditorStorage.ts`
+  widened the position-edit shape to price bands + `<band>Qty`; `assortmentEditorStore.ts` added the
+  untracked `DROP_POSITION_FIELD` action used by the clear flow.
+- `components/ui/number-input.tsx` — locale-tolerant decimal buffer (comma/dot, preserves mid-typed
+  decimals) so numeric parents that store numbers don't clobber entry.
+- Locales: new/changed keys under `assortment.editor.*`, `assortment.picker.*`, `common.close`, and
+  `finishingMaterials.table.purchasePrice`/`retailGross`, in both `pl.json` and `ru.json`.
+- The legacy assortment CRUD components/schema were removed.
+
+### Verification performed
+
+Backend affected test classes run green via `--tests` (resolver property test + service compute/clear
+test). Frontend `tsc` clean and the assortment + number-input tests pass. The flows were exercised
+end-to-end in the browser and against the Dockerized API (seed, edit, save-all, MAX headline, qty
+override incl. 0, clear-in-place, picker filter/sort/select).

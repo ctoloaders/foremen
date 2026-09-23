@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI: per-GROUP reference quantity + unit on assortment_groups. The package
+        zł/m² model uses ONE reference quantity (ILOSC) per group applied to the sum of that
+        group's positions' avg prices (e.g. Drzwi = 3 szt, Podłoga = 50 m2): group /m2 =
+        (Σ position avg prices × reference_qty) / 50; package /m2 = Σ group /m2.
+
+        reference_qty  NUMERIC(12,4) NOT NULL DEFAULT 1  — the group's single ILOSC.
+        reference_unit VARCHAR(8)    NOT NULL DEFAULT 'szt' — the group's unit ('szt'|'m2').
+
+        Idempotent: each column is added only when it does not already exist
+        (NOT columnExists) and the whole changeset is MARK_RAN so a re-run against an
+        already-migrated database makes no schema change. Registered LAST in sequence.
+    -->
+
+    <changeSet id="094-add-assortment-group-reference-qty-column" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="assortment_groups" columnName="reference_qty"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="assortment_groups">
+            <column name="reference_qty" type="NUMERIC(12,4)" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="094-add-assortment-group-reference-unit-column" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="assortment_groups" columnName="reference_unit"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="assortment_groups">
+            <column name="reference_unit" type="VARCHAR(8)" defaultValue="szt">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

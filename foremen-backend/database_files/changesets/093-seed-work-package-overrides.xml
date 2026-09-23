@@ -1,0 +1,1152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI: seed work-package memberships + override formulas from the EBRD
+        Matrix "Oferta" sheet package columns AL/AM/AN (PAKIET START/COMFORT/PRESTIGE ->
+        offer_packages budget/norm/lux). Each non-empty AL/AM/AN cell means the work is
+        a MEMBER of that package; the cell content decides whether an override applies:
+
+          - A cell mirroring column D's reference quantity (=Wymiary!P*, the reference-
+            area column) => member, NO override (same qty as the default formula).
+          - A hardcoded scalar, or a formula/reference that RESOLVES to a scalar (following
+            intra-AL..AN references, e.g. AM=AL142*2 with AL142=4 => 8) => member + a
+            constant override (the resolved value). These match the workbook's own
+            computed cell values.
+          - A per-package quantity the backend grammar cannot faithfully express
+            (COUNTIF(range)/SUM(Wymiary!range) multi-room aggregates, IFS chains) => member,
+            NO override: the membership intent is preserved without seeding an
+            untranslatable formula.
+
+        No AL/AM/AN cell references another work's VOLUME column, so there are no
+        cross-work-reference overrides. override_source_text holds the human constant and
+        override_parsed_ast the pre-parsed AST (JSONB) in the exact Jackson "k"-tagged shape
+        FormulaParser produces; member-only rows leave both NULL (flag-only membership).
+
+        Idempotent: guarded by onFail="MARK_RAN"; each insert resolves the work item and
+        offer package by natural code via subselects and is skipped when either code is
+        absent or the (work_item, offer_package) pair already exists (UNIQUE). Registered
+        LAST in the changelog.
+
+        Rows: 158 memberships across 76 work items (18 scalar overrides, 140 flag-only).
+    -->
+
+    <changeSet id="093-seed-work-package-overrides" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_package_overrides</sqlCheck>
+        </preConditions>
+        <!-- Scalar override rows (member + constant override formula). -->
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '4', '{"k":"const","v":4}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.17' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '8', '{"k":"const","v":8}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.18' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '16', '{"k":"const","v":16}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.18' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '4', '{"k":"const","v":4}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.19' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '8', '{"k":"const","v":8}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.19' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '16', '{"k":"const","v":16}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.19' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '4', '{"k":"const","v":4}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.25' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '8', '{"k":"const","v":8}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.25' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '16', '{"k":"const","v":16}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.25' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '4', '{"k":"const","v":4}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.26' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '8', '{"k":"const","v":8}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.26' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '10', '{"k":"const","v":10}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.13' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '20', '{"k":"const","v":20}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.13' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '15', '{"k":"const","v":15}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.15' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '30', '{"k":"const","v":30}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.15' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '3', '{"k":"const","v":3}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.10' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '4', '{"k":"const","v":4}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.10' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, override_source_text, override_parsed_ast, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, '5', '{"k":"const","v":5}'::jsonb, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.10' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <!-- Flag-only membership rows (member, no override formula). -->
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '1.01' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '1.01' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '1.01' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '2.16' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '2.16' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '2.16' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.01' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.01' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.01' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.04' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.04' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.04' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.05' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.05' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.05' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.06' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.07' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.08' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.08' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.08' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.09' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.10' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '3.11' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.01' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.01' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.01' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.02' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.02' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.02' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.03' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.03' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.03' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.06' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.07' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.10' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.10' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.11' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.11' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.12' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.12' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.12' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.14' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.14' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.14' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.15' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.15' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.16' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.17' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.18' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.19' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.21' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.21' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.22' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.22' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '4.22' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '5.05' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '5.05' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '5.05' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '5.07' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '5.07' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '5.07' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '6.05' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '6.05' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '6.05' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.01' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.01' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.01' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.02' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.02' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.02' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.04' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.05' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.06' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.08' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.09' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.13' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.14' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.14' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.24' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.24' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.24' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.27' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.27' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.27' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.28' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.28' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '7.28' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.01' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.01' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.01' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.02' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.02' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.02' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.03' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.03' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '8.03' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.02' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.03' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.04' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.05' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.05' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.06' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.06' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.07' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '9.07' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.05' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.05' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.06' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.08' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.11' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.12' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.12' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.12' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.13' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.13' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.13' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.15' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.15' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '10.15' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.02' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.02' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.03' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.03' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.04' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.04' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.05' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.06' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.06' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '11.06' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.03' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.03' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.04' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.04' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.04' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.05' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.06' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '12.06' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '13.02' AND op.code = 'budget'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '13.02' AND op.code = 'norm'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+        <sql>
+            INSERT INTO work_package_overrides (work_item_id, offer_package_id, member, created_date, created_by)
+            SELECT wi.id, op.id, TRUE, NOW(), 'system'
+            FROM work_items wi, offer_packages op
+            WHERE wi.code = '13.02' AND op.code = 'lux'
+              AND NOT EXISTS (SELECT 1 FROM work_package_overrides x WHERE x.work_item_id = wi.id AND x.offer_package_id = op.id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

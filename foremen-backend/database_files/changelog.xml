@@ -141,4 +141,63 @@
          makes no schema/data change. Registered LAST in sequence. -->
     <include file="database_files/changesets/090-archive-and-drop-construction-material-packages.xml"/>
 
+    <!-- FOR-05-04-UI: seed assortment_groups + assortment_line_items from the
+         "Materiały pakiety" catalog (5 groups x 3 packages = 15 line items),
+         with min/avg/max derived from per-variant net prices. Idempotent via
+         onFail="MARK_RAN". Registered LAST in sequence. -->
+    <include file="database_files/changesets/091-seed-assortment-groups-and-line-items.xml"/>
+    <!-- FOR-05-04-UI: seed default work-volume formulas from the EBRD Matrix
+         "Oferta" sheet (26 work items whose column-X formula is a pure function of
+         the 14 room dimensions). Matched to work_items by code; parsed_ast built to
+         FormulaParser's "k"-tagged shape. Idempotent via onFail="MARK_RAN".
+         Registered LAST in sequence. -->
+    <include file="database_files/changesets/092-seed-work-volume-formulas.xml"/>
+    <!-- FOR-05-04-UI: seed work-package memberships + override formulas from the EBRD
+         Matrix "Oferta" package columns AL/AM/AN (budget/norm/lux). Non-empty cell => member;
+         scalar/resolved-scalar cells => a constant override, ref-area / untranslatable
+         (COUNTIF/SUM-range/IFS) cells => flag-only membership. Idempotent via
+         onFail="MARK_RAN". Registered LAST in sequence. -->
+    <include file="database_files/changesets/093-seed-work-package-overrides.xml"/>
+    <!-- FOR-05-04-UI (single-package grouped editor): per-GROUP reference quantity + unit on
+         assortment_groups (reference_qty NUMERIC(12,4) NOT NULL DEFAULT 1, reference_unit
+         VARCHAR(8) NOT NULL DEFAULT 'szt'). The package zł/m² model applies ONE reference qty
+         per group to the sum of the group's positions. Idempotent via NOT columnExists +
+         MARK_RAN. Registered LAST in sequence. -->
+    <include file="database_files/changesets/094-add-assortment-group-reference-qty.xml"/>
+    <!-- FOR-05-04-UI: denormalized package zł/m² cache on offer_packages
+         (zl_m2 NUMERIC(12,2), nullable) written by the package-save recompute. Idempotent via
+         NOT columnExists + MARK_RAN. Registered LAST in sequence. -->
+    <include file="database_files/changesets/095-add-offer-package-zl-m2.xml"/>
+    <!-- FOR-05-04-UI: drop the legacy per-line assortment_line_items.qty_ref50
+         (reference quantity is now per-group, changeset 094). Forward-only migration;
+         idempotent via columnExists + MARK_RAN. Registered LAST in sequence. -->
+    <include file="database_files/changesets/096-drop-assortment-line-item-qty-ref50.xml"/>
+    <!-- FOR-05-04-UI (assortment rework): normalized assortment model — assortment_positions
+         (GLOBAL, per group, material-type-backed; UNIQUE (group, material_type)) and
+         assortment_position_prices (per position x per offer package; UNIQUE (position,
+         package)). Replaces the per-(group x package) free-text assortment_line_items.
+         Idempotent via NOT tableExists + MARK_RAN. Registered LAST in sequence. -->
+    <include file="database_files/changesets/097-create-assortment-positions.xml"/>
+    <!-- FOR-05-04-UI (assortment rework): data migration from assortment_line_items into
+         assortment_positions + assortment_position_prices, matching each line item's name to a
+         material_types localized name (case-insensitive trim); unmatched names are skipped.
+         Runs before 099 drops the legacy table. Idempotent via COUNT=0 + MARK_RAN. Registered
+         LAST in sequence. -->
+    <include file="database_files/changesets/098-migrate-assortment-line-items-to-positions.xml"/>
+    <!-- FOR-05-04-UI (assortment rework): archive-before-drop of assortment_line_items — snapshot
+         every row into assortment_line_items_archive, then drop the legacy table (its data was
+         migrated by 098). Idempotent via onFail="MARK_RAN" preconditions. Registered LAST in
+         sequence. -->
+    <include file="database_files/changesets/099-drop-assortment-line-items.xml"/>
+    <!-- FOR-05-04-UI (assortment seed): populate assortment_positions + assortment_position_prices
+         from the "Materiały pakiety" catalog sheet `Zestawienie` (18 material-type-backed
+         positions across 4 groups, with per-package min/avg/max net prices). Positions REQUIRE a
+         material type, so each maps to an existing material_types row. Idempotent via
+         COUNT(assortment_positions)=0 -> MARK_RAN plus per-row NOT EXISTS. Registered LAST. -->
+    <include file="database_files/changesets/100-seed-assortment-positions-and-prices.xml"/>
+    <!-- FOR-05-04-UI (per-price quantity override): add nullable min_qty/avg_qty/max_qty to
+         assortment_position_prices. Each band's quantity, when set, overrides the group's
+         reference_qty in the zł/m² contribution for that band; NULL falls back to the group value.
+         No data migration (NULL = prior behavior). Idempotent via NOT columnExists + MARK_RAN. -->
+    <include file="database_files/changesets/101-add-assortment-position-price-qty-overrides.xml"/>
 </databaseChangeLog>

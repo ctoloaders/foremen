@@ -1,5 +1,7 @@
 package com.foremen.service.model;
 
+import java.math.BigDecimal;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,4 +19,6 @@ public class AssortmentGroupServiceModel {
     private Long id;
     private String name;
     private Integer sortOrder;
+    private BigDecimal referenceQty;
+    private String referenceUnit;
 }

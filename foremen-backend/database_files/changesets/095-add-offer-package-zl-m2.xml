@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-04-UI: denormalized package zł/m² on offer_packages. zl_m2 caches the last
+        package-save recompute (Σ group /m2 for the package) so the frontend can display the
+        persisted value without recomputing; nullable — NULL means "not yet computed/saved".
+        The package-save endpoint recomputes via PackageZlM2Resolver and writes this column
+        inside its transaction.
+
+        Idempotent: column added only when absent (NOT columnExists) + MARK_RAN. Registered
+        LAST in sequence.
+    -->
+
+    <changeSet id="095-add-offer-package-zl-m2-column" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="offer_packages" columnName="zl_m2"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="offer_packages">
+            <column name="zl_m2" type="NUMERIC(12,2)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

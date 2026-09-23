@@ -40,6 +40,7 @@ import com.foremen.dao.WorkCategoryDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkPriceDao;
 import com.foremen.dao.model.CurrencyEntity;
+import com.foremen.dao.model.MaterialTypeEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.ProjectEntity;
@@ -91,7 +92,7 @@ class FormulaAssortmentEndToEndIntegrationTest {
     private static final String ESTIMATE_LINES_PATH = "/api/estimate-lines";
     private static final String WORK_VOLUME_FORMULAS_PATH = "/api/work-volume-formulas";
     private static final String ASSORTMENT_GROUPS_PATH = "/api/assortment-groups";
-    private static final String ASSORTMENT_LINE_ITEMS_PATH = "/api/assortment-line-items";
+    private static final String ASSORTMENT_POSITIONS_PATH = "/api/assortment-positions";
 
     private static final AtomicLong COUNTER = new AtomicLong();
 
@@ -157,6 +158,12 @@ class FormulaAssortmentEndToEndIntegrationTest {
     private com.foremen.dao.AssortmentGroupDao assortmentGroupDao;
 
     @Autowired
+    private com.foremen.dao.MaterialTypeDao materialTypeDao;
+
+    @Autowired
+    private com.foremen.dao.AssortmentPositionDao assortmentPositionDao;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     @PersistenceContext
@@ -197,10 +204,18 @@ class FormulaAssortmentEndToEndIntegrationTest {
                     .setParameter("p", "%" + runId + "%")
                     .executeUpdate();
             entityManager.createQuery(
-                            "delete from AssortmentLineItemEntity ali where ali.group.nameRU like :p")
+                            "delete from AssortmentPositionPriceEntity app "
+                                    + "where app.position.group.nameRU like :p")
+                    .setParameter("p", "%" + runId + "%")
+                    .executeUpdate();
+            entityManager.createQuery(
+                            "delete from AssortmentPositionEntity ap where ap.group.nameRU like :p")
                     .setParameter("p", "%" + runId + "%")
                     .executeUpdate();
             entityManager.createQuery("delete from AssortmentGroupEntity ag where ag.nameRU like :p")
+                    .setParameter("p", "%" + runId + "%")
+                    .executeUpdate();
+            entityManager.createQuery("delete from MaterialTypeEntity mt where mt.nameRU like :p")
                     .setParameter("p", "%" + runId + "%")
                     .executeUpdate();
             // Work item codes are WorkRef-shaped ("X1"/"X2" + digits derived from runId, not the
@@ -377,12 +392,13 @@ class FormulaAssortmentEndToEndIntegrationTest {
                         m -> assertThat(m).containsIgnoringCase("cykl"),
                         m -> assertThat(m).containsIgnoringCase("цикл"));
 
-        // --- 5) Assortment CRUD (R6.1, R6.2) ---
+        // --- 5) Assortment CRUD (R6.1, R6.2): group + material-type-backed positions ---
         MvcResult groupResult = mockMvc.perform(post(ASSORTMENT_GROUPS_PATH)
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(
-                                new AssortmentGroupCreateBody("Группа " + runId, "Grupa " + runId, 1))))
+                                new AssortmentGroupCreateBody("Группа " + runId, "Grupa " + runId, 1,
+                                        BigDecimal.ONE, "szt"))))
                 .andReturn();
         assertThat(groupResult.getResponse().getStatus())
                 .as("POST /api/assortment-groups must succeed (200)")
@@ -404,74 +420,124 @@ class FormulaAssortmentEndToEndIntegrationTest {
         }
         long groupId = groupIdOrNull;
 
-        BigDecimal avgPrice1 = new BigDecimal("100.00");
-        BigDecimal qtyRef50_1 = new BigDecimal("2.00");
-        MvcResult lineItem1Result = mockMvc.perform(post(ASSORTMENT_LINE_ITEMS_PATH)
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new AssortmentLineItemCreateBody(
-                                groupId, packageOne.getId(), "Позиция 1 " + runId, "Pozycja 1 " + runId,
-                                new BigDecimal("80.00"), avgPrice1, new BigDecimal("120.00"), qtyRef50_1, null))))
-                .andReturn();
-        assertThat(lineItem1Result.getResponse().getStatus())
-                .as("POST /api/assortment-line-items must succeed (200)")
-                .isEqualTo(200);
-        JsonNode lineItem1Json = objectMapper.readTree(lineItem1Result.getResponse().getContentAsString());
-        assertThat(lineItem1Json.path("avgPrice").decimalValue()).isEqualByComparingTo(avgPrice1);
-        assertThat(lineItem1Json.path("qtyRef50").decimalValue()).isEqualByComparingTo(qtyRef50_1);
+        // Two material types (positions REQUIRE a material type). Persisted directly via the DAO —
+        // material-type CRUD is not the subject under test here.
+        MaterialTypeEntity materialType1 = persistMaterialType("MT1_" + runId);
+        MaterialTypeEntity materialType2 = persistMaterialType("MT2_" + runId);
 
-        // --- 6) Package zł/m² recomputed from current data (R6.3, R6.4, R6.5) ---
-        BigDecimal expectedZlM2First = avgPrice1.multiply(qtyRef50_1)
+        // Create two GLOBAL positions in the group (shared across all packages).
+        long positionId1 = createPosition(token, groupId, materialType1.getId());
+        assertThat(assortmentPositionDao.findById(positionId1))
+                .as("the just-created assortment position must exist").isPresent();
+
+        // The group's reference quantity (ILOSC) is 1 (FOR-05-04-UI), so the group contribution is
+        // (Σ avgPrice for the package's positions × 1) / 50.
+        BigDecimal groupReferenceQty = BigDecimal.ONE;
+        BigDecimal avgPrice1 = new BigDecimal("100.00");
+
+        // --- 6) Save this package's prices via package-save, then recompute zł/m² (R6.3-6.5) ---
+        savePackagePrices(token, packageOne.getCode(), groupId, groupReferenceQty,
+                new PositionPriceBody[] {
+                        new PositionPriceBody(positionId1, new BigDecimal("80.00"), avgPrice1,
+                                new BigDecimal("120.00"))});
+
+        BigDecimal expectedZlM2First = avgPrice1.multiply(groupReferenceQty)
                 .divide(new BigDecimal("50"), 2, RoundingMode.HALF_UP);
-        MvcResult zlM2FirstResult = mockMvc.perform(get(ASSORTMENT_LINE_ITEMS_PATH + "/package-zl-m2")
+        MvcResult zlM2FirstResult = mockMvc.perform(get(ASSORTMENT_POSITIONS_PATH + "/package-zl-m2")
                         .header("Authorization", "Bearer " + token)
                         .param("packageCode", packageOne.getCode()))
                 .andReturn();
         assertThat(zlM2FirstResult.getResponse().getStatus()).isEqualTo(200);
         JsonNode zlM2FirstJson = objectMapper.readTree(zlM2FirstResult.getResponse().getContentAsString());
         assertThat(zlM2FirstJson.path("value").decimalValue())
-                .as("package zł/m² must equal (avgPrice * qtyRef50) / 50, round2 (R6.3, R6.4)")
+                .as("package zł/m² must equal (Σ avgPrice × group.referenceQty) / 50, round2 (R6.3, R6.4)")
                 .isEqualByComparingTo(expectedZlM2First);
 
-        // Add a second line item for the SAME package/group and confirm the value CHANGES (R6.5,
-        // proving fresh recomputation rather than a cached total).
+        // Add a second position with its own price for the SAME package/group and confirm the
+        // value CHANGES (R6.5, proving fresh recomputation rather than a cached total). Both
+        // positions share one group, so the group contribution is (avg1 + avg2) × referenceQty / 50.
+        long positionId2 = createPosition(token, groupId, materialType2.getId());
         BigDecimal avgPrice2 = new BigDecimal("50.00");
-        BigDecimal qtyRef50_2 = new BigDecimal("1.00");
-        MvcResult lineItem2Result = mockMvc.perform(post(ASSORTMENT_LINE_ITEMS_PATH)
-                        .header("Authorization", "Bearer " + token)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new AssortmentLineItemCreateBody(
-                                groupId, packageOne.getId(), "Позиция 2 " + runId, "Pozycja 2 " + runId,
-                                new BigDecimal("40.00"), avgPrice2, new BigDecimal("60.00"), qtyRef50_2, null))))
-                .andReturn();
-        assertThat(lineItem2Result.getResponse().getStatus()).isEqualTo(200);
+        savePackagePrices(token, packageOne.getCode(), groupId, groupReferenceQty,
+                new PositionPriceBody[] {
+                        new PositionPriceBody(positionId1, new BigDecimal("80.00"), avgPrice1,
+                                new BigDecimal("120.00")),
+                        new PositionPriceBody(positionId2, new BigDecimal("40.00"), avgPrice2,
+                                new BigDecimal("60.00"))});
 
-        BigDecimal expectedZlM2Second = expectedZlM2First.add(
-                avgPrice2.multiply(qtyRef50_2).divide(new BigDecimal("50"), 2, RoundingMode.HALF_UP));
-        MvcResult zlM2SecondResult = mockMvc.perform(get(ASSORTMENT_LINE_ITEMS_PATH + "/package-zl-m2")
+        BigDecimal expectedZlM2Second = avgPrice1.add(avgPrice2).multiply(groupReferenceQty)
+                .divide(new BigDecimal("50"), 2, RoundingMode.HALF_UP);
+        MvcResult zlM2SecondResult = mockMvc.perform(get(ASSORTMENT_POSITIONS_PATH + "/package-zl-m2")
                         .header("Authorization", "Bearer " + token)
                         .param("packageCode", packageOne.getCode()))
                 .andReturn();
         assertThat(zlM2SecondResult.getResponse().getStatus()).isEqualTo(200);
         JsonNode zlM2SecondJson = objectMapper.readTree(zlM2SecondResult.getResponse().getContentAsString());
         assertThat(zlM2SecondJson.path("value").decimalValue())
-                .as("adding a second line item must CHANGE the computed package zł/m² (R6.5, no caching)")
+                .as("adding a second priced position must CHANGE the computed package zł/m² (R6.5, no caching)")
                 .isEqualByComparingTo(expectedZlM2Second);
         assertThat(zlM2SecondJson.path("value").decimalValue())
                 .as("the recomputed value must differ from the first snapshot")
                 .isNotEqualByComparingTo(zlM2FirstJson.path("value").decimalValue());
 
-        // packageTwo (unused by any line item) has zero contribution, sanity-checking the sum is
-        // scoped to packageCode, not global.
-        MvcResult zlM2PackageTwoResult = mockMvc.perform(get(ASSORTMENT_LINE_ITEMS_PATH + "/package-zl-m2")
+        // packageTwo (no price rows) has zero contribution, sanity-checking the sum is scoped to
+        // packageCode, not global — even though the positions are global.
+        MvcResult zlM2PackageTwoResult = mockMvc.perform(get(ASSORTMENT_POSITIONS_PATH + "/package-zl-m2")
                         .header("Authorization", "Bearer " + token)
                         .param("packageCode", packageTwo.getCode()))
                 .andReturn();
         assertThat(zlM2PackageTwoResult.getResponse().getStatus()).isEqualTo(200);
         JsonNode zlM2PackageTwoJson = objectMapper.readTree(zlM2PackageTwoResult.getResponse().getContentAsString());
         assertThat(zlM2PackageTwoJson.path("value").decimalValue())
-                .as("a package with no assortment line items must compute a zero zł/m² contribution")
+                .as("a package with no assortment position prices must compute a zero zł/m² contribution")
                 .isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    /** Creates a global assortment position via the REST API and returns its resolved id. */
+    private long createPosition(String token, long groupId, long materialTypeId) throws Exception {
+        MvcResult result = mockMvc.perform(post(ASSORTMENT_POSITIONS_PATH)
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                new AssortmentPositionCreateBody(groupId, materialTypeId, null))))
+                .andReturn();
+        assertThat(result.getResponse().getStatus())
+                .as("POST /api/assortment-positions must succeed (200)")
+                .isEqualTo(200);
+        // The create response echoes no id; resolve the just-created position by (group, material
+        // type) via the DAO.
+        for (var p : assortmentPositionDao.findAll()) {
+            if (p.getGroup() != null && groupId == p.getGroup().getId()
+                    && p.getMaterialType() != null && materialTypeId == p.getMaterialType().getId()) {
+                return p.getId();
+            }
+        }
+        throw new AssertionError("the just-created assortment position must exist");
+    }
+
+    /** Saves this package's per-position prices via POST /package-save. */
+    private void savePackagePrices(String token, String packageCode, long groupId,
+                                   BigDecimal referenceQty, PositionPriceBody[] positions) throws Exception {
+        PackageSaveBody body = new PackageSaveBody(new PackageSaveGroupBody[] {
+                new PackageSaveGroupBody(groupId, referenceQty, "szt", positions)});
+        MvcResult result = mockMvc.perform(post(ASSORTMENT_POSITIONS_PATH + "/package-save")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .param("packageCode", packageCode)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andReturn();
+        assertThat(result.getResponse().getStatus())
+                .as("POST /api/assortment-positions/package-save must succeed (200)")
+                .isEqualTo(200);
+    }
+
+    private MaterialTypeEntity persistMaterialType(String code) {
+        MaterialTypeEntity materialType = new MaterialTypeEntity();
+        materialType.setCode(code);
+        materialType.setNameRU("Тип " + runId);
+        materialType.setNamePL("Typ " + runId);
+        materialType.setActive(true);
+        return materialTypeDao.save(materialType);
     }
 
     // ------------------------------------------------------------------
@@ -574,9 +640,17 @@ class FormulaAssortmentEndToEndIntegrationTest {
 
     private record WorkVolumeFormulaUpdateBody(Long workItemId, String sourceText) {}
 
-    private record AssortmentGroupCreateBody(String nameRU, String namePL, Integer sortOrder) {}
+    private record AssortmentGroupCreateBody(String nameRU, String namePL, Integer sortOrder,
+                                             BigDecimal referenceQty, String referenceUnit) {}
 
-    private record AssortmentLineItemCreateBody(Long assortmentGroupId, Long offerPackageId, String nameRU,
-                                                 String namePL, BigDecimal minPrice, BigDecimal avgPrice,
-                                                 BigDecimal maxPrice, BigDecimal qtyRef50, Long typicalProductId) {}
+    private record AssortmentPositionCreateBody(Long assortmentGroupId, Long materialTypeId,
+                                                 Integer sortOrder) {}
+
+    private record PackageSaveBody(PackageSaveGroupBody[] groups) {}
+
+    private record PackageSaveGroupBody(Long groupId, BigDecimal referenceQty, String referenceUnit,
+                                         PositionPriceBody[] positions) {}
+
+    private record PositionPriceBody(Long positionId, BigDecimal minPrice, BigDecimal avgPrice,
+                                      BigDecimal maxPrice) {}
 }
