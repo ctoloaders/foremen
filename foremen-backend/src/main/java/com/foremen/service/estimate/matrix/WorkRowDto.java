@@ -1,0 +1,17 @@
+package com.foremen.service.estimate.matrix;
+
+import java.util.List;
+
+/**
+ * One work row of the Estimate tab matrix (FOR-05-05, design §B6): the work item, its optional
+ * {@code Room_Type_Attachment} ({@code roomTypeIds}, empty ⇒ attaches to all rooms), and one
+ * {@link CellDto} per room column (in the same order as {@link EstimateMatrixDto#rooms()}). Mirrors
+ * the frontend {@code WorkRowDto}.
+ *
+ * @param workItemId   the work item id
+ * @param workItemName the work item display name (localized at the read layer)
+ * @param roomTypeIds  the work's Room_Type_Attachment ids (empty ⇒ attaches to all rooms, R10.3)
+ * @param cells        one cell per room column, aligned with {@link EstimateMatrixDto#rooms()}
+ */
+public record WorkRowDto(Long workItemId, String workItemName, List<Long> roomTypeIds, List<CellDto> cells) {
+}

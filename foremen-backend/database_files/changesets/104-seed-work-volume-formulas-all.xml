@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (Requirement 17): full-coverage default work-volume seed.
+
+        Changeset 092 (FOR-05-04-UI) hand-seeded a default work_volume_formula for the 26
+        work items whose EBRD "Oferta" column-X formula was a pure function of the 14 room
+        dimensions. This changeset EXTENDS that seed to full coverage: it seeds a default
+        formula for EVERY remaining work item that still lacks one (R17.1), so no cell ever
+        falls back to the unit->dimension safety net.
+
+        The seeded formula is derived from the work item's measurement UNIT (the unit->dimension
+        convention of R5.2), and every seeded parsed_ast uses ONLY the 14 known dimension
+        variables (or a numeric constant), so each passes FormulaValidator (R17.2):
+
+          - m2, m3            -> floorArea   (area units map to the room floor area; the
+                                              documented default for the ambiguous area unit, R5.2/R5.3)
+          - mb                -> perimeter   (linear/length units map to the room perimeter, R5.2)
+          - everything else   -> 1           (szt, kpl, godz, proc, kg, l, or any other/unknown
+                                              unit -> a per-room count of 1, R5.2 "szt -> 1 per room")
+
+        source_text holds the human formula (bare dimension identifier or the literal "1");
+        parsed_ast holds the pre-parsed AST (JSONB NOT NULL) in the exact Jackson "k"-tagged
+        shape FormulaParser produces (matching changeset 092), so the app evaluates without
+        re-parsing.
+
+        Non-overwriting + idempotent (R17.3, R17.4, R19.2): guarded by onFail="MARK_RAN" and a
+        per-row NOT EXISTS guard on work_volume_formulas for that work item, so a work that
+        already has a formula (including every row seeded by 092) is left untouched and a re-run
+        against an already-seeded database inserts nothing. Registered LAST in the changelog,
+        after 103.
+    -->
+
+    <changeSet id="104-seed-work-volume-formulas-all" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="work_volume_formulas"/>
+        </preConditions>
+
+        <!-- Area units (m2, m3) -> floorArea. -->
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'floorArea', '{"k":"var","name":"floorArea"}'::jsonb, NOW(), 'system'
+            FROM work_items wi
+            JOIN measurement_units mu ON mu.id = wi.unit_id
+            WHERE mu.code IN ('m2', 'm3')
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+
+        <!-- Linear/length units (mb) -> perimeter. -->
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, 'perimeter', '{"k":"var","name":"perimeter"}'::jsonb, NOW(), 'system'
+            FROM work_items wi
+            JOIN measurement_units mu ON mu.id = wi.unit_id
+            WHERE mu.code = 'mb'
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+
+        <!-- Every remaining unit (szt, kpl, godz, proc, kg, l, or any other/unknown) -> a
+             per-room count of 1. Covers work items with a NULL/unmatched unit defensively. -->
+        <sql>
+            INSERT INTO work_volume_formulas (work_item_id, source_text, parsed_ast, created_date, created_by)
+            SELECT wi.id, '1', '{"k":"const","v":1}'::jsonb, NOW(), 'system'
+            FROM work_items wi
+            WHERE NOT EXISTS (
+                    SELECT 1 FROM measurement_units mu
+                    WHERE mu.id = wi.unit_id AND mu.code IN ('m2', 'm3', 'mb')
+                  )
+              AND NOT EXISTS (SELECT 1 FROM work_volume_formulas f WHERE f.work_item_id = wi.id);
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

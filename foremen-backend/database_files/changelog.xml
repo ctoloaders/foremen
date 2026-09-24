@@ -200,4 +200,28 @@
          reference_qty in the zł/m² contribution for that band; NULL falls back to the group value.
          No data migration (NULL = prior behavior). Idempotent via NOT columnExists + MARK_RAN. -->
     <include file="database_files/changesets/101-add-assortment-position-price-qty-overrides.xml"/>
+
+    <!-- FOR-05-05 (R13, R6, R4): estimate_line_room_materials — the estimate's FROZEN copied-price
+         material collection. One row per (estimate line, room, branch, material type), carrying a
+         copied Type_Price_Range (range_min/range_max), a provenance FK to the source catalog
+         material (ON DELETE SET NULL), and an optional Concrete_Material FK (ON DELETE SET NULL);
+         owned by estimate_line_room_qty (ON DELETE CASCADE, R19.3). UNIQUE (room_qty_id, branch,
+         construction_type_id, finishing_type_id) (R13.4). Idempotent via NOT tableExists +
+         MARK_RAN. Registered after 101, before 103/104. -->
+    <include file="database_files/changesets/102-create-estimate-line-room-materials.xml"/>
+
+    <!-- FOR-05-05 (R10, R19.2): optional Room_Type_Attachment on a work item — a pure M:N
+         join work_room_types(work_item_id, room_type_id) with UNIQUE (work_item_id,
+         room_type_id) and both FKs (work_items, room_types) ON DELETE CASCADE. Empty set =>
+         the work attaches to all rooms on apply; non-empty => only rooms of those types.
+         Idempotent via NOT tableExists + MARK_RAN. Registered after 102, before 104. -->
+    <include file="database_files/changesets/103-create-work-room-types.xml"/>
+
+    <!-- FOR-05-05 (R17): full-coverage default work-volume seed. Extends changeset 092 so
+         EVERY work item lacking a volume formula gets one derived from its measurement unit
+         (m2/m3 -> floorArea, mb -> perimeter, else -> 1), each parsed_ast using only known
+         dimension variables/constants so it passes FormulaValidator (R17.2). Non-overwriting
+         + idempotent via onFail="MARK_RAN" + per-row NOT EXISTS (R17.3, R17.4, R19.2).
+         Registered LAST, after 103. -->
+    <include file="database_files/changesets/104-seed-work-volume-formulas-all.xml"/>
 </databaseChangeLog>

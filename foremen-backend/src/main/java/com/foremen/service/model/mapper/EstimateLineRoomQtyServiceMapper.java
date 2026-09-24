@@ -56,12 +56,14 @@ public abstract class EstimateLineRoomQtyServiceMapper
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "line", expression = "java(lineRef(source.getLineId()))")
     @Mapping(target = "room", expression = "java(roomRef(source.getRoomId()))")
+    @Mapping(target = "materials", ignore = true)
     public abstract EstimateLineRoomQtyEntity toCreateDaoModel(EstimateLineRoomQtyServiceExtendedModel source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "line", expression = "java(lineRef(source.getLineId()))")
     @Mapping(target = "room", expression = "java(roomRef(source.getRoomId()))")
+    @Mapping(target = "materials", ignore = true)
     public abstract void updateFields(
             EstimateLineRoomQtyServiceExtendedModel source, @MappingTarget EstimateLineRoomQtyEntity target);
 

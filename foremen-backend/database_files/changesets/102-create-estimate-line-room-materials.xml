@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (R13, R6, R4): estimate_line_room_materials — the estimate's FROZEN copied-price
+        material collection (design §B1 / Data Models). One row per (estimate line, room, branch,
+        material type): the cell's copied material entry, carrying a copied Type_Price_Range and an
+        optional Concrete_Material reference.
+
+        Columns / FKs (design §B1, EstimateLineRoomMaterialEntity):
+          - room_qty_id   : owner FK to estimate_line_room_qty, NOT NULL; ON DELETE CASCADE — the
+                            material rows cascade-delete with their room-qty (and, transitively, with
+                            the owning line) (R19.3).
+          - branch        : VARCHAR — 'construction' | 'finishing' (ConsumptionBranch enum).
+          - construction_type_id / finishing_type_id : NULLABLE type FKs. Exactly ONE is non-null,
+                            matching `branch`; ON DELETE RESTRICT (a material type referenced by a
+                            copied line cannot be silently removed).
+          - norm_qty      : NUMERIC — copied consumption norm per one work-unit (R4.2).
+          - range_min / range_max : NUMERIC — copied Type_Price_Range (per one work-unit money band
+                            edge) (R13.2).
+          - source_construction_material_id / source_finishing_material_id : provenance FK to the
+                            catalog material that contributed the range; ON DELETE SET NULL (R13.2)
+                            — provenance never drives value.
+          - concrete_construction_material_id / concrete_finishing_material_id : the chosen
+                            Concrete_Material; ON DELETE SET NULL. NULL ⇒ Placeholder (R6.6); set ⇒
+                            the line collapses to concrete_net (R6.4).
+          - concrete_net  : NUMERIC — copied chosen product retailNet; collapses the line (R6.4).
+        Plus the four BaseEntity audit columns.
+
+        UNIQUE (room_qty_id, branch, construction_type_id, finishing_type_id): a material line is
+        keyed uniquely per assignment by branch and type (R13.4).
+
+        Idempotent via NOT tableExists + MARK_RAN, so a re-run makes no change (R19.2). Registered
+        LAST in changelog.xml after 101.
+    -->
+
+    <changeSet id="102-create-estimate-line-room-materials" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="estimate_line_room_materials"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="estimate_line_room_materials">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="room_qty_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="branch" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="construction_type_id" type="BIGINT"/>
+            <column name="finishing_type_id" type="BIGINT"/>
+            <column name="norm_qty" type="NUMERIC(12,4)"/>
+            <column name="range_min" type="NUMERIC(12,2)"/>
+            <column name="range_max" type="NUMERIC(12,2)"/>
+            <column name="source_construction_material_id" type="BIGINT"/>
+            <column name="source_finishing_material_id" type="BIGINT"/>
+            <column name="concrete_construction_material_id" type="BIGINT"/>
+            <column name="concrete_finishing_material_id" type="BIGINT"/>
+            <column name="concrete_net" type="NUMERIC(12,2)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting the room-qty (and, transitively, its owning line) removes its
+             material lines (ON DELETE CASCADE) — R19.3. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_room_qty"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="room_qty_id"
+            referencedTableName="estimate_line_room_qty"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Construction material TYPE reference FK: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_construction_type"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="construction_type_id"
+            referencedTableName="construction_material_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Finishing material TYPE reference FK: ON DELETE RESTRICT. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_finishing_type"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="finishing_type_id"
+            referencedTableName="material_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Source (provenance) construction material FK: ON DELETE SET NULL (R13.2). -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_source_construction_material"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="source_construction_material_id"
+            referencedTableName="construction_materials"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- Source (provenance) finishing material FK: ON DELETE SET NULL (R13.2). -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_source_finishing_material"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="source_finishing_material_id"
+            referencedTableName="finishing_materials"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- Chosen Concrete_Material (construction) FK: ON DELETE SET NULL. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_concrete_construction_material"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="concrete_construction_material_id"
+            referencedTableName="construction_materials"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- Chosen Concrete_Material (finishing) FK: ON DELETE SET NULL. -->
+        <addForeignKeyConstraint
+            constraintName="fk_elrm_concrete_finishing_material"
+            baseTableName="estimate_line_room_materials"
+            baseColumnNames="concrete_finishing_material_id"
+            referencedTableName="finishing_materials"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- A material line is keyed uniquely per assignment by branch and type (R13.4). -->
+        <addUniqueConstraint
+            constraintName="uq_elrm_room_qty_branch_type"
+            tableName="estimate_line_room_materials"
+            columnNames="room_qty_id, branch, construction_type_id, finishing_type_id"/>
+    </changeSet>
+
+</databaseChangeLog>
