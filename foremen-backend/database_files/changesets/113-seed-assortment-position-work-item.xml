@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (point A, seed): link each assortment position (a finishing material
+        TYPE, seeded by changeset 100 under groups Sanitariat/Drzwi/Podłoga/Płytki) to the WORK ITEM
+        whose finishing consumption is of that material type (changeset 110 added the nullable
+        work_item_id column).
+
+        A single set-based UPDATE joins assortment_positions -> the finishing-branch
+        work_material_consumptions declaring a norm for the position's material type
+        (wmc.branch = 'finishing' AND wmc.finishing_material_type_id = p.material_type_id), and sets
+        the position's work_item_id to a DETERMINISTIC work — MIN(wmc.work_item_id) — so a type
+        consumed by several works resolves stably.
+
+        Non-overwriting + inherently idempotent: the UPDATE only touches rows where
+        work_item_id IS NULL, so a re-run against already-linked rows (or against a position whose
+        type has no finishing consumption on any work — left NULL, acceptable) makes no change. No
+        sqlCheck precondition is needed: the WHERE work_item_id IS NULL filter is the idempotency
+        guard (same forward-only, precondition-free pattern as changeset 109-v2). Registered LAST,
+        after 112.
+    -->
+
+    <changeSet id="113-seed-assortment-position-work-item" author="foremen">
+        <sql>
+            UPDATE assortment_positions p
+            SET work_item_id = sub.work_item_id
+            FROM (
+                SELECT wmc.finishing_material_type_id AS material_type_id,
+                       MIN(wmc.work_item_id)          AS work_item_id
+                FROM work_material_consumptions wmc
+                WHERE wmc.branch = 'finishing'
+                  AND wmc.finishing_material_type_id IS NOT NULL
+                GROUP BY wmc.finishing_material_type_id
+            ) sub
+            WHERE p.work_item_id IS NULL
+              AND p.material_type_id = sub.material_type_id;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

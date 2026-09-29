@@ -1,5 +1,9 @@
 package com.foremen.service.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.foremen.controller.model.RefDto;
 import com.foremen.controller.model.WorkCostCellDto;
 
 import lombok.AllArgsConstructor;
@@ -15,6 +19,13 @@ import lombok.NoArgsConstructor;
  * service mapper via {@code WorkCatalogAggregationResolver} in an {@code @AfterMapping} (task
  * 6.2/14.2). Being attached onto the existing row, it never multiplies or splits the paginated
  * distinct-{@code WorkItem} rows (Requirement 5.3).
+ *
+ * <p>{@link #packages} is the set of offer packages this work is a MEMBER of — every package for
+ * which a {@code WorkPackageOverride(workItem, offerPackage, member=true)} row exists. It is a
+ * computed, never-persisted list of {@link RefDto} (id + localized package name), batch-populated by
+ * {@code WorkItemService} after the generic list maps the page (one grouped
+ * {@code findMembershipRefsByWorkItemIdIn} query for the whole page — no per-row N+1), so it never
+ * multiplies or splits the paginated distinct-{@code WorkItem} rows.
  */
 @Data
 @NoArgsConstructor
@@ -31,4 +42,7 @@ public class WorkItemServiceModel {
 
     /** The work item's three cost parts; {@code null} when the work item has no aggregation. */
     private WorkCostCellDto costCell;
+
+    /** The offer packages this work is a member of (member=true); empty when it belongs to none. */
+    private List<RefDto> packages = new ArrayList<>();
 }

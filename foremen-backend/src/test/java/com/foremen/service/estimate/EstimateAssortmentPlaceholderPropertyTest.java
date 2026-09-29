@@ -221,6 +221,11 @@ class EstimateAssortmentPlaceholderPropertyTest {
 
         lenient().when(workItemDao.findById(anyLong())).thenReturn(java.util.Optional.of(work));
 
+        // The read path now resolves the estimate via the get-or-create collaborator (R1.7).
+        com.foremen.service.EstimateService estimateServiceMock = mock(com.foremen.service.EstimateService.class);
+        lenient().when(estimateServiceMock.getOrCreateEntityForProject(PROJECT_ID))
+                .thenReturn(scenario.estimate);
+
         return new EstimateAssignmentService(
                 estimateLineRoomMaterialDao,
                 mapper,
@@ -242,11 +247,13 @@ class EstimateAssortmentPlaceholderPropertyTest {
                 constructionMaterialTypeDao,
                 materialTypeDao,
                 assortmentPositionPriceDao,
+                mock(com.foremen.dao.AssortmentPositionDao.class),
                 draftGateGuard,
                 estimateRecomputeService,
                 priceRangeResolver,
                 finishingPriceRangeResolver,
-                estimateMatrixAssembler);
+                estimateMatrixAssembler,
+                estimateServiceMock);
     }
 
     // ------------------------------------------------------------------------------------------

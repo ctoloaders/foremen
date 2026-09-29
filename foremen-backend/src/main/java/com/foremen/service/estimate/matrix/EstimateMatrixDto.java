@@ -24,6 +24,15 @@ import java.util.List;
  * @param groups           the work rows grouped by work category (R2.1)
  * @param totals           the three header totals: works / construction / finishing (R14.1, R14.2)
  * @param fillIndicatorPct the concrete-line share as a percentage 0..100 (R14.3)
+ * @param packageMaterialsTotal the header package summary total (FOR-05-05 Amendment A1): the sum of
+ *                         every work row's {@code packageVolume} (i.e. the resolved quantity of all
+ *                         {@code appliedFromPackage} finishing lines across the estimate)
+ * @param packageMaterialsMoney the materials-from-package money sum (FOR-05-05 Amendment A1, point F):
+ *                         the summed money contribution of all package-flagged material lines, as a
+ *                         {@link MoneyRange} (collapses when every package line is concrete)
+ * @param appliedPackageCode the offer-package code last APPLIED to this estimate (FOR-05-05 Wave 1b,
+ *                         #1), or {@code null} when none was ever applied. Mirrored by the frontend
+ *                         (a later wave) to pre-select the header package; exposed read-only here.
  */
 public record EstimateMatrixDto(
         Long projectId,
@@ -31,5 +40,8 @@ public record EstimateMatrixDto(
         List<EstimateMatrixRoomDto> rooms,
         List<WorkTypeGroupDto> groups,
         BranchSubtotals totals,
-        BigDecimal fillIndicatorPct) {
+        BigDecimal fillIndicatorPct,
+        BigDecimal packageMaterialsTotal,
+        MoneyRange packageMaterialsMoney,
+        String appliedPackageCode) {
 }

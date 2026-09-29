@@ -224,4 +224,102 @@
          + idempotent via onFail="MARK_RAN" + per-row NOT EXISTS (R17.3, R17.4, R19.2).
          Registered LAST, after 103. -->
     <include file="database_files/changesets/104-seed-work-volume-formulas-all.xml"/>
+
+    <!-- FOR-05-05 (R10.6): meaningful initial seed of the Room_Type_Attachment M:N
+         (work_room_types) by WORK CATEGORY -> ROOM TYPES (mapping B). Wet works
+         (TILING/PLUMBING_ROUGH/PLUMBING_FINISH) -> {kuchnia, lazienka}; FLOORS -> the 6 dry
+         rooms; CARPENTRY -> the 6 dry living/circulation rooms. All OTHER categories are left
+         with NO rows = empty attachment = attaches to all rooms on apply (R10.3). Categories and
+         room types resolved by CODE. Non-overwriting + idempotent via onFail="MARK_RAN" +
+         tableExists + a per-work NOT EXISTS guard, so a work whose attachment was edited via the
+         Work Catalog UI (or a plain re-run) is left untouched (R10.6, R19.2). Registered LAST,
+         after 104. -->
+    <include file="database_files/changesets/105-seed-work-room-types.xml"/>
+
+    <!-- FOR-05-05 (#7 Quantity/Volume override): add a boolean volume_overridden flag (NOT NULL
+         DEFAULT false) to estimate_line_room_qty, marking a cell whose stored quantity is a MANUAL
+         Volume override (protected from formula recompute/reassign). Idempotent via NOT columnExists
+         + MARK_RAN. Registered LAST, after 105. -->
+    <include file="database_files/changesets/106-add-estimate-line-room-qty-volume-overridden.xml"/>
+
+    <!-- FOR-05-05 amendment #1 (per-material-line quantity override): add manual_qty NUMERIC(12,4)
+         NULL + qty_overridden BOOLEAN NOT NULL DEFAULT false to estimate_line_room_materials, letting
+         a single material line's physical quantity be set explicitly (independent of norm × Volume).
+         CHECK (manual_qty IS NULL OR manual_qty >= 0). Idempotent via NOT columnExists + MARK_RAN.
+         Registered LAST, after 106. -->
+    <include file="database_files/changesets/107-add-estimate-line-room-material-qty-override.xml"/>
+
+    <!-- FOR-05-05 amendment #4 (consumption basis): add consumption_basis VARCHAR(32) NOT NULL
+         DEFAULT 'PER_UNIT' to both work_material_consumptions (catalog norm) and
+         estimate_line_room_materials (frozen estimate line). PER_ROOM applies the norm once per
+         assigned room (norm × 1) regardless of Volume; PER_UNIT keeps norm × Volume. The DEFAULT
+         backfills every existing row to PER_UNIT. Idempotent via NOT columnExists + MARK_RAN.
+         Registered after 107. -->
+    <include file="database_files/changesets/108-add-consumption-basis.xml"/>
+
+    <!-- FOR-05-05 amendment #4 (reseed): flip consumption_basis to PER_ROOM for the piece/complect
+         consumptions — those whose material NORM unit is code 'szt' or 'kpl' (a fixed count for the
+         whole room, e.g. 1 shower per bathroom). Single UPDATE joined through measurement_units,
+         inherently idempotent via the "consumption_basis <> 'PER_ROOM'" guard (no precondition).
+         Uses changeSet id "...-v2": the original id ran with a broken sqlCheck precondition that
+         always MARK_RANed it without applying, so a fresh id re-runs it forward-only. Registered
+         LAST, after 108. -->
+    <include file="database_files/changesets/109-reseed-consumption-basis.xml"/>
+
+    <!-- FOR-05-05 Amendment A1 (Wave 1): package finishing-materials propagation schema + seeds.
+         110 adds the assortment_positions.work_item_id link (ON DELETE SET NULL, point A);
+         111 creates the assortment_group_room_types pure M:N join (point B); 112 adds
+         estimate_line_room_materials.applied_from_package (point 2); 113 seeds the position->work
+         links from finishing work_material_consumptions (deterministic MIN(work_item_id),
+         non-overwriting via work_item_id IS NULL); 114 seeds the group->room-type mapping
+         (Sanitariat/Płytki -> wet, Podłoga -> dry, Drzwi -> all 8). All idempotent, registered LAST
+         in sequence, after 109. -->
+    <include file="database_files/changesets/110-add-assortment-position-work-item.xml"/>
+    <include file="database_files/changesets/111-create-assortment-group-room-types.xml"/>
+    <include file="database_files/changesets/112-add-estimate-line-room-material-applied-from-package.xml"/>
+    <include file="database_files/changesets/113-seed-assortment-position-work-item.xml"/>
+    <include file="database_files/changesets/114-seed-assortment-group-room-types.xml"/>
+
+    <!-- FOR-05-05 Amendment A1 (Wave 2): let a package-flagged finishing line and its non-package
+         "extra" line of the same type coexist in one cell by extending the
+         estimate_line_room_materials unique key with applied_from_package. Idempotent, after 114. -->
+    <include file="database_files/changesets/115-extend-estimate-line-room-material-unique.xml"/>
+
+    <!-- FOR-05-05 Amendment A1 (corrective seeds): close two data-seed gaps found in live
+         verification (the merge CODE is correct and tested — these are pure data seeds).
+         116 seeds the tiles group's room-types under the correct name_pl 'Płytki Ściany' (114
+         wrongly matched 'Płytki' and inserted nothing) -> WET rooms {kuchnia, lazienka};
+         117 seeds ONE finishing work_material_consumptions row per the 16 assortment material
+         types that had none, attaching each to a deterministic MIN(id) work of the appropriate
+         category (Sanitariat -> PLUMBING_FINISH szt/PER_ROOM, Drzwi -> CARPENTRY szt/PER_ROOM,
+         Płytki Ściany -> TILING m2/PER_UNIT), so the merge can propagate them;
+         118 re-runs 113's position->work link (fresh id) so the now-consumable types get linked.
+         All idempotent (116/117 onFail=MARK_RAN; 118 guarded by work_item_id IS NULL), registered
+         LAST in sequence, after 115. -->
+    <include file="database_files/changesets/116-seed-assortment-group-room-types-plytki.xml"/>
+    <include file="database_files/changesets/117-seed-package-finishing-consumptions.xml"/>
+    <include file="database_files/changesets/118-relink-assortment-position-work-item.xml"/>
+
+    <!-- FOR-05-05 (Wave 1b, #1): remember the offer-package code last APPLIED to an estimate —
+         a nullable applied_package_code VARCHAR(64) on estimates, set on Save and exposed on the
+         matrix DTO. Idempotent via NOT columnExists + MARK_RAN. Registered LAST, after 118. -->
+    <include file="database_files/changesets/119-add-estimate-applied-package-code.xml"/>
+
+    <!-- FOR-05-05 (Wave 1b, #8): the assortment position -> work item link becomes PER (position,
+         offer package). 120 creates the assortment_position_work_items join (PK (position, package),
+         all three FKs ON DELETE CASCADE); 121 migrates the single work_item_id into one join row per
+         ACTIVE package (preserving the "apply to all" default), run-once via sqlCheck + NOT EXISTS;
+         122 drops the now-migrated single assortment_positions.work_item_id column (forward-only,
+         columnExists-guarded). Registered LAST in sequence, after 119. -->
+    <include file="database_files/changesets/120-create-assortment-position-work-items.xml"/>
+    <include file="database_files/changesets/121-migrate-assortment-position-work-item-to-per-package.xml"/>
+    <include file="database_files/changesets/122-drop-assortment-position-work-item.xml"/>
+
+    <!-- FOR-05-05: re-assign package finishing work_material_consumptions from the corrected
+         per-(position, package) linkage (assortment_position_work_items). Phase 1 deletes changeset
+         117's mis-linked seed (created_by='seed:for-05-05-a1-finishing'); Phase 2 re-seeds one row
+         per DISTINCT (work_item, material_type) from the linkage, reusing 117's per-family
+         unit/basis/norm. Idempotent (Phase 1 DELETE + Phase 2 NOT-EXISTS + relink created_by tag).
+         Registered LAST, after 122. -->
+    <include file="database_files/changesets/123-reassign-finishing-consumptions-from-linkage.xml"/>
 </databaseChangeLog>

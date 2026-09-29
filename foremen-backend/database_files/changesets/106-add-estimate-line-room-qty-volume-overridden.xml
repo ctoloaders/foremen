@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (#7 Quantity/Volume override): flag a per-(line, room) cell's stored quantity as a
+        MANUAL Volume override. When volume_overridden is true the estimate_line_room_qty.quantity is
+        the user's manual Volume and MUST NOT be recomputed/overwritten by the formula on
+        recompute/reassign; when false, quantity stays the formula-resolved Volume (existing
+        behavior). NOT NULL DEFAULT false so every existing row keeps the prior (formula) semantics.
+
+        Idempotent via NOT columnExists + MARK_RAN, so a re-run against an already-migrated database
+        makes no schema change. Registered LAST in sequence.
+    -->
+
+    <changeSet id="106-add-estimate-line-room-qty-volume-overridden" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimate_line_room_qty" columnName="volume_overridden"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="estimate_line_room_qty">
+            <column name="volume_overridden" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (Wave 2): allow a package-flagged finishing line and its non-package
+        "extra" line to coexist in the SAME cell (room_qty) for the SAME finishing type.
+
+        The apply-package merge (point 3/4) may split a room's consumption of a finishing type into a
+        package-flagged line (applied_from_package = true, qty = the package allocation) PLUS an extra
+        line (applied_from_package = false, qty = need - allocation). Both are keyed by the SAME
+        (room_qty_id, branch = finishing, finishing_type_id), so the original changeset-102 unique
+        key uq_elrm_room_qty_branch_type (room_qty_id, branch, construction_type_id, finishing_type_id)
+        would reject the second row. Extending the unique key with applied_from_package makes the
+        package line and the extra line distinct while still forbidding two lines of the same
+        (branch, type) with the SAME package flag in one cell (R13.4 preserved per flag).
+
+        Idempotent: guarded so a re-run against an already-migrated database (the extended constraint
+        already present, or the old one already gone) makes no change. Drop is conditional on the old
+        constraint still existing; the re-create is conditional on the new one not yet existing.
+        Registered LAST in sequence, after 114.
+    -->
+
+    <!-- Drop the original (branch, type)-only unique key, if it is still in place. The precondition
+         uses a portable information_schema check (uniqueConstraintExists is not a built-in Liquibase
+         precondition) so a re-run after the drop is a MARK_RAN no-op. -->
+    <changeSet id="115-drop-elrm-unique-branch-type" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM information_schema.table_constraints
+                WHERE table_schema = 'public'
+                  AND table_name = 'estimate_line_room_materials'
+                  AND constraint_type = 'UNIQUE'
+                  AND constraint_name = 'uq_elrm_room_qty_branch_type'
+            </sqlCheck>
+        </preConditions>
+
+        <dropUniqueConstraint
+            tableName="estimate_line_room_materials"
+            constraintName="uq_elrm_room_qty_branch_type"/>
+    </changeSet>
+
+    <!-- Recreate the unique key including applied_from_package, if not already present. -->
+    <changeSet id="115-add-elrm-unique-branch-type-package" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM information_schema.table_constraints
+                WHERE table_schema = 'public'
+                  AND table_name = 'estimate_line_room_materials'
+                  AND constraint_type = 'UNIQUE'
+                  AND constraint_name = 'uq_elrm_room_qty_branch_type_pkg'
+            </sqlCheck>
+        </preConditions>
+
+        <addUniqueConstraint
+            constraintName="uq_elrm_room_qty_branch_type_pkg"
+            tableName="estimate_line_room_materials"
+            columnNames="room_qty_id, branch, construction_type_id, finishing_type_id, applied_from_package"/>
+    </changeSet>
+
+</databaseChangeLog>

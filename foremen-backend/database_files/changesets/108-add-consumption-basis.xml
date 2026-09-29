@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 amendment #4 (per-room / piece-complect consumption basis): add a consumption BASIS
+        so a norm can be applied once per assigned room (PER_ROOM: physical qty = norm × 1 = norm,
+        independent of Volume) instead of the historical per-work-unit basis (PER_UNIT: norm × Volume).
+
+        Two idempotent changesets:
+          108a - consumption_basis on work_material_consumptions (the CATALOG norm). The value is
+                 copied onto the estimate line at assign time.
+          108b - consumption_basis on estimate_line_room_materials (the FROZEN estimate line) so the
+                 frozen estimate is self-contained (does not re-read the catalog).
+
+        Both columns are VARCHAR(32) NOT NULL DEFAULT 'PER_UNIT'; the DEFAULT backfills every existing
+        row to PER_UNIT (prior behavior). Idempotent via NOT columnExists + MARK_RAN. Registered after
+        107.
+    -->
+
+    <changeSet id="108a-add-work-material-consumption-basis" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="work_material_consumptions" columnName="consumption_basis"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="work_material_consumptions">
+            <column name="consumption_basis" type="VARCHAR(32)" defaultValue="PER_UNIT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="108b-add-estimate-line-room-material-consumption-basis" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimate_line_room_materials" columnName="consumption_basis"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="estimate_line_room_materials">
+            <column name="consumption_basis" type="VARCHAR(32)" defaultValue="PER_UNIT">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

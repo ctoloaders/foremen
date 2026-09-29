@@ -1,5 +1,6 @@
 package com.foremen.controller.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -48,6 +49,10 @@ public record ApplyAssignmentsRequest(List<StagedEditPayload> edits) {
      * @param materialLineId target material line (CHOOSE_CONCRETE / RECOMPUTE_FINISHING)
      * @param materialId     chosen concrete product (CHOOSE_CONCRETE / BULK_CHOOSE_CONCRETE)
      * @param packageCode    active package code (ASSIGN / APPLY_PACKAGE / RECOMPUTE_FINISHING)
+     * @param quantity       the manual Volume for a {@code SET_QUANTITY} cell override (FOR-05-05 #7),
+     *                       or the manual physical quantity for a {@code SET_MATERIAL_QUANTITY} line
+     *                       override (amendment #1); {@code null} for every other kind (including
+     *                       {@code CLEAR_QUANTITY} / {@code CLEAR_MATERIAL_QUANTITY})
      */
     public record StagedEditPayload(
             EditKind kind,
@@ -58,12 +63,14 @@ public record ApplyAssignmentsRequest(List<StagedEditPayload> edits) {
             Long typeId,
             Long materialLineId,
             Long materialId,
-            String packageCode) {
+            String packageCode,
+            BigDecimal quantity) {
 
         /** Maps this request payload to the service {@link StagedEdit} record. */
         public StagedEdit toStagedEdit() {
             return new StagedEdit(
-                    kind, workItemId, roomId, roomQtyId, branch, typeId, materialLineId, materialId, packageCode);
+                    kind, workItemId, roomId, roomQtyId, branch, typeId, materialLineId, materialId,
+                    packageCode, quantity);
         }
     }
 }

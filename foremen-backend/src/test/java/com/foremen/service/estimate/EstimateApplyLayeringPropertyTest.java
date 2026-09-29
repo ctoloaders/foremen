@@ -312,6 +312,9 @@ class EstimateApplyLayeringPropertyTest {
 
         // --- read stubs the planning core consults ---
         lenient().when(estimateDao.findByProjectId(PROJECT_ID)).thenReturn(Optional.of(estimate));
+        // The read path now resolves the estimate via the get-or-create collaborator (R1.7).
+        com.foremen.service.EstimateService estimateServiceMock = mock(com.foremen.service.EstimateService.class);
+        lenient().when(estimateServiceMock.getOrCreateEntityForProject(PROJECT_ID)).thenReturn(estimate);
         lenient().when(roomDao.findByProjectId(PROJECT_ID)).thenReturn(rooms);
         lenient().when(workItemDao.findById(WORK_ID)).thenReturn(Optional.of(work));
         lenient().when(workVolumeFormulaDao.findByWorkItemId(WORK_ID))
@@ -344,11 +347,13 @@ class EstimateApplyLayeringPropertyTest {
                 /* constructionTypeDao    */ mock(ConstructionMaterialTypeDao.class),
                 /* materialTypeDao        */ mock(MaterialTypeDao.class),
                 assortmentPositionPriceDao,
+                /* assortmentPositionDao  */ mock(com.foremen.dao.AssortmentPositionDao.class),
                 /* draftGateGuard         */ mock(DraftGateGuard.class),
                 estimateRecomputeService,
                 new PriceRangeResolver(),
                 new FinishingPriceRangeResolver(),
-                /* estimateMatrixAssembler */ mock(com.foremen.service.estimate.matrix.EstimateMatrixAssembler.class));
+                /* estimateMatrixAssembler */ mock(com.foremen.service.estimate.matrix.EstimateMatrixAssembler.class),
+                estimateServiceMock);
     }
 
     // ------------------------------------------------------------------------------------------

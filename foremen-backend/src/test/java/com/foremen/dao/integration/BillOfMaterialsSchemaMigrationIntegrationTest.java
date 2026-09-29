@@ -123,13 +123,18 @@ class BillOfMaterialsSchemaMigrationIntegrationTest {
 
     // --- R13.4 : material line keyed uniquely per assignment by branch and type ---
     @Test
-    @DisplayName("estimate_line_room_materials (room_qty_id, branch, construction_type_id, finishing_type_id) is UNIQUE")
+    @DisplayName("estimate_line_room_materials (room_qty_id, branch, construction_type_id, "
+            + "finishing_type_id, applied_from_package) is UNIQUE (extended by A1 Wave 2 changeset 115)")
     void estimateLineRoomMaterialsIsKeyedByRoomQtyBranchType() throws Exception {
+        // FOR-05-05 Amendment A1 (Wave 2, changeset 115) extended the key with applied_from_package so
+        // a package-flagged finishing line and its non-package "extra" line of the same type coexist
+        // in one cell (R13.4 preserved per package flag).
         assertThat(uniqueConstraintColumns("estimate_line_room_materials"))
                 .as("a UNIQUE constraint covers exactly "
-                        + "[room_qty_id, branch, construction_type_id, finishing_type_id]")
+                        + "[room_qty_id, branch, construction_type_id, finishing_type_id, applied_from_package]")
                 .contains(List.of(
-                        "room_qty_id", "branch", "construction_type_id", "finishing_type_id"));
+                        "room_qty_id", "branch", "construction_type_id", "finishing_type_id",
+                        "applied_from_package"));
     }
 
     // --- R10.1 : a room type is attached to a work at most once ---
@@ -191,6 +196,34 @@ class BillOfMaterialsSchemaMigrationIntegrationTest {
         assertThat(deleteRuleForForeignKeyColumn("work_room_types", "room_type_id"))
                 .as("work_room_types.room_type_id FK delete rule (CASCADE)")
                 .isEqualTo("CASCADE");
+    }
+
+    // ------------------------------------------------------------------
+    // 107 / 108 : FOR-05-05 amendments — per-line qty override + consumption basis
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Changeset 107 adds manual_qty + qty_overridden to estimate_line_room_materials "
+            + "(qty_overridden NOT NULL DEFAULT false)")
+    void addsPerLineQuantityOverrideColumns() throws Exception {
+        assertThat(columnExists("estimate_line_room_materials", "manual_qty"))
+                .as("manual_qty column exists after migrate (#1)").isTrue();
+        assertThat(columnExists("estimate_line_room_materials", "qty_overridden"))
+                .as("qty_overridden column exists after migrate (#1)").isTrue();
+        assertThat(columnDefault("estimate_line_room_materials", "qty_overridden"))
+                .as("qty_overridden defaults to false (#1)").contains("false");
+    }
+
+    @Test
+    @DisplayName("Changeset 108 adds consumption_basis (NOT NULL DEFAULT 'PER_UNIT') to both "
+            + "work_material_consumptions and estimate_line_room_materials")
+    void addsConsumptionBasisColumns() throws Exception {
+        for (String table : List.of("work_material_consumptions", "estimate_line_room_materials")) {
+            assertThat(columnExists(table, "consumption_basis"))
+                    .as("%s.consumption_basis exists after migrate (#4)", table).isTrue();
+            assertThat(columnDefault(table, "consumption_basis"))
+                    .as("%s.consumption_basis defaults to PER_UNIT (#4)", table).contains("PER_UNIT");
+        }
     }
 
     // ------------------------------------------------------------------
@@ -262,9 +295,10 @@ class BillOfMaterialsSchemaMigrationIntegrationTest {
                     .isTrue();
         }
         assertThat(uniqueConstraintColumns("estimate_line_room_materials"))
-                .as("estimate_line_room_materials UNIQUE constraint unchanged after re-migrate")
+                .as("estimate_line_room_materials UNIQUE constraint (A1 Wave 2 form) unchanged after re-migrate")
                 .contains(List.of(
-                        "room_qty_id", "branch", "construction_type_id", "finishing_type_id"));
+                        "room_qty_id", "branch", "construction_type_id", "finishing_type_id",
+                        "applied_from_package"));
         assertThat(uniqueConstraintColumns("work_room_types"))
                 .as("work_room_types UNIQUE constraint unchanged after re-migrate")
                 .contains(List.of("work_item_id", "room_type_id"));
@@ -318,6 +352,36 @@ class BillOfMaterialsSchemaMigrationIntegrationTest {
                 ResultSet rs = ps.executeQuery()) {
             rs.next();
             return rs.getLong(1);
+        }
+    }
+
+    /** Whether the given (table, column) exists in the public schema. */
+    private boolean columnExists(String tableName, String columnName) throws Exception {
+        String sql = "SELECT COUNT(*) FROM information_schema.columns "
+                + "WHERE table_schema = 'public' AND table_name = ? AND column_name = ?";
+        try (Connection c = newConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, tableName);
+            ps.setString(2, columnName);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    /** The {@code column_default} expression for the given (table, column), or {@code null}. */
+    private String columnDefault(String tableName, String columnName) throws Exception {
+        String sql = "SELECT column_default FROM information_schema.columns "
+                + "WHERE table_schema = 'public' AND table_name = ? AND column_name = ?";
+        try (Connection c = newConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, tableName);
+            ps.setString(2, columnName);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString(1);
+                }
+                return null;
+            }
         }
     }
 

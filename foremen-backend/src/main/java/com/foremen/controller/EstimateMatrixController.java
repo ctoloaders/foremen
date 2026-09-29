@@ -1,17 +1,5 @@
 package com.foremen.controller;
 
-import com.foremen.config.security.PermissionResource;
-import com.foremen.config.security.RequiresPermission;
-import com.foremen.controller.model.ApplyAssignmentsRequest;
-import com.foremen.controller.model.ApplyPackageRequest;
-import com.foremen.controller.model.ApplyWorkRequest;
-import com.foremen.controller.model.RecomputeFinishingRequest;
-import com.foremen.exception.ForemenApiException;
-import com.foremen.service.estimate.EstimateAssignmentService;
-import com.foremen.service.estimate.matrix.EstimateMatrixDto;
-import com.foremen.service.permission.ForemenPermissionEvaluator;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -23,6 +11,20 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.foremen.config.security.PermissionResource;
+import com.foremen.config.security.RequiresPermission;
+import com.foremen.controller.model.ApplyAssignmentsRequest;
+import com.foremen.controller.model.ApplyPackageRequest;
+import com.foremen.controller.model.ApplyWorkRequest;
+import com.foremen.controller.model.RecomputeFinishingRequest;
+import com.foremen.exception.ForemenApiException;
+import com.foremen.service.estimate.EstimateAssignmentService;
+import com.foremen.service.estimate.matrix.EstimateMatrixDto;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
+
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 
 /**
  * The Estimate tab matrix controller (FOR-05-05, design §B6) — the read model plus the matrix
@@ -117,6 +119,21 @@ public class EstimateMatrixController {
             @PathVariable Long projectId, @Valid @RequestBody RecomputeFinishingRequest request) {
         EstimateMatrixDto preview = estimateAssignmentService.previewRecomputeFinishing(
                 projectId, request.packageCode(), resolveEditable(projectId));
+        return ResponseEntity.ok(preview);
+    }
+
+    /**
+     * Read-only preview of the whole client staged set (R15.6): replays every staged edit onto the
+     * in-memory estimate graph exactly as the batched Save would, returns the resulting matrix,
+     * persists nothing. {@code ESTIMATE} READ. Used by the client to render real server-computed
+     * numbers for material edits (ADD/REMOVE/CHOOSE_CONCRETE/BULK) before Save.
+     */
+    @PostMapping("/project/{projectId}/preview")
+    @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = "READ")
+    public ResponseEntity<EstimateMatrixDto> previewStagedEdits(
+            @PathVariable Long projectId, @Valid @RequestBody ApplyAssignmentsRequest request) {
+        EstimateMatrixDto preview = estimateAssignmentService.previewStagedEdits(
+                projectId, request.toStagedEdits(), resolveEditable(projectId));
         return ResponseEntity.ok(preview);
     }
 

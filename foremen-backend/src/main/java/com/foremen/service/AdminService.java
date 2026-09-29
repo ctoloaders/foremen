@@ -1,30 +1,34 @@
 package com.foremen.service;
 
+import java.lang.reflect.Field;
+import java.time.LocalDateTime;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.BiConsumer;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.PropertyAccessor;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.ReadOnlyAdminDao;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.audit.AuditLogEntity;
-import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.PropertyAccessor;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaUpdate;
 import jakarta.persistence.criteria.Root;
-import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import org.springframework.transaction.annotation.Transactional;
-
-import java.lang.reflect.Field;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Set;
-import java.util.function.BiConsumer;
 
 public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
         extends ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID> {
@@ -295,8 +299,11 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
     default String serializeEntity(DaoModel entity) {
         if (entity == null) return null;
         try {
-            return AUDIT_OBJECT_MAPPER.writeValueAsString(entity);
-        } catch (JsonProcessingException e) {
+            JsonNode tree = AUDIT_OBJECT_MAPPER.valueToTree(entity);
+            ObjectNode flat = AUDIT_OBJECT_MAPPER.createObjectNode();
+            flatten(null, tree, flat);
+            return AUDIT_OBJECT_MAPPER.writeValueAsString(flat);
+        } catch (Exception e) {
             // If serialization fails, store a fallback message rather than crashing the operation
             return "{\"error\":\"serialization_failed\",\"class\":\"" + entity.getClass().getSimpleName() + "\"}";
         }
@@ -316,7 +323,116 @@ public interface AdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID>
      * @param after          the entity after the update was applied
      */
     default String serializeUpdateAfterSnapshot(String beforeSnapshot, DaoModel after) {
-        return serializeEntity(after);
+        if (after == null) return null;
+        try {
+            // Produce the after-state through the SAME seam that produced beforeSnapshot
+            // (serializeEntity, which may be overridden by a subclass and is already flat). Parsing
+            // both sides from their JSON text keeps node types consistent, so equal values compare
+            // equal regardless of int/long representation.
+            String afterSnapshot = serializeEntity(after);
+            JsonNode afterParsed = afterSnapshot == null ? null : AUDIT_OBJECT_MAPPER.readTree(afterSnapshot);
+
+            // beforeSnapshot was produced by serializeEntity (already flat). If it's missing
+            // (should not happen on update), fall back to the full after-state.
+            if (beforeSnapshot == null) {
+                return afterSnapshot;
+            }
+
+            JsonNode beforeParsed = AUDIT_OBJECT_MAPPER.readTree(beforeSnapshot);
+            if (!(beforeParsed instanceof ObjectNode beforeFlat) || !(afterParsed instanceof ObjectNode afterFlat)) {
+                // Unexpected shape on either side (e.g. a fallback error string): emit the full
+                // after-state rather than a partial/misleading diff.
+                return afterSnapshot;
+            }
+
+            ObjectNode diff = flatDiff(beforeFlat, afterFlat);
+            return AUDIT_OBJECT_MAPPER.writeValueAsString(diff);
+        } catch (Exception e) {
+            return "{\"error\":\"serialization_failed\",\"class\":\"" + after.getClass().getSimpleName() + "\"}";
+        }
+    }
+
+    /**
+     * Flattens a Jackson {@link JsonNode} tree into the single-level {@code target} object using
+     * dot-notation for nested objects and index notation for arrays/collections.
+     *
+     * <ul>
+     *   <li>Nested objects: {@code {"a":{"b":1}}} &rarr; {@code {"a.b":1}}.</li>
+     *   <li>Object arrays: {@code {"users":[{"name":"x"}]}} &rarr; {@code {"users[0].name":"x"}}.</li>
+     *   <li>Scalar arrays: {@code {"tags":["a","b"]}} &rarr; {@code {"tags[0]":"a","tags[1]":"b"}}.</li>
+     *   <li>Leaf scalars (string/number/boolean/null) are kept as their JSON value.</li>
+     *   <li>Empty objects/arrays are OMITTED (kept lean); a top-level empty entity yields {@code {}}.</li>
+     * </ul>
+     *
+     * @param prefix the accumulated dotted/indexed key path so far ({@code null} at the root)
+     * @param node   the current node being flattened
+     * @param target the flat object node being built up
+     */
+    private static void flatten(String prefix, JsonNode node, ObjectNode target) {
+        if (node == null || node.isNull()) {
+            if (prefix != null) target.putNull(prefix);
+            return;
+        }
+        if (node.isObject()) {
+            if (node.isEmpty()) {
+                // Empty object leaf: omit (lean). Root empty object -> target stays {}.
+                return;
+            }
+            Iterator<Map.Entry<String, JsonNode>> fields = node.fields();
+            while (fields.hasNext()) {
+                Map.Entry<String, JsonNode> e = fields.next();
+                String key = prefix == null ? e.getKey() : prefix + "." + e.getKey();
+                flatten(key, e.getValue(), target);
+            }
+            return;
+        }
+        if (node.isArray()) {
+            if (node.isEmpty()) {
+                // Empty array leaf: omit (lean).
+                return;
+            }
+            for (int i = 0; i < node.size(); i++) {
+                String key = (prefix == null ? "" : prefix) + "[" + i + "]";
+                flatten(key, node.get(i), target);
+            }
+            return;
+        }
+        // Leaf scalar (string/number/boolean).
+        if (prefix != null) {
+            target.set(prefix, node);
+        }
+    }
+
+    /**
+     * Computes the flat diff between two already-flattened snapshot objects. The result contains
+     * ONLY the keys whose value changed:
+     * <ul>
+     *   <li>present in {@code after} with a new/different value &rarr; included with the new value;</li>
+     *   <li>present in {@code before} but absent from {@code after} (removed) &rarr; included as {@code null};</li>
+     *   <li>present in both with an equal JSON value &rarr; omitted.</li>
+     * </ul>
+     */
+    private static ObjectNode flatDiff(ObjectNode before, ObjectNode after) {
+        ObjectNode diff = AUDIT_OBJECT_MAPPER.createObjectNode();
+
+        Iterator<Map.Entry<String, JsonNode>> afterFields = after.fields();
+        while (afterFields.hasNext()) {
+            Map.Entry<String, JsonNode> e = afterFields.next();
+            JsonNode beforeVal = before.get(e.getKey());
+            if (beforeVal == null || !beforeVal.equals(e.getValue())) {
+                diff.set(e.getKey(), e.getValue());
+            }
+        }
+
+        Iterator<String> beforeNames = before.fieldNames();
+        while (beforeNames.hasNext()) {
+            String key = beforeNames.next();
+            if (!after.has(key)) {
+                diff.putNull(key);
+            }
+        }
+
+        return diff;
     }
 
     // --- Utility Methods ---

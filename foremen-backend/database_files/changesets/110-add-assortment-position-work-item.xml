@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (point A): the 1-to-1 link from an assortment position (a finishing
+        material TYPE in a group) to the WORK ITEM whose finishing consumption it fulfils.
+
+        Adds a nullable work_item_id BIGINT to assortment_positions with an FK -> work_items(id)
+        ON DELETE SET NULL (removing a work item nulls the link, never deleting the position). The
+        column is nullable: a position whose finishing type has no declared consumption on any work
+        stays NULL (it simply won't be merged for a work — acceptable, seeded by changeset 113).
+
+        Idempotent via NOT columnExists + MARK_RAN (mirrors the add-column style of changesets
+        106/107), so a re-run against an already-migrated database makes no schema change.
+        Registered LAST in sequence, after 109.
+    -->
+
+    <changeSet id="110-add-assortment-position-work-item" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="assortment_positions" columnName="work_item_id"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="assortment_positions">
+            <column name="work_item_id" type="BIGINT"/>
+        </addColumn>
+
+        <!-- The finishing-work link FK: nullable, ON DELETE SET NULL. -->
+        <addForeignKeyConstraint
+            constraintName="fk_assortment_position_work_item"
+            baseTableName="assortment_positions"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

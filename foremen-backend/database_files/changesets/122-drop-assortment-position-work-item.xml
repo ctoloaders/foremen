@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (Wave 1b, #8): drop the now-migrated single assortment_positions.work_item_id link
+        (Amendment A1 / changeset 110); the per-(position, package) link now lives in
+        assortment_position_work_items (created by 120, populated by 121).
+
+        Drops the FK constraint (fk_assortment_position_work_item) first, then the column. Forward-only
+        migration guarded by columnExists + MARK_RAN so a re-run against an already-migrated database
+        makes no change. The entity field AssortmentPositionEntity.workItem is removed in the SAME
+        change so the app still validates (SPRING_JPA_HIBERNATE_DDL_AUTO=validate in docker).
+
+        Registered LAST in sequence, after 121.
+    -->
+
+    <changeSet id="122-drop-assortment-position-work-item" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="assortment_positions" columnName="work_item_id"/>
+        </preConditions>
+
+        <dropForeignKeyConstraint
+            baseTableName="assortment_positions"
+            constraintName="fk_assortment_position_work_item"/>
+
+        <dropColumn tableName="assortment_positions" columnName="work_item_id"/>
+    </changeSet>
+
+</databaseChangeLog>

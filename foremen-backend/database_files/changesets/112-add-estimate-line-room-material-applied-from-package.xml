@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (point 2): flag a material line placed by an applied package.
+
+        Adds applied_from_package BOOLEAN NOT NULL DEFAULT false to estimate_line_room_materials.
+        A package-flagged line is otherwise an ordinary material line (point 4); the flag lets the
+        apply-package merge (Wave 2) identify and replace the previous package's lines on re-apply
+        (point 5) and lets the read model aggregate the package-materials summary. NOT NULL DEFAULT
+        false backfills every existing row to the non-package semantics.
+
+        Idempotent via NOT columnExists + MARK_RAN (mirrors changeset 106/107 boolean-add style), so
+        a re-run against an already-migrated database makes no schema change. Registered LAST, after
+        111.
+    -->
+
+    <changeSet id="112-add-estimate-line-room-material-applied-from-package" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimate_line_room_materials" columnName="applied_from_package"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="estimate_line_room_materials">
+            <column name="applied_from_package" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

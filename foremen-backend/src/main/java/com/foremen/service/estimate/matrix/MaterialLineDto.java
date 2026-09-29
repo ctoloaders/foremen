@@ -2,6 +2,7 @@ package com.foremen.service.estimate.matrix;
 
 import java.math.BigDecimal;
 
+import com.foremen.dao.model.ConsumptionBasis;
 import com.foremen.dao.model.ConsumptionBranch;
 
 /**
@@ -21,6 +22,20 @@ import com.foremen.dao.model.ConsumptionBranch;
  * @param concreteMaterialId   the chosen concrete product id, or {@code null} for a Placeholder
  * @param concreteMaterialName the chosen concrete product name, or {@code null} for a Placeholder
  * @param concreteNet          the copied chosen product {@code retailNet}, or {@code null}
+ * @param normUnit             the material NORM's unit code (e.g. {@code l}, {@code m2}, {@code szt})
+ *                             so the UI can render the norm quantity (#8), or {@code null} when the
+ *                             unit cannot be resolved at read time
+ * @param quantity             the RESOLVED physical quantity actually used for this line (FOR-05-05
+ *                             amendments #1/#4): {@code manualQty} when the line is overridden, else
+ *                             {@code norm} for a {@code PER_ROOM} basis, else {@code norm × Volume}
+ *                             for {@code PER_UNIT}. This is the physical quantity the money
+ *                             contribution multiplies by
+ * @param quantityOverridden   {@code true} iff {@code quantity} is a manual per-line override (#1),
+ *                             which wins over the consumption basis
+ * @param consumptionBasis     the line's copied consumption basis (#4): {@code PER_UNIT}
+ *                             ({@code norm × Volume}) or {@code PER_ROOM} ({@code norm}, once per
+ *                             assigned room). Serialized by its enum name; the frontend mirrors it as
+ *                             {@code 'PER_UNIT' | 'PER_ROOM'}
  */
 public record MaterialLineDto(
         Long id,
@@ -32,10 +47,20 @@ public record MaterialLineDto(
         BigDecimal rangeMax,
         Long concreteMaterialId,
         String concreteMaterialName,
-        BigDecimal concreteNet) {
+        BigDecimal concreteNet,
+        String normUnit,
+        BigDecimal quantity,
+        boolean quantityOverridden,
+        ConsumptionBasis consumptionBasis,
+        boolean appliedFromPackage) {
 
     /** Whether this line has a chosen concrete product (⇒ its contribution is a point, R6.4). */
     public boolean isConcrete() {
         return concreteMaterialId != null;
+    }
+
+    /** Whether this line was placed by an applied offer package (FOR-05-05 Amendment A1). */
+    public boolean isAppliedFromPackage() {
+        return appliedFromPackage;
     }
 }

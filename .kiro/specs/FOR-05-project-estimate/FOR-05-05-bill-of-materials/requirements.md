@@ -126,6 +126,11 @@ can assign works to rooms in one grid.
    with the volume computed under the formula engine's missing-variable-is-zero contract.
 5. THE matrix SHALL be usable on desktop (dense table) and degrade gracefully on narrow viewports.
 6. WHERE the user lacks `ESTIMATE` READ, THE Estimate_Tab SHALL be gated from that user.
+7. WHEN the user opens Estimate_Tab for a project that has no estimate yet (e.g. an existing project
+   created before the estimate feature), THE matrix read SHALL create the project's single estimate
+   (defaulted to PLN/DRAFT, reusing the shipped get-or-create path) and return an empty, assignable
+   matrix rather than failing, resolving to the same estimate on repeated reads without creating a
+   second one.
 
 ### Requirement 2: Group works by type with group subtotals
 
@@ -297,6 +302,19 @@ applying a package (or the work-row hammer) attaches the work only to relevant r
 3. WHERE a work's Room_Type_Attachment is empty, THE work SHALL attach to all rooms on apply.
 4. THE volume formula SHALL remain independent of the Room_Type_Attachment (the attachment governs
    which rooms a work attaches to, not how the volume is computed).
+5. WHEN a user opens the Work Catalog edit form (`/catalog/works`, edit mode) for a work item, THE
+   form SHALL let the user view and manage that work item's Room_Type_Attachment — view the currently
+   attached room types, add or remove room types, and save the change — persisting the selected set
+   independently of the main work-item create/update form; AND WHERE the user clears all selections,
+   saving SHALL clear the attachment so the work attaches to all rooms on apply (per criterion 3).
+6. THE system SHALL seed each work item's INITIAL Room_Type_Attachment from the meaning of its work
+   category: wet-room works (tiling and plumbing rough/finish) SHALL attach to the kitchen and
+   bathroom; floor works SHALL attach to the dry rooms (excluding kitchen and bathroom); carpentry
+   works SHALL attach to the dry living/circulation rooms; and every other category SHALL be left
+   with an EMPTY attachment (attaches to all rooms on apply, per criterion 3). The seed SHALL be an
+   idempotent Liquibase changeset registered last in sequence, and SHALL NOT overwrite the
+   attachment of any work item that already has one (so an attachment edited via criterion 5 is
+   preserved).
 
 ### Requirement 11: Package selector and Apply_Package
 

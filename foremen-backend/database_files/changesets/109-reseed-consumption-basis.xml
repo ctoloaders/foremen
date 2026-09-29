@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 amendment #4 (reseed): flip the consumption BASIS to PER_ROOM for the consumptions
+        that are semantically per-room. The defensible, small candidate set is every consumption whose
+        material NORM unit is a piece/complect unit — code 'szt' (штука / szt., piece) or 'kpl'
+        (комплект / kpl., complect), both seeded by changeset 019. A piece/complect norm is a fixed
+        count for the whole room (e.g. 1 shower per bathroom), so PER_ROOM (norm × 1) is the correct
+        physical quantity rather than norm × Volume.
+
+        Single UPDATE joining through measurement_units (material_unit_id) to match code IN
+        ('szt','kpl'). The UPDATE is inherently idempotent and re-runnable: the
+        "AND consumption_basis <> 'PER_ROOM'" guard makes a re-run (all already PER_ROOM) a harmless
+        no-op, so NO precondition is needed. Registered LAST, after 108.
+
+        History note: the original changeSet id "109-reseed-consumption-basis-per-room" used a broken
+        preCondition — <sqlCheck expectedResult="false">SELECT COUNT(*) = 0 ...</sqlCheck>. Liquibase
+        sqlCheck compares the first column of the first row as a STRING to expectedResult; a Postgres
+        boolean renders as 't'/'f', never the literal "false", so the precondition ALWAYS failed and
+        the changeset was MARK_RAN without ever running the UPDATE (0 rows flipped). Because that old
+        id is already recorded as MARK_RAN (and editing its body would also trip checksum validation),
+        this corrected reseed uses a NEW id ("...-v2") so Liquibase treats it as a fresh, unrun
+        changeset. This is a forward-only reseed — no validCheckSum / history rewrite.
+    -->
+
+    <changeSet id="109-reseed-consumption-basis-per-room-v2" author="foremen">
+        <sql>
+            UPDATE work_material_consumptions wmc
+               SET consumption_basis = 'PER_ROOM'
+              FROM measurement_units mu
+             WHERE mu.id = wmc.material_unit_id
+               AND mu.code IN ('szt', 'kpl')
+               AND wmc.consumption_basis &lt;&gt; 'PER_ROOM';
+        </sql>
+        <rollback>
+            <sql>
+                UPDATE work_material_consumptions wmc
+                   SET consumption_basis = 'PER_UNIT'
+                  FROM measurement_units mu
+                 WHERE mu.id = wmc.material_unit_id
+                   AND mu.code IN ('szt', 'kpl');
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

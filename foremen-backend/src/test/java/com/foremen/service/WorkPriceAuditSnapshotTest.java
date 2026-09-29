@@ -150,11 +150,11 @@ class WorkPriceAuditSnapshotTest {
         assertThat(before.get("netPrice").decimalValue()).isEqualByComparingTo("150.00");
     }
 
-    // --- UPDATE: price-only change (flat symmetric before/after) ---
+    // --- UPDATE: price-only change (flat before, diff-only after) ---
 
     @Test
-    @DisplayName("price-only UPDATE yields flat symmetric before/after carrying old/new netPrice")
-    void priceOnlyUpdateProducesSymmetricFlatSnapshots() {
+    @DisplayName("price-only UPDATE: full flat before, after is the diff carrying ONLY the changed netPrice")
+    void priceOnlyUpdateProducesFlatBeforeAndDiffAfter() {
         WorkPriceEntity existing = workPrice(9L, 300L, "PLN", "100.00");
         when(dao.findById(9L)).thenReturn(Optional.of(existing));
         when(dao.save(any(WorkPriceEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -175,16 +175,20 @@ class WorkPriceAuditSnapshotTest {
         JsonNode before = parse(row.getSnapshotBefore());
         JsonNode after = parse(row.getSnapshotAfter());
 
+        // Before is the full flattened state.
         assertThat(before.get("workItemId").asLong()).isEqualTo(300L);
-        assertThat(after.get("workItemId").asLong()).isEqualTo(300L);
-
         assertThat(before.get("netPrice").decimalValue()).isEqualByComparingTo("100.00");
+
+        // After is a DIFF: only netPrice changed, so it is the ONLY key present.
         assertThat(after.get("netPrice").decimalValue()).isEqualByComparingTo("120.00");
+        assertThat(after.has("workItemId")).isFalse();
+        assertThat(after.has("currencyCode")).isFalse();
+        assertThat(after.has("id")).isFalse();
     }
 
     @Test
-    @DisplayName("workItem-changed UPDATE still writes the flat snapshot with the new workItemId")
-    void workItemChangeProducesFlatSnapshot() {
+    @DisplayName("workItem-changed UPDATE: after diff carries ONLY the new workItemId, unchanged netPrice omitted")
+    void workItemChangeProducesDiffAfter() {
         WorkPriceEntity existing = workPrice(13L, 500L, "PLN", "100.00");
         when(dao.findById(13L)).thenReturn(Optional.of(existing));
         when(dao.save(any(WorkPriceEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -198,7 +202,8 @@ class WorkPriceAuditSnapshotTest {
 
         AuditLogEntity row = captureSingleAudit();
         JsonNode after = parse(row.getSnapshotAfter());
+        // Only workItemId changed (500 -> 999); netPrice is unchanged and therefore omitted.
         assertThat(after.get("workItemId").asLong()).isEqualTo(999L);
-        assertThat(after.get("netPrice").decimalValue()).isEqualByComparingTo("100.00");
+        assertThat(after.has("netPrice")).isFalse();
     }
 }

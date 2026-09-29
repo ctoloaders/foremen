@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (point B, seed): populate assortment_group_room_types (created by
+        changeset 111) with a defensible group -> room-type mapping, consistent with the wet/dry room
+        semantics used by the work-category room seed (changeset 105).
+
+        ROOM-TYPE VOCABULARY (room_types.code, from changeset 105): przedpokoj, hol, kuchnia, salon,
+        biuro, master, pokoj, lazienka.
+          - WET rooms = {kuchnia, lazienka}
+          - DRY rooms = {przedpokoj, hol, salon, biuro, master, pokoj}
+
+        MAPPING (groups by assortment_groups.name_pl, from changeset 100):
+          - Sanitariat (sanitary/bathroom) -> WET rooms {kuchnia, lazienka}.
+          - Płytki     (tiles)             -> WET rooms {kuchnia, lazienka}.
+          - Podłoga    (flooring)          -> DRY rooms {przedpokoj, hol, salon, biuro, master, pokoj}.
+          - Drzwi      (doors)             -> ALL 8 rooms (both WET and DRY) — seeded EXPLICITLY: this
+              join has no "empty = all" fallback, so Drzwi is materialized as all-room rows.
+
+        Each INSERT resolves the group by name_pl and the room type by code (never by hard-coded id)
+        and is NOT-EXISTS-guarded on the (assortment_group_id, room_type_id) pair — so it is
+        non-overwriting + idempotent (a re-run, or a mapping already edited elsewhere, inserts
+        nothing). Guarded by onFail="MARK_RAN" + tableExists(assortment_group_room_types). Registered
+        LAST, after 113.
+    -->
+
+    <changeSet id="114-seed-assortment-group-room-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="assortment_group_room_types"/>
+        </preConditions>
+
+        <!-- Sanitariat -> WET rooms {kuchnia, lazienka}. -->
+        <sql>
+            INSERT INTO assortment_group_room_types (assortment_group_id, room_type_id)
+            SELECT g.id, rt.id
+            FROM assortment_groups g
+            JOIN room_types rt ON rt.code IN ('kuchnia', 'lazienka')
+            WHERE g.name_pl = 'Sanitariat'
+              AND NOT EXISTS (
+                    SELECT 1 FROM assortment_group_room_types x
+                    WHERE x.assortment_group_id = g.id AND x.room_type_id = rt.id
+                  );
+        </sql>
+
+        <!-- Płytki -> WET rooms {kuchnia, lazienka}. -->
+        <sql>
+            INSERT INTO assortment_group_room_types (assortment_group_id, room_type_id)
+            SELECT g.id, rt.id
+            FROM assortment_groups g
+            JOIN room_types rt ON rt.code IN ('kuchnia', 'lazienka')
+            WHERE g.name_pl = 'Płytki'
+              AND NOT EXISTS (
+                    SELECT 1 FROM assortment_group_room_types x
+                    WHERE x.assortment_group_id = g.id AND x.room_type_id = rt.id
+                  );
+        </sql>
+
+        <!-- Podłoga -> DRY rooms {przedpokoj, hol, salon, biuro, master, pokoj}. -->
+        <sql>
+            INSERT INTO assortment_group_room_types (assortment_group_id, room_type_id)
+            SELECT g.id, rt.id
+            FROM assortment_groups g
+            JOIN room_types rt ON rt.code IN
+                ('przedpokoj', 'hol', 'salon', 'biuro', 'master', 'pokoj')
+            WHERE g.name_pl = 'Podłoga'
+              AND NOT EXISTS (
+                    SELECT 1 FROM assortment_group_room_types x
+                    WHERE x.assortment_group_id = g.id AND x.room_type_id = rt.id
+                  );
+        </sql>
+
+        <!-- Drzwi -> ALL 8 rooms (explicit, no empty=all fallback in this join). -->
+        <sql>
+            INSERT INTO assortment_group_room_types (assortment_group_id, room_type_id)
+            SELECT g.id, rt.id
+            FROM assortment_groups g
+            JOIN room_types rt ON rt.code IN
+                ('przedpokoj', 'hol', 'kuchnia', 'salon', 'biuro', 'master', 'pokoj', 'lazienka')
+            WHERE g.name_pl = 'Drzwi'
+              AND NOT EXISTS (
+                    SELECT 1 FROM assortment_group_room_types x
+                    WHERE x.assortment_group_id = g.id AND x.room_type_id = rt.id
+                  );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

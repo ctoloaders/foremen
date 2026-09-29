@@ -252,6 +252,58 @@ work attaches to on apply*, never *how* Volume is computed (R10.4) — the formu
 Editing the attachment is a `WORK_CATALOG` catalog-admin concern (a small write on the work-item edit
 surface), not an estimate write.
 
+**Work Catalog Room_Type_Attachment editor (R10.5).** The attachment is viewed and edited from the
+Work Catalog edit form (`/catalog/works`, edit mode) via two custom handlers on the shipped
+`WorkItemController` (class `@PermissionResource("WORK_CATALOG")`; no new ABAC resource / seed
+changeset — `work_room_types` and `WORK_CATALOG` are already shipped):
+
+- `GET /api/work-items/{id}/room-types` — method-level `@PermissionOperation("READ")`; returns the
+  work item's attached room-type ids as `WorkItemRoomTypesResponse(List<Long> roomTypeIds)`; `404`
+  when the work item does not exist.
+- `PUT /api/work-items/{id}/room-types` — method-level `@PermissionOperation("UPDATE")`; body
+  `WorkItemRoomTypesRequest(List<Long> roomTypeIds)` is a full REPLACE of the attached set: it
+  resolves each id via `RoomTypeDao` (`404` on a bad id), sets the `WorkItemEntity.roomTypes`
+  collection, saves + flushes, and audits an `UPDATE`; a `null`/empty list clears the attachment
+  (attaches to all rooms on apply, R10.3). Returns the resulting id list.
+
+Both method-level `@PermissionOperation`s combine with the class `@PermissionResource("WORK_CATALOG")`
+so `PermissionAnnotationValidator` classifies the controller COMPLETE at startup. The service half is
+`WorkItemService#getRoomTypeIds`/`setRoomTypeIds` (the write is `@Transactional`).
+
+On the frontend, an edit-mode-only `WorkRoomTypeAttachmentEditor` sub-editor (in
+`features/work-catalog/components/`) mirrors the `WorkPackageOverridesEditor` pattern: it loads
+`/api/room-types` options via `useReferenceOptions` (sorted `name,asc`, with inline
+forbidden/loading/empty states), renders one checkbox row per room type reconciled against the
+persisted attached ids (`useWorkItemRoomTypes`), and a single Save button PUTs the checked ids
+(`useUpdateWorkItemRoomTypes`, invalidating the room-types query). It is embedded in
+`WorkItemFormSheet` alongside `WorkVolumeFormulaEditor` + `WorkPackageOverridesEditor` in the
+`mode === 'edit' && itemId != null` block and persists independently (its own Save); a clear hint
+states that when no room type is selected the work attaches to all rooms on apply (R10.3). New i18n
+lives under `workCatalog.roomTypes.*` in both `pl.json` and `ru.json` (strict parity), reusing
+`referenceFilter.noAccess` for the forbidden state.
+
+**Initial Room_Type_Attachment seed (changeset `105`, R10.6).** Changeset `103` creates the empty
+`work_room_types` join; changeset `105` **seeds** it meaningfully by WORK CATEGORY → ROOM TYPES
+(mapping B), so every work starts attached to the rooms where it is appropriate:
+
+- **Wet works** — every work item whose `work_categories.code ∈ {TILING, PLUMBING_ROUGH,
+  PLUMBING_FINISH}` → the wet rooms `{kuchnia, lazienka}`.
+- **FLOORS** (parquet/laminate) → the 6 dry rooms `{przedpokoj, hol, salon, biuro, master, pokoj}`
+  (excludes kitchen/bathroom).
+- **CARPENTRY** (wardrobes/doors) → the same 6 dry living/circulation rooms.
+- **All other categories** (`PRELIMINARY, CONSTRUCTIONS_GK, ELECTRICAL_ROUGH, ELECTRICAL_FINISH,
+  PLASTERING, PAINTING_DECOR, EXTRAS, OTHER`) → **seeded nothing**: an empty attachment means the
+  work attaches to all rooms on apply (R10.3), consistent with the empty-set semantics above.
+
+The changeset is a single set-based seed resolving categories and room types by `code` (never by
+hard-coded id), grouped by mapping bucket (wet / floors / carpentry), inserting only the two
+join columns (`work_item_id, room_type_id` — `work_room_types` is a pure join table). It is
+**non-overwriting + idempotent** (R10.6, R19.2): guarded by `onFail="MARK_RAN"` +
+`tableExists(work_room_types)`, and each INSERT seeds a work **only** when it currently has no
+attachment rows (`AND NOT EXISTS (SELECT 1 FROM work_room_types wrt WHERE wrt.work_item_id =
+wi.id)`), so a work whose attachment was already edited via the B2 editor — or a plain changelog
+re-run — is left untouched. Registered **last** in `changelog.xml`, after `104`.
+
 #### Component B3 — `FinishingPriceRangeResolver` (NEW, R12, R3.4, R6.1)
 
 The one new pricing primitive. A pure, total, deterministic `@Component` mirroring
@@ -311,6 +363,21 @@ they simply return the computed result instead of writing it. The actual persist
 package-apply / recompute-originated staged edits flows through `applyAssignments` on `Save`, so the
 same batched commit path serves cell edits and apply/recompute alike.
 
+**Estimate resolution is get-or-create, never a 404 (R1.7).** The read path — `getMatrix`, the
+`isDraft` lifecycle check, and the read-only `calculate*`/preview cores (`apply-package`,
+`apply-work`, `recompute-finishing`) — resolves the project's estimate through the shipped
+`EstimateService.getOrCreateEntityForProject(projectId)` (the entity twin of
+`EstimateController#getOrCreateForProject`): when the project has no estimate yet (e.g. an existing
+project created before the estimate feature) it **creates** a single defaulted PLN/DRAFT estimate and
+returns an empty, assignable matrix rather than `404 error.entity.not.found`. Repeated reads resolve
+the same row (no duplicate; the `estimates.project_id` UNIQUE is the backstop). The write path
+(`resolveDraftEstimate`, used by assign / material edits / `applyAssignments`) get-or-creates the same
+way — so a first Save on a brand-new project works — and then still applies the DRAFT gate. Because a
+first read may INSERT the estimate row, `getMatrix` / `isDraft` / the `calculate*` methods run in a
+read-write transaction (`@Transactional`, not `readOnly = true`); the preview mutations of
+`previewApply*`/`previewRecomputeFinishing` are still rolled back after assembly so those endpoints
+persist nothing beyond the lazily-created estimate.
+
 #### Component B5 — Volume computation and the unit→dimension fallback (R5)
 
 Volume resolution, per cell:
@@ -334,7 +401,10 @@ A new `@RestController @RequestMapping("/api/estimates") @PermissionResource("ES
 
 - `GET /api/estimates/project/{projectId}/matrix` — the full read model (works grouped by type, room
   columns, per-cell assignment + cost range + fill-state, header totals, fill indicator).
-  `@RequiresPermission(resource="ESTIMATE", operation="READ")`.
+  `@RequiresPermission(resource="ESTIMATE", operation="READ")`. When the project has no estimate yet,
+  the read **get-or-creates** a defaulted PLN/DRAFT estimate (via the shipped
+  `EstimateService.getOrCreateEntityForProject`, mirroring `EstimateController#getOrCreateForProject`)
+  and returns an empty matrix instead of a 404 (R1.7).
 - `POST /api/estimates/project/{projectId}/apply-package`, `.../apply-work`, `.../recompute-finishing`
   — the **calculate/preview** endpoints. They compute and return the resulting assignments / volumes /
   material-lines / ranges **without persisting anything**, so they are `@RequiresPermission
@@ -701,6 +771,7 @@ staged edits leaves the positioning state unchanged.
 | Cyclic cross-work references | seeded/override formulas form a cycle | backend `409 error.formula.cycle` (shipped `FormulaEvaluationPlanner`); localized message |
 | Finishing type with no priced material | no active, non-null-`retailNet`, package-member finishing material | range is `EMPTY (null..null)`; the line renders a `0` band (never fabricated), consistent with `PriceRangeResolver` (R12.5) |
 | Empty group / empty matrix | no assigned works | subtotals/totals are zero/empty ranges; groups still render collapsible (R2.5, R14) |
+| Project has no estimate yet | first open of an existing project created before the estimate feature | the matrix read (and the `isDraft` lifecycle check) **get-or-create** the project's single estimate (defaulted PLN/DRAFT, via the shipped `EstimateService` get-or-create path, mirroring `EstimateController#getOrCreateForProject`) and return an empty, assignable matrix instead of `404 error.entity.not.found`; repeated reads resolve the same estimate (the `estimates.project_id` UNIQUE is the backstop) (R1.7) |
 | Assign/edit while not editable | project not `DRAFT` or caller lacks `ESTIMATE` UPDATE | matrix read-only; assign/edit/apply/commit/undo/redo disabled; magnifier stays as read-only summary (R9.7, R15.5) |
 | Caller lacks `ESTIMATE` READ | route/tab gate | the estimate tab is hidden from that user (shipped tab gate) (R1.6) |
 | `localStorage` unavailable/malformed | private browsing, quota, bad JSON | staged-edits and positioning stores degrade to no-pending-state / defaults, never throw (mirrors `roomMatrixStorage`) (R15, R16) |
@@ -790,3 +861,92 @@ Responsive layout (1.5), theme color derivation and the legend (8.2, 8.3), ABAC 
 migrations and cascade deletes (17.x, 19.2, 19.3), locale parity (18.x), and the git/process rule
 (19.4) are deterministic, external-machinery, or visual concerns where 100 generated iterations add no
 value over targeted example/integration checks.
+
+---
+
+## Amendment A1 — Package finishing-materials propagation (apply-package merge)
+
+### Motivation
+
+When an offer package is applied, the package's assortment finishing materials — each a finishing
+material **type** carrying a project-wide reference quantity and a per-package price — must be
+**merged** into the estimate alongside the works' consumption-derived lines. Package materials carry a
+fixed, package-allocated quantity per room; consumption beyond that allocation is added as **extra**
+lines. Apply-cheapest and every other per-line rule operate unchanged on the resulting lines.
+
+### Schema additions
+
+Three schema changes. Use the **next available** changeset numbers — the latest existing changeset is
+`109`, so the proposal is `110`, `111`, `112`, but the implementer MUST verify the actual next free
+numbers at build time and register any new seed changesets **last** in `changelog.xml`.
+
+| Table | Purpose | Key columns |
+|-------|---------|-------------|
+| `assortment_positions.work_item_id` | New nullable FK (`ON DELETE SET NULL`): the 1-to-1 link from an assortment position (a finishing material type in a group) to the WORK ITEM whose consumption it fulfils (point A). **Seeded.** | `work_item_id` FK → `work_items(id)`, nullable |
+| `assortment_group_room_types` | New M:N join table: which room TYPES a group's materials apply to (point B). **Seeded.** | `assortment_group_id` FK (ON DELETE CASCADE), `room_type_id` FK (ON DELETE CASCADE), `UNIQUE(assortment_group_id, room_type_id)` |
+| `estimate_line_room_materials.applied_from_package` | New `BOOLEAN NOT NULL DEFAULT false`: flags a material line placed by an applied package (point 2). Package-flagged lines are otherwise ordinary material lines (point 4). | `applied_from_package BOOLEAN NOT NULL DEFAULT false` |
+
+The seeds for the work-item link and the group→room-type association are **new idempotent seed
+changesets** (guarded with `onFail="MARK_RAN"` preconditions, registered last). The implementer must
+confirm the real column/table/entity names against the actual entities before writing the changesets.
+
+### Distribution algorithm (the apply-package merge core)
+
+Per applied package:
+
+1. For each assortment **GROUP** in the package, resolve the group's applicable **ROOMS** = the
+   project's rooms whose room-type is in the group's room-type association (the new
+   `assortment_group_room_types` join).
+2. For each **POSITION** in the group (a finishing material **type**), the position carries a
+   **project-wide total quantity** = the group's `referenceQty` (or the position's per-band override
+   where applicable — the implementer resolves this consistently with the existing
+   `assortmentPricesByType`). Distribute this total across the applicable rooms that **consume** that
+   finishing type (a room has a work whose finishing consumption is of this type) using
+   **water-fill, smallest-need-first, capped at each room's need, discarding leftover**:
+   - Compute each applicable room's **NEED** = the room's total consumption volume for the finishing
+     type (Σ over the room's assigned/attached works of `norm × roomVolume` for that finishing type,
+     honouring the `PER_UNIT` / `PER_ROOM` basis).
+   - Sort rooms by need **ascending**. Walk them, allocating to each room
+     `min(remainingPackageQty, roomNeed)`; subtract from the running package remainder; stop when the
+     remainder reaches 0.
+   - Never allocate a room more than its need. If the package total exceeds total need, the leftover
+     is **discarded** (not placed anywhere).
+3. For each room that received a package allocation **> 0**: emit a **package-flagged** finishing
+   material line (`applied_from_package = true`) with quantity = the allocated volume (a fixed
+   per-room quantity, like a manual override) and the position's package price band.
+4. For each room where the room's NEED for the type **exceeds** its package allocation: emit an
+   **extra** (NOT package-flagged) finishing line carrying **only** the uncovered remainder
+   `need − allocation` (point 3/D). Extras are added **only** in rooms where the package's allocated
+   volume does not cover the full consumption of that same finishing type (point D). A room fully
+   covered by the package gets no extra line.
+
+**Worked example.** Package total = 20 m² tiles; kitchen need = 10, bathroom need = 15 (total 25).
+Water-fill smallest-first: kitchen filled to 10 (package), remaining 10 → bathroom filled to 10
+(package), extra bathroom line = 15 − 10 = 5. Result: **kitchen 10 (package)**, **bathroom 10
+(package) + 5 (extra)**.
+
+### Re-apply semantics (point 5)
+
+Applying a package (or a different package) **replaces** all existing package-flagged lines with the
+new package's package-flagged lines, then **recomputes** the extras from the new allocations.
+Non-package lines that are not "extras of a package type" are untouched. A re-apply is **idempotent**
+for the same package.
+
+### Read model / DTO additions
+
+- `MaterialLineDto` gains `appliedFromPackage: boolean` (mirrored in the frontend type).
+- `EstimateMatrixDto` (and the per-row / group aggregation) gains a **package summary column**: a new
+  per-work-row value `packageVolume` = the total package-allocated finishing volume across all rooms
+  for that row (sum of the row's package-flagged material line quantities), plus group subtotals and a
+  header total `packageMaterialsTotal`.
+- `EstimateMatrixDto.totals` (or a sibling field) gains a **materials-from-package** money sum
+  (point F) — the summed money contribution of all package-flagged lines.
+- The UI renders the package column at the **end** (after all room columns). Package-flagged lines get
+  a visible badge/icon in the cell report and the work-material summary (point E/2). Clicking a cell
+  shows the usual summary; package lines are visually distinguished.
+
+### Out of scope / unchanged
+
+Apply-cheapest, per-line quantity override (#1), the `PER_ROOM` basis (#4), and
+undo/redo/discard reconciliation all operate on the resulting lines **unchanged**. Construction
+materials are **not** affected by the package merge (finishing only).

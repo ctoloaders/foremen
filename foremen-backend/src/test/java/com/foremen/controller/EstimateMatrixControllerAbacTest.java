@@ -103,6 +103,13 @@ class EstimateMatrixControllerAbacTest {
     }
 
     @Test
+    @DisplayName("POST /project/{id}/preview (staged-set preview, persists nothing) → (ESTIMATE, READ)")
+    void previewStagedEditsIsEstimateRead() {
+        assertResolvesTo(
+                handlerFor("previewStagedEdits", Long.class, ApplyAssignmentsRequest.class), ESTIMATE, READ);
+    }
+
+    @Test
     @DisplayName("POST /project/{id}/assignments (batched Save, persists) → (ESTIMATE, UPDATE)")
     void saveAssignmentsIsEstimateUpdate() {
         assertResolvesTo(
@@ -133,6 +140,12 @@ class EstimateMatrixControllerAbacTest {
     @DisplayName("recomputeFinishing classifies COMPLETE")
     void recomputeFinishingComplete() {
         assertComplete(handlerFor("recomputeFinishing", Long.class, RecomputeFinishingRequest.class));
+    }
+
+    @Test
+    @DisplayName("previewStagedEdits classifies COMPLETE")
+    void previewStagedEditsComplete() {
+        assertComplete(handlerFor("previewStagedEdits", Long.class, ApplyAssignmentsRequest.class));
     }
 
     @Test

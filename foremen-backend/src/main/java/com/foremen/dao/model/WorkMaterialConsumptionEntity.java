@@ -45,6 +45,15 @@ public class WorkMaterialConsumptionEntity extends BaseEntity {
     @Column(name = "branch", nullable = false, length = 32)
     private ConsumptionBranch branch;
 
+    /**
+     * The consumption BASIS (FOR-05-05 amendment #4): {@code PER_UNIT} scales the norm by the cell's
+     * Volume ({@code norm × V}); {@code PER_ROOM} applies the norm once per assigned room regardless
+     * of Volume ({@code norm × 1}). Defaults to {@code PER_UNIT} for every existing row.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "consumption_basis", nullable = false, length = 32)
+    private ConsumptionBasis consumptionBasis = ConsumptionBasis.PER_UNIT;
+
     /** Analog GROUP for the construction branch; non-null iff {@code branch == construction}. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "construction_material_type_id")

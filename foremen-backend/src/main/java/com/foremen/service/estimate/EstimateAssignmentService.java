@@ -3,8 +3,10 @@ package com.foremen.service.estimate;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import com.foremen.dao.AdminDao;
+import com.foremen.dao.AssortmentPositionDao;
 import com.foremen.dao.AssortmentPositionPriceDao;
 import com.foremen.dao.ConstructionMaterialDao;
 import com.foremen.dao.ConstructionMaterialTypeDao;
@@ -31,10 +34,12 @@ import com.foremen.dao.WorkMaterialConsumptionDao;
 import com.foremen.dao.WorkPackageOverrideDao;
 import com.foremen.dao.WorkPriceDao;
 import com.foremen.dao.WorkVolumeFormulaDao;
+import com.foremen.dao.model.AssortmentGroupEntity;
 import com.foremen.dao.model.AssortmentPositionEntity;
 import com.foremen.dao.model.AssortmentPositionPriceEntity;
 import com.foremen.dao.model.ConstructionMaterialEntity;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
+import com.foremen.dao.model.ConsumptionBasis;
 import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
@@ -53,6 +58,7 @@ import com.foremen.dao.model.WorkPriceEntity;
 import com.foremen.dao.model.WorkVolumeFormulaEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
+import com.foremen.service.EstimateService;
 import com.foremen.service.ProjectAccessCache;
 import com.foremen.service.ProjectScopedService;
 import com.foremen.service.audit.AuditLogDao;
@@ -132,12 +138,14 @@ public class EstimateAssignmentService
     private final ConstructionMaterialTypeDao constructionMaterialTypeDao;
     private final MaterialTypeDao materialTypeDao;
     private final AssortmentPositionPriceDao assortmentPositionPriceDao;
+    private final AssortmentPositionDao assortmentPositionDao;
 
     private final DraftGateGuard draftGateGuard;
     private final EstimateRecomputeService estimateRecomputeService;
     private final PriceRangeResolver priceRangeResolver;
     private final FinishingPriceRangeResolver finishingPriceRangeResolver;
     private final EstimateMatrixAssembler estimateMatrixAssembler;
+    private final EstimateService estimateService;
 
     public EstimateAssignmentService(
             EstimateLineRoomMaterialDao estimateLineRoomMaterialDao,
@@ -160,11 +168,13 @@ public class EstimateAssignmentService
             ConstructionMaterialTypeDao constructionMaterialTypeDao,
             MaterialTypeDao materialTypeDao,
             AssortmentPositionPriceDao assortmentPositionPriceDao,
+            AssortmentPositionDao assortmentPositionDao,
             DraftGateGuard draftGateGuard,
             EstimateRecomputeService estimateRecomputeService,
             PriceRangeResolver priceRangeResolver,
             FinishingPriceRangeResolver finishingPriceRangeResolver,
-            EstimateMatrixAssembler estimateMatrixAssembler) {
+            EstimateMatrixAssembler estimateMatrixAssembler,
+            EstimateService estimateService) {
         this.estimateLineRoomMaterialDao = estimateLineRoomMaterialDao;
         this.estimateLineRoomMaterialServiceMapper = estimateLineRoomMaterialServiceMapper;
         this.projectAccessCache = projectAccessCache;
@@ -185,11 +195,13 @@ public class EstimateAssignmentService
         this.constructionMaterialTypeDao = constructionMaterialTypeDao;
         this.materialTypeDao = materialTypeDao;
         this.assortmentPositionPriceDao = assortmentPositionPriceDao;
+        this.assortmentPositionDao = assortmentPositionDao;
         this.draftGateGuard = draftGateGuard;
         this.estimateRecomputeService = estimateRecomputeService;
         this.priceRangeResolver = priceRangeResolver;
         this.finishingPriceRangeResolver = finishingPriceRangeResolver;
         this.estimateMatrixAssembler = estimateMatrixAssembler;
+        this.estimateService = estimateService;
     }
 
     // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---
@@ -265,7 +277,14 @@ public class EstimateAssignmentService
         assertRoomInProject(room, projectId);
         OfferPackageEntity offerPackage = resolvePackageOrNull(packageCode);
 
-        EstimateLineRoomQtyEntity roomQty = doAssign(estimate, workItem, room, offerPackage);
+        EstimateLineRoomQtyEntity roomQty =
+                doAssign(estimate, workItem, room, offerPackage, consumptionsByWorkId(List.of(workItem)));
+
+        // Remember the applied package when one was supplied (FOR-05-05 Wave 1b, #1); a null
+        // packageCode leaves the existing value unchanged (do not clear).
+        if (packageCode != null) {
+            estimate.setAppliedPackageCode(packageCode);
+        }
 
         estimateRecomputeService.recomputeEstimate(estimate);
         entityManager.flush();
@@ -314,14 +333,49 @@ public class EstimateAssignmentService
         EstimateEntity estimate = resolveDraftEstimate(projectId);
 
         if (stagedEdits != null) {
+            // Batch-load every referenced work's consumptions ONCE for the whole replay so the
+            // per-cell doAssign -> seedMaterialLines does not re-query per (work, room) (perf N+1).
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                    consumptionsForStagedEdits(stagedEdits);
             for (StagedEdit edit : stagedEdits) {
-                applyStagedEdit(estimate, projectId, edit);
+                applyStagedEdit(estimate, projectId, edit, consumptionsByWork);
+            }
+            // Remember the applied offer package (FOR-05-05 Wave 1b, #1): the MOST-RECENT non-null
+            // packageCode carried by a package-scoped staged edit (APPLY_PACKAGE / RECOMPUTE_FINISHING
+            // / MERGE_PACKAGE_MATERIALS). If no staged edit carries a package code, leave the existing
+            // value unchanged (do not clear — the "clear kosztorys" flow owns clearing in a later wave).
+            String appliedPackageCode = latestAppliedPackageCode(stagedEdits);
+            if (appliedPackageCode != null) {
+                estimate.setAppliedPackageCode(appliedPackageCode);
             }
         }
 
         estimateRecomputeService.recomputeEstimate(estimate);
         entityManager.flush();
         return estimate;
+    }
+
+    /**
+     * The last non-null {@code packageCode} carried by a package-scoped staged edit in {@code edits}
+     * (FOR-05-05 Wave 1b, #1) — the package the estimate should remember as applied. Only
+     * {@code APPLY_PACKAGE}, {@code RECOMPUTE_FINISHING} and {@code MERGE_PACKAGE_MATERIALS} edits
+     * carry a package code (an {@code APPLY_CHEAPEST} does not); an {@code ASSIGN}'s package code
+     * drives the override formula but does not represent applying a whole package, so it is ignored
+     * here. Returns {@code null} when no such edit is present (the caller then leaves the estimate's
+     * current value unchanged).
+     */
+    private static String latestAppliedPackageCode(List<StagedEdit> edits) {
+        String latest = null;
+        for (StagedEdit edit : edits) {
+            if (edit == null || edit.kind() == null || edit.packageCode() == null) {
+                continue;
+            }
+            switch (edit.kind()) {
+                case APPLY_PACKAGE, RECOMPUTE_FINISHING, MERGE_PACKAGE_MATERIALS -> latest = edit.packageCode();
+                default -> { /* ASSIGN etc. carry a packageCode only to drive the override formula. */ }
+            }
+        }
+        return latest;
     }
 
     // =====================================================================================
@@ -340,7 +394,7 @@ public class EstimateAssignmentService
      * @param editable  whether the estimate may be written (DRAFT + caller ESTIMATE UPDATE, R15.5)
      * @return the assembled matrix read model
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public EstimateMatrixDto getMatrix(Long projectId, boolean editable) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         return estimateMatrixAssembler.assemble(estimate, projectId, editable);
@@ -354,7 +408,7 @@ public class EstimateAssignmentService
      * @param projectId the owning project whose estimate lifecycle to read
      * @return {@code true} iff the estimate exists and is DRAFT
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public boolean isDraft(Long projectId) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         return estimate.getStatus() == EstimateStatus.DRAFT;
@@ -393,7 +447,34 @@ public class EstimateAssignmentService
     @Transactional
     public EstimateMatrixDto previewApplyPackage(Long projectId, String packageCode, boolean editable) {
         CalculatedApply plan = calculateApplyPackage(projectId, packageCode);
-        return assemblePreview(projectId, plan.toStagedEdits(), editable);
+        // The full apply-package flow layers the expanded assigns AND then merges the package's
+        // assortment finishing materials (FOR-05-05 Amendment A1): the merge edit runs LAST, after the
+        // assigns in the same batch, so each room's finishing consumption NEED is known (point 3).
+        List<StagedEdit> edits = new ArrayList<>(plan.toStagedEdits());
+        edits.add(StagedEdit.mergePackageMaterials(packageCode));
+        return assemblePreview(projectId, edits, editable);
+    }
+
+    /**
+     * <b>Read-only (persists NOTHING).</b> The apply-package merge calculate entry (FOR-05-05
+     * Amendment A1): returns the {@link CalculatedPackageMerge} plan the client stages as a single
+     * {@code MERGE_PACKAGE_MATERIALS} edit (in addition to the expanded assign delta). The actual
+     * merge is computed on replay against the current estimate graph (after the batch's assigns), so
+     * the calculate entry simply carries the package code — mirroring the calculate/preview pattern of
+     * the sibling apply/recompute cores. Persists nothing.
+     *
+     * @param projectId   the owning project's estimate (resolved/created for read, R1.7)
+     * @param packageCode the package whose assortment finishing materials to merge
+     * @return the calculated, non-persisted merge plan (a blank/unknown package plans nothing)
+     */
+    @Transactional
+    public CalculatedPackageMerge calculatePackageMerge(Long projectId, String packageCode) {
+        resolveEstimateForRead(projectId);
+        OfferPackageEntity offerPackage = resolvePackageOrNull(packageCode);
+        if (offerPackage == null) {
+            return CalculatedPackageMerge.EMPTY;
+        }
+        return new CalculatedPackageMerge(offerPackage.getCode());
     }
 
     /**
@@ -434,6 +515,25 @@ public class EstimateAssignmentService
     }
 
     /**
+     * Read-only preview of the whole client staged set (design §B4/§B6,
+     * {@code POST .../preview}): replays the FULL client staged set — any {@link EditKind}: cell
+     * assign/unassign, material add/remove, choose-concrete/bulk-choose-concrete, and
+     * apply/recompute-originated edits — onto the in-memory estimate graph exactly as the batched Save
+     * would, assembles the resulting matrix, and rolls back so NOTHING is persisted (R15.6). This is
+     * the read-only dry-run of {@link #saveAndAssemble} used to render the staged set live so the
+     * client can show real server-computed numbers for panel material edits before Save.
+     *
+     * @param projectId   the owning project's estimate to preview against
+     * @param stagedEdits the full ordered client staged set to replay (may be empty ⇒ current matrix)
+     * @param editable    the caller's editable flag (carried onto the preview matrix)
+     * @return the preview matrix (never persisted)
+     */
+    @Transactional
+    public EstimateMatrixDto previewStagedEdits(Long projectId, List<StagedEdit> stagedEdits, boolean editable) {
+        return assemblePreview(projectId, stagedEdits, editable);
+    }
+
+    /**
      * Replays {@code stagedEdits} onto the project's estimate graph, assembles the resulting matrix,
      * and marks the current transaction <b>rollback-only</b> so the preview mutations are discarded and
      * NOTHING is persisted (R15.6). The graph is mutated only to produce a faithful preview identical
@@ -444,8 +544,12 @@ public class EstimateAssignmentService
     private EstimateMatrixDto assemblePreview(Long projectId, List<StagedEdit> stagedEdits, boolean editable) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         if (stagedEdits != null) {
+            // Batch-load every referenced work's consumptions ONCE for the whole replay so the
+            // per-cell doAssign -> seedMaterialLines does not re-query per (work, room) (perf N+1).
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                    consumptionsForStagedEdits(stagedEdits);
             for (StagedEdit edit : stagedEdits) {
-                applyStagedEdit(estimate, projectId, edit);
+                applyStagedEdit(estimate, projectId, edit, consumptionsByWork);
             }
         }
         entityManager.flush(); // materialize ids/collections for a faithful assembly
@@ -455,8 +559,24 @@ public class EstimateAssignmentService
         return preview;
     }
 
-    /** Replays a single staged edit onto the estimate graph. */
-    private void applyStagedEdit(EstimateEntity estimate, Long projectId, StagedEdit edit) {
+    /**
+     * Replays a single staged edit onto the estimate graph.
+     *
+     * <p><b>{@code APPLY_PACKAGE} has two shapes, both handled here.</b> A <i>per-cell</i>
+     * {@code APPLY_PACKAGE} (roomId set) — the plan-expanded form emitted by
+     * {@link CalculatedApply#toStagedEdits()} — assigns that one {@code (work, room)} cell. A
+     * <i>coarse work-level</i> {@code APPLY_PACKAGE} (roomId null) — the form the work-row hammer /
+     * Apply_Package button stages, meaning "apply this work to all its matching rooms" — is expanded
+     * via {@link #calculateApplyWorkToRooms(Long, Long, String)} keyed on {@code (workItemId,
+     * packageCode)} and each planned cell replayed, so both the coarse client form and the
+     * plan-expanded form persist/preview correctly. Expanded cells carry a non-null roomId (in fact
+     * they replay as {@code ASSIGN} edits), so the expansion provably terminates and never recurses
+     * into itself; a coarse edit with a {@code null} workItemId is a defensive no-op (a preview must
+     * be total, R15.6).
+     */
+    private void applyStagedEdit(
+            EstimateEntity estimate, Long projectId, StagedEdit edit,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork) {
         if (edit == null || edit.kind() == null) {
             return;
         }
@@ -465,7 +585,7 @@ public class EstimateAssignmentService
                 WorkItemEntity workItem = resolveWorkItem(edit.workItemId());
                 RoomEntity room = resolveRoom(edit.roomId());
                 assertRoomInProject(room, projectId);
-                doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()));
+                doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()), consumptionsByWork);
             }
             case UNASSIGN -> {
                 EstimateLineEntity line = findLine(estimate, edit.workItemId());
@@ -474,19 +594,243 @@ public class EstimateAssignmentService
                 }
             }
             // Cell material edits and apply/recompute-originated edits share the primitives below.
-            // APPLY_PACKAGE stages a batch of ASSIGN-shaped rows (its own computation is the
-            // read-only calculate core of task 5.3); each staged row is replayed as a plain assign,
-            // so no distinct persistence branch is required here.
+            // APPLY_PACKAGE comes in two shapes, both replayed here:
+            //   * per-cell (roomId set): the plan-expanded form produced by
+            //     CalculatedApply#toStagedEdits — a single (work, room) assign, unchanged behaviour.
+            //   * coarse work-level (roomId null): the form the work-row hammer / Apply_Package button
+            //     stages, meaning "apply this work to all its matching rooms". It carries only
+            //     (workItemId, packageCode) and NO room, so it is expanded here via the read-only
+            //     calculate core calculateApplyWorkToRooms(workItemId, packageCode) and each planned
+            //     cell replayed. The expanded edits each carry a non-null roomId, so they take the
+            //     per-cell branch below (in fact CalculatedApply expands to ASSIGN edits) — this
+            //     provably terminates and cannot recurse into itself. A null workItemId is a defensive
+            //     no-op (a preview must be total and never throw).
             case APPLY_PACKAGE -> {
-                WorkItemEntity workItem = resolveWorkItem(edit.workItemId());
-                RoomEntity room = resolveRoom(edit.roomId());
-                assertRoomInProject(room, projectId);
-                doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()));
+                if (edit.roomId() != null) {
+                    WorkItemEntity workItem = resolveWorkItem(edit.workItemId());
+                    RoomEntity room = resolveRoom(edit.roomId());
+                    assertRoomInProject(room, projectId);
+                    doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()),
+                            consumptionsByWork);
+                } else if (edit.workItemId() != null) {
+                    CalculatedApply plan =
+                            calculateApplyWorkToRooms(projectId, edit.workItemId(), edit.packageCode());
+                    // The coarse expansion targets a single work; batch-load its consumptions once for
+                    // the expanded per-cell replay so seedMaterialLines is not re-queried per room.
+                    Map<Long, List<WorkMaterialConsumptionEntity>> expandedConsumptions =
+                            consumptionsForStagedEdits(plan.toStagedEdits());
+                    for (StagedEdit cellEdit : plan.toStagedEdits()) {
+                        applyStagedEdit(estimate, projectId, cellEdit, expandedConsumptions);
+                    }
+                }
+                // else: coarse edit with no work -> defensive no-op (preview stays total, R15.6).
             }
             case RECOMPUTE_FINISHING -> recopyFinishingRange(estimate, edit);
+            case MERGE_PACKAGE_MATERIALS -> mergePackageMaterials(estimate, projectId, edit.packageCode());
+            case SET_QUANTITY -> applySetQuantity(estimate, edit);
+            case CLEAR_QUANTITY -> applyClearQuantity(estimate, edit);
+            case SET_MATERIAL_QUANTITY -> applySetMaterialQuantity(estimate, edit);
+            case CLEAR_MATERIAL_QUANTITY -> applyClearMaterialQuantity(estimate, edit);
+            case APPLY_CHEAPEST -> applyCheapest(estimate, edit);
             case ADD_MATERIAL, REMOVE_MATERIAL, CHOOSE_CONCRETE, BULK_CHOOSE_CONCRETE ->
                     applyMaterialEdit(estimate, edit);
         }
+    }
+
+    /**
+     * Overrides the {@code (workItemId, roomId)} cell's Volume with the edit's manual {@code quantity}
+     * (#7): resolves the cell by natural keys within the estimate graph (reusing
+     * {@link #resolveStagedCell}); when the cell exists AND {@code quantity} is non-null and positive,
+     * stores it as the room-qty {@code quantity} and flags {@code volumeOverridden = true} so a later
+     * recompute/reassign will NOT recompute it back to the formula Volume. A NO-OP when the cell is
+     * absent or the value is {@code null}/non-positive — a preview must be total and must never throw.
+     */
+    private void applySetQuantity(EstimateEntity estimate, StagedEdit edit) {
+        EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+        if (roomQty == null || edit.quantity() == null || edit.quantity().signum() <= 0) {
+            return; // absent cell / null / non-positive -> total no-op (#7, R15.6)
+        }
+        roomQty.setQuantity(edit.quantity());
+        roomQty.setVolumeOverridden(true);
+        estimateLineRoomQtyDao.save(roomQty);
+    }
+
+    /**
+     * Clears the {@code (workItemId, roomId)} cell's manual Volume override (#7), re-deriving the
+     * formula-resolved Volume: resolves the cell by natural keys; when it exists and is currently
+     * overridden, clears the flag and recomputes its {@code quantity} via the same package-less
+     * resolver path {@link #doAssign}/{@link #assign} use ({@link #resolveVolume} with a {@code null}
+     * package — the matrix read has no active-package context, matching the assign default). A NO-OP
+     * when the cell is absent or is not overridden.
+     */
+    private void applyClearQuantity(EstimateEntity estimate, StagedEdit edit) {
+        EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+        if (roomQty == null || !roomQty.isVolumeOverridden()) {
+            return; // absent cell / not overridden -> no-op (#7)
+        }
+        roomQty.setVolumeOverridden(false);
+        EstimateLineEntity line = roomQty.getLine();
+        WorkItemEntity workItem = line != null ? line.getWorkItem() : null;
+        RoomEntity room = roomQty.getRoom();
+        if (workItem != null && room != null) {
+            roomQty.setQuantity(resolveVolume(workItem, null, room));
+        }
+        estimateLineRoomQtyDao.save(roomQty);
+    }
+
+    // =====================================================================================
+    // Per-material-line quantity override (FOR-05-05 amendment #1)
+    // =====================================================================================
+
+    /**
+     * Overrides a single material line's physical quantity with the edit's manual {@code quantity}
+     * (amendment #1): resolves the target line by the natural keys {@code (workItemId, roomId, branch,
+     * typeId)} within the in-memory estimate graph — exactly like {@code CHOOSE_CONCRETE} — then copies
+     * {@code quantity} into {@code manualQty} and sets {@code qtyOverridden = true}. The override wins
+     * over the consumption basis (#4). A NO-OP when the cell/line is absent or {@code quantity} is
+     * {@code null} or negative, so a preview stays total and never throws (R15.6).
+     */
+    private void applySetMaterialQuantity(EstimateEntity estimate, StagedEdit edit) {
+        EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+        if (roomQty == null || edit.quantity() == null || edit.quantity().signum() < 0) {
+            return; // absent cell / null / negative -> total no-op (#1, R15.6)
+        }
+        EstimateLineRoomMaterialEntity material = findMaterialLine(roomQty, edit.branch(), edit.typeId());
+        if (material == null) {
+            return; // absent line -> no-op
+        }
+        material.setManualQty(edit.quantity());
+        material.setQtyOverridden(true);
+        estimateLineRoomMaterialDao.save(material);
+    }
+
+    /**
+     * Clears a material line's manual quantity override (amendment #1): resolves the target line by
+     * natural keys {@code (workItemId, roomId, branch, typeId)}, sets {@code qtyOverridden = false} and
+     * {@code manualQty = null}, so the line reverts to its derived quantity ({@code norm × Volume} for
+     * PER_UNIT, {@code norm} for PER_ROOM). A NO-OP when the cell/line is absent.
+     */
+    private void applyClearMaterialQuantity(EstimateEntity estimate, StagedEdit edit) {
+        EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+        if (roomQty == null) {
+            return;
+        }
+        EstimateLineRoomMaterialEntity material = findMaterialLine(roomQty, edit.branch(), edit.typeId());
+        if (material == null) {
+            return;
+        }
+        material.setQtyOverridden(false);
+        material.setManualQty(null);
+        estimateLineRoomMaterialDao.save(material);
+    }
+
+    // =====================================================================================
+    // Apply cheapest products — fill placeholders with the min-price concrete (design #19)
+    // =====================================================================================
+
+    /**
+     * Fills every in-scope PLACEHOLDER material line with the CHEAPEST concrete product of its
+     * material type (#19), collapsing each filled line to that product's {@code retailNet} via the
+     * existing {@link #applyChooseConcrete(EstimateLineRoomMaterialEntity, Long)}. A material line is a
+     * Placeholder iff neither concrete FK is set (R6.6); a line that already has a chosen concrete
+     * product is left untouched. When no active, priced product exists for a line's {@code (branch,
+     * type)} the line stays a Placeholder (a no-op for that line).
+     *
+     * <p><b>Scope</b> (both optional): {@code workItemId == null} ⇒ every assigned cell of the
+     * estimate; {@code workItemId != null && roomId == null} ⇒ every assigned cell of that work;
+     * {@code workItemId != null && roomId != null} ⇒ the single {@code (work, room)} cell. Total and
+     * non-throwing — an absent work / cell is a no-op — so it is safe in a preview (R15.6).
+     */
+    private void applyCheapest(EstimateEntity estimate, StagedEdit edit) {
+        List<EstimateLineRoomQtyEntity> targets = new ArrayList<>();
+        if (edit.workItemId() == null) {
+            for (EstimateLineEntity line : estimate.getLines()) {
+                targets.addAll(line.getRoomQtys());
+            }
+        } else if (edit.roomId() == null) {
+            EstimateLineEntity line = findLine(estimate, edit.workItemId());
+            if (line != null) {
+                targets.addAll(line.getRoomQtys());
+            }
+        } else {
+            EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+            if (roomQty != null) {
+                targets.add(roomQty);
+            }
+        }
+
+        for (EstimateLineRoomQtyEntity roomQty : targets) {
+            for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
+                applyCheapestToLine(material);
+            }
+        }
+    }
+
+    /**
+     * Fills one material line with the cheapest concrete product of its type when it is a Placeholder
+     * (R6.6). Construction lines resolve the cheapest by {@code constructionType}, finishing lines by
+     * {@code finishingType}; a line whose type is unset or that has no priced product for its type is
+     * left as a Placeholder.
+     */
+    private void applyCheapestToLine(EstimateLineRoomMaterialEntity material) {
+        boolean placeholder = material.getConcreteConstructionMaterial() == null
+                && material.getConcreteFinishingMaterial() == null;
+        if (!placeholder) {
+            return; // already concrete -> leave the chosen product untouched
+        }
+        Long cheapestId = null;
+        if (material.getBranch() == ConsumptionBranch.construction && material.getConstructionType() != null) {
+            cheapestId = cheapestConstructionProductId(material.getConstructionType().getId());
+        } else if (material.getBranch() == ConsumptionBranch.finishing && material.getFinishingType() != null) {
+            cheapestId = cheapestFinishingProductId(material.getFinishingType().getId());
+        }
+        if (cheapestId != null) {
+            applyChooseConcrete(material, cheapestId);
+        }
+        // else: no priced product for the type -> leave the line as a Placeholder (no-op).
+    }
+
+    /**
+     * The id of the cheapest active, priced construction product of {@code typeId} (min by
+     * {@code retailNet}), or {@code null} when the type has no such product. Reuses the same active +
+     * priced batch the seeding / range resolvers load.
+     */
+    private Long cheapestConstructionProductId(Long typeId) {
+        if (typeId == null) {
+            return null;
+        }
+        ConstructionMaterialEntity cheapest = null;
+        for (ConstructionMaterialEntity product : constructionMaterialDao.findByActiveTrueAndRetailNetNotNull()) {
+            if (product.getType() == null || !typeId.equals(product.getType().getId())
+                    || product.getRetailNet() == null) {
+                continue;
+            }
+            if (cheapest == null || product.getRetailNet().compareTo(cheapest.getRetailNet()) < 0) {
+                cheapest = product;
+            }
+        }
+        return cheapest != null ? cheapest.getId() : null;
+    }
+
+    /**
+     * The id of the cheapest active, priced finishing product of {@code typeId} (min by
+     * {@code retailNet}), or {@code null} when the type has no such product.
+     */
+    private Long cheapestFinishingProductId(Long typeId) {
+        if (typeId == null) {
+            return null;
+        }
+        FinishingMaterialEntity cheapest = null;
+        for (FinishingMaterialEntity product : finishingMaterialDao.findByActiveTrueAndRetailNetNotNull()) {
+            if (product.getType() == null || !typeId.equals(product.getType().getId())
+                    || product.getRetailNet() == null) {
+                continue;
+            }
+            if (cheapest == null || product.getRetailNet().compareTo(cheapest.getRetailNet()) < 0) {
+                cheapest = product;
+            }
+        }
+        return cheapest != null ? cheapest.getId() : null;
     }
 
     // =====================================================================================
@@ -614,6 +958,8 @@ public class EstimateAssignmentService
         material.setRoomQty(roomQty);
         material.setBranch(branch);
         material.setNormQty(resolveNormQty(roomQty, branch, typeId));
+        // Copy the work's consumption basis for (branch, type) onto the line (#4); PER_UNIT default.
+        material.setConsumptionBasis(resolveConsumptionBasis(roomQty, branch, typeId));
 
         if (branch == ConsumptionBranch.construction) {
             ConstructionMaterialTypeEntity type = resolveConstructionType(typeId);
@@ -732,6 +1078,37 @@ public class EstimateAssignmentService
         return null;
     }
 
+    /**
+     * The consumption BASIS the work declares for {@code (branch, type)} (#4), or
+     * {@link ConsumptionBasis#PER_UNIT} when the work has no consumption for that type (an ad-hoc
+     * material line added beyond the work's declared consumption is per-unit by default).
+     */
+    private ConsumptionBasis resolveConsumptionBasis(
+            EstimateLineRoomQtyEntity roomQty, ConsumptionBranch branch, Long typeId) {
+        EstimateLineEntity line = roomQty.getLine();
+        WorkItemEntity workItem = line != null ? line.getWorkItem() : null;
+        if (workItem == null) {
+            return ConsumptionBasis.PER_UNIT;
+        }
+        List<WorkMaterialConsumptionEntity> consumptions =
+                workMaterialConsumptionDao.findByWorkItemIdIn(List.of(workItem.getId()));
+        for (WorkMaterialConsumptionEntity consumption : consumptions) {
+            if (consumption.getBranch() != branch) {
+                continue;
+            }
+            Long consumptionTypeId = branch == ConsumptionBranch.construction
+                    ? (consumption.getConstructionMaterialType() != null
+                            ? consumption.getConstructionMaterialType().getId() : null)
+                    : (consumption.getFinishingMaterialType() != null
+                            ? consumption.getFinishingMaterialType().getId() : null);
+            if (typeId.equals(consumptionTypeId)) {
+                return consumption.getConsumptionBasis() != null
+                        ? consumption.getConsumptionBasis() : ConsumptionBasis.PER_UNIT;
+            }
+        }
+        return ConsumptionBasis.PER_UNIT;
+    }
+
     /** Resolves a construction material type by id (404 when missing). */
     private ConstructionMaterialTypeEntity resolveConstructionType(Long typeId) {
         ConstructionMaterialTypeEntity type = typeId == null ? null
@@ -787,7 +1164,8 @@ public class EstimateAssignmentService
      * entry points recompute once after the whole batch.
      */
     private EstimateLineRoomQtyEntity doAssign(
-            EstimateEntity estimate, WorkItemEntity workItem, RoomEntity room, OfferPackageEntity offerPackage) {
+            EstimateEntity estimate, WorkItemEntity workItem, RoomEntity room, OfferPackageEntity offerPackage,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork) {
         EstimateLineEntity line = findLine(estimate, workItem.getId());
         if (line == null) {
             line = createLine(estimate, workItem);
@@ -803,9 +1181,11 @@ public class EstimateAssignmentService
             roomQty.setQuantity(volume);
             estimateLineRoomQtyDao.save(roomQty);
             line.getRoomQtys().add(roomQty);
-            seedMaterialLines(workItem, roomQty, offerPackage);
-        } else {
-            // Re-assigning an already-assigned cell refreshes its Volume without duplicating rows.
+            seedMaterialLines(workItem, roomQty, offerPackage, consumptionsByWork);
+        } else if (!roomQty.isVolumeOverridden()) {
+            // Re-assigning an already-assigned cell refreshes its Volume without duplicating rows —
+            // BUT never overwrites a manual Volume override (FOR-05-05 #7). An overridden cell keeps
+            // its stored manual quantity on reassign/recompute.
             roomQty.setQuantity(volume);
             estimateLineRoomQtyDao.save(roomQty);
         }
@@ -860,9 +1240,13 @@ public class EstimateAssignmentService
      * {@link FinishingPriceRangeResolver} (R3.4 — the widest honest band when no package context).
      */
     private void seedMaterialLines(
-            WorkItemEntity workItem, EstimateLineRoomQtyEntity roomQty, OfferPackageEntity offerPackage) {
+            WorkItemEntity workItem, EstimateLineRoomQtyEntity roomQty, OfferPackageEntity offerPackage,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork) {
+        // Consumptions are batch-loaded ONCE by the replay caller (consumptionsForStagedEdits) so this
+        // per-cell seed does not re-query per (work, room) — was a severe N+1 on the apply-package /
+        // apply-work preview replay for large projects.
         List<WorkMaterialConsumptionEntity> consumptions =
-                workMaterialConsumptionDao.findByWorkItemIdIn(List.of(workItem.getId()));
+                consumptionsByWork.getOrDefault(workItem.getId(), List.of());
         if (consumptions.isEmpty()) {
             return;
         }
@@ -875,6 +1259,9 @@ public class EstimateAssignmentService
             material.setRoomQty(roomQty);
             material.setBranch(consumption.getBranch());
             material.setNormQty(consumption.getNormQty());
+            // Copy the consumption basis onto the frozen line so the estimate is self-contained (#4).
+            material.setConsumptionBasis(consumption.getConsumptionBasis() != null
+                    ? consumption.getConsumptionBasis() : ConsumptionBasis.PER_UNIT);
 
             if (consumption.getBranch() == ConsumptionBranch.construction
                     && consumption.getConstructionMaterialType() != null) {
@@ -944,6 +1331,412 @@ public class EstimateAssignmentService
     }
 
     // =====================================================================================
+    // Package finishing-materials merge (FOR-05-05 Amendment A1) — the apply-package MERGE core
+    // =====================================================================================
+
+    /**
+     * Merges {@code packageCode}'s assortment finishing materials into {@code estimate} (FOR-05-05
+     * Amendment A1). Runs against the CURRENT estimate graph (so it MUST be replayed AFTER the same
+     * batch's assign edits, when each room's finishing consumption NEED is known).
+     *
+     * <p>Steps (design "Distribution algorithm" + "Re-apply semantics"):
+     * <ol>
+     *   <li><b>Reset (replace-on-reapply, point 5).</b> Remove every existing package-flagged line
+     *       ({@code appliedFromPackage == true}) and reset every prior "extra" finishing line back to
+     *       its full consumption NEED, so re-applying (the same or a different package) recomputes
+     *       cleanly. Idempotent.</li>
+     *   <li><b>Per group.</b> Resolve the group's applicable rooms = the project's rooms whose
+     *       {@code roomType.id} is in the group's {@code roomTypes} M:N (empty ⇒ skip the group — no
+     *       fall back to all rooms).</li>
+     *   <li><b>Per position (a finishing type with a per-package price row).</b> The project-wide
+     *       total = the group's {@code referenceQty}. Water-fill it across the applicable rooms that
+     *       CONSUME the type, smallest-need-first, capped at each room's need, discarding leftover.</li>
+     *   <li><b>Split.</b> For each covered room, flag its finishing line(s) of the type as
+     *       package-covered (qty = allocation, the package price band) and, where NEED exceeds the
+     *       allocation, add an extra (non-package) line for the remainder.</li>
+     * </ol>
+     *
+     * <p>Bulk-loads the package's assortment (positions + prices + group room-types) ONCE; the
+     * consumption NEED is read from the already-persisted/staged finishing lines (no per-room/type
+     * re-query). A blank/unknown package or a package with no priced assortment position is a total
+     * no-op (a preview must stay total, R15.6). Construction lines are never touched.
+     */
+    private void mergePackageMaterials(EstimateEntity estimate, Long projectId, String packageCode) {
+        OfferPackageEntity offerPackage = resolvePackageOrNull(packageCode);
+
+        // Step 1 — reset (replace-on-reapply, point 5): remove all package-flagged finishing lines and
+        // recompute the plain consumption line back to its full NEED (re-seeding a line that a prior
+        // full-coverage merge had absorbed into a package line), ALWAYS — even for a blank/unknown
+        // package, so "apply then apply nothing" clears cleanly and re-applying is idempotent.
+        resetAndReseedFinishing(estimate);
+        if (offerPackage == null) {
+            return; // blank/unknown package -> nothing more to merge (reset already ran)
+        }
+
+        // Bulk-load the package's assortment ONCE: the priced positions (a finishing type + its
+        // per-package band) grouped by their assortment group, and each group's room-type ids.
+        Map<Long, AssortmentPositionPriceEntity> priceByType = assortmentPricesByType(offerPackage);
+        if (priceByType.isEmpty()) {
+            return; // the package has no priced assortment position -> nothing to merge
+        }
+        Map<AssortmentGroupEntity, List<AssortmentPositionEntity>> positionsByGroup =
+                packagePositionsByGroup(priceByType.keySet());
+        if (positionsByGroup.isEmpty()) {
+            return;
+        }
+
+        List<RoomEntity> projectRooms = roomDao.findByProjectId(projectId);
+        // Index the estimate's finishing lines by (roomId, finishingTypeId) so NEED and the split are
+        // computed from the current graph without re-querying per room/type (a room may have several
+        // cells consuming the same type — collect ALL of them).
+        Map<RoomTypeKey, List<EstimateLineRoomMaterialEntity>> finishingLinesByRoomType =
+                indexFinishingLinesByRoomType(estimate);
+
+        for (Map.Entry<AssortmentGroupEntity, List<AssortmentPositionEntity>> entry : positionsByGroup.entrySet()) {
+            AssortmentGroupEntity group = entry.getKey();
+            List<RoomEntity> applicableRooms = applicableRoomsForGroup(group, projectRooms);
+            if (applicableRooms.isEmpty()) {
+                continue; // no seeded room types (or none match) -> skip the group (no fall back)
+            }
+            BigDecimal referenceQty = nz(group.getReferenceQty());
+            for (AssortmentPositionEntity position : entry.getValue()) {
+                Long typeId = position.getMaterialType() != null ? position.getMaterialType().getId() : null;
+                AssortmentPositionPriceEntity price = typeId != null ? priceByType.get(typeId) : null;
+                if (typeId == null || price == null) {
+                    continue; // no finishing type / no price row for the package -> skip
+                }
+                mergePosition(typeId, referenceQty, price, applicableRooms, finishingLinesByRoomType);
+            }
+        }
+    }
+
+    /**
+     * Reset step (point 5) — makes the estimate's finishing lines a clean, package-free base the
+     * water-fill re-splits from, so applying a package is idempotent and switching packages recomputes
+     * cleanly:
+     * <ol>
+     *   <li>Delete every package-flagged finishing line ({@code appliedFromPackage == true}).</li>
+     *   <li>Reset every remaining finishing line's package-managed override
+     *       ({@code qtyOverridden}/{@code manualQty}) so its quantity is the derived consumption NEED
+     *       again — undoing a prior merge's "extra" reduction.</li>
+     *   <li>Re-seed a full-NEED consumption line for any {@code (cell, finishing type)} the work
+     *       DECLARES but that has no non-package finishing line — this restores the base line a prior
+     *       FULL-coverage merge had absorbed into (and removed with) a package line, so NEED is again
+     *       computable from the current graph.</li>
+     * </ol>
+     * Construction lines, chosen concrete products, ranges and volumes are untouched.
+     */
+    private void resetAndReseedFinishing(EstimateEntity estimate) {
+        // 1 + 2: drop package lines and clear package-managed overrides on the surviving finishing lines.
+        for (EstimateLineEntity line : estimate.getLines()) {
+            for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+                List<EstimateLineRoomMaterialEntity> toRemove = new ArrayList<>();
+                for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
+                    if (material.getBranch() != ConsumptionBranch.finishing) {
+                        continue;
+                    }
+                    if (material.isAppliedFromPackage()) {
+                        toRemove.add(material);
+                    } else if (material.isQtyOverridden()) {
+                        material.setQtyOverridden(false);
+                        material.setManualQty(null);
+                    }
+                }
+                for (EstimateLineRoomMaterialEntity material : toRemove) {
+                    roomQty.getMaterials().remove(material);
+                    estimateLineRoomMaterialDao.delete(material);
+                }
+            }
+        }
+        entityManager.flush(); // materialize the deletes before re-seeding / re-splitting
+
+        // 3: re-seed any declared finishing consumption that no longer has a (non-package) line.
+        for (EstimateLineEntity line : estimate.getLines()) {
+            WorkItemEntity work = line.getWorkItem();
+            if (work == null) {
+                continue;
+            }
+            List<WorkMaterialConsumptionEntity> consumptions =
+                    workMaterialConsumptionDao.findByWorkItemIdIn(List.of(work.getId()));
+            for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+                reseedMissingFinishingLines(roomQty, consumptions);
+            }
+        }
+        entityManager.flush();
+    }
+
+    /**
+     * Re-seeds a full-NEED finishing consumption line for each finishing {@code WorkMaterialConsumption}
+     * of the cell's work that currently has no non-package finishing line of that type (restoring a
+     * base line a prior full-coverage merge removed). Copies the norm/basis and the package-less
+     * finishing range, mirroring {@link #seedMaterialLines}. Existing lines are left untouched.
+     */
+    private void reseedMissingFinishingLines(
+            EstimateLineRoomQtyEntity roomQty, List<WorkMaterialConsumptionEntity> consumptions) {
+        Collection<FinishingMaterialEntity> finishingMaterials = null;
+        for (WorkMaterialConsumptionEntity consumption : consumptions) {
+            if (consumption.getBranch() != ConsumptionBranch.finishing
+                    || consumption.getFinishingMaterialType() == null) {
+                continue;
+            }
+            Long typeId = consumption.getFinishingMaterialType().getId();
+            if (findMaterialLine(roomQty, ConsumptionBranch.finishing, typeId) != null) {
+                continue; // a non-package finishing line already exists -> nothing to re-seed
+            }
+            EstimateLineRoomMaterialEntity material = new EstimateLineRoomMaterialEntity();
+            material.setRoomQty(roomQty);
+            material.setBranch(ConsumptionBranch.finishing);
+            material.setFinishingType(consumption.getFinishingMaterialType());
+            material.setNormQty(consumption.getNormQty());
+            material.setConsumptionBasis(basisOf(consumption));
+            if (finishingMaterials == null) {
+                finishingMaterials = finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+            }
+            FinishingPriceRangeResolver.PriceRange range =
+                    finishingPriceRangeResolver.rangeFor(finishingMaterials, typeId, null);
+            material.setRangeMin(range.min());
+            material.setRangeMax(range.max());
+            estimateLineRoomMaterialDao.save(material);
+            roomQty.getMaterials().add(material);
+        }
+    }
+
+    /**
+     * Water-fills one position's project-wide {@code referenceQty} across the group's applicable rooms
+     * that consume {@code typeId} (smallest-need-first, capped at need, leftover discarded), then
+     * splits each covered room's finishing line(s) of the type into a package-flagged line
+     * (qty = allocation) plus, where NEED exceeds the allocation, an extra (non-package) line
+     * (qty = need − allocation). A room whose allocation fully covers its NEED gets ONLY the
+     * package-flagged line.
+     */
+    private void mergePosition(
+            Long typeId,
+            BigDecimal referenceQty,
+            AssortmentPositionPriceEntity price,
+            List<RoomEntity> applicableRooms,
+            Map<RoomTypeKey, List<EstimateLineRoomMaterialEntity>> finishingLinesByRoomType) {
+        // Compute each applicable room's NEED for the type = Σ resolved physical quantity of its
+        // finishing lines of that type (across all its cells). Rooms with NEED == 0 are skipped.
+        List<RoomNeed> needs = new ArrayList<>();
+        for (RoomEntity room : applicableRooms) {
+            List<EstimateLineRoomMaterialEntity> lines =
+                    finishingLinesByRoomType.getOrDefault(new RoomTypeKey(room.getId(), typeId), List.of());
+            if (lines.isEmpty()) {
+                continue;
+            }
+            BigDecimal need = BigDecimal.ZERO;
+            for (EstimateLineRoomMaterialEntity line : lines) {
+                need = need.add(resolvedNeed(line));
+            }
+            if (need.signum() > 0) {
+                needs.add(new RoomNeed(room.getId(), need, lines));
+            }
+        }
+        if (needs.isEmpty()) {
+            return; // no applicable room consumes the type -> nothing to distribute
+        }
+
+        // Sort by NEED ascending, tie-break by roomId for determinism.
+        needs.sort(Comparator
+                .comparing(RoomNeed::need)
+                .thenComparing(RoomNeed::roomId));
+
+        BigDecimal remaining = nz(referenceQty);
+        for (RoomNeed roomNeed : needs) {
+            BigDecimal alloc = remaining.min(roomNeed.need());
+            if (alloc.signum() < 0) {
+                alloc = BigDecimal.ZERO;
+            }
+            remaining = remaining.subtract(alloc);
+            splitRoomLines(roomNeed, typeId, alloc, price);
+            if (remaining.signum() <= 0) {
+                break; // package total exhausted -> later rooms get allocation 0 (no package line)
+            }
+        }
+    }
+
+    /**
+     * Splits a room's finishing consumption of {@code typeId} into a package-flagged line
+     * (qty = {@code alloc}, when {@code alloc > 0}) plus an extra (non-package) line
+     * (qty = need − alloc, when NEED exceeds the allocation). When the room has ONE finishing cell of
+     * the type (the common case) the existing line becomes the extra (carrying the uncovered
+     * remainder), preserving any already-chosen concrete product, and a NEW package-flagged line is
+     * added alongside it; when {@code alloc} covers the full NEED the extra is dropped so only the
+     * package-flagged line remains.
+     */
+    private void splitRoomLines(
+            RoomNeed roomNeed, Long typeId, BigDecimal alloc, AssortmentPositionPriceEntity price) {
+        BigDecimal need = roomNeed.need();
+        BigDecimal extra = need.subtract(alloc);
+        // Use the room's first finishing line of the type as the representative (its owning room-qty
+        // hosts the package + extra lines, and it carries the copied norm/basis/product to preserve).
+        EstimateLineRoomMaterialEntity base = roomNeed.lines().get(0);
+        EstimateLineRoomQtyEntity roomQty = base.getRoomQty();
+
+        // Any additional cells consuming the type in the same room are collapsed into the base for the
+        // package split (their NEED is already summed): remove them so the room ends with exactly the
+        // package-flagged line (+ optional extra) for the type — the water-fill allocates per ROOM.
+        for (int i = 1; i < roomNeed.lines().size(); i++) {
+            EstimateLineRoomMaterialEntity dup = roomNeed.lines().get(i);
+            dup.getRoomQty().getMaterials().remove(dup);
+            estimateLineRoomMaterialDao.delete(dup);
+        }
+
+        if (extra.signum() > 0) {
+            // The base line becomes the EXTRA: carry only the uncovered remainder, non-package,
+            // preserving its concrete product (best-effort) and its copied range.
+            base.setAppliedFromPackage(false);
+            base.setQtyOverridden(true);
+            base.setManualQty(extra);
+            estimateLineRoomMaterialDao.save(base);
+        } else {
+            // Fully covered by the package: the base extra is dropped (only the package line remains).
+            roomQty.getMaterials().remove(base);
+            estimateLineRoomMaterialDao.delete(base);
+        }
+        entityManager.flush();
+
+        if (alloc.signum() > 0) {
+            addPackageLine(roomQty, typeId, alloc, price, base);
+        }
+    }
+
+    /**
+     * Adds a package-flagged finishing material line to {@code roomQty} for {@code typeId}: a fixed
+     * per-room quantity ({@code qtyOverridden = true}, {@code manualQty = alloc}) with the position's
+     * per-package price band, starting as a placeholder (no concrete product). Copies the finishing
+     * type + norm/basis from {@code template} (the room's consumption line) so the line is a faithful,
+     * self-contained frozen row.
+     */
+    private void addPackageLine(
+            EstimateLineRoomQtyEntity roomQty, Long typeId, BigDecimal alloc,
+            AssortmentPositionPriceEntity price, EstimateLineRoomMaterialEntity template) {
+        EstimateLineRoomMaterialEntity pkg = new EstimateLineRoomMaterialEntity();
+        pkg.setRoomQty(roomQty);
+        pkg.setBranch(ConsumptionBranch.finishing);
+        pkg.setFinishingType(resolveFinishingType(typeId));
+        pkg.setNormQty(template != null ? template.getNormQty() : null);
+        pkg.setConsumptionBasis(template != null && template.getConsumptionBasis() != null
+                ? template.getConsumptionBasis() : ConsumptionBasis.PER_UNIT);
+        pkg.setRangeMin(price.getMinPrice());
+        pkg.setRangeMax(price.getMaxPrice());
+        pkg.setAppliedFromPackage(true);
+        // Fixed package allocation quantity — reuse the manual-override representation (#1) so the
+        // resolved physical quantity is EXACTLY the allocation, independent of Volume / basis.
+        pkg.setQtyOverridden(true);
+        pkg.setManualQty(alloc);
+        estimateLineRoomMaterialDao.save(pkg);
+        roomQty.getMaterials().add(pkg);
+    }
+
+    /**
+     * The resolved physical NEED of a finishing consumption line (mirrors the assembler's resolved
+     * physical quantity, #1/#4): {@code manualQty} when overridden, else {@code norm} for PER_ROOM,
+     * else {@code norm × Volume} for PER_UNIT. A {@code null} norm/qty/volume contributes zero.
+     */
+    private static BigDecimal resolvedNeed(EstimateLineRoomMaterialEntity material) {
+        if (material.isQtyOverridden()) {
+            return nz(material.getManualQty());
+        }
+        BigDecimal norm = nz(material.getNormQty());
+        if (material.getConsumptionBasis() == ConsumptionBasis.PER_ROOM) {
+            return norm;
+        }
+        EstimateLineRoomQtyEntity roomQty = material.getRoomQty();
+        BigDecimal volume = roomQty != null ? nz(roomQty.getQuantity()) : BigDecimal.ZERO;
+        return norm.multiply(volume);
+    }
+
+    /** Null-safe {@link BigDecimal} — a {@code null} contributes {@link BigDecimal#ZERO}. */
+    private static BigDecimal nz(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
+    }
+
+    /**
+     * Groups the package's priced positions by their assortment group (bulk: one {@code findAll()}).
+     * Only positions whose material type has a per-package price row (i.e. is in {@code pricedTypeIds})
+     * are included, so a group with no priced position simply does not appear.
+     */
+    private Map<AssortmentGroupEntity, List<AssortmentPositionEntity>> packagePositionsByGroup(
+            Set<Long> pricedTypeIds) {
+        Map<AssortmentGroupEntity, List<AssortmentPositionEntity>> byGroup = new LinkedHashMap<>();
+        for (AssortmentPositionEntity position : assortmentPositionDao.findAll()) {
+            AssortmentGroupEntity group = position.getGroup();
+            MaterialTypeEntity type = position.getMaterialType();
+            if (group == null || type == null || type.getId() == null
+                    || !pricedTypeIds.contains(type.getId())) {
+                continue;
+            }
+            byGroup.computeIfAbsent(group, g -> new ArrayList<>()).add(position);
+        }
+        return byGroup;
+    }
+
+    /**
+     * The group's applicable project rooms = the rooms whose {@code roomType.id} is in the group's
+     * {@code roomTypes} M:N (point B). An empty group room-type set ⇒ no applicable rooms (do NOT fall
+     * back to all rooms — the join is explicit per Wave 1).
+     */
+    private static List<RoomEntity> applicableRoomsForGroup(AssortmentGroupEntity group, List<RoomEntity> rooms) {
+        Set<Long> groupRoomTypeIds = new HashSet<>();
+        if (group.getRoomTypes() != null) {
+            for (RoomTypeEntity type : group.getRoomTypes()) {
+                if (type != null && type.getId() != null) {
+                    groupRoomTypeIds.add(type.getId());
+                }
+            }
+        }
+        if (groupRoomTypeIds.isEmpty()) {
+            return List.of();
+        }
+        List<RoomEntity> applicable = new ArrayList<>();
+        for (RoomEntity room : rooms) {
+            RoomTypeEntity roomType = room.getRoomType();
+            if (roomType != null && roomType.getId() != null && groupRoomTypeIds.contains(roomType.getId())) {
+                applicable.add(room);
+            }
+        }
+        return applicable;
+    }
+
+    /**
+     * Indexes the estimate's NON-package finishing material lines by {@code (roomId, finishingTypeId)}
+     * so the merge computes NEED and the split from the current graph (a room may consume a type in
+     * several cells — collect them all). Package-flagged lines are excluded (they were already removed
+     * by the reset step and never contribute to NEED).
+     */
+    private Map<RoomTypeKey, List<EstimateLineRoomMaterialEntity>> indexFinishingLinesByRoomType(
+            EstimateEntity estimate) {
+        Map<RoomTypeKey, List<EstimateLineRoomMaterialEntity>> index = new HashMap<>();
+        for (EstimateLineEntity line : estimate.getLines()) {
+            for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+                Long roomId = roomQty.getRoom() != null ? roomQty.getRoom().getId() : null;
+                if (roomId == null) {
+                    continue;
+                }
+                for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
+                    if (material.getBranch() != ConsumptionBranch.finishing
+                            || material.isAppliedFromPackage()
+                            || material.getFinishingType() == null) {
+                        continue;
+                    }
+                    index.computeIfAbsent(new RoomTypeKey(roomId, material.getFinishingType().getId()),
+                            k -> new ArrayList<>()).add(material);
+                }
+            }
+        }
+        return index;
+    }
+
+    /** A {@code (roomId, finishingTypeId)} key for indexing a room's finishing lines of a type. */
+    private record RoomTypeKey(Long roomId, Long finishingTypeId) {
+    }
+
+    /** A room's total finishing NEED for a type + the lines that produced it (for the split). */
+    private record RoomNeed(Long roomId, BigDecimal need, List<EstimateLineRoomMaterialEntity> lines) {
+    }
+
+    // =====================================================================================
     // Read-only calculate / preview cores — Apply_Package, Work_Row_Apply, Recompute (task 5.3)
     // =====================================================================================
 
@@ -965,7 +1758,7 @@ public class EstimateAssignmentService
      * @param packageCode the package whose member works to apply (a blank/unknown code plans nothing)
      * @return the calculated, non-persisted apply plan
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public CalculatedApply calculateApplyPackage(Long projectId, String packageCode) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         OfferPackageEntity offerPackage = resolvePackageOrNull(packageCode);
@@ -977,10 +1770,12 @@ public class EstimateAssignmentService
         List<RoomEntity> rooms = roomDao.findByProjectId(projectId);
         Set<CellKey> existing = existingAssignments(estimate);
         Map<Long, AssortmentPositionPriceEntity> assortmentByType = assortmentPricesByType(offerPackage);
+        Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                consumptionsByWorkId(memberWorks);
 
         List<AssignmentPlan> plans = new ArrayList<>();
         for (WorkItemEntity work : memberWorks) {
-            planWorkOverRooms(work, offerPackage, rooms, existing, assortmentByType, plans);
+            planWorkOverRooms(work, offerPackage, rooms, existing, assortmentByType, consumptionsByWork, plans);
         }
         return new CalculatedApply(offerPackage.getCode(), List.copyOf(plans));
     }
@@ -999,7 +1794,7 @@ public class EstimateAssignmentService
      * @param packageCode the active package driving the override formula + assortment, or {@code null}
      * @return the calculated, non-persisted apply plan for the one work
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public CalculatedApply calculateApplyWorkToRooms(Long projectId, Long workItemId, String packageCode) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         WorkItemEntity work = resolveWorkItem(workItemId);
@@ -1010,8 +1805,11 @@ public class EstimateAssignmentService
         Map<Long, AssortmentPositionPriceEntity> assortmentByType =
                 offerPackage == null ? Map.of() : assortmentPricesByType(offerPackage);
 
+        Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                consumptionsByWorkId(List.of(work));
+
         List<AssignmentPlan> plans = new ArrayList<>();
-        planWorkOverRooms(work, offerPackage, rooms, existing, assortmentByType, plans);
+        planWorkOverRooms(work, offerPackage, rooms, existing, assortmentByType, consumptionsByWork, plans);
         return new CalculatedApply(offerPackage != null ? offerPackage.getCode() : null, List.copyOf(plans));
     }
 
@@ -1033,7 +1831,7 @@ public class EstimateAssignmentService
      * @param packageCode the package whose finishing prices to recompute (blank/unknown ⇒ empty plan)
      * @return the calculated, non-persisted recompute plan
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public CalculatedRecompute calculateRecomputeFinishingPrices(Long projectId, String packageCode) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         OfferPackageEntity offerPackage = resolvePackageOrNull(packageCode);
@@ -1066,12 +1864,55 @@ public class EstimateAssignmentService
      * layering never overrides an existing Volume (R11.5/R9.6). Pure: reads only its arguments, mutates
      * only {@code out}, persists nothing.
      */
+    /**
+     * Batch-loads the declared {@link WorkMaterialConsumptionEntity} rows for every work in
+     * {@code works} in a single DAO call and groups them by owning work-item id (perf: replaces the
+     * per-work {@code findByWorkItemIdIn(List.of(id))} N+1 in the apply-package / apply-work loops).
+     * The DAO's {@code @EntityGraph} eagerly loads {@code getWorkItem()}, so grouping by its id is safe.
+     */
+    private Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId(List<WorkItemEntity> works) {
+        List<Long> workIds = works.stream()
+                .map(WorkItemEntity::getId).filter(java.util.Objects::nonNull).toList();
+        return groupConsumptionsBy(workIds);
+    }
+
+    /**
+     * Batch-loads (once) and groups by owning work-item id the consumptions for every work referenced
+     * by a staged-edit set — the input to the {@link #applyStagedEdit} replay so the per-cell
+     * {@code doAssign -> seedMaterialLines} reads from the map instead of re-querying per (work, room)
+     * (perf: replaces the {@code seedMaterialLines} N+1 on the apply-package / apply-work preview
+     * replay). Only {@code ASSIGN} / per-cell {@code APPLY_PACKAGE} edits actually seed material lines,
+     * but collecting every referenced work id is a cheap superset and keeps the helper total.
+     */
+    private Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsForStagedEdits(List<StagedEdit> stagedEdits) {
+        if (stagedEdits == null || stagedEdits.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> workIds = stagedEdits.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(StagedEdit::workItemId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        return groupConsumptionsBy(workIds);
+    }
+
+    /** Single DAO call + group-by-work-id for a batch of work ids (perf: avoids per-work N+1). */
+    private Map<Long, List<WorkMaterialConsumptionEntity>> groupConsumptionsBy(List<Long> workIds) {
+        return (workIds.isEmpty() ? List.<WorkMaterialConsumptionEntity>of()
+                : workMaterialConsumptionDao.findByWorkItemIdIn(workIds))
+                .stream()
+                .filter(c -> c.getWorkItem() != null && c.getWorkItem().getId() != null)
+                .collect(java.util.stream.Collectors.groupingBy(c -> c.getWorkItem().getId()));
+    }
+
     private void planWorkOverRooms(
             WorkItemEntity work,
             OfferPackageEntity offerPackage,
             List<RoomEntity> rooms,
             Set<CellKey> existing,
             Map<Long, AssortmentPositionPriceEntity> assortmentByType,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork,
             List<AssignmentPlan> out) {
         WorkVolumeFormulaEntity defaultFormula =
                 workVolumeFormulaDao.findByWorkItemId(work.getId()).orElse(null);
@@ -1080,8 +1921,10 @@ public class EstimateAssignmentService
                         .findByWorkItemIdAndOfferPackageId(work.getId(), offerPackage.getId())
                         .orElse(null);
         String unitCode = work.getUnit() != null ? work.getUnit().getCode() : null;
+        // Consumptions are batch-loaded ONCE by the caller (perf: was one DAO call per work — a
+        // severe N+1 across all member works during apply-package / apply-work).
         List<WorkMaterialConsumptionEntity> consumptions =
-                workMaterialConsumptionDao.findByWorkItemIdIn(List.of(work.getId()));
+                consumptionsByWork.getOrDefault(work.getId(), List.of());
         Set<Long> attachedTypeIds = attachedRoomTypeIds(work);
 
         for (RoomEntity room : rooms) {
@@ -1137,7 +1980,7 @@ public class EstimateAssignmentService
                 PriceRangeResolver.PriceRange range = priceRangeResolver.rangeFor(constructionMaterials, typeId);
                 lines.add(new MaterialLinePlan(
                         ConsumptionBranch.construction, typeId, consumption.getNormQty(),
-                        range.min(), range.max(), false));
+                        range.min(), range.max(), false, basisOf(consumption)));
             } else if (consumption.getBranch() == ConsumptionBranch.finishing
                     && consumption.getFinishingMaterialType() != null) {
                 Long typeId = consumption.getFinishingMaterialType().getId();
@@ -1146,7 +1989,7 @@ public class EstimateAssignmentService
                     // Assortment_Placeholder: carry the position's per-package band (R11.8).
                     lines.add(new MaterialLinePlan(
                             ConsumptionBranch.finishing, typeId, consumption.getNormQty(),
-                            assortment.getMinPrice(), assortment.getMaxPrice(), true));
+                            assortment.getMinPrice(), assortment.getMaxPrice(), true, basisOf(consumption)));
                 } else {
                     if (finishingMaterials == null) {
                         finishingMaterials = finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
@@ -1155,12 +1998,18 @@ public class EstimateAssignmentService
                             finishingPriceRangeResolver.rangeFor(finishingMaterials, typeId, packageId);
                     lines.add(new MaterialLinePlan(
                             ConsumptionBranch.finishing, typeId, consumption.getNormQty(),
-                            range.min(), range.max(), false));
+                            range.min(), range.max(), false, basisOf(consumption)));
                 }
             }
             // malformed consumption (branch/type mismatch) -> not planned
         }
         return lines;
+    }
+
+    /** The consumption's basis, defaulting to {@link ConsumptionBasis#PER_UNIT} when unset (#4). */
+    private static ConsumptionBasis basisOf(WorkMaterialConsumptionEntity consumption) {
+        return consumption.getConsumptionBasis() != null
+                ? consumption.getConsumptionBasis() : ConsumptionBasis.PER_UNIT;
     }
 
     /**
@@ -1269,11 +2118,20 @@ public class EstimateAssignmentService
         return roomType != null && roomType.getId() != null && attachedTypeIds.contains(roomType.getId());
     }
 
-    /** Loads the project's estimate for a read-only calculate (no draft gate: previews never persist). */
+    /**
+     * Resolves the project's estimate for a read (matrix read, {@code isDraft}, calculate/preview),
+     * <b>creating a defaulted PLN/DRAFT estimate when none exists</b> via the shipped get-or-create
+     * path ({@link EstimateService#getOrCreateEntityForProject(Long)}), rather than 404-ing (R1.7).
+     *
+     * <p>This mirrors the sibling {@code EstimateController#getOrCreateForProject} endpoint so a first
+     * open of an existing project created before the estimate feature yields an empty, assignable
+     * matrix instead of {@code 404 error.entity.not.found}. Because a first read may INSERT the
+     * estimate row, the callers ({@link #getMatrix}, {@link #isDraft}, the {@code calculate*} cores)
+     * run in a read-write transaction; a repeated read resolves the same row without creating a second
+     * one (the {@code estimates.project_id} UNIQUE is the backstop).
+     */
     private EstimateEntity resolveEstimateForRead(Long projectId) {
-        return estimateDao.findByProjectId(projectId)
-                .orElseThrow(() -> new ForemenApiException(
-                        HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "projectId", projectId));
+        return estimateService.getOrCreateEntityForProject(projectId);
     }
 
     // =====================================================================================
@@ -1296,6 +2154,8 @@ public class EstimateAssignmentService
      * @param rangeMin  the copied {@code Type_Price_Range} min (per one work-unit)
      * @param rangeMax  the copied {@code Type_Price_Range} max
      * @param assortment {@code true} iff the band came from a package assortment position (R11.8)
+     * @param consumptionBasis the copied consumption basis (#4): {@code PER_UNIT} ({@code norm ×
+     *                         Volume}) or {@code PER_ROOM} ({@code norm}); {@code PER_UNIT} default
      */
     public record MaterialLinePlan(
             ConsumptionBranch branch,
@@ -1303,7 +2163,8 @@ public class EstimateAssignmentService
             BigDecimal normQty,
             BigDecimal rangeMin,
             BigDecimal rangeMax,
-            boolean assortment) {
+            boolean assortment,
+            ConsumptionBasis consumptionBasis) {
     }
 
     /**
@@ -1372,7 +2233,7 @@ public class EstimateAssignmentService
         /** The staged {@code RECOMPUTE_FINISHING} edit this plan maps to on the batched Save (R15.6). */
         public StagedEdit toStagedEdit(String packageCode) {
             return new StagedEdit(EditKind.RECOMPUTE_FINISHING, null, null, null, null, null,
-                    materialLineId, null, packageCode);
+                    materialLineId, null, packageCode, null);
         }
     }
 
@@ -1405,6 +2266,34 @@ public class EstimateAssignmentService
         }
     }
 
+    /**
+     * The calculated apply-package MERGE result (FOR-05-05 Amendment A1): the package code whose
+     * assortment finishing materials to merge. The merge is computed on replay against the current
+     * estimate graph (after the batch's assigns), so the plan carries only the package code and maps
+     * to a single {@code MERGE_PACKAGE_MATERIALS} staged edit. Persists nothing — written only through
+     * the batched {@link #applyAssignments} Save (R15.6).
+     *
+     * @param packageCode the package to merge, or {@code null} for an empty (no-op) plan
+     */
+    public record CalculatedPackageMerge(String packageCode) {
+
+        /** An empty merge plan (blank/unknown package). */
+        public static final CalculatedPackageMerge EMPTY = new CalculatedPackageMerge(null);
+
+        /** {@code true} iff nothing is merged (no staged edit is produced). */
+        public boolean isEmpty() {
+            return packageCode == null;
+        }
+
+        /** The staged {@code MERGE_PACKAGE_MATERIALS} edit this plan maps to on the batched Save. */
+        public List<StagedEdit> toStagedEdits() {
+            if (packageCode == null) {
+                return List.of();
+            }
+            return List.of(StagedEdit.mergePackageMaterials(packageCode));
+        }
+    }
+
     // =====================================================================================
     // Extension points for tasks 5.2 (direct material edits) and 5.3 (calculate/preview cores)
     // =====================================================================================
@@ -1416,12 +2305,27 @@ public class EstimateAssignmentService
      * {@link #removeMaterialLine} / {@link #chooseConcrete} / {@link #bulkChooseConcreteForWork}).
      * The caller recomputes once after the whole batch, so this branch does not recompute per-edit.
      *
+     * <p><b>Natural-key resolution (R13.4).</b> Single-cell material edits are resolved by the natural
+     * keys the client always has — {@code (workItemId, roomId, branch, typeId)} — walked over the
+     * in-memory estimate graph ({@link #findLine} → {@link #findRoomQty} → {@link #findMaterialLine}),
+     * NOT by a persisted {@code roomQtyId}/{@code materialLineId}. This makes a material edit replay
+     * correctly against a cell that was assigned <em>earlier in the same batch</em> (so it has no
+     * persisted id yet) as well as against an already-persisted cell, and matches the matrix read model
+     * where a cell exposes only {@code (workItemId, roomId)} and a material line is keyed by
+     * {@code (branch, typeId)} within the cell. Every branch is a NO-OP when the target cell or line is
+     * absent from the current staged graph (e.g. the assign was undone) — a preview must be total and
+     * must never throw (mirrors the unassign no-op-when-missing behavior).
+     *
      * <ul>
-     *   <li>{@code ADD_MATERIAL} — add a {@code (branch, type)} line on the edit's {@code roomQtyId}
-     *       (copying the resolver range, R6.2);</li>
-     *   <li>{@code REMOVE_MATERIAL} — remove that {@code (branch, type)} line (R6.2);</li>
-     *   <li>{@code CHOOSE_CONCRETE} — set the concrete product on the edit's {@code materialLineId}
-     *       and collapse the line (R6.3, R6.4);</li>
+     *   <li>{@code ADD_MATERIAL} — add a {@code (branch, type)} line on the cell resolved from
+     *       {@code (workItemId, roomId)} (copying the resolver range, R6.2); no-op when the cell is
+     *       absent;</li>
+     *   <li>{@code REMOVE_MATERIAL} — remove that {@code (branch, type)} line (R6.2); when
+     *       {@code roomId} is {@code null} this is a bulk remove across every assigned cell of the
+     *       edit's {@code workItemId} (Work_Material_Summary bulk remove);</li>
+     *   <li>{@code CHOOSE_CONCRETE} — set the concrete product on the {@code (branch, type)} line of
+     *       the cell resolved from {@code (workItemId, roomId)} and collapse the line (R6.3, R6.4);
+     *       no-op when the cell or line is absent;</li>
      *   <li>{@code BULK_CHOOSE_CONCRETE} — apply the concrete product to the edit's {@code (branch,
      *       type)} across every assigned cell of the edit's {@code workItemId} (R9.3).</li>
      * </ul>
@@ -1429,17 +2333,38 @@ public class EstimateAssignmentService
     private void applyMaterialEdit(EstimateEntity estimate, StagedEdit edit) {
         switch (edit.kind()) {
             case ADD_MATERIAL -> {
-                EstimateLineRoomQtyEntity roomQty = resolveRoomQtyInEstimate(edit.roomQtyId(), estimate);
-                doAddMaterialLine(roomQty, edit.branch(), edit.typeId());
+                EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+                if (roomQty != null) {
+                    doAddMaterialLine(roomQty, edit.branch(), edit.typeId());
+                }
             }
             case REMOVE_MATERIAL -> {
-                EstimateLineRoomQtyEntity roomQty = resolveRoomQtyInEstimate(edit.roomQtyId(), estimate);
-                doRemoveMaterialLine(roomQty, edit.branch(), edit.typeId());
+                if (edit.roomId() != null) {
+                    // Single cell: remove the (branch, type) line from the resolved cell.
+                    EstimateLineRoomQtyEntity roomQty =
+                            resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+                    if (roomQty != null) {
+                        doRemoveMaterialLine(roomQty, edit.branch(), edit.typeId());
+                    }
+                } else {
+                    // Bulk (Work_Material_Summary): remove the (branch, type) line across the whole work.
+                    EstimateLineEntity line = findLine(estimate, edit.workItemId());
+                    if (line != null) {
+                        for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+                            doRemoveMaterialLine(roomQty, edit.branch(), edit.typeId());
+                        }
+                    }
+                }
             }
             case CHOOSE_CONCRETE -> {
-                EstimateLineRoomMaterialEntity material = resolveMaterialLine(edit.materialLineId());
-                assertMaterialInEstimate(material, estimate);
-                applyChooseConcrete(material, edit.materialId());
+                EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, edit.workItemId(), edit.roomId());
+                if (roomQty != null) {
+                    EstimateLineRoomMaterialEntity material =
+                            findMaterialLine(roomQty, edit.branch(), edit.typeId());
+                    if (material != null) {
+                        applyChooseConcrete(material, edit.materialId());
+                    }
+                }
             }
             case BULK_CHOOSE_CONCRETE -> {
                 EstimateLineEntity line = findLine(estimate, edit.workItemId());
@@ -1459,13 +2384,28 @@ public class EstimateAssignmentService
         }
     }
 
+    /**
+     * Resolves the {@code (workItemId, roomId)} cell within the in-memory estimate graph, or
+     * {@code null} when the work is unassigned or the cell is absent. Used by the staged material-edit
+     * replay so edits work against freshly-staged (unsaved) cells in the same batch as well as
+     * persisted ones, and are no-ops when the cell is missing (preview must be total).
+     */
+    private EstimateLineRoomQtyEntity resolveStagedCell(EstimateEntity estimate, Long workItemId, Long roomId) {
+        EstimateLineEntity line = findLine(estimate, workItemId);
+        return line == null ? null : findRoomQty(line, roomId);
+    }
+
     // --- resolution helpers -----------------------------------------------------------------
 
-    /** Loads the project's estimate and asserts it is still DRAFT (R7). */
+    /**
+     * Resolves the project's estimate for a <b>write</b> and asserts it is still DRAFT (R7).
+     * Get-or-creates a defaulted PLN/DRAFT estimate when none exists (R1.7) via the shipped
+     * {@link EstimateService#getOrCreateEntityForProject(Long)} path, so a first {@code Save}
+     * (assign / apply / material edit) on a brand-new project works instead of 404-ing; the DRAFT
+     * gate then still applies to the resolved estimate.
+     */
     private EstimateEntity resolveDraftEstimate(Long projectId) {
-        EstimateEntity estimate = estimateDao.findByProjectId(projectId)
-                .orElseThrow(() -> new ForemenApiException(
-                        HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "projectId", projectId));
+        EstimateEntity estimate = estimateService.getOrCreateEntityForProject(projectId);
         draftGateGuard.assertDraft(estimate);
         return estimate;
     }
@@ -1552,26 +2492,71 @@ public class EstimateAssignmentService
         CHOOSE_CONCRETE,
         BULK_CHOOSE_CONCRETE,
         APPLY_PACKAGE,
-        RECOMPUTE_FINISHING
+        RECOMPUTE_FINISHING,
+        /** FOR-05-05 (#7): override a {@code (work, room)} cell's Volume with a manual positive quantity. */
+        SET_QUANTITY,
+        /** FOR-05-05 (#7): clear a cell's manual Volume override, reverting to the formula-resolved Volume. */
+        CLEAR_QUANTITY,
+        /**
+         * FOR-05-05 amendment #1: override a single material line's physical quantity with an explicit
+         * manual value (independent of {@code norm × Volume}). The target line is resolved by natural
+         * keys {@code (workItemId, roomId, branch, typeId)} like {@code CHOOSE_CONCRETE}; the manual
+         * value is carried in {@code quantity}.
+         */
+        SET_MATERIAL_QUANTITY,
+        /**
+         * FOR-05-05 amendment #1: clear a material line's manual quantity override, reverting to the
+         * derived quantity ({@code norm × Volume} for PER_UNIT, {@code norm} for PER_ROOM). The target
+         * line is resolved by natural keys {@code (workItemId, roomId, branch, typeId)}.
+         */
+        CLEAR_MATERIAL_QUANTITY,
+        /**
+         * FOR-05-05 (#19): fill every in-scope PLACEHOLDER material line with the CHEAPEST concrete
+         * product of its material type, collapsing the line to that product's {@code retailNet}. Scope
+         * is optional: whole matrix ({@code workItemId == null}), one work ({@code workItemId} set,
+         * {@code roomId == null}), or one cell ({@code workItemId} + {@code roomId}).
+         */
+        APPLY_CHEAPEST,
+        /**
+         * FOR-05-05 Amendment A1: merge the applied package's assortment finishing materials into the
+         * estimate. The client stages ONE such edit (carrying only {@code packageCode}) when applying
+         * a package, in addition to the expanded ASSIGN/APPLY_PACKAGE delta. Replayed against the
+         * CURRENT estimate graph (after the same batch's assign edits have run so consumption NEED is
+         * known): it first REMOVES all existing package-flagged lines and resets any prior "extra"
+         * lines back to the works' full consumption need, then distributes each package position's
+         * project-wide {@code referenceQty} across the group's applicable rooms via water-fill
+         * (smallest-need-first, capped at need, leftover discarded), splitting each covered room's
+         * finishing line into a package-flagged line (qty = allocation) plus an extra line
+         * (qty = need − allocation) where consumption exceeds the allocation. Idempotent for the same
+         * package; re-applying a different package recomputes cleanly.
+         */
+        MERGE_PACKAGE_MATERIALS
     }
 
     /**
      * One staged matrix edit in a batched {@code Save} (design §B4). A single flat record covers every
      * {@link EditKind}; only the fields relevant to a given kind are populated (the rest are
-     * {@code null}). Cell edits carry {@code workItemId}/{@code roomId}; material edits carry
-     * {@code roomQtyId}/{@code branch}/{@code typeId} (and {@code materialLineId}/{@code materialId}
-     * for choose-concrete); apply/recompute-originated edits carry {@code packageCode} and the
+     * {@code null}). Cell edits carry {@code workItemId}/{@code roomId}; single-cell material edits
+     * (ADD/REMOVE/CHOOSE_CONCRETE) are resolved by the natural keys {@code workItemId}/{@code roomId}/
+     * {@code branch}/{@code typeId} (and {@code materialId} for choose-concrete) within the estimate
+     * graph, so they replay against freshly-staged cells too; the persisted {@code roomQtyId}/
+     * {@code materialLineId} fields are retained for wire-compatibility but are NOT used by the staged
+     * material-edit replay. Apply/recompute-originated edits carry {@code packageCode} and the
      * per-cell / per-line target they resolved to at calculate time.
      *
      * @param kind           the edit kind
-     * @param workItemId     target work (ASSIGN / UNASSIGN / APPLY_PACKAGE / bulk choose)
-     * @param roomId         target room (ASSIGN / UNASSIGN / APPLY_PACKAGE)
-     * @param roomQtyId      target cell for a material edit (ADD/REMOVE material)
+     * @param workItemId     target work (ASSIGN / UNASSIGN / APPLY_PACKAGE / material edit / bulk)
+     * @param roomId         target room (ASSIGN / UNASSIGN / APPLY_PACKAGE / single-cell material edit;
+     *                       {@code null} for a bulk REMOVE_MATERIAL across the whole work)
+     * @param roomQtyId      persisted cell id (wire-compat only; unused by the staged material replay)
      * @param branch         material branch for a material edit
      * @param typeId         material type id for a material edit
-     * @param materialLineId target material line (REMOVE / CHOOSE_CONCRETE / RECOMPUTE_FINISHING)
+     * @param materialLineId persisted material-line id (wire-compat / RECOMPUTE_FINISHING; unused by the
+     *                       staged CHOOSE_CONCRETE replay, which resolves by (branch, typeId))
      * @param materialId     chosen concrete product (CHOOSE_CONCRETE / BULK_CHOOSE_CONCRETE)
      * @param packageCode    active package code (ASSIGN / APPLY_PACKAGE / RECOMPUTE_FINISHING)
+     * @param quantity       the manual Volume for a {@code SET_QUANTITY} cell override (#7); {@code null}
+     *                       for every other kind (including {@code CLEAR_QUANTITY})
      */
     public record StagedEdit(
             EditKind kind,
@@ -1582,16 +2567,63 @@ public class EstimateAssignmentService
             Long typeId,
             Long materialLineId,
             Long materialId,
-            String packageCode) {
+            String packageCode,
+            BigDecimal quantity) {
 
         /** Convenience factory for an assign cell edit. */
         public static StagedEdit assign(Long workItemId, Long roomId, String packageCode) {
-            return new StagedEdit(EditKind.ASSIGN, workItemId, roomId, null, null, null, null, null, packageCode);
+            return new StagedEdit(
+                    EditKind.ASSIGN, workItemId, roomId, null, null, null, null, null, packageCode, null);
         }
 
         /** Convenience factory for an unassign cell edit. */
         public static StagedEdit unassign(Long workItemId, Long roomId) {
-            return new StagedEdit(EditKind.UNASSIGN, workItemId, roomId, null, null, null, null, null, null);
+            return new StagedEdit(
+                    EditKind.UNASSIGN, workItemId, roomId, null, null, null, null, null, null, null);
+        }
+
+        /**
+         * Convenience factory for an {@code APPLY_CHEAPEST} scoped edit (FOR-05-05 #19). Both scope
+         * fields are optional: {@code (null, null)} targets the whole matrix, {@code (workItemId,
+         * null)} one work's cells, {@code (workItemId, roomId)} a single cell.
+         */
+        public static StagedEdit applyCheapest(Long workItemId, Long roomId) {
+            return new StagedEdit(
+                    EditKind.APPLY_CHEAPEST, workItemId, roomId, null, null, null, null, null, null, null);
+        }
+
+        /**
+         * Convenience factory for a {@code SET_MATERIAL_QUANTITY} edit (amendment #1): override the
+         * physical quantity of the {@code (workItemId, roomId, branch, typeId)} material line with the
+         * manual {@code quantity}.
+         */
+        public static StagedEdit setMaterialQuantity(
+                Long workItemId, Long roomId, ConsumptionBranch branch, Long typeId, BigDecimal quantity) {
+            return new StagedEdit(
+                    EditKind.SET_MATERIAL_QUANTITY, workItemId, roomId, null, branch, typeId, null, null,
+                    null, quantity);
+        }
+
+        /**
+         * Convenience factory for a {@code CLEAR_MATERIAL_QUANTITY} edit (amendment #1): clear the
+         * manual quantity override on the {@code (workItemId, roomId, branch, typeId)} material line.
+         */
+        public static StagedEdit clearMaterialQuantity(
+                Long workItemId, Long roomId, ConsumptionBranch branch, Long typeId) {
+            return new StagedEdit(
+                    EditKind.CLEAR_MATERIAL_QUANTITY, workItemId, roomId, null, branch, typeId, null, null,
+                    null, null);
+        }
+
+        /**
+         * Convenience factory for a {@code MERGE_PACKAGE_MATERIALS} edit (FOR-05-05 Amendment A1):
+         * merge {@code packageCode}'s assortment finishing materials into the estimate. Carries only
+         * the package code — the merge resolves everything else from the estimate graph on replay.
+         */
+        public static StagedEdit mergePackageMaterials(String packageCode) {
+            return new StagedEdit(
+                    EditKind.MERGE_PACKAGE_MATERIALS, null, null, null, null, null, null, null,
+                    packageCode, null);
         }
     }
 }

@@ -7,6 +7,9 @@ import java.util.List;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -17,6 +20,8 @@ import com.foremen.controller.model.WorkItemCreateRequest;
 import com.foremen.controller.model.WorkItemCreateResponse;
 import com.foremen.controller.model.WorkItemDtoExtendedModel;
 import com.foremen.controller.model.WorkItemDtoModel;
+import com.foremen.controller.model.WorkItemRoomTypesRequest;
+import com.foremen.controller.model.WorkItemRoomTypesResponse;
 import com.foremen.controller.model.WorkItemUpdateRequest;
 import com.foremen.controller.model.WorkItemUpdateResponse;
 import com.foremen.controller.model.mapper.WorkItemControllerMapper;
@@ -103,5 +108,42 @@ public class WorkItemController implements AdminController<
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(1)))
                 .body(new MetadataResponse(fields));
+    }
+
+    /**
+     * Reads a work item's Room_Type_Attachment (FOR-05-05, R10.5) — the ids of the room types the
+     * work attaches to on apply. An empty list means the work has no attachment and attaches to ALL
+     * rooms (R10.3).
+     *
+     * <p>Reuses the shipped {@code WORK_CATALOG} ABAC resource (no new resource / seed changeset).
+     * The method-level {@link PermissionOperation @PermissionOperation("READ")} combines with the
+     * class {@link PermissionResource @PermissionResource("WORK_CATALOG")} to form the
+     * {@code (WORK_CATALOG, READ)} pair the {@code PermissionInterceptor} enforces, keeping the
+     * controller fully annotated for {@code PermissionAnnotationValidator}. Returns
+     * {@code 404 error.entity.not.found} when the work item does not exist.
+     */
+    @GetMapping("/{id}/room-types")
+    @PermissionOperation("READ")
+    public ResponseEntity<WorkItemRoomTypesResponse> getRoomTypes(@PathVariable Long id) {
+        return ResponseEntity.ok(new WorkItemRoomTypesResponse(service.getRoomTypeIds(id)));
+    }
+
+    /**
+     * Replaces a work item's Room_Type_Attachment (FOR-05-05, R10.5). The request body is a full
+     * REPLACE of the attached room-type ids: an empty/null list clears the attachment (the work then
+     * attaches to ALL rooms on apply, R10.3); otherwise the work attaches only to rooms whose type is
+     * in the set (R10.2). Returns the resulting id list.
+     *
+     * <p>The method-level {@link PermissionOperation @PermissionOperation("UPDATE")} combines with the
+     * class {@link PermissionResource @PermissionResource("WORK_CATALOG")} to form the
+     * {@code (WORK_CATALOG, UPDATE)} pair. Returns {@code 404 error.entity.not.found} when the work
+     * item or any referenced room type does not exist.
+     */
+    @PutMapping("/{id}/room-types")
+    @PermissionOperation("UPDATE")
+    public ResponseEntity<WorkItemRoomTypesResponse> setRoomTypes(
+            @PathVariable Long id, @RequestBody WorkItemRoomTypesRequest request) {
+        List<Long> resulting = service.setRoomTypeIds(id, request.roomTypeIds());
+        return ResponseEntity.ok(new WorkItemRoomTypesResponse(resulting));
     }
 }

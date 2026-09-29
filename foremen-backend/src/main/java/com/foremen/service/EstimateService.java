@@ -63,6 +63,9 @@ public class EstimateService
     /** Message code for an explicit second create attempt on an already-estimated project (409, R1.6). */
     static final String ALREADY_EXISTS_MESSAGE = "error.estimate.already.exists";
 
+    /** Message code surfaced if a just-created estimate cannot be reloaded by project id (500, defensive). */
+    static final String ENTITY_NOT_FOUND_MESSAGE = "error.entity.not.found";
+
     /** The seeded default currency code applied when a caller omits {@code currencyId} (R1.2). */
     private static final String DEFAULT_CURRENCY_CODE = "PLN";
 
@@ -183,6 +186,36 @@ public class EstimateService
                     EstimateServiceExtendedModel model = new EstimateServiceExtendedModel();
                     model.setProjectId(projectId);
                     return create(model);
+                });
+    }
+
+    /**
+     * Returns the project's estimate <b>entity</b> (managed), creating exactly one defaulted to
+     * PLN/DRAFT if absent (R1.5) — the entity-returning twin of {@link #getOrCreateForProject(Long)}
+     * for collaborators that need the managed {@link EstimateEntity} graph rather than a service
+     * model (e.g. the matrix read path in {@code EstimateAssignmentService}, so a first open of an
+     * existing project created before the estimate feature yields an empty matrix instead of a 404).
+     *
+     * <p>Reuses the same {@link EstimateDao#findByProjectId(Long)} lookup as
+     * {@link #getOrCreateForProject(Long)} and {@link #validateCreate}, so a repeated read resolves to
+     * the existing row rather than racing a duplicate — the DB-level UNIQUE constraint on
+     * {@code estimates.project_id} is the ultimate backstop. When it must create, it goes through the
+     * same {@link #create(EstimateServiceModel)} path (create defaults + {@link #afterCreate} totals
+     * recompute) and reloads the managed entity by project id.
+     *
+     * @param projectId the owning project's id
+     * @return the project's existing (or newly created PLN/DRAFT) managed estimate entity
+     */
+    @Transactional
+    public EstimateEntity getOrCreateEntityForProject(Long projectId) {
+        return estimateDao.findByProjectId(projectId)
+                .orElseGet(() -> {
+                    EstimateServiceExtendedModel model = new EstimateServiceExtendedModel();
+                    model.setProjectId(projectId);
+                    create(model);
+                    return estimateDao.findByProjectId(projectId)
+                            .orElseThrow(() -> new ForemenApiException(
+                                    HttpStatus.INTERNAL_SERVER_ERROR, ENTITY_NOT_FOUND_MESSAGE));
                 });
     }
 

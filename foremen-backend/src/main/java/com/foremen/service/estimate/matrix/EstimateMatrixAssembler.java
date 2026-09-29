@@ -13,9 +13,11 @@ import org.springframework.stereotype.Component;
 
 import com.foremen.dao.RoomDao;
 import com.foremen.dao.WorkItemDao;
+import com.foremen.dao.WorkMaterialConsumptionDao;
 import com.foremen.dao.WorkVolumeFormulaDao;
 import com.foremen.dao.model.ConstructionMaterialEntity;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
+import com.foremen.dao.model.ConsumptionBasis;
 import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
@@ -27,6 +29,7 @@ import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.dao.model.WorkMaterialConsumptionEntity;
 import com.foremen.dao.model.WorkVolumeFormulaEntity;
 import com.foremen.service.formula.VolumeResolver;
 
@@ -62,12 +65,17 @@ public class EstimateMatrixAssembler {
     private final RoomDao roomDao;
     private final WorkItemDao workItemDao;
     private final WorkVolumeFormulaDao workVolumeFormulaDao;
+    private final WorkMaterialConsumptionDao workMaterialConsumptionDao;
 
     public EstimateMatrixAssembler(
-            RoomDao roomDao, WorkItemDao workItemDao, WorkVolumeFormulaDao workVolumeFormulaDao) {
+            RoomDao roomDao,
+            WorkItemDao workItemDao,
+            WorkVolumeFormulaDao workVolumeFormulaDao,
+            WorkMaterialConsumptionDao workMaterialConsumptionDao) {
         this.roomDao = roomDao;
         this.workItemDao = workItemDao;
         this.workVolumeFormulaDao = workVolumeFormulaDao;
+        this.workMaterialConsumptionDao = workMaterialConsumptionDao;
     }
 
     /**
@@ -84,7 +92,8 @@ public class EstimateMatrixAssembler {
         List<RoomEntity> rooms = roomDao.findByProjectId(projectId);
         List<EstimateMatrixRoomDto> roomDtos = new ArrayList<>(rooms.size());
         for (RoomEntity room : rooms) {
-            roomDtos.add(new EstimateMatrixRoomDto(room.getId(), room.getLabel(), roomTypeName(room, ru)));
+            roomDtos.add(new EstimateMatrixRoomDto(
+                    room.getId(), room.getLabel(), roomTypeId(room), roomTypeName(room, ru)));
         }
 
         // Index the estimate's assigned cells by (workItemId, roomId) for O(1) lookup per cell.
@@ -97,12 +106,27 @@ public class EstimateMatrixAssembler {
         Map<Long, GroupAccumulator> groups = new LinkedHashMap<>();
         MaterialFold headerFold = new MaterialFold();
         FillCounter fillCounter = new FillCounter();
+        // Header package summary fold (FOR-05-05 Amendment A1): the estimate-wide package-allocated
+        // finishing volume total and the package-flagged lines' money contribution (point F).
+        PackageFold headerPackageFold = new PackageFold();
 
         List<WorkItemEntity> sortedWorks = new ArrayList<>();
         workItemDao.findAll().forEach(sortedWorks::add);
         sortedWorks.sort(Comparator
                 .comparing(EstimateMatrixAssembler::categoryOrder, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparing(WorkItemEntity::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        // Batch-load every work's declared consumptions ONCE (perf: was one DAO call per material
+        // line via resolveNormUnit — a severe N+1 on large projects). The DAO's @EntityGraph eagerly
+        // loads getWorkItem(), so grouping by workItem id is safe.
+        List<Long> workItemIds = sortedWorks.stream()
+                .map(WorkItemEntity::getId).filter(java.util.Objects::nonNull).toList();
+        Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId =
+                (workItemIds.isEmpty() ? List.<WorkMaterialConsumptionEntity>of()
+                        : workMaterialConsumptionDao.findByWorkItemIdIn(workItemIds))
+                        .stream()
+                        .filter(c -> c.getWorkItem() != null && c.getWorkItem().getId() != null)
+                        .collect(java.util.stream.Collectors.groupingBy(c -> c.getWorkItem().getId()));
 
         for (WorkItemEntity work : sortedWorks) {
             WorkCategoryEntity category = work.getWorkCategory();
@@ -112,6 +136,9 @@ public class EstimateMatrixAssembler {
 
             WorkVolumeFormulaEntity defaultFormula = formulasByWork.get(work.getId());
             List<CellDto> cells = new ArrayList<>(rooms.size());
+            // Per-row package summary fold (FOR-05-05 Amendment A1): the row's package-allocated
+            // finishing volume across all its cells (the value of the trailing package column).
+            PackageFold rowPackageFold = new PackageFold();
             for (RoomEntity room : rooms) {
                 EstimateLineRoomQtyEntity roomQty = assigned.get(new CellKey(work.getId(), room.getId()));
                 if (roomQty == null) {
@@ -119,21 +146,26 @@ public class EstimateMatrixAssembler {
                     continue;
                 }
                 EstimateLineEntity line = lineByWork.get(work.getId());
-                CellDto cell = assembleCell(work, room, roomQty, line, defaultFormula, ru);
+                CellDto cell = assembleCell(work, room, roomQty, line, defaultFormula, ru, consumptionsByWorkId);
                 cells.add(cell);
                 group.fold.add(cell);
                 headerFold.add(cell);
                 fillCounter.count(cell);
+                rowPackageFold.add(cell);
             }
 
+            group.packageFold.merge(rowPackageFold);
+            headerPackageFold.merge(rowPackageFold);
             group.rows.add(new WorkRowDto(
-                    work.getId(), workItemName(work, ru), roomTypeIds(work), cells));
+                    work.getId(), workItemName(work, ru), roomTypeIds(work), cells,
+                    rowPackageFold.volume(), rowPackageFold.toMoney()));
         }
 
         List<WorkTypeGroupDto> groupDtos = new ArrayList<>(groups.size());
         for (GroupAccumulator group : groups.values()) {
             groupDtos.add(new WorkTypeGroupDto(
-                    group.categoryId, group.categoryName, group.rows, group.fold.toSubtotals()));
+                    group.categoryId, group.categoryName, group.rows, group.fold.toSubtotals(),
+                    group.packageFold.volume(), group.packageFold.toMoney()));
         }
 
         return new EstimateMatrixDto(
@@ -142,7 +174,10 @@ public class EstimateMatrixAssembler {
                 roomDtos,
                 groupDtos,
                 headerFold.toSubtotals(),
-                fillCounter.toPct());
+                fillCounter.toPct(),
+                headerPackageFold.volume(),
+                headerPackageFold.toMoney(),
+                estimate.getAppliedPackageCode());
     }
 
     // --- per-cell assembly ------------------------------------------------------------------
@@ -154,7 +189,8 @@ public class EstimateMatrixAssembler {
             EstimateLineRoomQtyEntity roomQty,
             EstimateLineEntity line,
             WorkVolumeFormulaEntity defaultFormula,
-            boolean ru) {
+            boolean ru,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId) {
         BigDecimal volume = roomQty.getQuantity() != null ? roomQty.getQuantity() : BigDecimal.ZERO;
 
         // Volume provenance for the Cell_Report (R4.4, R5.3): re-derived, package-less, via the pure
@@ -164,6 +200,11 @@ public class EstimateMatrixAssembler {
                 VolumeResolver.resolve(null, defaultFormula, unitCode, room);
         boolean fallbackUsed = resolution.fallbackUsed();
         String formulaUsed = fallbackUsed || defaultFormula == null ? null : defaultFormula.getSourceText();
+        // A stable formula key the frontend maps to a localized label (#2): "fallback" when the
+        // unit→dimension fallback supplied the Volume, else the default formula's raw source text
+        // (e.g. "floorArea"), else null. formulaUsed stays the raw fallback text.
+        String formulaKey = fallbackUsed ? "fallback"
+                : (defaultFormula != null ? defaultFormula.getSourceText() : null);
 
         BigDecimal unitPrice = line != null && line.getUnitPrice() != null
                 ? line.getUnitPrice() : BigDecimal.ZERO;
@@ -174,9 +215,9 @@ public class EstimateMatrixAssembler {
         int concreteCount = 0;
         int total = 0;
         for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
-            MaterialLineDto dto = materialLineDto(material, ru);
+            MaterialLineDto dto = materialLineDto(work, material, volume, ru, consumptionsByWorkId);
             materialDtos.add(dto);
-            materialsRange = add(materialsRange, materialContribution(dto, volume));
+            materialsRange = add(materialsRange, materialContribution(dto));
             total++;
             if (dto.isConcrete()) {
                 concreteCount++;
@@ -192,15 +233,25 @@ public class EstimateMatrixAssembler {
                 true,
                 volume,
                 formulaUsed,
+                formulaKey,
                 fallbackUsed,
+                roomQty.isVolumeOverridden(),
                 labour,
                 materialDtos,
                 costRange,
                 fillState);
     }
 
-    /** Maps a stored material line to its read DTO, localizing the type + concrete-product names. */
-    private MaterialLineDto materialLineDto(EstimateLineRoomMaterialEntity material, boolean ru) {
+    /**
+     * Maps a stored material line to its read DTO, localizing the type + concrete-product names and
+     * resolving the norm's unit code (#8). The estimate line does not persist a unit and the material
+     * TYPE entities carry none, so the norm unit is resolved at READ time from the work's declared
+     * {@code WorkMaterialConsumption} for the line's {@code (branch, type)} — its {@code materialUnit}
+     * code — and is {@code null} when no matching consumption exists.
+     */
+    private MaterialLineDto materialLineDto(
+            WorkItemEntity work, EstimateLineRoomMaterialEntity material, BigDecimal volume, boolean ru,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId) {
         ConsumptionBranch branch = material.getBranch();
         Long typeId;
         String typeName;
@@ -227,6 +278,13 @@ public class EstimateMatrixAssembler {
             }
         }
 
+        Long workId = work != null ? work.getId() : null;
+        String normUnit = resolveNormUnit(workId, branch, typeId, consumptionsByWorkId);
+
+        ConsumptionBasis basis = material.getConsumptionBasis() != null
+                ? material.getConsumptionBasis() : ConsumptionBasis.PER_UNIT;
+        BigDecimal resolvedQty = resolvedPhysicalQuantity(material, volume);
+
         return new MaterialLineDto(
                 material.getId(),
                 branch,
@@ -237,22 +295,84 @@ public class EstimateMatrixAssembler {
                 material.getRangeMax(),
                 concreteId,
                 concreteName,
-                material.getConcreteNet());
+                material.getConcreteNet(),
+                normUnit,
+                resolvedQty,
+                material.isQtyOverridden(),
+                basis,
+                material.isAppliedFromPackage());
     }
 
     /**
-     * The money contribution of one material line at Volume {@code V}: the point {@code norm × V ×
-     * concreteNet} when concrete (R6.4), else the band {@code norm × V × [rangeMin..rangeMax]}
-     * (R4.3). A {@code null} norm / range edge contributes zero on that edge (no fabricated value).
+     * The single "resolved physical quantity for a material line" helper (FOR-05-05 amendments #1/#4)
+     * — the ONE place the override + basis rules live, shared by the per-cell money contribution and
+     * the group/header {@link MaterialFold} so the displayed quantity and the money never drift:
+     * <ol>
+     *   <li>if the line is manually overridden (#1) → {@code manualQty} (override wins over basis);</li>
+     *   <li>else if the copied basis is {@code PER_ROOM} (#4) → {@code norm} (i.e. {@code norm × 1},
+     *       independent of Volume);</li>
+     *   <li>else ({@code PER_UNIT}) → {@code norm × Volume} as before.</li>
+     * </ol>
+     * A {@code null} norm / manualQty contributes zero (no fabricated value).
      */
-    private static MoneyRange materialContribution(MaterialLineDto line, BigDecimal volume) {
-        BigDecimal normVolume = nz(line.norm()).multiply(nz(volume));
+    private static BigDecimal resolvedPhysicalQuantity(EstimateLineRoomMaterialEntity material, BigDecimal volume) {
+        if (material.isQtyOverridden()) {
+            return nz(material.getManualQty());
+        }
+        BigDecimal norm = nz(material.getNormQty());
+        if (material.getConsumptionBasis() == ConsumptionBasis.PER_ROOM) {
+            return norm; // norm × 1 — a fixed quantity for the whole room (#4)
+        }
+        return norm.multiply(nz(volume)); // PER_UNIT: norm × Volume (default)
+    }
+
+    /**
+     * Resolves the norm's unit code for {@code (branch, typeId)} from the work's declared consumptions
+     * (#8): finds the {@code WorkMaterialConsumption} whose branch + material-type match the line and
+     * returns its {@code materialUnit} code. {@code null} when the work is missing, the type is unset,
+     * or the work declares no consumption for that type (e.g. an ad-hoc material line).
+     */
+    private String resolveNormUnit(
+            Long workId, ConsumptionBranch branch, Long typeId,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId) {
+        if (workId == null || branch == null || typeId == null) {
+            return null;
+        }
+        List<WorkMaterialConsumptionEntity> consumptions =
+                consumptionsByWorkId.getOrDefault(workId, List.of());
+        for (WorkMaterialConsumptionEntity consumption : consumptions) {
+            if (consumption.getBranch() != branch) {
+                continue;
+            }
+            Long consumptionTypeId = branch == ConsumptionBranch.construction
+                    ? (consumption.getConstructionMaterialType() != null
+                            ? consumption.getConstructionMaterialType().getId() : null)
+                    : (consumption.getFinishingMaterialType() != null
+                            ? consumption.getFinishingMaterialType().getId() : null);
+            if (typeId.equals(consumptionTypeId)) {
+                return consumption.getMaterialUnit() != null ? consumption.getMaterialUnit().getCode() : null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The money contribution of one material line, using its RESOLVED physical quantity {@code Q}
+     * (override- and basis-aware, FOR-05-05 amendments #1/#4 — {@link MaterialLineDto#quantity()}):
+     * the point {@code Q × concreteNet} when concrete (R6.4), else the band
+     * {@code Q × [rangeMin..rangeMax]} (R4.3). A {@code null} range edge contributes zero on that edge
+     * (no fabricated value). The physical quantity is centralized in
+     * {@link #resolvedPhysicalQuantity(EstimateLineRoomMaterialEntity, BigDecimal)} so the per-cell
+     * contribution and the {@link MaterialFold} never diverge.
+     */
+    private static MoneyRange materialContribution(MaterialLineDto line) {
+        BigDecimal quantity = nz(line.quantity());
         if (line.isConcrete()) {
-            BigDecimal point = normVolume.multiply(nz(line.concreteNet()));
+            BigDecimal point = quantity.multiply(nz(line.concreteNet()));
             return MoneyRange.point(point);
         }
-        BigDecimal min = normVolume.multiply(nz(line.rangeMin()));
-        BigDecimal max = normVolume.multiply(nz(line.rangeMax()));
+        BigDecimal min = quantity.multiply(nz(line.rangeMin()));
+        BigDecimal max = quantity.multiply(nz(line.rangeMax()));
         return new MoneyRange(min, max);
     }
 
@@ -269,7 +389,9 @@ public class EstimateMatrixAssembler {
         void add(CellDto cell) {
             works = works.add(nz(cell.labour()));
             for (MaterialLineDto line : cell.materials()) {
-                MoneyRange contribution = materialContribution(line, cell.volume());
+                // The DTO already carries the resolved (override/basis-aware) physical quantity, so
+                // the fold reuses the SAME contribution as the per-cell computation (no drift).
+                MoneyRange contribution = materialContribution(line);
                 if (line.branch() == ConsumptionBranch.construction) {
                     constructionMin = constructionMin.add(nz(contribution.min()));
                     constructionMax = constructionMax.add(nz(contribution.max()));
@@ -285,6 +407,46 @@ public class EstimateMatrixAssembler {
                     MoneyRange.point(works),
                     new MoneyRange(constructionMin, constructionMax),
                     new MoneyRange(finishingMin, finishingMax));
+        }
+    }
+
+    /**
+     * Accumulates the package summary (FOR-05-05 Amendment A1) over a set of cells: the total
+     * resolved quantity of the cells' {@code appliedFromPackage} material lines (the package-column
+     * value / group subtotal / header total) and their money contribution (point F). The money reuses
+     * the SAME per-line {@link #materialContribution(MaterialLineDto)} as the cost folds so a
+     * package-flagged line's money never diverges between the cost total and the package total.
+     */
+    private static final class PackageFold {
+        private BigDecimal volume = BigDecimal.ZERO;
+        private BigDecimal moneyMin = BigDecimal.ZERO;
+        private BigDecimal moneyMax = BigDecimal.ZERO;
+
+        void add(CellDto cell) {
+            for (MaterialLineDto line : cell.materials()) {
+                if (!line.appliedFromPackage()) {
+                    continue;
+                }
+                volume = volume.add(nz(line.quantity()));
+                MoneyRange contribution = materialContribution(line);
+                moneyMin = moneyMin.add(nz(contribution.min()));
+                moneyMax = moneyMax.add(nz(contribution.max()));
+            }
+        }
+
+        /** Rolls another fold (e.g. a row's) into this one (e.g. the header's). */
+        void merge(PackageFold other) {
+            volume = volume.add(other.volume);
+            moneyMin = moneyMin.add(other.moneyMin);
+            moneyMax = moneyMax.add(other.moneyMax);
+        }
+
+        BigDecimal volume() {
+            return volume;
+        }
+
+        MoneyRange toMoney() {
+            return new MoneyRange(moneyMin, moneyMax);
         }
     }
 
@@ -318,6 +480,12 @@ public class EstimateMatrixAssembler {
         private final String categoryName;
         private final List<WorkRowDto> rows = new ArrayList<>();
         private final MaterialFold fold = new MaterialFold();
+        /**
+         * The group's package summary fold (FOR-05-05 Amendment A1 / FOR-05-04 Change #4): Σ of its
+         * rows' package-allocated finishing volume AND their money contribution (rolled from each
+         * row's fold via {@link PackageFold#merge}).
+         */
+        private final PackageFold packageFold = new PackageFold();
 
         GroupAccumulator(Long categoryId, String categoryName) {
             this.categoryId = categoryId;
@@ -404,6 +572,12 @@ public class EstimateMatrixAssembler {
     }
 
     // --- localization -----------------------------------------------------------------------
+
+    /** The room's type id (FOR-05-05 amendment #3), or {@code null} when the room has no type. */
+    private static Long roomTypeId(RoomEntity room) {
+        RoomTypeEntity type = room.getRoomType();
+        return type != null ? type.getId() : null;
+    }
 
     private static String roomTypeName(RoomEntity room, boolean ru) {
         RoomTypeEntity type = room.getRoomType();

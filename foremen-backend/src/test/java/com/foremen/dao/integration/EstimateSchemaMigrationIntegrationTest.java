@@ -297,6 +297,15 @@ class EstimateSchemaMigrationIntegrationTest {
         }
     }
 
+    // --- FOR-05-05 #7 : changeset 106 adds estimate_line_room_qty.volume_overridden ---
+    @Test
+    @DisplayName("FOR-05-05 changeset 106 adds estimate_line_room_qty.volume_overridden (#7)")
+    void addsVolumeOverriddenColumn() throws Exception {
+        assertThat(columnExists("estimate_line_room_qty", "volume_overridden"))
+                .as("estimate_line_room_qty.volume_overridden exists after migrate (#7)")
+                .isTrue();
+    }
+
     // --- Requirement 1.1 : estimates.project_id UNIQUE enforces the 1:1 invariant ---
     @Test
     @DisplayName("estimates.project_id has a UNIQUE constraint (1:1 invariant)")
@@ -421,6 +430,20 @@ class EstimateSchemaMigrationIntegrationTest {
                 + "WHERE table_schema = 'public' AND table_name = ? AND table_type = 'BASE TABLE'";
         try (Connection c = newConnection(db); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, tableName);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1) > 0;
+            }
+        }
+    }
+
+    /** Whether the given column exists on the given base table in the public schema (default database). */
+    private boolean columnExists(String tableName, String columnName) throws Exception {
+        String sql = "SELECT COUNT(*) FROM information_schema.columns "
+                + "WHERE table_schema = 'public' AND table_name = ? AND column_name = ?";
+        try (Connection c = newConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, tableName);
+            ps.setString(2, columnName);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getInt(1) > 0;

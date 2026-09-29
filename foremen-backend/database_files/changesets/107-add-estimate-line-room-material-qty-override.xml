@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 amendment #1 (per-material-line quantity override): add an OPTIONAL manual physical
+        quantity override to a single estimate material line (per work × room), independent of
+        norm × Volume.
+
+          - manual_qty     : NUMERIC(12,4) NULL — the explicit physical quantity when overridden.
+          - qty_overridden : BOOLEAN NOT NULL DEFAULT false — whether manual_qty is in effect.
+
+        When qty_overridden is true the line's resolved physical quantity is manual_qty (which wins
+        over the consumption basis); when false the quantity derives from norm × Volume (PER_UNIT) or
+        norm (PER_ROOM). NOT NULL DEFAULT false so every existing row keeps the derived semantics.
+
+        A CHECK guarantees manual_qty >= 0 when set (mirrors ck_elrq_quantity_non_negative style from
+        changeset 078). Idempotent via NOT columnExists + MARK_RAN, so a re-run against an
+        already-migrated database makes no schema change. Registered LAST, after 106.
+    -->
+
+    <changeSet id="107-add-estimate-line-room-material-qty-override" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimate_line_room_materials" columnName="qty_overridden"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="estimate_line_room_materials">
+            <column name="manual_qty" type="NUMERIC(12,4)"/>
+            <column name="qty_overridden" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+
+        <!-- Non-negative manual quantity when set (NULL is allowed = not overridden). -->
+        <sql>
+            ALTER TABLE estimate_line_room_materials
+                ADD CONSTRAINT ck_elrm_manual_qty_non_negative CHECK (manual_qty IS NULL OR manual_qty >= 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE estimate_line_room_materials
+                    DROP CONSTRAINT IF EXISTS ck_elrm_manual_qty_non_negative;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

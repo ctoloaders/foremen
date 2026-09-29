@@ -10,7 +10,9 @@ import org.mockito.Mockito;
 import com.foremen.dao.AssortmentGroupDao;
 import com.foremen.dao.AssortmentPositionDao;
 import com.foremen.dao.AssortmentPositionPriceDao;
+import com.foremen.dao.AssortmentPositionWorkItemDao;
 import com.foremen.dao.OfferPackageDao;
+import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.model.AssortmentGroupEntity;
 import com.foremen.dao.model.AssortmentPositionEntity;
 import com.foremen.dao.model.AssortmentPositionPriceEntity;
@@ -41,12 +43,17 @@ class AssortmentPositionServiceComputePackageZlM2Test {
     private final AssortmentPositionDao dao = Mockito.mock(AssortmentPositionDao.class);
     private final AssortmentGroupDao groupDao = Mockito.mock(AssortmentGroupDao.class);
     private final AssortmentPositionPriceDao priceDao = Mockito.mock(AssortmentPositionPriceDao.class);
+    private final AssortmentPositionWorkItemDao positionWorkItemDao =
+            Mockito.mock(AssortmentPositionWorkItemDao.class);
     private final OfferPackageDao offerPackageDao = Mockito.mock(OfferPackageDao.class);
+    private final WorkItemDao workItemDao = Mockito.mock(WorkItemDao.class);
     private final AssortmentPositionService service = new AssortmentPositionService(
             dao,
             groupDao,
             priceDao,
+            positionWorkItemDao,
             offerPackageDao,
+            workItemDao,
             Mockito.mock(AssortmentPositionServiceMapper.class),
             Mockito.mock(AuditLogDao.class),
             Mockito.mock(EntityManager.class),

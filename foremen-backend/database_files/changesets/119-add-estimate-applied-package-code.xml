@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (Wave 1b, #1): remember the offer-package code last APPLIED to an estimate.
+
+        Adds a nullable applied_package_code VARCHAR(64) to estimates. It records the package whose
+        materials/works were last applied on Save (the staged/unsaved header selection lives
+        client-side until Save). Nullable: a fresh estimate, or one never applied a package, is NULL.
+        The "clear whole kosztorys" flow (a later wave) will clear it; this wave only sets it on Save
+        and exposes it on the matrix DTO for the header to pre-select.
+
+        Idempotent via NOT columnExists + MARK_RAN (mirrors the add-column style of changesets
+        106/107), so a re-run against an already-migrated database makes no schema change. Registered
+        LAST in sequence, after 118.
+    -->
+
+    <changeSet id="119-add-estimate-applied-package-code" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimates" columnName="applied_package_code"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="estimates">
+            <column name="applied_package_code" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

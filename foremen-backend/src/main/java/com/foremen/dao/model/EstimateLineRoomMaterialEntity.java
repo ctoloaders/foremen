@@ -1,11 +1,18 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 
 /**
  * The estimate's <b>frozen</b> copied-price material entry for a cell — one row per
@@ -92,4 +99,42 @@ public class EstimateLineRoomMaterialEntity extends BaseEntity {
     /** Copied chosen product {@code retailNet}; collapses the line to a point (R6.4). */
     @Column(name = "concrete_net", precision = 12, scale = 2)
     private BigDecimal concreteNet;
+
+    /**
+     * The explicit physical quantity when this line is manually overridden (FOR-05-05 amendment #1):
+     * a per-material-line override that fixes the line's physical quantity independent of
+     * {@code norm × Volume}. Non-null and {@code >= 0} only while {@link #qtyOverridden} is
+     * {@code true}; otherwise {@code null}.
+     */
+    @Column(name = "manual_qty", precision = 12, scale = 4)
+    private BigDecimal manualQty;
+
+    /**
+     * Whether {@link #manualQty} overrides this line's derived physical quantity (FOR-05-05 amendment
+     * #1). When {@code true} the resolved physical quantity is {@link #manualQty} (which wins over the
+     * consumption basis); when {@code false} the quantity derives from {@code norm × Volume} (PER_UNIT)
+     * or {@code norm} (PER_ROOM). Defaults to {@code false}.
+     */
+    @Column(name = "qty_overridden", nullable = false)
+    private boolean qtyOverridden = false;
+
+    /**
+     * The copied consumption BASIS (FOR-05-05 amendment #4) so the frozen estimate is self-contained:
+     * {@code PER_UNIT} ⇒ physical quantity {@code norm × Volume}; {@code PER_ROOM} ⇒ {@code norm}
+     * (once per assigned room, independent of Volume). Copied from the work's
+     * {@code WorkMaterialConsumption} at assign/add time; defaults to {@code PER_UNIT}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "consumption_basis", nullable = false, length = 32)
+    private ConsumptionBasis consumptionBasis = ConsumptionBasis.PER_UNIT;
+
+    /**
+     * Whether this material line was placed by an applied offer package (FOR-05-05 Amendment A1,
+     * point 2). A package-flagged line carries a fixed per-room package allocation quantity and the
+     * position's package price band; it is otherwise an ordinary material line (point 4). Re-applying
+     * a package replaces all package-flagged lines with the new package's lines (point 5). Defaults
+     * to {@code false}.
+     */
+    @Column(name = "applied_from_package", nullable = false)
+    private boolean appliedFromPackage = false;
 }

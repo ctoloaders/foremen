@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (seed): give the 16 assortment material TYPES that currently have NO
+        finishing work_material_consumptions row a representative finishing consumption, so the
+        position->work link (re-run in changeset 118) can attach them and the package-materials merge
+        can propagate them.
+
+        BACKGROUND: changeset 100 seeded 18 assortment_positions (Podłoga / Sanitariat / Drzwi /
+        Płytki Ściany). Only 2 of them (laminat, podklad_klej_grunt) are consumed by a work via a
+        finishing consumption, so changeset 113's position->work UPDATE (join on
+        finishing_material_type_id) left the other 16 positions' work_item_id NULL and the merge could
+        not attach them. This changeset supplies ONE finishing consumption per missing type, attaching
+        it to a DETERMINISTIC representative work of the appropriate category.
+
+        CATEGORY -> WORK resolution (deterministic): each type attaches to MIN(wi.id) among the work
+        items of the target work category (subselect
+        `SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id
+        WHERE wc.code = '<CODE>'`). All 9 Sanitariat types share the same PLUMBING_FINISH work; the 4
+        Drzwi types share the same CARPENTRY work; the 2 tile types share the same TILING work — a
+        work may declare many finishing consumptions, so this is fine. If a category has no work items
+        the MIN subselect yields NULL and the INSERT...SELECT inserts nothing (defensive, acceptable).
+
+        NORM / UNIT / BASIS per type:
+          - Sanitariat (bateria_umywalkowa, bateria_wannowo_prysznicowa_z_kompletem, brodzik_kabina,
+            miska_wc, przycisk, sciana_kabina_prysznicowa, stelaz_podtynkowy, umywalka_nablatowa,
+            wanna) -> PLUMBING_FINISH, unit 'szt', norm 1.0000, basis PER_ROOM (one per room, like a WC).
+          - Drzwi (klamki_drzwi, oscieznica, przylgowe, rozety_drzwi) -> CARPENTRY, unit 'szt',
+            norm 1.0000, basis PER_ROOM (one set per room).
+          - Płytki Ściany (plytka_podlogowa, plytka_scienna) -> TILING, unit 'm2', norm 1.0000,
+            basis PER_UNIT (scales with area). 1.0000 is a nominal norm to establish the link; the
+            exact number can be tuned later.
+
+        COLUMN NOTE: work_material_consumptions no longer has an offer_package_id column — changeset
+        084c dropped the package dimension (one row per (work_item, material_type, branch)). So this
+        INSERT omits offer_package_id entirely. construction_material_type_id stays NULL (branch XOR);
+        finishing_material_type_id is resolved by material_types.code. consumption_basis is set
+        explicitly (the column is NOT NULL, default PER_UNIT, added by changeset 108).
+
+        Each INSERT is NOT-EXISTS-guarded on the natural key (work_item_id, branch,
+        finishing_material_type_id). The whole changeset is guarded by onFail="MARK_RAN" + sqlCheck
+        expectedResult="0" on COUNT(*) WHERE created_by = 'seed:for-05-05-a1-finishing' (idempotent,
+        like 071). Registered LAST, after 116.
+    -->
+
+    <changeSet id="117-seed-package-finishing-consumptions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM work_material_consumptions WHERE created_by = 'seed:for-05-05-a1-finishing'</sqlCheck>
+        </preConditions>
+
+        <!-- ============================ Sanitariat -> PLUMBING_FINISH (szt, PER_ROOM) ============================ -->
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'bateria_umywalkowa'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'bateria_wannowo_prysznicowa_z_kompletem'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'brodzik_kabina'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'miska_wc'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'przycisk'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'sciana_kabina_prysznicowa'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'stelaz_podtynkowy'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'umywalka_nablatowa'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (санитарный пакет) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet sanitarny) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'wanna'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'PLUMBING_FINISH')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+
+        <!-- ============================ Drzwi -> CARPENTRY (szt, PER_ROOM) ============================ -->
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (пакет дверей) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet drzwi) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'klamki_drzwi'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (пакет дверей) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet drzwi) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'oscieznica'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (пакет дверей) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet drzwi) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'przylgowe'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_ROOM',
+                'FOR-05-05 A1: посев чистовой нормы (пакет дверей) — 1 шт на комнату.',
+                'FOR-05-05 A1: seed czystej normy (pakiet drzwi) — 1 szt na pomieszczenie.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'szt'
+              AND tp.code = 'rozety_drzwi'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'CARPENTRY')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+
+        <!-- ============================ Płytki Ściany -> TILING (m2, PER_UNIT) ============================ -->
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'TILING'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_UNIT',
+                'FOR-05-05 A1: посев чистовой нормы (пакет плитки) — 1 м2 на м2 площади.',
+                'FOR-05-05 A1: seed czystej normy (pakiet plytek) — 1 m2 na m2 powierzchni.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'm2'
+              AND tp.code = 'plytka_podlogowa'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'TILING') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'TILING')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT
+                (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'TILING'),
+                u.id, 'finishing',
+                NULL, tp.id,
+                1.0000, 0, 'PER_UNIT',
+                'FOR-05-05 A1: посев чистовой нормы (пакет плитки) — 1 м2 на м2 площади.',
+                'FOR-05-05 A1: seed czystej normy (pakiet plytek) — 1 m2 na m2 powierzchni.',
+                'seed', 'FOR-05-05 A1 package finishing consumption seed', NULL, 'FOR-05-05 A1 package finishing consumption seed',
+                NOW(), 'seed:for-05-05-a1-finishing'
+            FROM measurement_units u, material_types tp
+            WHERE u.code = 'm2'
+              AND tp.code = 'plytka_scienna'
+              AND (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'TILING') IS NOT NULL
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_material_consumptions w
+                    WHERE w.work_item_id = (SELECT MIN(wi.id) FROM work_items wi JOIN work_categories wc ON wc.id = wi.work_category_id WHERE wc.code = 'TILING')
+                      AND w.branch = 'finishing'
+                      AND w.finishing_material_type_id = tp.id
+                  );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

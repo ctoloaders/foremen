@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (Wave 1b, #8): migrate the single assortment_positions.work_item_id link
+        (Amendment A1) into the new per-(position, package) assortment_position_work_items join
+        (changeset 120), preserving the "apply to all packages" default of the single link.
+
+        For every assortment_positions row with a non-null work_item_id, insert one join row per
+        ACTIVE offer package (offer_packages.active = true) carrying that same work_item_id. Using
+        only active packages keeps the seed aligned with the packages the editor exposes.
+
+        NOT-EXISTS-guarded on (assortment_position_id, offer_package_id) so a re-run inserts nothing
+        for an already-migrated pair, and a sqlCheck precondition (the join table is still empty) with
+        onFail=MARK_RAN makes the whole changeset run exactly once. Forward-only. Registered LAST in
+        sequence, after 120.
+    -->
+
+    <changeSet id="121-migrate-assortment-position-work-item-to-per-package" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM assortment_position_work_items
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO assortment_position_work_items (assortment_position_id, offer_package_id, work_item_id)
+            SELECT p.id, op.id, p.work_item_id
+            FROM assortment_positions p
+            CROSS JOIN offer_packages op
+            WHERE p.work_item_id IS NOT NULL
+              AND op.active = true
+              AND NOT EXISTS (
+                  SELECT 1 FROM assortment_position_work_items apwi
+                  WHERE apwi.assortment_position_id = p.id
+                    AND apwi.offer_package_id = op.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

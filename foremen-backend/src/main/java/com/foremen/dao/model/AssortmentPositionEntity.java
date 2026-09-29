@@ -1,10 +1,14 @@
 package com.foremen.dao.model;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,6 +30,8 @@ import lombok.Setter;
  *   <li>{@code materialType} — required FK to {@link MaterialTypeEntity} (ON DELETE RESTRICT): a
  *       material type referenced by a position cannot be silently removed.</li>
  *   <li>{@code sortOrder} — optional display order within the group.</li>
+ *   <li>{@code packageWorkItems} — the PER-package work-item links (FOR-05-05 Wave 1b, #8): which
+ *       work's finishing consumption this position fulfils UNDER each offer package.</li>
  * </ul>
  */
 @Entity
@@ -48,4 +54,15 @@ public class AssortmentPositionEntity extends BaseEntity {
     /** Optional display order within the group. */
     @Column(name = "sort_order")
     private Integer sortOrder;
+
+    /**
+     * The PER-package work-item links (FOR-05-05 Wave 1b, #8): which work's finishing consumption
+     * this position fulfils UNDER each offer package. Replaces the single {@code work_item_id} FK of
+     * Amendment A1 — a position may now link to a DIFFERENT work per package (or none for a package).
+     * Read-side view of {@link AssortmentPositionWorkItemEntity}; owned/persisted by the dedicated
+     * per-package-links write path, deletion cascades at the DB level (the join FK is
+     * {@code ON DELETE CASCADE}).
+     */
+    @OneToMany(mappedBy = "position", fetch = FetchType.LAZY)
+    private List<AssortmentPositionWorkItemEntity> packageWorkItems = new ArrayList<>();
 }

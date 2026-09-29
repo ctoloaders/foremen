@@ -53,6 +53,16 @@ public class EstimateLineRoomQtyEntity extends BaseEntity {
     private BigDecimal quantity;
 
     /**
+     * FOR-05-05 (#7): when {@code true}, {@link #quantity} is a MANUAL Volume override the user set
+     * for this {@code (line, room)} cell, and it MUST NOT be recomputed/overwritten by the formula on
+     * recompute or reassign; when {@code false} (the default), {@code quantity} is the formula-resolved
+     * Volume (existing behavior). Backed by {@code estimate_line_room_qty.volume_overridden} (changeset
+     * {@code 106-add-estimate-line-room-qty-volume-overridden.xml}).
+     */
+    @Column(name = "volume_overridden", nullable = false)
+    private boolean volumeOverridden = false;
+
+    /**
      * The cell's frozen copied-price material lines (FOR-05-05 §B1) — one per
      * {@code (branch, material type)}. Owned by this room-qty: cascade + orphan removal make them
      * cascade-delete when this room-qty (and, transitively, its owning line) is removed (R19.3).
