@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05b (List of materials): persist the project-level materials reserve map.
+
+        Adds a nullable materials_reserve_map JSONB column to estimates. It holds the
+        Materials_Reserve_Map (per-material reserve percent + its computed as-is/effective/brutto
+        totals), keyed by materialId, serialized by Jackson (mirroring rooms.geometry / RoomGeometry).
+        There is exactly one map per project because estimates.project_id is UNIQUE. Nullable: a fresh
+        estimate, or one with no reserves set, is NULL (which reads as identity — no reserve).
+
+        Idempotent via NOT columnExists + MARK_RAN (mirrors the add-column style of changeset
+        119-add-estimate-applied-package-code), so a re-run against an already-migrated database makes
+        no schema change. Registered LAST in sequence, after 123.
+    -->
+
+    <changeSet id="124-add-estimate-materials-reserve-map" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimates" columnName="materials_reserve_map"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="estimates">
+            <column name="materials_reserve_map" type="jsonb"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,826 @@
+{
+  "pbtResults": {
+    "2.2 Write property test for the reserve-map round-trip + stale keys (jqwik, ≥100 iterations)": {
+      "status": "passed",
+      "lastRunTimestamp": 1790714019360
+    },
+    "5.3 Write property test — reserve validation bounds (jqwik, ≥100 iterations)": {
+      "status": "passed",
+      "lastRunTimestamp": 1790715417216
+    }
+  },
+  "executionHistory": {
+    "1.1 Create the `materials_reserve_map` column changeset (`124`)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549602
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713563367
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713823431
+      }
+    ],
+    "1.2 Write the migration integration test": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549736
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713830362
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714152900
+      }
+    ],
+    "2.1 Add the `MaterialsReserveMap` record and map it as a JSONB column": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549781
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713564717
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713821023
+      }
+    ],
+    "2.2 Write property test for the reserve-map round-trip + stale keys (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549820
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713831795
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714154278
+      }
+    ],
+    "3.1 Implement the canonical `effectiveQuantity` helper and the concrete-material projection": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549852
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713833282
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714156987
+      }
+    ],
+    "3.2 Implement the dashboard folds and the null-net / fulfilment handling": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549895
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714176816
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714369915
+      }
+    ],
+    "3.3 Write property test — concrete projection + branch partition (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549950
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714639114
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715001514
+      }
+    ],
+    "3.4 Write property test — per-room aggregation + net→brutto (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713549995
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714639857
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715002010
+      }
+    ],
+    "3.5 Write property test — `Effective_Quantity` reserve→ceiling / basis (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550046
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714640051
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715003351
+      }
+    ],
+    "3.6 Write property test — dashboard totals (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550083
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714640411
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715004662
+      }
+    ],
+    "4.1 Add the materials read-model DTOs": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550137
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714625462
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715000921
+      }
+    ],
+    "5.1 Implement the read model and the `editable` resolution": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550185
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714604209
+      }
+    ],
+    "5.2 Implement `saveReserveMap` with the DRAFT gate, server validation, stale-key pruning, and recompute": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550263
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714632765
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715001231
+      }
+    ],
+    "5.3 Write property test — reserve validation bounds (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550302
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715290530
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715640485
+      }
+    ],
+    "5.4 Write service integration tests (Spring)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550350
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715291918
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715641900
+      }
+    ],
+    "6.1 Implement the controller endpoints with ABAC annotations": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550403
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715024213
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715283017
+      }
+    ],
+    "6.2 Write ABAC + startup-annotation integration tests": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550453
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715654280
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715902439
+      }
+    ],
+    "7. Checkpoint — backend compiles and its tests pass": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550509
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715925161
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716194258
+      }
+    ],
+    "8.1 Scaffold `features/materials/` and mirror the backend read-model types": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550550
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713566607
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713822294
+      }
+    ],
+    "8.2 Implement `api/materials-api.ts`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550581
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713834658
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714157164
+      }
+    ],
+    "9.1 Implement `state/materialsModel.ts`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550613
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714177963
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714371299
+      }
+    ],
+    "9.2 Write property test — concrete projection + branch partition (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550659
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714386116
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714597629
+      }
+    ],
+    "9.3 Write property test — per-room aggregation + net→brutto (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550698
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714387531
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714598817
+      }
+    ],
+    "9.4 Write property test — `Effective_Quantity` reserve→ceiling / basis (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550730
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714388927
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714600274
+      }
+    ],
+    "9.5 Write property test — dashboard totals (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550781
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714390311
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714601684
+      }
+    ],
+    "10.1 Implement `state/reserveDraftStore.ts` and the mass-apply expansion": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550818
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714178781
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714372267
+      }
+    ],
+    "10.2 Implement the client reserve zod schema": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550864
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713835900
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714158214
+      }
+    ],
+    "10.3 Write property test — mass-apply transform (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550934
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714391650
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714603079
+      }
+    ],
+    "10.4 Write property test — reserve validation bounds (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713550986
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714625345
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715001364
+      }
+    ],
+    "11. Checkpoint — pure frontend core compiles and its property tests pass": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551059
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715926302
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716196132
+      }
+    ],
+    "12.1 Implement `MaterialsMatrix` + branch groups": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551097
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715019194
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715283930
+      }
+    ],
+    "12.2 Implement `MaterialsDashboard`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551131
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715020543
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715280320
+      }
+    ],
+    "12.3 Implement `MaterialDetailPopup`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551168
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715021948
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715281502
+      }
+    ],
+    "12.4 Write matrix/dashboard/popup component tests": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551244
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715293377
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715643223
+      }
+    ],
+    "13.1 Implement `ReserveInput` + `MassApplyControl`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551280
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715022910
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715278669
+      }
+    ],
+    "13.2 Write reserve-control component tests": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551314
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715294279
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715644699
+      }
+    ],
+    "14.1 Implement `MaterialsTab` and register the workspace tab": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551358
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715295513
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715645784
+      }
+    ],
+    "14.2 Write tab/registration component tests": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551411
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715655351
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715901391
+      }
+    ],
+    "15.1 Add every new string under `materials.*` (and `workspace.tab.materials`) to both `pl.json` and `ru.json`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551465
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715652979
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715899920
+      }
+    ],
+    "15.2 Write locale-parity test": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551497
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715923814
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716193551
+      }
+    ],
+    "16. Checkpoint — frontend compiles and its tests pass": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551531
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715932470
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716198099
+      }
+    ],
+    "17. Author test-cases.md": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551569
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715933473
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716198339
+      }
+    ],
+    "18. Final checkpoint — full verification and per-repo commits": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790713551603
+      },
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716206585
+      }
+    ],
+    "1. Backend: reserve-map schema addition (idempotent Liquibase changeset, registered last)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714152947
+      }
+    ],
+    "2. Backend: `MaterialsReserveMap` model on `EstimateEntity`": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714154315
+      }
+    ],
+    "8. Frontend: feature scaffold, read-model types, and API layer": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714157198
+      }
+    ],
+    "9. Frontend: pure client model (property-tested core)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790714601742
+      }
+    ],
+    "4. Backend: read-model DTOs": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715000998
+      }
+    ],
+    "10. Frontend: reserve draft store, schema, and mass-apply transform": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715001403
+      }
+    ],
+    "3. Backend: `MaterialsListAssembler` (the read-only projection core)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715004730
+      }
+    ],
+    "5. Backend: `MaterialsListService` (read model + reserve write)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715641964
+      }
+    ],
+    "12. Frontend: matrix, branch groups, dashboard, and detail popup": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715643315
+      }
+    ],
+    "13. Frontend: reserve controls": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715644813
+      }
+    ],
+    "14. Frontend: `MaterialsTab` and workspace tab registration": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715901552
+      }
+    ],
+    "6. Backend: `EstimateMaterialsController` (endpoints on the ESTIMATE resource)": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790715902477
+      }
+    ],
+    "15. Frontend: i18n and locale parity": [
+      {
+        "executionId": "edff2fd5-a51b-4c86-911d-3dc052cb2b5e",
+        "chatSessionId": "sess_838ffca4-b822-4c4e-bd70-cd2e5c903b8f",
+        "timestamp": 1790716193605
+      }
+    ]
+  }
+}

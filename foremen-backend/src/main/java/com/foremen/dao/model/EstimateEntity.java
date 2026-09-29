@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -76,6 +79,18 @@ public class EstimateEntity extends BaseEntity {
      */
     @Column(name = "applied_package_code", length = 64)
     private String appliedPackageCode;
+
+    /**
+     * Project-level material reserve map (FOR-05-05b, R4.2), keyed by {@code materialId}. Nullable ⇒
+     * "no reserves set". Only each entry's {@code percent} is authoritative input; the stored
+     * {@code asIsQty}/{@code effectiveQty}/{@code bruttoTotal} are computed on write for display/reuse
+     * and are never trusted on read (the read assembler always recomputes from the live kosztorys,
+     * R12.5). Mirrors the existing JSONB mappings ({@code RoomEntity.geometry},
+     * {@code WorkVolumeFormulaEntity.parsedAst}, {@code UserEntity.displayPreferences}).
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "materials_reserve_map", columnDefinition = "jsonb")
+    private MaterialsReserveMap materialsReserveMap;
 
     /**
      * Read-side view of the estimate's lines, used by {@code EstimateRecomputeService} to

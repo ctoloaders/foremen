@@ -322,4 +322,12 @@
          unit/basis/norm. Idempotent (Phase 1 DELETE + Phase 2 NOT-EXISTS + relink created_by tag).
          Registered LAST, after 122. -->
     <include file="database_files/changesets/123-reassign-finishing-consumptions-from-linkage.xml"/>
+
+    <!-- FOR-05-05b (List of materials): persist the project-level materials reserve map — a nullable
+         materials_reserve_map JSONB on estimates, holding the per-material reserve percent + its
+         computed as-is/effective/brutto totals (keyed by materialId, one map per project since
+         estimates.project_id is UNIQUE). Serialized by Jackson (mirroring rooms.geometry). NULL =
+         no reserves set = identity. Idempotent via NOT columnExists + MARK_RAN. Registered LAST,
+         after 123. -->
+    <include file="database_files/changesets/124-add-estimate-materials-reserve-map.xml"/>
 </databaseChangeLog>
