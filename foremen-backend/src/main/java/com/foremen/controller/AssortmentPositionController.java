@@ -1,8 +1,12 @@
 package com.foremen.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,6 +23,7 @@ import com.foremen.controller.model.AssortmentPositionUpdateResponse;
 import com.foremen.controller.model.PackageAssortmentClearQtyRequest;
 import com.foremen.controller.model.PackageAssortmentEditorResponse;
 import com.foremen.controller.model.PackageAssortmentSaveRequest;
+import com.foremen.controller.model.PackageWorkItemsReplaceRequest;
 import com.foremen.controller.model.PackageZlM2Response;
 import com.foremen.controller.model.mapper.AssortmentPositionControllerMapper;
 import com.foremen.dao.model.AssortmentPositionEntity;
@@ -166,5 +171,24 @@ public class AssortmentPositionController implements AdminController<
             @Valid @RequestBody PackageAssortmentClearQtyRequest request) {
         return ResponseEntity.ok(
                 service.clearPositionQty(packageCode, request.positionId(), request.band()));
+    }
+
+    /**
+     * Replaces a position's PER-package work-item links (FOR-05-05 Wave 1b, #8). The body carries
+     * the full set of {@code (packageCode, workItemId|null)} items: a null work id clears the link
+     * for that package, a non-null one upserts it; packages not named are left untouched (which also
+     * covers a client-side "propagate to all packages"). Returns the refreshed per-package links for
+     * the position. Guarded by a method-level {@code @RequiresPermission(PACKAGE_ASSORTMENT, UPDATE)},
+     * mirroring the package-save flow.
+     *
+     * @param positionId the assortment position whose links to replace
+     * @param request    the full set of per-package link items to apply
+     */
+    @PutMapping("/{positionId}/package-work-items")
+    @RequiresPermission(resource = "PACKAGE_ASSORTMENT", operation = "UPDATE")
+    public ResponseEntity<List<PackageAssortmentEditorResponse.PackageWorkItem>> replacePackageWorkItems(
+            @PathVariable("positionId") Long positionId,
+            @Valid @RequestBody PackageWorkItemsReplaceRequest request) {
+        return ResponseEntity.ok(service.replacePackageWorkItems(positionId, request));
     }
 }

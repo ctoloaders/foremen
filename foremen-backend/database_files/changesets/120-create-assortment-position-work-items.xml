@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (Wave 1b, #8): make the assortment position -> work item link PER (position, offer
+        package). The original single FK (assortment_positions.work_item_id, Amendment A1 / changeset
+        110) attached a position to ONE work regardless of package; a position now links to a possibly
+        DIFFERENT work per package.
+
+        New join table assortment_position_work_items:
+          - assortment_position_id : FK to assortment_positions, NOT NULL; ON DELETE CASCADE.
+          - offer_package_id        : FK to offer_packages, NOT NULL; ON DELETE CASCADE.
+          - work_item_id            : FK to work_items, NOT NULL; ON DELETE CASCADE.
+        PRIMARY KEY / UNIQUE (assortment_position_id, offer_package_id) — one work per position per
+        package. All three FKs are ON DELETE CASCADE, matching the join-table convention of
+        work_room_types (103) and assortment_group_room_types (111): removing a position, a package or
+        the linked work removes the link row rather than orphaning it.
+
+        Idempotent via NOT tableExists + MARK_RAN so a re-run against an already-migrated database
+        makes no change. Registered LAST in sequence, after 119.
+    -->
+
+    <changeSet id="120-create-assortment-position-work-items" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_position_work_items"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_position_work_items">
+            <column name="assortment_position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_package_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- The (assortment_position_id, offer_package_id) pair is the composite primary key:
+             one work per position per package. -->
+        <addPrimaryKey
+            constraintName="pk_assortment_position_work_items"
+            tableName="assortment_position_work_items"
+            columnNames="assortment_position_id, offer_package_id"/>
+
+        <!-- Owner position FK: NOT NULL, ON DELETE CASCADE. -->
+        <addForeignKeyConstraint
+            constraintName="fk_apwi_assortment_position"
+            baseTableName="assortment_position_work_items"
+            baseColumnNames="assortment_position_id"
+            referencedTableName="assortment_positions"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Offer package FK: NOT NULL, ON DELETE CASCADE. -->
+        <addForeignKeyConstraint
+            constraintName="fk_apwi_offer_package"
+            baseTableName="assortment_position_work_items"
+            baseColumnNames="offer_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Work item FK: NOT NULL, ON DELETE CASCADE. -->
+        <addForeignKeyConstraint
+            constraintName="fk_apwi_work_item"
+            baseTableName="assortment_position_work_items"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

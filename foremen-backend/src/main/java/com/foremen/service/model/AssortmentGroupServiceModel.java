@@ -1,6 +1,7 @@
 package com.foremen.service.model;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,7 +11,9 @@ import lombok.NoArgsConstructor;
  * Service-layer read model for an {@code AssortmentGroup} row: a curated grouping of
  * finishing/fixture line items used by the package zł/m² pricing model (FOR-05-04,
  * Requirement 6.1). {@code name} is the localized display name (PL fallback, populated by the
- * shared i18n framework from {@code nameRU}/{@code namePL}).
+ * shared i18n framework from {@code nameRU}/{@code namePL}). {@code roomTypeIds} is the sorted set
+ * of applicable room-type ids (FOR-05-05 Amendment A1, point B), so the generic admin GET returns
+ * them for the editor to seed from.
  */
 @Data
 @NoArgsConstructor
@@ -21,4 +24,5 @@ public class AssortmentGroupServiceModel {
     private Integer sortOrder;
     private BigDecimal referenceQty;
     private String referenceUnit;
+    private List<Long> roomTypeIds;
 }

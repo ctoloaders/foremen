@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (R10): optional Room_Type_Attachment on a work item.
+
+        A pure M:N join `work_room_types(work_item_id, room_type_id)` marking which room
+        types a work attaches to when a package or the work-row hammer applies:
+          - empty  => the work attaches to ALL rooms on apply (R10.3);
+          - non-empty => only rooms whose type is in the set (R10.2).
+        The attachment governs WHICH rooms a work attaches to, never HOW the Volume is
+        computed (R10.4) — the volume formula stays independent.
+
+        FKs (both ON DELETE CASCADE — removing a work item or a room type removes its
+        attachment rows, never orphaning the join):
+          - work_item_id : FK to work_items, NOT NULL.
+          - room_type_id : FK to room_types, NOT NULL.
+        UNIQUE (work_item_id, room_type_id) — a room type is attached to a work at most once.
+
+        A plain join table (no surrogate id / BaseEntity audit columns): the pair IS the
+        composite primary key.
+
+        Idempotent via NOT tableExists + MARK_RAN so a re-run against an already-migrated
+        database makes no change (R19.2).
+    -->
+
+    <changeSet id="103-create-work-room-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_room_types"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_room_types">
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="room_type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- The (work_item_id, room_type_id) pair is the composite primary key. -->
+        <addPrimaryKey
+            constraintName="pk_work_room_types"
+            tableName="work_room_types"
+            columnNames="work_item_id, room_type_id"/>
+
+        <!-- Work item reference FK: NOT NULL, ON DELETE CASCADE (removing a work item
+             removes its attachment rows). -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_room_types_work_item"
+            baseTableName="work_room_types"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Room type reference FK: NOT NULL, ON DELETE CASCADE (removing a room type
+             removes its attachment rows). -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_room_types_room_type"
+            baseTableName="work_room_types"
+            baseColumnNames="room_type_id"
+            referencedTableName="room_types"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- A room type is attached to a work at most once (R10.1). -->
+        <addUniqueConstraint
+            constraintName="uq_work_room_types_work_item_room_type"
+            tableName="work_room_types"
+            columnNames="work_item_id, room_type_id"/>
+    </changeSet>
+
+</databaseChangeLog>

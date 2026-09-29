@@ -29,12 +29,14 @@ import jakarta.persistence.EntityManager;
  * {@code WorkMaterialConsumptionServiceMapper}.
  *
  * <p>Reads. {@code toServiceModel} maps the flat FK ids and, in {@link #resolveReferencedNames},
- * localizes the referenced group's/material type's display names using the request-locale rule
- * (RU when the request locale language is {@code ru}, PL otherwise).
+ * localizes the referenced group's/material type's display names using the request-locale rule (RU
+ * when the request locale language is {@code ru}, PL otherwise).
  *
  * <p>Writes. {@code toCreateDaoModel}/{@code updateFields} set the {@code group}/
  * {@code materialType} references via {@code expression} mappings and copy {@code sortOrder}
- * straight through.
+ * straight through. The per-package work-item link (FOR-05-05 Wave 1b, #8) is NOT managed by this
+ * generic CRUD mapper — a position links to a possibly different work per package, handled by the
+ * dedicated per-package links write path — so the {@code packageWorkItems} collection is ignored.
  */
 @Mapper(config = ForemenMapperConfig.class)
 public abstract class AssortmentPositionServiceMapper
@@ -62,6 +64,7 @@ public abstract class AssortmentPositionServiceMapper
     @Mapping(target = "group", expression = "java(assortmentGroupRef(source.assortmentGroupId()))")
     @Mapping(target = "materialType", expression = "java(materialTypeRef(source.materialTypeId()))")
     @Mapping(target = "sortOrder", source = "sortOrder")
+    @Mapping(target = "packageWorkItems", ignore = true)
     public abstract AssortmentPositionEntity toCreateDaoModel(AssortmentPositionServiceExtendedModel source);
 
     @Override
@@ -69,6 +72,7 @@ public abstract class AssortmentPositionServiceMapper
     @Mapping(target = "group", expression = "java(assortmentGroupRef(source.assortmentGroupId()))")
     @Mapping(target = "materialType", expression = "java(materialTypeRef(source.materialTypeId()))")
     @Mapping(target = "sortOrder", source = "sortOrder")
+    @Mapping(target = "packageWorkItems", ignore = true)
     public abstract void updateFields(AssortmentPositionServiceExtendedModel source,
                                       @MappingTarget AssortmentPositionEntity target);
 
@@ -88,8 +92,7 @@ public abstract class AssortmentPositionServiceMapper
 
     /**
      * Resolves the referenced assortment group's and material type's localized display names using
-     * the per-request locale rule (RU when the request locale language is {@code ru}, PL
-     * otherwise).
+     * the per-request locale rule (RU when the request locale language is {@code ru}, PL otherwise).
      */
     @AfterMapping
     protected void resolveReferencedNames(@MappingTarget AssortmentPositionServiceModel target,

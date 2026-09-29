@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 (Requirement 10): meaningful initial seed of the Room_Type_Attachment M:N
+        (work_room_types) BY WORK CATEGORY -> ROOM TYPES.
+
+        Changeset 103 created the pure join table work_room_types(work_item_id, room_type_id).
+        This changeset SEEDS it so each work attaches, on apply (Apply_Package / work-row hammer),
+        to the rooms where the work is actually appropriate — derived from the meaning of the
+        work's work category (work_items.work_category_id -> work_categories.code).
+
+        SEMANTICS (critical): an EMPTY attachment for a work (NO rows in work_room_types for that
+        work) means the work attaches to ALL rooms on apply (R10.3). So this seed ONLY inserts rows
+        for the room-specific categories below and leaves every other (universal) category with NO
+        rows — they stay universal = all rooms. Do NOT read the absence of rows as "no rooms".
+
+        ROOM-TYPE VOCABULARY (room_types.code): przedpokoj, hol, kuchnia, salon, biuro, master,
+        pokoj, lazienka.
+          - WET rooms                     = {kuchnia, lazienka}
+          - DRY living/circulation rooms  = {przedpokoj, hol, salon, biuro, master, pokoj}
+
+        MAPPING (option B — fuller room-appropriateness) by work_categories.code:
+          - WET works: TILING, PLUMBING_ROUGH, PLUMBING_FINISH -> WET rooms {kuchnia, lazienka}.
+          - FLOORS (parquet/laminate)  -> the 6 DRY rooms (przedpokoj, hol, salon, biuro, master,
+                                          pokoj) — i.e. EXCLUDE kuchnia and lazienka.
+          - CARPENTRY (wardrobes/doors) -> the 6 DRY living/circulation rooms (przedpokoj, hol,
+                                          salon, biuro, master, pokoj).
+          - ALL OTHER categories (PRELIMINARY, CONSTRUCTIONS_GK, ELECTRICAL_ROUGH,
+            ELECTRICAL_FINISH, PLASTERING, PAINTING_DECOR, EXTRAS, OTHER) -> seed NOTHING
+            (empty attachment = all rooms).
+
+        work_room_types is a pure join table: its only columns are work_item_id and room_type_id
+        (no id / created_by / created_date). Insert only those two columns. Room types and
+        categories are resolved by CODE, never by hard-coded ids.
+
+        Non-overwriting + idempotent (R10.6, R19.2): the changeset is guarded by
+        onFail="MARK_RAN" + tableExists(work_room_types); every INSERT additionally seeds a work
+        item ONLY when it currently has NO attachment rows at all
+        (AND NOT EXISTS (... work_room_types wrt WHERE wrt.work_item_id = wi.id)). So a work whose
+        attachment was already edited via the new Work Catalog UI, or a plain re-run of the
+        changelog, is left untouched (no duplicate rows). Registered LAST in the changelog, after
+        104.
+    -->
+
+    <changeSet id="105-seed-work-room-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="work_room_types"/>
+        </preConditions>
+
+        <!-- WET works (TILING, PLUMBING_ROUGH, PLUMBING_FINISH) -> WET rooms {kuchnia, lazienka}. -->
+        <sql>
+            INSERT INTO work_room_types (work_item_id, room_type_id)
+            SELECT wi.id, rt.id
+            FROM work_items wi
+            JOIN work_categories wc ON wc.id = wi.work_category_id
+            JOIN room_types rt ON rt.code IN ('kuchnia', 'lazienka')
+            WHERE wc.code IN ('TILING', 'PLUMBING_ROUGH', 'PLUMBING_FINISH')
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_room_types wrt WHERE wrt.work_item_id = wi.id
+                  );
+        </sql>
+
+        <!-- FLOORS (parquet/laminate) -> the 6 DRY rooms (exclude kuchnia + lazienka). -->
+        <sql>
+            INSERT INTO work_room_types (work_item_id, room_type_id)
+            SELECT wi.id, rt.id
+            FROM work_items wi
+            JOIN work_categories wc ON wc.id = wi.work_category_id
+            JOIN room_types rt ON rt.code IN
+                ('przedpokoj', 'hol', 'salon', 'biuro', 'master', 'pokoj')
+            WHERE wc.code = 'FLOORS'
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_room_types wrt WHERE wrt.work_item_id = wi.id
+                  );
+        </sql>
+
+        <!-- CARPENTRY (wardrobes/doors) -> the 6 DRY living/circulation rooms. -->
+        <sql>
+            INSERT INTO work_room_types (work_item_id, room_type_id)
+            SELECT wi.id, rt.id
+            FROM work_items wi
+            JOIN work_categories wc ON wc.id = wi.work_category_id
+            JOIN room_types rt ON rt.code IN
+                ('przedpokoj', 'hol', 'salon', 'biuro', 'master', 'pokoj')
+            WHERE wc.code = 'CARPENTRY'
+              AND NOT EXISTS (
+                    SELECT 1 FROM work_room_types wrt WHERE wrt.work_item_id = wi.id
+                  );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

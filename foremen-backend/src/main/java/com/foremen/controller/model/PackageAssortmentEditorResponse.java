@@ -32,7 +32,9 @@ public record PackageAssortmentEditorResponse(
 
     /**
      * A single assortment group in the editor: its id, localized name, sort order, single
-     * reference quantity + unit, and ALL of the group's (global) positions.
+     * reference quantity + unit, the sorted set of applicable room-type ids ({@code roomTypeIds},
+     * FOR-05-05 Amendment A1 — what the edit dialog seeds from), and ALL of the group's (global)
+     * positions.
      */
     public record Group(
             Long groupId,
@@ -40,14 +42,21 @@ public record PackageAssortmentEditorResponse(
             Integer sortOrder,
             BigDecimal referenceQty,
             String referenceUnit,
+            List<Long> roomTypeIds,
             List<Position> positions) {
     }
 
     /**
      * A single assortment position for the current package: its id, its backing material type
      * (id + localized name), the min/avg/max price band for THIS package (null when no price row
-     * exists yet), and the OPTIONAL per-band quantity overrides ({@code minQty}/{@code avgQty}/
-     * {@code maxQty} — null when that band uses the group's {@code referenceQty}).
+     * exists yet), the OPTIONAL per-band quantity overrides ({@code minQty}/{@code avgQty}/
+     * {@code maxQty} — null when that band uses the group's {@code referenceQty}), and the PER-package
+     * work-item links (FOR-05-05 Wave 1b, #8).
+     *
+     * <p>{@code packageWorkItems} carries ONE entry per offer package present in the editor (so the
+     * UI renders a dropdown per package), with {@code workItemId}/{@code workItemName} null when that
+     * package has no link set — replacing the single {@code workItemId}/{@code workItemName} of
+     * Amendment A1, since a position may now link to a different work per package.
      */
     public record Position(
             Long positionId,
@@ -58,6 +67,19 @@ public record PackageAssortmentEditorResponse(
             BigDecimal maxPrice,
             BigDecimal minQty,
             BigDecimal avgQty,
-            BigDecimal maxQty) {
+            BigDecimal maxQty,
+            List<PackageWorkItem> packageWorkItems) {
+    }
+
+    /**
+     * One per-package work-item link of a position (FOR-05-05 Wave 1b, #8): the {@code packageCode}
+     * the link is for, and the linked work item ({@code workItemId} + localized {@code workItemName},
+     * both null when no work is linked for that package). The editor emits one entry per package so
+     * the UI can render a work dropdown for every package.
+     */
+    public record PackageWorkItem(
+            String packageCode,
+            Long workItemId,
+            String workItemName) {
     }
 }

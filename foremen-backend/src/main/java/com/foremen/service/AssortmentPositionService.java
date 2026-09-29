@@ -6,8 +6,10 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,15 +17,21 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.foremen.controller.model.PackageAssortmentEditorResponse;
 import com.foremen.controller.model.PackageAssortmentSaveRequest;
+import com.foremen.controller.model.PackageWorkItemsReplaceRequest;
 import com.foremen.dao.AssortmentGroupDao;
 import com.foremen.dao.AssortmentPositionDao;
 import com.foremen.dao.AssortmentPositionPriceDao;
+import com.foremen.dao.AssortmentPositionWorkItemDao;
 import com.foremen.dao.OfferPackageDao;
+import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.model.AssortmentGroupEntity;
 import com.foremen.dao.model.AssortmentPositionEntity;
 import com.foremen.dao.model.AssortmentPositionPriceEntity;
+import com.foremen.dao.model.AssortmentPositionWorkItemEntity;
 import com.foremen.dao.model.MaterialTypeEntity;
 import com.foremen.dao.model.OfferPackageEntity;
+import com.foremen.dao.model.RoomTypeEntity;
+import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.AssortmentPositionServiceExtendedModel;
@@ -67,7 +75,9 @@ public class AssortmentPositionService implements AdminService<
     private final AssortmentPositionDao dao;
     private final AssortmentGroupDao groupDao;
     private final AssortmentPositionPriceDao positionPriceDao;
+    private final AssortmentPositionWorkItemDao positionWorkItemDao;
     private final OfferPackageDao offerPackageDao;
+    private final WorkItemDao workItemDao;
     private final AssortmentPositionServiceMapper mapper;
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
@@ -208,6 +218,129 @@ public class AssortmentPositionService implements AdminService<
         }
 
         return buildEditorResponse(pkg);
+    }
+
+    /**
+     * Replaces a position's PER-package work-item links (FOR-05-05 Wave 1b, #8) with the supplied
+     * full set, in ONE transaction: for each item, a {@code null} {@code workItemId} DELETES the
+     * link for that package (if any), otherwise the link is UPSERTED (created or its work item
+     * updated). Packages NOT named in the request are left untouched, so the request expresses a
+     * targeted replacement (which also covers a client-side "propagate to all packages" — the client
+     * simply sends the propagated set).
+     *
+     * <p>Guarded at the controller by {@code PACKAGE_ASSORTMENT UPDATE} (mirroring the package-save
+     * flow). Returns the refreshed per-package links for the position (one entry per active editor
+     * package, null work when unlinked).
+     *
+     * @param positionId the assortment position whose links to replace
+     * @param request    the full set of {@code (packageCode, workItemId|null)} items to apply
+     * @return the refreshed per-package links for the position after the replacement
+     */
+    @Transactional
+    public List<PackageAssortmentEditorResponse.PackageWorkItem> replacePackageWorkItems(
+            Long positionId, PackageWorkItemsReplaceRequest request) {
+        AssortmentPositionEntity position = entityManager.find(AssortmentPositionEntity.class, positionId);
+        if (position == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Assortment position not found: " + positionId);
+        }
+
+        // Existing links for this position, keyed by package code, so we upsert/delete in place.
+        Map<String, AssortmentPositionWorkItemEntity> existingByPackageCode = new HashMap<>();
+        for (AssortmentPositionWorkItemEntity link : positionWorkItemDao.findByPosition_Id(positionId)) {
+            if (link.getOfferPackage() != null && link.getOfferPackage().getCode() != null) {
+                existingByPackageCode.put(link.getOfferPackage().getCode(), link);
+            }
+        }
+
+        if (request.items() != null) {
+            for (PackageWorkItemsReplaceRequest.Item item : request.items()) {
+                applyPackageWorkItem(position, item, existingByPackageCode);
+            }
+        }
+        entityManager.flush();
+
+        return refreshedPackageWorkItems(positionId);
+    }
+
+    /**
+     * Applies one {@code (packageCode, workItemId|null)} item to {@code position}: resolves the
+     * package (404 when unknown); a {@code null} work id DELETES the existing link for that package
+     * (a no-op when absent); a non-null work id UPSERTS the link (404 when the work is unknown),
+     * updating an existing row's work or creating a new one.
+     */
+    private void applyPackageWorkItem(AssortmentPositionEntity position,
+                                      PackageWorkItemsReplaceRequest.Item item,
+                                      Map<String, AssortmentPositionWorkItemEntity> existingByPackageCode) {
+        String packageCode = item.packageCode();
+        OfferPackageEntity pkg = requirePackage(packageCode);
+        AssortmentPositionWorkItemEntity existing = existingByPackageCode.get(packageCode);
+
+        if (item.workItemId() == null) {
+            if (existing != null) {
+                positionWorkItemDao.delete(existing);
+                existingByPackageCode.remove(packageCode);
+            }
+            return;
+        }
+
+        WorkItemEntity workItem = entityManager.find(WorkItemEntity.class, item.workItemId());
+        if (workItem == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Work item not found: " + item.workItemId());
+        }
+        if (existing != null) {
+            existing.setWorkItem(workItem);
+        } else {
+            AssortmentPositionWorkItemEntity link = new AssortmentPositionWorkItemEntity();
+            link.setPosition(position);
+            link.setOfferPackage(pkg);
+            link.setWorkItem(workItem);
+            positionWorkItemDao.save(link);
+            existingByPackageCode.put(packageCode, link);
+        }
+    }
+
+    /**
+     * The refreshed per-package links for {@code positionId} after a write: one entry per ACTIVE
+     * offer package (order_no then code), the linked work (id + localized name) or null when
+     * unlinked — the same shape the editor Position carries.
+     */
+    private List<PackageAssortmentEditorResponse.PackageWorkItem> refreshedPackageWorkItems(Long positionId) {
+        boolean ru = isRussianLocale();
+
+        Map<String, WorkItemEntity> workByPackageCode = new HashMap<>();
+        for (AssortmentPositionWorkItemEntity link : positionWorkItemDao.findByPosition_Id(positionId)) {
+            if (link.getOfferPackage() != null && link.getOfferPackage().getCode() != null) {
+                workByPackageCode.put(link.getOfferPackage().getCode(), link.getWorkItem());
+            }
+        }
+
+        List<OfferPackageEntity> activePackages = new ArrayList<>();
+        for (OfferPackageEntity op : offerPackageDao.findAll()) {
+            if (op.isActive()) {
+                activePackages.add(op);
+            }
+        }
+        activePackages.sort(Comparator
+                .comparing(OfferPackageEntity::getOrderNo, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(OfferPackageEntity::getCode, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        List<PackageAssortmentEditorResponse.PackageWorkItem> out = new ArrayList<>(activePackages.size());
+        for (OfferPackageEntity op : activePackages) {
+            WorkItemEntity workItem = workByPackageCode.get(op.getCode());
+            out.add(new PackageAssortmentEditorResponse.PackageWorkItem(
+                    op.getCode(),
+                    workItem != null ? workItem.getId() : null,
+                    workItem != null
+                            ? localizedName(ru, workItem.getNameRU(), workItem.getNamePL(), null)
+                            : null));
+        }
+        return out;
+    }
+
+    /** A {@code (positionId, packageCode)} key for indexing per-package work links. */
+    private record PositionPackageKey(Long positionId, String packageCode) {
     }
 
     private static PriceField parseBand(String band) {
@@ -368,6 +501,7 @@ public class AssortmentPositionService implements AdminService<
      * min/avg/max TOTAL band plus the persisted {@code zlM2}.
      */
     private PackageAssortmentEditorResponse buildEditorResponse(OfferPackageEntity pkg) {
+        boolean ru = isRussianLocale();
         String packageCode = pkg.getCode();
 
         // This package's price rows indexed by position id.
@@ -385,6 +519,7 @@ public class AssortmentPositionService implements AdminService<
         // bucketed onto their group.
         Map<Long, AssortmentGroupEntity> groupById = new LinkedHashMap<>();
         Map<Long, List<AssortmentPositionEntity>> positionsByGroup = new HashMap<>();
+        List<Long> allPositionIds = new ArrayList<>();
         for (AssortmentGroupEntity group : groupDao.findAll()) {
             if (group.getId() != null) {
                 groupById.putIfAbsent(group.getId(), group);
@@ -397,12 +532,44 @@ public class AssortmentPositionService implements AdminService<
             }
             groupById.putIfAbsent(group.getId(), group);
             positionsByGroup.computeIfAbsent(group.getId(), id -> new ArrayList<>()).add(position);
+            if (position.getId() != null) {
+                allPositionIds.add(position.getId());
+            }
+        }
+
+        // The offer packages the per-package work-item dropdowns are rendered for (FOR-05-05 Wave 1b,
+        // #8): every ACTIVE package, in a stable order (order_no then code), so each position emits
+        // one PackageWorkItem entry per package (null work when unlinked for that package).
+        List<OfferPackageEntity> editorPackages = new ArrayList<>();
+        for (OfferPackageEntity op : offerPackageDao.findAll()) {
+            if (op.isActive()) {
+                editorPackages.add(op);
+            }
+        }
+        editorPackages.sort(Comparator
+                .comparing(OfferPackageEntity::getOrderNo, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(OfferPackageEntity::getCode, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        // Batch-load the per-package work links for ALL positions once (no N+1): keyed by
+        // (positionId, packageCode) -> work item.
+        Map<PositionPackageKey, WorkItemEntity> workByPositionPackage = new HashMap<>();
+        List<AssortmentPositionWorkItemEntity> links = allPositionIds.isEmpty()
+                ? List.of()
+                : positionWorkItemDao.findByPosition_IdIn(allPositionIds);
+        for (AssortmentPositionWorkItemEntity link : links) {
+            if (link.getPosition() == null || link.getPosition().getId() == null
+                    || link.getOfferPackage() == null || link.getOfferPackage().getCode() == null) {
+                continue;
+            }
+            workByPositionPackage.put(
+                    new PositionPackageKey(link.getPosition().getId(), link.getOfferPackage().getCode()),
+                    link.getWorkItem());
         }
 
         List<AssortmentGroupEntity> sortedGroups = new ArrayList<>(groupById.values());
         sortedGroups.sort(Comparator
                 .comparing(AssortmentGroupEntity::getSortOrder, Comparator.nullsLast(Comparator.naturalOrder()))
-                .thenComparing(g -> displayName(g.getNamePL(), g.getNameRU(), null),
+                .thenComparing(g -> localizedName(ru, g.getNameRU(), g.getNamePL(), null),
                         Comparator.nullsLast(Comparator.naturalOrder())));
 
         List<PackageAssortmentEditorResponse.Group> groupDtos = new ArrayList<>();
@@ -419,25 +586,42 @@ public class AssortmentPositionService implements AdminService<
             for (AssortmentPositionEntity position : positions) {
                 MaterialTypeEntity materialType = position.getMaterialType();
                 AssortmentPositionPriceEntity price = priceByPosition.get(position.getId());
+                // One PackageWorkItem entry per editor package (FOR-05-05 Wave 1b, #8): the linked
+                // work for that package, or null work when unlinked. The UI renders a dropdown per
+                // package from these entries.
+                List<PackageAssortmentEditorResponse.PackageWorkItem> packageWorkItems =
+                        new ArrayList<>(editorPackages.size());
+                for (OfferPackageEntity op : editorPackages) {
+                    WorkItemEntity workItem =
+                            workByPositionPackage.get(new PositionPackageKey(position.getId(), op.getCode()));
+                    packageWorkItems.add(new PackageAssortmentEditorResponse.PackageWorkItem(
+                            op.getCode(),
+                            workItem != null ? workItem.getId() : null,
+                            workItem != null
+                                    ? localizedName(ru, workItem.getNameRU(), workItem.getNamePL(), null)
+                                    : null));
+                }
                 positionDtos.add(new PackageAssortmentEditorResponse.Position(
                         position.getId(),
                         materialType != null ? materialType.getId() : null,
                         materialType != null
-                                ? displayName(materialType.getNamePL(), materialType.getNameRU(), null)
+                                ? localizedName(ru, materialType.getNameRU(), materialType.getNamePL(), null)
                                 : null,
                         price != null ? price.getMinPrice() : null,
                         price != null ? price.getAvgPrice() : null,
                         price != null ? price.getMaxPrice() : null,
                         price != null ? price.getMinQty() : null,
                         price != null ? price.getAvgQty() : null,
-                        price != null ? price.getMaxQty() : null));
+                        price != null ? price.getMaxQty() : null,
+                        packageWorkItems));
             }
             groupDtos.add(new PackageAssortmentEditorResponse.Group(
                     group.getId(),
-                    displayName(group.getNamePL(), group.getNameRU(), null),
+                    localizedName(ru, group.getNameRU(), group.getNamePL(), null),
                     group.getSortOrder(),
                     group.getReferenceQty(),
                     group.getReferenceUnit(),
+                    sortedRoomTypeIds(group),
                     positionDtos));
         }
 
@@ -447,7 +631,7 @@ public class AssortmentPositionService implements AdminService<
 
         return new PackageAssortmentEditorResponse(
                 packageCode,
-                displayName(pkg.getNamePL(), pkg.getNameRU(), pkg.getCode()),
+                localizedName(ru, pkg.getNameRU(), pkg.getNamePL(), pkg.getCode()),
                 pkg.getZlM2(),
                 totalMin,
                 totalAvg,
@@ -455,9 +639,40 @@ public class AssortmentPositionService implements AdminService<
                 groupDtos);
     }
 
-    /** Repo-wide PL-fallback display name: first non-blank of {@code namePL}, {@code nameRU}, {@code code}. */
-    private static String displayName(String namePL, String nameRU, String code) {
-        for (String candidate : new String[] {namePL, nameRU, code}) {
+    /**
+     * The group's applicable room-type ids (FOR-05-05 Amendment A1), sorted ascending. Read inside
+     * the {@code readOnly} editor transaction, so the LAZY {@code roomTypes} set is initialized here.
+     */
+    private static List<Long> sortedRoomTypeIds(AssortmentGroupEntity group) {
+        List<Long> ids = new ArrayList<>();
+        for (RoomTypeEntity roomType : group.getRoomTypes()) {
+            if (roomType != null && roomType.getId() != null) {
+                ids.add(roomType.getId());
+            }
+        }
+        ids.sort(Long::compareTo);
+        return ids;
+    }
+
+    /**
+     * Whether the current request locale is Russian. Mirrors the repo-wide convention
+     * ({@code EstimateMatrixAssembler}, {@code RoleService}, {@code ProjectService}).
+     */
+    private static boolean isRussianLocale() {
+        Locale locale = LocaleContextHolder.getLocale();
+        return locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
+    }
+
+    /**
+     * Locale-aware display name: the locale-preferred name first (RU when {@code ru}, else PL), then
+     * the OTHER locale's name, then {@code fallbackCode} — each only when non-blank. So a missing
+     * RU name still falls back to PL, and blanks never win over a present candidate. Returns
+     * {@code null} only when every candidate is null/blank.
+     */
+    private static String localizedName(boolean ru, String nameRU, String namePL, String fallbackCode) {
+        String preferred = ru ? nameRU : namePL;
+        String other = ru ? namePL : nameRU;
+        for (String candidate : new String[] {preferred, other, fallbackCode}) {
             if (candidate != null && !candidate.isBlank()) {
                 return candidate;
             }

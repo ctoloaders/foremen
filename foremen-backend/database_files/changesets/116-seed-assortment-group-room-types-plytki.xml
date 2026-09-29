@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (point B fix): seed the tiles assortment group's room-type
+        associations that changeset 114 MISSED.
+
+        Changeset 114 mapped the tiles group by name_pl = 'Płytki', but the live group name is
+        'Płytki Ściany' (verified against the live DB). So 114's tiles INSERT matched zero rows and
+        inserted nothing, leaving the tiles group with NO assortment_group_room_types. This forward-
+        only changeset seeds the correct mapping.
+
+        We do NOT edit 114 — it is already applied (MARK_RAN / ran) in dev databases; the fix is a
+        new changeset (same forward-only rule as 109-v2 / 113).
+
+        MAPPING: tiles are a WET-room finish, so 'Płytki Ściany' -> WET rooms {kuchnia, lazienka},
+        consistent with the wet/dry semantics of changesets 105 and 114.
+
+        Group resolved by name_pl, room types by code (never hard-coded id). NOT-EXISTS-guarded on
+        the (assortment_group_id, room_type_id) pair, so a re-run (or a mapping already edited
+        elsewhere) inserts nothing. Guarded by onFail="MARK_RAN" + tableExists. Registered LAST,
+        after 115.
+    -->
+
+    <changeSet id="116-seed-assortment-group-room-types-plytki" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="assortment_group_room_types"/>
+        </preConditions>
+
+        <!-- Płytki Ściany -> WET rooms {kuchnia, lazienka}. -->
+        <sql>
+            INSERT INTO assortment_group_room_types (assortment_group_id, room_type_id)
+            SELECT g.id, rt.id
+            FROM assortment_groups g
+            JOIN room_types rt ON rt.code IN ('kuchnia', 'lazienka')
+            WHERE g.name_pl = 'Płytki Ściany'
+              AND NOT EXISTS (
+                    SELECT 1 FROM assortment_group_room_types x
+                    WHERE x.assortment_group_id = g.id AND x.room_type_id = rt.id
+                  );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

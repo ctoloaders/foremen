@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (relink): re-run the assortment position -> work item link now that
+        changeset 117 has added the missing finishing work_material_consumptions rows for the 16
+        previously-unlinked assortment material types.
+
+        This is a copy of changeset 113's set-based UPDATE (join assortment_positions -> finishing
+        work_material_consumptions by material type, set work_item_id = MIN(work_item_id)), with a
+        FRESH changeSet id so Liquibase runs it again — 113 already ran but resolved only the 2 types
+        that had a finishing consumption at the time. Now that 117 seeded the other 16, this fill-in
+        links them.
+
+        Non-overwriting + inherently idempotent: the WHERE p.work_item_id IS NULL guard means a
+        re-run (or a position edited elsewhere) makes no change, and only still-unlinked positions
+        are filled. A position whose type still has no finishing consumption stays NULL (acceptable).
+        No sqlCheck precondition is needed — the IS NULL filter is the idempotency guard (same
+        forward-only, precondition-free pattern as 113 / 109-v2). Registered LAST, after 117.
+    -->
+
+    <changeSet id="118-relink-assortment-position-work-item" author="foremen">
+        <sql>
+            UPDATE assortment_positions p
+            SET work_item_id = sub.work_item_id
+            FROM (
+                SELECT wmc.finishing_material_type_id AS material_type_id,
+                       MIN(wmc.work_item_id)          AS work_item_id
+                FROM work_material_consumptions wmc
+                WHERE wmc.branch = 'finishing'
+                  AND wmc.finishing_material_type_id IS NOT NULL
+                GROUP BY wmc.finishing_material_type_id
+            ) sub
+            WHERE p.work_item_id IS NULL
+              AND p.material_type_id = sub.material_type_id;
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

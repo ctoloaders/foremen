@@ -1,5 +1,34 @@
 package com.foremen.controller.integration;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.transaction.annotation.Transactional;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+
 import com.foremen.dao.MaterialCategoryDao;
 import com.foremen.dao.MaterialDao;
 import com.foremen.dao.MaterialProducerDao;
@@ -13,32 +42,9 @@ import com.foremen.dao.model.MaterialTypeEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.testsupport.MockMvcSecurityConfig;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
-import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.hamcrest.Matchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * Integration tests for {@code FinishingMaterialController} CRUD operations (FOR-04-18, task 9.1).
@@ -659,6 +665,45 @@ class FinishingMaterialControllerIntegrationTest {
                 .andExpect(jsonPath("$.content[?(@.id == " + other + ")]").doesNotExist());
     }
 
+    @Test
+    @DisplayName("GET /api/finishing-materials - list row exposes its packages as RefDto (id + localized name)")
+    void listExposesPackagesRefDto() throws Exception {
+        Long id = createMaterial(categoryId, materialId, "z-pakietem", packageId);
+        entityManager.flush();
+
+        mockMvc.perform(get("/api/finishing-materials")
+                        .header("Accept-Language", "pl")
+                        .param("query", "id==" + id)
+                        .param("page", "0")
+                        .param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.id == " + id + ")].packages[?(@.id == " + packageId + ")]")
+                        .exists())
+                .andExpect(jsonPath("$.content[?(@.id == " + id + ")].packages[?(@.id == " + packageId + ")].name")
+                        .value(contains("Pakiet A")));
+    }
+
+    @Test
+    @DisplayName("GET /api/finishing-materials?query=packages.id~in~<a>,<b> - multi-select returns the union, deduplicated")
+    void listFilteredByPackageIdInSet_returnsUnionDeduplicated() throws Exception {
+        // inA belongs to packageId; inB belongs to packageId2; inBoth belongs to BOTH (must appear
+        // exactly once — distinct collapses the M:N join fan-out).
+        Long inA = createMaterial(categoryId, materialId, "in-a", packageId);
+        Long inB = createMaterial(categoryId, materialId, "in-b", packageId2);
+        Long inBoth = createMaterialWithPackages(categoryId, materialId, "in-both", packageId, packageId2);
+        entityManager.flush();
+
+        mockMvc.perform(get("/api/finishing-materials")
+                        .param("query", "packages.id~in~" + packageId + "," + packageId2)
+                        .param("page", "0")
+                        .param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[?(@.id == " + inA + ")]").exists())
+                .andExpect(jsonPath("$.content[?(@.id == " + inB + ")]").exists())
+                // inBoth appears exactly once despite matching via two packages.
+                .andExpect(jsonPath("$.content[?(@.id == " + inBoth + ")]", hasSize(1)));
+    }
+
     // --- helpers ---
 
     /**
@@ -678,6 +723,30 @@ class FinishingMaterialControllerIntegrationTest {
                                     "retailNet": 100.00
                                 }
                                 """.formatted(categoryId, materialId, packageId, unitId, model)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return com.jayway.jsonpath.JsonPath.parse(body).read("$.id", Long.class);
+    }
+
+    /**
+     * Creates a finishing material bound to MULTIPLE packages (plus shared category/material/unit),
+     * returning its generated id. Used to prove the multi-select {@code packages.id~in~} filter
+     * returns a material matching several selected packages exactly once (distinct).
+     */
+    private Long createMaterialWithPackages(Long categoryId, Long materialId, String model,
+                                            Long packageA, Long packageB) throws Exception {
+        String body = mockMvc.perform(post("/api/finishing-materials")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                    "categoryId": %d,
+                                    "materialId": %d,
+                                    "offerPackageIds": [%d, %d],
+                                    "unitId": %d,
+                                    "model": "%s",
+                                    "retailNet": 100.00
+                                }
+                                """.formatted(categoryId, materialId, packageA, packageB, unitId, model)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         return com.jayway.jsonpath.JsonPath.parse(body).read("$.id", Long.class);

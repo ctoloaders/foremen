@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05: RE-ASSIGN the package finishing work_material_consumptions from the CORRECT
+        line-item -> work-item -> package linkage.
+
+        BACKGROUND: changeset 117 seeded ONE finishing consumption per missing assortment material
+        TYPE by attaching each type to MIN(work_items.id) within a whole work CATEGORY (Sanitariat
+        -> PLUMBING_FINISH, Drzwi -> CARPENTRY, Płytki Ściany -> TILING). That category-level
+        MIN(id) heuristic linked the WRONG works. The source of truth is now the per-(position,
+        package) join table assortment_position_work_items (assortment_position_id, offer_package_id,
+        work_item_id) — created by changeset 120, populated by 121 — joined to the owning
+        assortment_positions.material_type_id. The linkage has since been corrected in the editor, so
+        this changeset re-derives the finishing consumptions from it.
+
+        TWO PHASES (in order), single changeSet:
+
+          Phase 1 — remove the previous (mis-linked) 117 seed:
+              DELETE FROM work_material_consumptions WHERE created_by = 'seed:for-05-05-a1-finishing'.
+              Only changeset 117's seed rows carry that created_by, so nothing else is touched.
+              Naturally idempotent (a re-run finds no such rows and deletes nothing).
+
+          Phase 2 — re-seed from the corrected per-package linkage:
+              INSERT one finishing consumption per DISTINCT (work_item_id, material_type_id) derived
+              from assortment_position_work_items joined to assortment_positions.material_type_id.
+
+        DECISIONS (locked by the user):
+          - Decision A: one consumption row per DISTINCT (work_item, material_type) across ALL
+            packages. A material type linked to different works across packages therefore yields one
+            row per distinct work (SELECT DISTINCT on apwi.work_item_id + p.material_type_id).
+          - Decision B: reuse changeset 117's per-family nominal values keyed by the material type
+            CODE — only the WORK linkage is corrected. norm_qty is a literal 1.0000 for all; unit and
+            consumption_basis are per family:
+              * Sanitariat  -> unit 'szt', basis 'PER_ROOM': bateria_umywalkowa,
+                bateria_wannowo_prysznicowa_z_kompletem, brodzik_kabina, miska_wc, przycisk,
+                sciana_kabina_prysznicowa, stelaz_podtynkowy, umywalka_nablatowa, wanna
+              * Drzwi       -> unit 'szt', basis 'PER_ROOM': klamki_drzwi, oscieznica, przylgowe,
+                rozety_drzwi
+              * Płytki Ściany -> unit 'm2', basis 'PER_UNIT': plytka_podlogowa, plytka_scienna
+            A material type NOT in this closed set contributes no row (the inline VALUES family table
+            is the whitelist; the JOIN on fam.type_code = mt.code drops anything else).
+
+        COLUMN NOTE: work_material_consumptions has NO offer_package_id column — changeset 084c
+        dropped the package dimension (one row per (work_item, material_type, branch)). So this
+        INSERT omits offer_package_id entirely. construction_material_type_id stays NULL (branch XOR:
+        exactly one of construction/finishing type id is non-null, matching branch);
+        finishing_material_type_id is p.material_type_id. consumption_basis is set explicitly (the
+        column is NOT NULL, default 'PER_UNIT', added by changeset 108a).
+
+        IDEMPOTENCY: Phase 1 DELETE is naturally idempotent. Phase 2 is NOT-EXISTS-guarded on the
+        natural key (work_item_id, branch='finishing', finishing_material_type_id) so a re-run — or a
+        pre-existing/hand-edited row — is left alone. Phase 2 rows are tagged
+        created_by = 'seed:for-05-05-a1-finishing-relink' (distinct from 117's tag) so they can be
+        identified / re-corrected independently.
+
+        Forward-only; no MARK_RAN precondition — both phases self-guard (Phase 1 DELETE naturally
+        idempotent; Phase 2 NOT-EXISTS + relink created_by tag). Registered LAST in sequence, after 122.
+    -->
+
+    <changeSet id="123-reassign-finishing-consumptions-from-linkage" author="foremen">
+
+        <!-- ============================ Phase 1: remove the mis-linked 117 seed ============================ -->
+        <sql>
+            DELETE FROM work_material_consumptions WHERE created_by = 'seed:for-05-05-a1-finishing';
+        </sql>
+
+        <!-- ============ Phase 2: re-seed from the corrected per-(position, package) linkage ============ -->
+        <sql>
+            INSERT INTO work_material_consumptions (
+                work_item_id, material_unit_id, branch,
+                construction_material_type_id, finishing_material_type_id,
+                norm_qty, waste_pct, consumption_basis,
+                justification_ru, justification_pl,
+                source_type, source_doc, source_url, source_ref,
+                created_date, created_by)
+            SELECT DISTINCT
+                apwi.work_item_id,
+                u.id,
+                'finishing',
+                CAST(NULL AS BIGINT),
+                p.material_type_id,
+                1.0000,
+                0,
+                fam.basis,
+                'FOR-05-05: перепривязка чистовой нормы по линковке позиция->работа->пакет.',
+                'FOR-05-05: przepiecie czystej normy wg powiazania pozycja->praca->pakiet.',
+                'seed', 'FOR-05-05 finishing consumption relink from linkage', NULL,
+                'FOR-05-05 finishing consumption relink from linkage',
+                NOW(), 'seed:for-05-05-a1-finishing-relink'
+            FROM assortment_position_work_items apwi
+            JOIN assortment_positions p ON p.id = apwi.assortment_position_id
+            JOIN material_types mt ON mt.id = p.material_type_id
+            JOIN (
+                VALUES
+                    ('bateria_umywalkowa', 'szt', 'PER_ROOM'),
+                    ('bateria_wannowo_prysznicowa_z_kompletem', 'szt', 'PER_ROOM'),
+                    ('brodzik_kabina', 'szt', 'PER_ROOM'),
+                    ('miska_wc', 'szt', 'PER_ROOM'),
+                    ('przycisk', 'szt', 'PER_ROOM'),
+                    ('sciana_kabina_prysznicowa', 'szt', 'PER_ROOM'),
+                    ('stelaz_podtynkowy', 'szt', 'PER_ROOM'),
+                    ('umywalka_nablatowa', 'szt', 'PER_ROOM'),
+                    ('wanna', 'szt', 'PER_ROOM'),
+                    ('klamki_drzwi', 'szt', 'PER_ROOM'),
+                    ('oscieznica', 'szt', 'PER_ROOM'),
+                    ('przylgowe', 'szt', 'PER_ROOM'),
+                    ('rozety_drzwi', 'szt', 'PER_ROOM'),
+                    ('plytka_podlogowa', 'm2', 'PER_UNIT'),
+                    ('plytka_scienna', 'm2', 'PER_UNIT')
+            ) AS fam(type_code, unit_code, basis)
+                ON fam.type_code = mt.code
+            JOIN measurement_units u ON u.code = fam.unit_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM work_material_consumptions w
+                WHERE w.work_item_id = apwi.work_item_id
+                  AND w.branch = 'finishing'
+                  AND w.finishing_material_type_id = p.material_type_id
+            );
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>

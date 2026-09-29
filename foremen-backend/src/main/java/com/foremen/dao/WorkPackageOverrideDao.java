@@ -1,5 +1,6 @@
 package com.foremen.dao;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,4 +30,35 @@ public interface WorkPackageOverrideDao extends AdminDao<WorkPackageOverrideEnti
 
     @Query("SELECT o FROM WorkPackageOverrideEntity o JOIN FETCH o.workItem JOIN FETCH o.offerPackage")
     List<WorkPackageOverrideEntity> findAllWithWorkItemAndPackage();
+
+    /**
+     * Batch-loads the offer-package memberships for a page of work items in ONE query (avoiding a
+     * per-row N+1 when the work-item list attaches its {@code packages} field). Returns one
+     * {@link WorkItemPackageMembership} projection per {@code (workItem, offerPackage)} pair with a
+     * {@code member=true} row, carrying the work-item id, the package id, and both localized package
+     * names so the service can localize to the request locale without loading full entities.
+     * Ordered by {@code offerPackage.orderNo} so the resulting per-work {@code packages} list follows
+     * the catalog's package order.
+     */
+    @Query("SELECT o.workItem.id AS workItemId, o.offerPackage.id AS packageId, "
+            + "o.offerPackage.nameRU AS nameRU, o.offerPackage.namePL AS namePL "
+            + "FROM WorkPackageOverrideEntity o "
+            + "WHERE o.member = true AND o.workItem.id IN :workItemIds "
+            + "ORDER BY o.offerPackage.orderNo ASC")
+    List<WorkItemPackageMembership> findMembershipRefsByWorkItemIdIn(
+            @Param("workItemIds") Collection<Long> workItemIds);
+
+    /**
+     * Spring Data projection for a single work-item ↔ offer-package membership row, carrying the
+     * owning work-item id, the package id, and both localized package names.
+     */
+    interface WorkItemPackageMembership {
+        Long getWorkItemId();
+
+        Long getPackageId();
+
+        String getNameRU();
+
+        String getNamePL();
+    }
 }

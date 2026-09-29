@@ -69,6 +69,15 @@ public class EstimateEntity extends BaseEntity {
     private BigDecimal totalGross = BigDecimal.ZERO;
 
     /**
+     * The offer-package code last APPLIED to this estimate (FOR-05-05 Wave 1b, #1). Set on Save when
+     * the staged set carries a package-scoped edit; nullable. The staged/unsaved header selection
+     * lives client-side until Save — this column only reflects what was actually applied and
+     * persisted, and the "clear whole kosztorys" flow (a later wave) will clear it.
+     */
+    @Column(name = "applied_package_code", length = 64)
+    private String appliedPackageCode;
+
+    /**
      * Read-side view of the estimate's lines, used by {@code EstimateRecomputeService} to
      * traverse {@code estimate.lines} per design §6.1. Not cascaded from this side — lines are
      * owned/persisted by {@code EstimateLineService}; deletion cascade is enforced at the DB

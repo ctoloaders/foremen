@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 Amendment A1 (point B): which room TYPES an assortment group's materials apply to.
+
+        A pure M:N join `assortment_group_room_types(assortment_group_id, room_type_id)` (mirrors the
+        work_room_types pure-join style of changeset 103 — no surrogate id / audit columns; the pair
+        IS the composite primary key). The apply-package merge (Wave 2) resolves each group's
+        applicable rooms via this join.
+
+        FKs (both ON DELETE CASCADE — removing a group or a room type removes its association rows,
+        never orphaning the join):
+          - assortment_group_id : FK to assortment_groups, NOT NULL.
+          - room_type_id        : FK to room_types, NOT NULL.
+        UNIQUE (assortment_group_id, room_type_id) — a room type is associated to a group at most once.
+
+        Idempotent via NOT tableExists + MARK_RAN so a re-run against an already-migrated database
+        makes no change. Registered LAST in sequence, after 110.
+    -->
+
+    <changeSet id="111-create-assortment-group-room-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="assortment_group_room_types"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="assortment_group_room_types">
+            <column name="assortment_group_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="room_type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- The (assortment_group_id, room_type_id) pair is the composite primary key. -->
+        <addPrimaryKey
+            constraintName="pk_assortment_group_room_types"
+            tableName="assortment_group_room_types"
+            columnNames="assortment_group_id, room_type_id"/>
+
+        <!-- Group reference FK: NOT NULL, ON DELETE CASCADE. -->
+        <addForeignKeyConstraint
+            constraintName="fk_agrt_assortment_group"
+            baseTableName="assortment_group_room_types"
+            baseColumnNames="assortment_group_id"
+            referencedTableName="assortment_groups"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Room type reference FK: NOT NULL, ON DELETE CASCADE. -->
+        <addForeignKeyConstraint
+            constraintName="fk_agrt_room_type"
+            baseTableName="assortment_group_room_types"
+            baseColumnNames="room_type_id"
+            referencedTableName="room_types"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- A room type is associated to a group at most once. -->
+        <addUniqueConstraint
+            constraintName="uq_agrt_group_room_type"
+            tableName="assortment_group_room_types"
+            columnNames="assortment_group_id, room_type_id"/>
+    </changeSet>
+
+</databaseChangeLog>
