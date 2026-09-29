@@ -56,7 +56,7 @@ export async function getState(telegramId: number): Promise<ConversationState | 
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: `${sheetName}!A2:N`,
+    range: `${sheetName}!A2:R`,
   });
 
   const rows = res.data.values || [];
@@ -84,6 +84,11 @@ export async function getState(telegramId: number): Promise<ConversationState | 
     ocrGrossAmount: row[12] ? parseFloat(String(row[12])) || undefined : undefined,
     // Session Log correlation id (column N)
     sessionId: row[13] || undefined,
+    // Category fields (columns O, P, Q, R)
+    isMaterial: row[14] === "1" ? true : row[14] === "0" ? false : undefined,
+    categoryName: row[15] || undefined,
+    categoryExtraPrompt: row[16] || undefined,
+    categoryDetail: row[17] || undefined,
   };
 
   // Check staleness
@@ -116,6 +121,10 @@ export async function setState(state: ConversationState): Promise<void> {
     state.ocrStoreName || "",                               // L
     state.ocrGrossAmount !== undefined ? String(state.ocrGrossAmount) : "",  // M
     state.sessionId || "",                                  // N
+    state.isMaterial === undefined ? "" : state.isMaterial ? "1" : "0",  // O
+    state.categoryName || "",                               // P
+    state.categoryExtraPrompt || "",                        // Q
+    state.categoryDetail || "",                             // R
   ];
 
   // Find existing row
@@ -132,7 +141,7 @@ export async function setState(state: ConversationState): Promise<void> {
     const rowNum = rowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A${rowNum}:N${rowNum}`,
+      range: `${sheetName}!A${rowNum}:R${rowNum}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -140,7 +149,7 @@ export async function setState(state: ConversationState): Promise<void> {
     // Append new
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: `${sheetName}!A:N`,
+      range: `${sheetName}!A:R`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
@@ -162,9 +171,9 @@ export async function clearState(telegramId: number): Promise<void> {
     const rowNum = rowIndex + 2;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A${rowNum}:N${rowNum}`,
+      range: `${sheetName}!A${rowNum}:R${rowNum}`,
       valueInputOption: "RAW",
-      requestBody: { values: [["", "", "", "", "", "", "", "", "", "", "", "", "", ""]] },
+      requestBody: { values: [["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""]] },
     });
   }
 }

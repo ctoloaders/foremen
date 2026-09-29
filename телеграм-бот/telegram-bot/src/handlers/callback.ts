@@ -1,14 +1,11 @@
 import { Bot, Context, InlineKeyboard } from "grammy";
-import { getState, setState, clearState } from "../state/store.js";
+import { getState, setState } from "../state/store.js";
 import { ConversationStep, ConversationState } from "../state/machine.js";
 import { downloadFile } from "../services/telegram.js";
 import { extractTextFromPages } from "../services/ocr.js";
 import { parseReceipt } from "../services/gemini.js";
-import { formatPhotoLinks } from "../services/drive.js";
-import { appendReceiptRow } from "../services/sheets.js";
-import { uploadReceiptArtifact } from "../services/receipt-upload.js";
+import { handleCategorySelection, finalizeSave } from "./category.js";
 import { sessionLog } from "../services/session-log.js";
-import { withRetry } from "../utils/retry.js";
 import { logger } from "../utils/logger.js";
 
 const errorKeyboard = new InlineKeyboard()
@@ -97,115 +94,6 @@ export function createOcrCallbackHandler(bot: Bot) {
     }
   }
 
-  /**
-   * Saves the receipt in OCR flow: downloads photos, uploads to Drive, writes row to Sheets.
-   */
-  async function saveReceiptOcr(ctx: Context, state: ConversationState): Promise<void> {
-    const telegramId = state.telegramId;
-
-    try {
-      await ctx.reply("⏳ Сохраняю...");
-
-      // 1. Download all photos from Telegram
-      const files: Array<{ buffer: Buffer; mimeType: string }> = [];
-      for (const fileId of state.photoFileIds!) {
-        const { buffer, mimeType } = await downloadFile(bot, fileId);
-        files.push({ buffer, mimeType });
-      }
-
-      // 2. Upload to Drive (with retry).
-      //    Preferred path: reprocess pages (crop + deskew) into ONE multi-page PDF.
-      //    On any reprocess/PDF failure, fall back to uploading the original photos.
-      let links: string[];
-      try {
-        links = await uploadReceiptArtifact(
-          state.projectDriveUrl!,
-          state.storeName!,
-          state.sum!,
-          files,
-          { telegramId },
-        );
-      } catch (err: any) {
-        logger.error("Drive upload failed (OCR flow)", { telegramId, error: err.message });
-        if (state.sessionId) {
-          await sessionLog.finalizeFailed(state.sessionId, err, {
-            step: state.step,
-            sum: state.sum,
-            photoFileIds: state.photoFileIds,
-          });
-        }
-        await ctx.reply("❌ Ошибка загрузки фото. Попробуйте ещё раз (/start)");
-        return;
-      }
-
-      // 3. Write row to Sheets (with retry)
-      const today = new Date().toISOString().split("T")[0];
-      const addedBy = [ctx.from!.first_name, ctx.from!.last_name].filter(Boolean).join(" ");
-      const photoLink = formatPhotoLinks(links);
-
-      // Determine sum note (mismatch case: user confirmed their entry over OCR)
-      let sumNote: string | undefined;
-      if (state.ocrGrossAmount !== undefined && state.ocrGrossAmount !== null) {
-        if (state.sum !== state.ocrGrossAmount) {
-          sumNote = `⚠️ OCR: ${state.ocrGrossAmount}, введено: ${state.sum} — подтверждено сотрудником`;
-        }
-      }
-
-      try {
-        await withRetry(() =>
-          appendReceiptRow(state.projectSheetsUrl!, {
-            date: today,
-            sum: state.sum!,
-            description: state.description!,
-            storeName: state.storeName!,
-            photoLink,
-            addedBy,
-            sumNote,
-          })
-        );
-      } catch (err: any) {
-        logger.error("Sheets write failed (OCR flow)", { telegramId, error: err.message, stack: err.stack?.slice(0, 500), sheetsUrl: state.projectSheetsUrl });
-        if (state.sessionId) {
-          await sessionLog.finalizeFailed(state.sessionId, err, {
-            step: state.step,
-            sum: state.sum,
-            photoFileIds: state.photoFileIds,
-            photoLinks: links,
-          });
-        }
-        await ctx.reply("❌ Ошибка записи в таблицу. Фото загружено, но строка не добавлена. Попробуйте /start");
-        return;
-      }
-
-      // 4. Success — clear state and confirm
-      await clearState(telegramId);
-      if (state.sessionId) {
-        // Reuse the Drive links already produced by uploadPhotos (no re-upload).
-        await sessionLog.finalizeSuccess(state.sessionId, {
-          step: ConversationStep.SAVING,
-          sum: state.sum,
-          photoFileIds: state.photoFileIds,
-          photoLinks: links,
-        });
-      }
-      await ctx.reply(
-        `✅ Записал: ${state.projectName}, ${state.sum} PLN, ${state.storeName}, ${state.description}\n\nМожете отправить следующий чек или выбрать другой проект (/start)`
-      );
-
-      logger.info("Receipt saved (OCR flow)", {
-        telegramId,
-        project: state.projectName,
-        sum: state.sum,
-        store: state.storeName,
-        pages: state.photoFileIds?.length,
-      });
-    } catch (err: any) {
-      logger.error("Save receipt OCR error", { telegramId, error: err.message });
-      if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err, { step: state.step });
-      await ctx.reply("⚠️ Произошла ошибка. Попробуйте позже или напишите /start");
-    }
-  }
-
   return async function handleOcrCallbacks(ctx: Context): Promise<void> {
     const data = ctx.callbackQuery?.data;
     const telegramId = ctx.from?.id;
@@ -215,6 +103,12 @@ export function createOcrCallbackHandler(bot: Bot) {
 
     const state = await getState(telegramId);
     if (!state) return;
+
+    // Expense category selection (cat:N)
+    if (data.startsWith("cat:")) {
+      await handleCategorySelection(ctx, bot, state, data);
+      return;
+    }
 
     switch (data) {
       case "ocr:more_pages": {
@@ -253,10 +147,10 @@ export function createOcrCallbackHandler(bot: Bot) {
       }
 
       case "ocr:confirm_yes": {
-        // User confirms mismatched sum — proceed to save
+        // User confirms mismatched sum — category was chosen at the start → save now.
         state.step = ConversationStep.SAVING;
         await setState(state);
-        await saveReceiptOcr(ctx, state);
+        await finalizeSave(ctx, bot, state);
         break;
       }
 

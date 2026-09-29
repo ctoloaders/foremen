@@ -1,6 +1,7 @@
 import { Bot } from "grammy";
 import { config } from "./config.js";
-import { handleStart, handleProjectSelection } from "./handlers/start.js";
+import { handleStart } from "./handlers/start.js";
+import { handleProjectSelection } from "./handlers/category.js";
 import { createOcrCallbackHandler } from "./handlers/callback.js";
 import { handleMyId } from "./handlers/myid.js";
 import { handleCancel } from "./handlers/cancel.js";
@@ -29,9 +30,9 @@ export function createBot(): Bot {
   // Callback queries (project selection: p0, p1, p2...)
   bot.callbackQuery(/^p\d/, handleProjectSelection);
 
-  // Callback queries (OCR flow)
+  // Callback queries (OCR flow + expense category selection)
   const handleOcrCallbacks = createOcrCallbackHandler(bot);
-  bot.callbackQuery(/^ocr:/, handleOcrCallbacks);
+  bot.callbackQuery(/^(ocr|cat):/, handleOcrCallbacks);
 
   // Callback query: cancel button
   bot.callbackQuery("cancel", async (ctx) => {

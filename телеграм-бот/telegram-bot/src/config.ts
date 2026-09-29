@@ -51,6 +51,13 @@ export const config = {
     projectsSheetName: process.env.PROJECTS_SHEET_NAME || "projects",
     receiptsSheetName: process.env.RECEIPTS_SHEET_NAME || "Чеки",
     templateSpreadsheetId: process.env.TEMPLATE_SPREADSHEET_ID || "",
+    // Centralized receipt storage: all receipts/invoices go to ONE shared Drive folder and
+    // ONE shared sheet in the workers-registry spreadsheet, tagged with project + category.
+    receiptsPdfFolderId: process.env.RECEIPTS_PDF_FOLDER_ID || "1zJPsF5HtUgHThvTcLV8PtxgM4DcrwZHO",
+    // Sheet in the workers-registry spreadsheet holding all receipt rows.
+    centralReceiptsSheetName: process.env.CENTRAL_RECEIPTS_SHEET_NAME || "receipts",
+    // Sheet in the workers-registry spreadsheet holding expense categories (A=category, B=extra_prompt).
+    expenseCategoriesSheetName: process.env.EXPENSE_CATEGORIES_SHEET_NAME || "expense_categories",
   },
   bitrix: {
     // CRM Deal field codes

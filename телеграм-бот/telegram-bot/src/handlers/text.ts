@@ -1,13 +1,10 @@
 import { Context, InlineKeyboard } from "grammy";
-import { getState, setState, clearState } from "../state/store.js";
+import { getState, setState } from "../state/store.js";
 import { ConversationStep } from "../state/machine.js";
 import { validateSum, validateText } from "../utils/validators.js";
 import { compareSums } from "../utils/sum-compare.js";
-import { downloadFile } from "../services/telegram.js";
-import { uploadReceiptArtifact } from "../services/receipt-upload.js";
-import { appendReceiptRow } from "../services/sheets.js";
+import { handleCategoryDetail, finalizeSave } from "./category.js";
 import { sessionLog } from "../services/session-log.js";
-import { logger } from "../utils/logger.js";
 import { Bot } from "grammy";
 
 const cancelKeyboard = new InlineKeyboard().text("❌ Отмена", "cancel");
@@ -76,13 +73,13 @@ export function createTextHandler(bot: Bot) {
         // Sum matches or no OCR amount
         // Check if OCR flow (has ocrDescription + ocrStoreName)
         if (state.ocrDescription && state.ocrStoreName) {
-          // OCR flow: skip description/store steps, go directly to save
+          // OCR flow: category was already chosen at the start → save now.
           state.step = ConversationStep.SAVING;
           await setState(state);
           if (state.sessionId) {
             await sessionLog.updateSession(state.sessionId, { step: ConversationStep.SAVING, sum: state.sum });
           }
-          await saveReceipt(ctx, bot, state);
+          await finalizeSave(ctx, bot, state);
         } else {
           // Manual flow — continue to description
           state.step = ConversationStep.AWAIT_DESCRIPTION;
@@ -124,13 +121,23 @@ export function createTextHandler(bot: Bot) {
           await sessionLog.updateSession(state.sessionId, { step: ConversationStep.SAVING, storeName });
         }
 
-        // Save flow
-        await saveReceipt(ctx, bot, state);
+        // Manual flow complete (category already chosen at start) → save.
+        await finalizeSave(ctx, bot, state);
+        break;
+      }
+
+      case ConversationStep.AWAIT_CATEGORY_DETAIL: {
+        await handleCategoryDetail(ctx, bot, state, text);
+        break;
+      }
+
+      case ConversationStep.SELECT_CATEGORY: {
+        await ctx.reply("Пожалуйста, выберите категорию кнопкой выше, или /start заново.");
         break;
       }
 
       case ConversationStep.SELECT_PROJECT: {
-        await ctx.reply("Выберите проект из кнопок выше, или отправьте /start заново.");
+        await ctx.reply("Выберите объект (проект) из кнопок выше, или отправьте /start заново.");
         break;
       }
 
@@ -142,109 +149,3 @@ export function createTextHandler(bot: Bot) {
   };
 }
 
-async function saveReceipt(ctx: Context, bot: Bot, state: any) {
-  const telegramId = ctx.from!.id;
-
-  try {
-    await ctx.reply("⏳ Сохраняю...");
-
-    // Download all pages from Telegram. Prefer the multi-page photoFileIds; fall back to the
-    // legacy single photoFileId for backward compatibility.
-    const fileIds: string[] =
-      state.photoFileIds && state.photoFileIds.length > 0
-        ? state.photoFileIds
-        : state.photoFileId
-        ? [state.photoFileId]
-        : [];
-
-    const files: Array<{ buffer: Buffer; mimeType: string }> = [];
-    for (const fileId of fileIds) {
-      const { buffer, mimeType } = await downloadFile(bot, fileId);
-      files.push({ buffer, mimeType });
-    }
-
-    // Reprocess into a single multi-page PDF and upload to Drive (with fallback to
-    // uploading original photos). Shared with the OCR callback flow.
-    let photoLink: string;
-    try {
-      const links = await uploadReceiptArtifact(
-        state.projectDriveUrl,
-        state.storeName,
-        state.sum,
-        files,
-        { telegramId },
-      );
-      photoLink = links.join("\n");
-    } catch (err: any) {
-      logger.error("Drive upload failed", { telegramId, error: err.message });
-      if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err, { step: state.step, sum: state.sum });
-      await ctx.reply("❌ Ошибка загрузки фото. Попробуйте ещё раз (/start)");
-      return;
-    }
-
-    // Write to Sheets
-    const today = new Date().toISOString().split("T")[0];
-    const addedBy = [ctx.from!.first_name, ctx.from!.last_name].filter(Boolean).join(" ");
-
-    // Determine sum note (manual entry after OCR failure)
-    let sumNote: string | undefined;
-    if (state.photoFileIds && state.photoFileIds.length > 0 && !state.ocrDescription) {
-      sumNote = "⚠️ Данные введены вручную (OCR не распознал)";
-    }
-
-    try {
-      await appendReceiptRow(state.projectSheetsUrl, {
-        date: today,
-        sum: state.sum,
-        description: state.description,
-        storeName: state.storeName,
-        photoLink,
-        addedBy,
-        sumNote,
-      });
-    } catch (err: any) {
-      logger.error("Sheets write failed", { telegramId, error: err.message, stack: err.stack?.slice(0, 500), sheetsUrl: state.projectSheetsUrl });
-      await new Promise(r => setTimeout(r, 2000));
-      try {
-        await appendReceiptRow(state.projectSheetsUrl, {
-          date: today,
-          sum: state.sum,
-          description: state.description,
-          storeName: state.storeName,
-          photoLink,
-          addedBy,
-          sumNote,
-        });
-      } catch (err2: any) {
-        logger.error("Sheets write retry failed", { telegramId, error: err2.message });
-        if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err2, { step: state.step, sum: state.sum, photoLinks: [photoLink] });
-        await ctx.reply("❌ Ошибка записи в таблицу. Фото загружено, но строка не добавлена. Попробуйте /start");
-        return;
-      }
-    }
-
-    // Success
-    await clearState(telegramId);
-    if (state.sessionId) {
-      await sessionLog.finalizeSuccess(state.sessionId, {
-        step: ConversationStep.SAVING,
-        sum: state.sum,
-        photoLinks: [photoLink],
-      });
-    }
-    await ctx.reply(
-      `✅ Записал: ${state.projectName}, ${state.sum || 0} PLN, ${state.storeName}, ${state.description}\n\nМожете отправить следующий чек или выбрать другой проект (/start)`
-    );
-
-    logger.info("Receipt saved", {
-      telegramId,
-      project: state.projectName,
-      sum: state.sum,
-      store: state.storeName,
-    });
-  } catch (err: any) {
-    logger.error("Save receipt error", { telegramId, error: err.message });
-    if (state.sessionId) await sessionLog.finalizeFailed(state.sessionId, err, { step: state.step });
-    await ctx.reply("⚠️ Произошла ошибка. Попробуйте позже или напишите /start");
-  }
-}

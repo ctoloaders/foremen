@@ -109,6 +109,46 @@ export async function uploadPhoto(
 }
 
 /**
+ * Uploads a single multi-page receipt PDF to a Drive folder given by its raw folder id
+ * (used for the centralized shared receipts folder).
+ */
+export async function uploadReceiptPdfToFolder(
+  folderId: string,
+  storeName: string,
+  sum: number,
+  pdfBuffer: Buffer,
+): Promise<{ link: string }> {
+  const fileName = generatePdfFileName(storeName, sum);
+  const result = await uploadFileToDrive(folderId, fileName, pdfBuffer, "application/pdf");
+  return { link: result.webViewLink };
+}
+
+/**
+ * Uploads multiple photos (multi-page receipt fallback) to a Drive folder given by its raw
+ * folder id. Returns an array of webViewLinks for all uploaded photos.
+ */
+export async function uploadPhotosToFolder(
+  folderId: string,
+  storeName: string,
+  sum: number,
+  files: Array<{ buffer: Buffer; mimeType: string }>,
+): Promise<{ links: string[] }> {
+  const links: string[] = [];
+  const isMultiPage = files.length > 1;
+  for (let i = 0; i < files.length; i++) {
+    const fileName = generateFileName(
+      storeName,
+      sum,
+      files[i].mimeType,
+      isMultiPage ? i + 1 : undefined,
+    );
+    const result = await uploadFileToDrive(folderId, fileName, files[i].buffer, files[i].mimeType);
+    links.push(result.webViewLink);
+  }
+  return { links };
+}
+
+/**
  * Generates a filename for the reprocessed receipt PDF uploaded to Drive.
  * Format: YYYY-MM-DD_HH-MM_<store>_<sum>.pdf
  */
