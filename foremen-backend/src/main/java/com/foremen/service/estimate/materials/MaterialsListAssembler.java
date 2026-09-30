@@ -38,11 +38,51 @@ import com.foremen.service.estimate.matrix.WorkTypeGroupDto;
  * <p>The canonical {@link #effectiveQuantity(BigDecimal, ConsumptionBasis, BigDecimal)} helper is the
  * single place the reserve/ceiling/basis rules live — shared by the row total, the row brutto, and the
  * dashboard effective figures so they never drift (R7.4).
+ *
+ * <p><strong>Piece-unit rounding (amendment):</strong> when a material's consumption norm unit is the
+ * piece unit ({@code szt} / {@code шт}, matched case-insensitively with an optional trailing dot), the
+ * two {@code Row_Total} figures — the as-is total and the effective total — are rounded UP to whole
+ * numbers (a piece cannot be a fraction). This applies regardless of reserve percent and regardless of
+ * consumption basis (PER_UNIT or PER_ROOM). The per-room cell quantities stay EXACT (raw), and prices
+ * follow the rounded totals. See {@link MaterialAcc#toRow(List, BigDecimal, BigDecimal)}.
  */
 @Component
 public class MaterialsListAssembler {
 
     private static final int VAT_MOVE_POINT_LEFT = 2;
+
+    /** The canonical piece measurement-unit code ({@code name_ru} {@code шт.}, {@code name_pl} {@code szt.}). */
+    private static final String PIECE_UNIT_CODE = "szt";
+
+    /**
+     * Whether {@code unit} is the piece unit ({@code szt} / {@code шт}). Matches case-insensitively and
+     * tolerates a single optional trailing dot (e.g. {@code szt.}). {@code null} ⇒ {@code false}.
+     */
+    static boolean isPieceUnit(String unit) {
+        if (unit == null) {
+            return false;
+        }
+        String normalized = unit.trim();
+        if (normalized.endsWith(".")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized.equalsIgnoreCase(PIECE_UNIT_CODE);
+    }
+
+    /**
+     * Round a {@code Row_Total} quantity UP to a whole number when the row's unit is the piece unit
+     * (a piece cannot be fractional). Otherwise the quantity is returned unchanged.
+     *
+     * @param qty  the row total quantity (as-is or effective); {@code null} ⇒ returned unchanged
+     * @param unit the row's consumption norm unit
+     * @return {@code ceil(qty)} for a piece unit, else {@code qty} unchanged
+     */
+    static BigDecimal roundUpForPieceUnit(BigDecimal qty, String unit) {
+        if (qty != null && isPieceUnit(unit)) {
+            return qty.setScale(0, RoundingMode.CEILING);
+        }
+        return qty;
+    }
 
     /**
      * Assemble the Materials tab read model from the kosztorys matrix, the estimate VAT rate, and the
@@ -163,8 +203,8 @@ public class MaterialsListAssembler {
 
         BigDecimal vat = vatRatePct == null ? BigDecimal.ZERO : vatRatePct;
 
-        Map<Long, MaterialAcc> accByMaterialId = foldConcreteLines(matrix);
-        List<MaterialBranchGroupDto> branches = emitBranches(accByMaterialId, roomOrder, vat, reserveMap);
+        Map<MaterialKey, MaterialAcc> accByMaterialKey = foldConcreteLines(matrix);
+        List<MaterialBranchGroupDto> branches = emitBranches(accByMaterialKey, roomOrder, vat, reserveMap);
 
         List<BranchDashboardDto> branchDashboards = new ArrayList<>();
         BranchDashboardDto grandTotal = dashboards(branches, vat, branchDashboards);
@@ -183,10 +223,10 @@ public class MaterialsListAssembler {
      * Walk every kosztorys cell's concrete material lines into per-material accumulators, in first-seen
      * order so rows/branches are deterministic (R1.2, R1.3, R1.5).
      */
-    private static Map<Long, MaterialAcc> foldConcreteLines(EstimateMatrixDto matrix) {
-        Map<Long, MaterialAcc> accByMaterialId = new LinkedHashMap<>();
+    private static Map<MaterialKey, MaterialAcc> foldConcreteLines(EstimateMatrixDto matrix) {
+        Map<MaterialKey, MaterialAcc> accByMaterialKey = new LinkedHashMap<>();
         if (matrix == null || matrix.groups() == null) {
-            return accByMaterialId;
+            return accByMaterialKey;
         }
         for (WorkTypeGroupDto group : matrix.groups()) {
             if (group == null || group.rows() == null) {
@@ -197,11 +237,11 @@ public class MaterialsListAssembler {
                     continue;
                 }
                 for (CellDto cell : row.cells()) {
-                    foldCell(cell, accByMaterialId);
+                    foldCell(cell, accByMaterialKey);
                 }
             }
         }
-        return accByMaterialId;
+        return accByMaterialKey;
     }
 
     /**
@@ -209,7 +249,7 @@ public class MaterialsListAssembler {
      * first-seen material order within each branch (R1.5).
      */
     private static List<MaterialBranchGroupDto> emitBranches(
-            Map<Long, MaterialAcc> accByMaterialId,
+            Map<MaterialKey, MaterialAcc> accByMaterialKey,
             List<Long> roomOrder,
             BigDecimal vat,
             MaterialsReserveMap reserveMap) {
@@ -217,7 +257,9 @@ public class MaterialsListAssembler {
         for (ConsumptionBranch branch : ConsumptionBranch.values()) {
             rowsByBranch.put(branch, new ArrayList<>());
         }
-        for (MaterialAcc acc : accByMaterialId.values()) {
+        for (MaterialAcc acc : accByMaterialKey.values()) {
+            // The reserve map remains keyed by the bare material id (a construction/finishing id-space
+            // collision on the reserve map is a separate, far rarer concern left out of this fix).
             MaterialRowDto rowDto = acc.toRow(roomOrder, vat, reservePercent(reserveMap, acc.materialId));
             rowsByBranch.computeIfAbsent(acc.branch, b -> new ArrayList<>()).add(rowDto);
         }
@@ -262,13 +304,13 @@ public class MaterialsListAssembler {
             return rooms;
         }
         for (EstimateMatrixRoomDto room : matrix.rooms()) {
-            rooms.add(new MaterialsRoomColumnDto(room.id(), room.label()));
+            rooms.add(new MaterialsRoomColumnDto(room.id(), room.label(), room.roomTypeId(), room.roomTypeName()));
         }
         return rooms;
     }
 
     /** Fold one cell's concrete material lines into the per-material accumulators (R1.2, R1.3, R2.4, R7.3). */
-    private static void foldCell(CellDto cell, Map<Long, MaterialAcc> accByMaterialId) {
+    private static void foldCell(CellDto cell, Map<MaterialKey, MaterialAcc> accByMaterialKey) {
         if (cell == null || cell.materials() == null) {
             return;
         }
@@ -277,10 +319,23 @@ public class MaterialsListAssembler {
             if (line == null || line.concreteMaterialId() == null) {
                 continue; // Placeholder — excluded (R1.3)
             }
-            MaterialAcc acc = accByMaterialId.computeIfAbsent(
-                    line.concreteMaterialId(), id -> new MaterialAcc(id, line));
+            // Key by the composite (branch, concreteMaterialId): concreteMaterialId is a
+            // construction_materials.id for construction lines and a finishing_materials.id for
+            // finishing lines — two independent id spaces that must not collide into one row.
+            MaterialKey key = new MaterialKey(line.branch(), line.concreteMaterialId());
+            MaterialAcc acc = accByMaterialKey.computeIfAbsent(
+                    key, k -> new MaterialAcc(line.concreteMaterialId(), line));
             acc.add(roomId, line);
         }
+    }
+
+    /**
+     * The composite identity of a material row: the {@link ConsumptionBranch} plus the concrete
+     * material id. {@code concreteMaterialId} alone is NOT unique across branches (a
+     * {@code construction_materials.id} and a {@code finishing_materials.id} can share the same
+     * numeric value), so folding by id alone collides two independent materials into one row.
+     */
+    private record MaterialKey(ConsumptionBranch branch, Long materialId) {
     }
 
     private static BigDecimal reservePercent(MaterialsReserveMap reserveMap, Long materialId) {
@@ -307,7 +362,7 @@ public class MaterialsListAssembler {
     }
 
     /**
-     * Mutable per-material accumulator (one per distinct concrete material id). Captures the row's
+     * Mutable per-material accumulator (one per distinct (branch, concrete material id)). Captures the row's
      * identity/metadata from its first concrete line and folds the per-room as-is quantities; the
      * basis classification is {@link ConsumptionBasis#PER_ROOM} only while EVERY contributing line is
      * {@code PER_ROOM} (R5.1).
@@ -315,6 +370,8 @@ public class MaterialsListAssembler {
     private static final class MaterialAcc {
         private final Long materialId;
         private final String materialName;
+        private final Long typeId;
+        private final String typeName;
         private final ConsumptionBranch branch;
         private final BigDecimal net;
         private final String unit;
@@ -324,6 +381,8 @@ public class MaterialsListAssembler {
         private MaterialAcc(Long materialId, MaterialLineDto first) {
             this.materialId = materialId;
             this.materialName = first.concreteMaterialName();
+            this.typeId = first.typeId();     // material TYPE (filter attribute, not row identity, fix #2)
+            this.typeName = first.typeName();
             this.branch = first.branch();
             this.net = first.concreteNet();
             this.unit = first.normUnit();
@@ -342,6 +401,14 @@ public class MaterialsListAssembler {
             return anyPerUnit ? ConsumptionBasis.PER_UNIT : ConsumptionBasis.PER_ROOM;
         }
 
+        /**
+         * Build the row: per-room cells (raw, EXACT quantities and money) plus the two {@code Row_Total}
+         * figures. When the unit is the piece unit ({@code szt} / {@code шт}) both totals — the as-is
+         * total and the effective total — are rounded UP to whole numbers (a piece cannot be
+         * fractional), regardless of reserve percent or consumption basis; the reserve/ceiling still
+         * operates on the RAW as-is total, and the row price follows the rounded effective total. The
+         * per-room cells are never rounded (R2.4, R7.3).
+         */
         private MaterialRowDto toRow(List<Long> roomOrder, BigDecimal vat, BigDecimal reservePercent) {
             ConsumptionBasis basis = basis();
 
@@ -357,21 +424,27 @@ public class MaterialsListAssembler {
                 cells.add(new MaterialRoomCellDto(roomId, cellQty, unit, money(cellQty, net, vat)));
             }
 
-            BigDecimal effectiveTotal = effectiveQuantity(asIsTotal, basis, reservePercent);
-            MoneyBrutto rowTotalPrice = money(effectiveTotal, net, vat); // effective qty × unit price (R3.3)
+            // Reserve/ceiling operates on the RAW as-is total; the piece-unit roundup is applied to the
+            // two displayed Row_Total figures only (per-room cells stay EXACT).
+            BigDecimal displayedAsIs = roundUpForPieceUnit(asIsTotal, unit);
+            BigDecimal effectiveRounded =
+                    roundUpForPieceUnit(effectiveQuantity(asIsTotal, basis, reservePercent), unit);
+            MoneyBrutto rowTotalPrice = money(effectiveRounded, net, vat); // effective qty × unit price (R3.3)
 
             return new MaterialRowDto(
                     materialId,
                     materialName,
+                    typeId,
+                    typeName,
                     branch,
                     basis,
                     unit,
                     net,
                     bruttoUnitPrice(net, vat),
                     cells,
-                    asIsTotal,
+                    displayedAsIs,
                     reservePercent,
-                    effectiveTotal,
+                    effectiveRounded,
                     rowTotalPrice);
         }
     }

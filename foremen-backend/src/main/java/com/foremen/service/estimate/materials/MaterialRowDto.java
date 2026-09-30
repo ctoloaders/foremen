@@ -14,12 +14,20 @@ import com.foremen.dao.model.ConsumptionBranch;
  *
  * <p>A {@link ConsumptionBasis#PER_ROOM} row is an {@code Absolute_Per_Room_Material}: reserve and
  * ceiling are suppressed, so {@link #effectiveTotalQty()} equals {@link #asIsTotalQty()} (R5.2, R5.3,
- * R4.6). A {@code null} {@link #netUnitPrice()} means the chosen product has no net price: quantities
+ * R4.6). The row also carries the material TYPE ({@link #typeId()} / {@link #typeName()}) — a
+ * filter/grouping attribute distinct from the concrete material identity ({@link #materialId()} /
+ * {@link #materialName()}), which stays the row identity (fix #2). A {@code null}
+ * {@link #netUnitPrice()} means the chosen product has no net price: quantities
  * still show, but prices render {@code —} and are excluded from money totals (R12.4). Mirrors the
  * frontend {@code MaterialRow}.
  *
  * @param materialId       the concrete material id (row identity within its branch)
  * @param materialName     the concrete material display name (localized at the read layer)
+ * @param typeId           the material TYPE id (construction / finishing type) — a filter/grouping
+ *                         attribute, distinct from the concrete material identity above (fix #2);
+ *                         {@code null} when the type cannot be resolved at read time
+ * @param typeName         the material TYPE display name (localized at the read layer), used to filter
+ *                         and group rows; distinct from {@link #materialName()}, or {@code null}
  * @param branch           the row's branch (construction / finishing, R1.5)
  * @param basis            the row's consumption basis; {@code PER_ROOM} ⇒ {@code Absolute_Per_Room_Material}
  * @param unit             the material norm's unit code, or {@code null}
@@ -35,6 +43,8 @@ import com.foremen.dao.model.ConsumptionBranch;
 public record MaterialRowDto(
         Long materialId,
         String materialName,
+        Long typeId,
+        String typeName,
         ConsumptionBranch branch,
         ConsumptionBasis basis,
         String unit,

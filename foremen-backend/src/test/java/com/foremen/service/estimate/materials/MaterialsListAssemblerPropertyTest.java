@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 import com.foremen.dao.model.ConsumptionBasis;
 import com.foremen.dao.model.ConsumptionBranch;
@@ -86,14 +87,23 @@ class MaterialsListAssemblerPropertyTest {
         MaterialsListDto dto = MaterialsListAssembler.project(matrix, vat, null, false);
 
         // ---- Oracle: the distinct (branch, concreteMaterialId) pairs present on concrete lines. ----
-        Map<Long, ConsumptionBranch> expectedBranchByMaterial = new LinkedHashMap<>();
+        // concreteMaterialId is a construction_materials.id for construction lines and a
+        // finishing_materials.id for finishing lines — two independent id spaces — so the SAME
+        // numeric id in BOTH branches is TWO distinct rows. The row identity is the (branch, id) pair.
+        Set<MaterialRef> expectedRefs = new LinkedHashSet<>();
+        // The material TYPE captured for each row is the FIRST concrete line of that (branch, id) pair
+        // (fix #2): a filter attribute carried through, distinct from the concrete material identity.
+        Map<MaterialRef, Long> expectedTypeIdByRef = new LinkedHashMap<>();
+        Map<MaterialRef, String> expectedTypeNameByRef = new LinkedHashMap<>();
         for (MaterialLineDto line : concreteLines(matrix)) {
-            expectedBranchByMaterial.putIfAbsent(line.concreteMaterialId(), line.branch());
+            MaterialRef ref = new MaterialRef(line.branch(), line.concreteMaterialId());
+            expectedRefs.add(ref);
+            expectedTypeIdByRef.putIfAbsent(ref, line.typeId());
+            expectedTypeNameByRef.putIfAbsent(ref, line.typeName());
         }
 
-        // Collect every emitted row and the branch group it sits in.
-        Map<Long, ConsumptionBranch> emittedBranchByMaterial = new LinkedHashMap<>();
-        List<Long> emittedRowMaterialIds = new ArrayList<>();
+        // Collect every emitted row as a (branch, materialId) ref and the branch group it sits in.
+        List<MaterialRef> emittedRefs = new ArrayList<>();
         Set<ConsumptionBranch> seenBranchGroups = new LinkedHashSet<>();
 
         for (MaterialBranchGroupDto group : dto.branches()) {
@@ -102,37 +112,259 @@ class MaterialsListAssemblerPropertyTest {
                     .as("branch group %s appears exactly once", group.branch())
                     .isTrue();
             for (MaterialRowDto row : group.rows()) {
-                emittedRowMaterialIds.add(row.materialId());
-                emittedBranchByMaterial.put(row.materialId(), group.branch());
+                MaterialRef ref = new MaterialRef(group.branch(), row.materialId());
+                emittedRefs.add(ref);
                 // A row's own branch field agrees with the group it is partitioned into (R1.5).
                 assertThat(row.branch())
                         .as("row %s branch matches its group", row.materialId())
                         .isEqualTo(group.branch());
+                // The row carries the material TYPE from its first concrete line (fix #2): a filter
+                // attribute distinct from the concrete material identity.
+                assertThat(row.typeId())
+                        .as("row %s carries the type id of its first concrete line", row.materialId())
+                        .isEqualTo(expectedTypeIdByRef.get(ref));
+                assertThat(row.typeName())
+                        .as("row %s carries the type name of its first concrete line", row.materialId())
+                        .isEqualTo(expectedTypeNameByRef.get(ref));
             }
         }
 
-        // Exactly one row per distinct concrete material id — no duplicates (R1.2), and the same
-        // product repeated across cells/rooms folds into a single row.
-        assertThat(emittedRowMaterialIds)
-                .as("no duplicate rows: exactly one row per distinct concrete material id")
+        // Exactly one row per distinct (branch, concrete material id) — no duplicates (R1.2), and the
+        // same product repeated across cells/rooms within a branch folds into a single row.
+        assertThat(emittedRefs)
+                .as("no duplicate rows: exactly one row per distinct (branch, concrete material id)")
                 .doesNotHaveDuplicates();
 
-        // The emitted rows are EXACTLY the distinct concrete materials — no Placeholder-only row
-        // (R1.3), none missing (R1.2).
-        assertThat(new LinkedHashSet<>(emittedRowMaterialIds))
-                .as("rows are exactly the distinct concrete material ids (Placeholders excluded)")
-                .isEqualTo(expectedBranchByMaterial.keySet());
+        // The emitted rows are EXACTLY the distinct (branch, concrete material id) pairs — no
+        // Placeholder-only row (R1.3), none missing (R1.2).
+        assertThat(new LinkedHashSet<>(emittedRefs))
+                .as("rows are exactly the distinct (branch, concrete material id) pairs (Placeholders excluded)")
+                .isEqualTo(expectedRefs);
 
-        // Each material sits in the branch of its first concrete line (R1.5).
-        assertThat(emittedBranchByMaterial)
-                .as("each material is grouped under its (first) branch")
-                .isEqualTo(expectedBranchByMaterial);
-
-        // The branch groups partition the rows: Σ group sizes == total distinct materials.
+        // The branch groups partition the rows: Σ group sizes == total distinct (branch, id) pairs.
         int totalRows = dto.branches().stream().mapToInt(g -> g.rows().size()).sum();
         assertThat(totalRows)
                 .as("branch groups partition the rows (no row lost or double-counted)")
-                .isEqualTo(expectedBranchByMaterial.size());
+                .isEqualTo(expectedRefs.size());
+    }
+
+    /** A material row's composite identity: the branch plus the concrete material id (id-space fix). */
+    private record MaterialRef(ConsumptionBranch branch, Long materialId) {
+    }
+
+    // =============================================================================================
+    // Regression: a construction concrete material and a finishing concrete material that share the
+    // same numeric id must NOT collide into one merged row (id-space fix).
+    // Root cause proven against live data (project 158, room 13): construction material id 96 (tile
+    // adhesive, PER_UNIT, sums to 208) and finishing material id 96 (a WC set, PER_ROOM, 1) collided
+    // into a single accumulator keyed by the bare id, producing one row of 209 mislabeled as the WC
+    // set. Keying by (branch, id) keeps them as two independent rows.
+    // Validates: Requirements 1.2, 1.5
+    // =============================================================================================
+
+    @Test
+    @Tag("Feature: for-05-05b-list-of-materials, Regression: same numeric concrete material id in both branches yields two rows")
+    void sameConcreteIdInBothBranchesYieldsTwoIndependentRows() {
+        long roomId = 13L;
+        long sharedId = 7L; // same numeric id in two independent id spaces (construction vs finishing)
+
+        // Construction line: tile adhesive, PER_UNIT, quantity 208.
+        MaterialLineDto construction = new MaterialLineDto(
+                1L, ConsumptionBranch.construction, 500L, "adhesive-type",
+                BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
+                sharedId, "tile adhesive", new BigDecimal("10.00"), "kg",
+                new BigDecimal("208.0000"), false, ConsumptionBasis.PER_UNIT, false);
+
+        // Finishing line: WC set, PER_ROOM, quantity 1 — same numeric id, different id space.
+        MaterialLineDto finishing = new MaterialLineDto(
+                2L, ConsumptionBranch.finishing, 600L, "wc-set-type",
+                BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
+                sharedId, "WC set", new BigDecimal("300.00"), "szt",
+                new BigDecimal("1.0000"), false, ConsumptionBasis.PER_ROOM, false);
+
+        CellDto cell = new CellDto(
+                1L, roomId, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
+                BigDecimal.ZERO, List.of(construction, finishing), MoneyRange.ZERO, FillState.filled);
+        WorkRowDto workRow = new WorkRowDto(1L, "work", List.of(), List.of(cell), BigDecimal.ZERO, MoneyRange.ZERO);
+        WorkTypeGroupDto group = new WorkTypeGroupDto(
+                1L, "cat", List.of(workRow), BranchSubtotals.ZERO, BigDecimal.ZERO, MoneyRange.ZERO);
+        EstimateMatrixDto matrix = new EstimateMatrixDto(
+                158L, true,
+                List.of(new EstimateMatrixRoomDto(roomId, "room-13", null, null)),
+                List.of(group),
+                BranchSubtotals.ZERO, new BigDecimal("100.00"), BigDecimal.ZERO, MoneyRange.ZERO, null);
+
+        MaterialsListDto dto = MaterialsListAssembler.project(matrix, new BigDecimal("23.00"), null, false);
+
+        // Exactly two rows total — not one merged row of 209 (the bug).
+        int totalRows = dto.branches().stream().mapToInt(g -> g.rows().size()).sum();
+        assertThat(totalRows)
+                .as("two independent materials (construction id 7 + finishing id 7) ⇒ two rows, not one")
+                .isEqualTo(2);
+
+        MaterialRowDto constructionRow = rowFor(dto, ConsumptionBranch.construction, sharedId);
+        MaterialRowDto finishingRow = rowFor(dto, ConsumptionBranch.finishing, sharedId);
+
+        // The construction row carries its own quantity (208), independent of the finishing line.
+        assertThat(constructionRow.materialName())
+                .as("construction row keeps its own identity (tile adhesive)")
+                .isEqualTo("tile adhesive");
+        assertThat(constructionRow.asIsTotalQty())
+                .as("construction as-is total is 208, not 209")
+                .isEqualByComparingTo(new BigDecimal("208.0000"));
+
+        // The finishing row carries its own quantity (1), NOT the merged 209.
+        assertThat(finishingRow.materialName())
+                .as("finishing row keeps its own identity (WC set)")
+                .isEqualTo("WC set");
+        assertThat(finishingRow.asIsTotalQty())
+                .as("finishing as-is total is 1, not 209")
+                .isEqualByComparingTo(new BigDecimal("1.0000"));
+    }
+
+    /** Find the single emitted row for a (branch, materialId) pair; fails if absent or duplicated. */
+    private static MaterialRowDto rowFor(MaterialsListDto dto, ConsumptionBranch branch, long materialId) {
+        List<MaterialRowDto> matches = new ArrayList<>();
+        for (MaterialBranchGroupDto group : dto.branches()) {
+            if (group.branch() != branch) {
+                continue;
+            }
+            for (MaterialRowDto row : group.rows()) {
+                if (row.materialId() != null && row.materialId() == materialId) {
+                    matches.add(row);
+                }
+            }
+        }
+        assertThat(matches)
+                .as("exactly one %s row for material id %s", branch, materialId)
+                .hasSize(1);
+        return matches.get(0);
+    }
+
+    // =============================================================================================
+    // Amendment: when the norm unit is the piece unit (szt / шт), the two Row_Total figures — the
+    // as-is total and the effective total — are rounded UP to whole numbers (a piece cannot be
+    // fractional), regardless of reserve percent and regardless of consumption basis. Per-room cells
+    // stay EXACT; a non-piece unit is never rounded.
+    // =============================================================================================
+
+    @Test
+    @Tag("Feature: for-05-05b-list-of-materials, Amend: szt row totals round up to whole numbers")
+    void sztRowTotalsRoundUpToWholeNumbers() {
+        // --- Case 1: PER_ROOM szt material across two rooms, per-line 0.7 + 0.5 = 1.2 as-is total. ---
+        long roomA = 100L;
+        long roomB = 101L;
+
+        MaterialLineDto lineA = new MaterialLineDto(
+                1L, ConsumptionBranch.construction, 7L, "type",
+                BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
+                50L, "screws", new BigDecimal("3.00"), "szt",
+                new BigDecimal("0.7000"), false, ConsumptionBasis.PER_ROOM, false);
+        MaterialLineDto lineB = new MaterialLineDto(
+                2L, ConsumptionBranch.construction, 7L, "type",
+                BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
+                50L, "screws", new BigDecimal("3.00"), "szt",
+                new BigDecimal("0.5000"), false, ConsumptionBasis.PER_ROOM, false);
+
+        CellDto cellA = new CellDto(
+                1L, roomA, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
+                BigDecimal.ZERO, List.of(lineA), MoneyRange.ZERO, FillState.filled);
+        CellDto cellB = new CellDto(
+                2L, roomB, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
+                BigDecimal.ZERO, List.of(lineB), MoneyRange.ZERO, FillState.filled);
+        WorkRowDto workRow = new WorkRowDto(
+                1L, "work", List.of(), List.of(cellA, cellB), BigDecimal.ZERO, MoneyRange.ZERO);
+        WorkTypeGroupDto group = new WorkTypeGroupDto(
+                1L, "cat", List.of(workRow), BranchSubtotals.ZERO, BigDecimal.ZERO, MoneyRange.ZERO);
+        EstimateMatrixDto matrix = new EstimateMatrixDto(
+                1L, true,
+                List.of(new EstimateMatrixRoomDto(roomA, "room-a", null, null),
+                        new EstimateMatrixRoomDto(roomB, "room-b", null, null)),
+                List.of(group),
+                BranchSubtotals.ZERO, new BigDecimal("100.00"), BigDecimal.ZERO, MoneyRange.ZERO, null);
+
+        MaterialsListDto dto = MaterialsListAssembler.project(matrix, new BigDecimal("23.00"), null, false);
+        MaterialRowDto row = rowFor(dto, ConsumptionBranch.construction, 50L);
+
+        // Both Row_Total figures round UP from 1.2 to the whole number 2 (PER_ROOM ⇒ no reserve, so
+        // the effective raw would be 1.2, still rounded up to 2 by the piece-unit rule).
+        assertThat(row.asIsTotalQty().compareTo(new BigDecimal("2")))
+                .as("szt as-is Row_Total rounds up 1.2 → 2").isZero();
+        assertThat(row.effectiveTotalQty().compareTo(new BigDecimal("2")))
+                .as("szt effective Row_Total rounds up 1.2 → 2").isZero();
+
+        // The per-room cells stay EXACT (0.7 and 0.5), never rounded.
+        assertThat(row.cells()).hasSize(2);
+        assertThat(row.cells().get(0).quantity())
+                .as("room A cell stays exact 0.7").isEqualByComparingTo(new BigDecimal("0.7000"));
+        assertThat(row.cells().get(1).quantity())
+                .as("room B cell stays exact 0.5").isEqualByComparingTo(new BigDecimal("0.5000"));
+
+        // --- Case 2: PER_UNIT szt material with a fractional as-is and a reserve percent. ---
+        // norm×Volume already resolved into quantity=2.5; reserve 10% ⇒ raw effective ceil(2.75)=3;
+        // as-is total ceil(2.5)=3.
+        MaterialLineDto perUnit = new MaterialLineDto(
+                3L, ConsumptionBranch.finishing, 8L, "type",
+                BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
+                60L, "sockets", new BigDecimal("5.00"), "szt",
+                new BigDecimal("2.5000"), false, ConsumptionBasis.PER_UNIT, false);
+        CellDto perUnitCell = new CellDto(
+                3L, roomA, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
+                BigDecimal.ZERO, List.of(perUnit), MoneyRange.ZERO, FillState.filled);
+        WorkRowDto perUnitWorkRow = new WorkRowDto(
+                2L, "work", List.of(), List.of(perUnitCell), BigDecimal.ZERO, MoneyRange.ZERO);
+        WorkTypeGroupDto perUnitGroup = new WorkTypeGroupDto(
+                2L, "cat", List.of(perUnitWorkRow), BranchSubtotals.ZERO, BigDecimal.ZERO, MoneyRange.ZERO);
+        EstimateMatrixDto perUnitMatrix = new EstimateMatrixDto(
+                1L, true,
+                List.of(new EstimateMatrixRoomDto(roomA, "room-a", null, null)),
+                List.of(perUnitGroup),
+                BranchSubtotals.ZERO, new BigDecimal("100.00"), BigDecimal.ZERO, MoneyRange.ZERO, null);
+
+        MaterialsReserveMap reserve = new MaterialsReserveMap(
+                Map.of(60L, new ReserveEntry(new BigDecimal("10.00"), null, null, null)));
+        MaterialsListDto perUnitDto =
+                MaterialsListAssembler.project(perUnitMatrix, new BigDecimal("23.00"), reserve, false);
+        MaterialRowDto perUnitRow = rowFor(perUnitDto, ConsumptionBranch.finishing, 60L);
+
+        // as-is total = ceil(2.5) = 3; effective = ceil(2.5 × 1.10 = 2.75) = 3 (both whole).
+        assertThat(perUnitRow.asIsTotalQty().compareTo(new BigDecimal("3")))
+                .as("szt PER_UNIT as-is Row_Total is ceil of raw 2.5 → 3").isZero();
+        assertThat(perUnitRow.effectiveTotalQty().compareTo(new BigDecimal("3")))
+                .as("szt PER_UNIT effective Row_Total is whole → 3").isZero();
+        // Per-room cell stays exact 2.5.
+        assertThat(perUnitRow.cells().get(0).quantity())
+                .as("PER_UNIT cell stays exact 2.5").isEqualByComparingTo(new BigDecimal("2.5000"));
+
+        // --- Control: a non-piece unit (m2) with a fractional as-is total is NOT rounded. ---
+        MaterialLineDto m2Line = new MaterialLineDto(
+                4L, ConsumptionBranch.construction, 9L, "type",
+                BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
+                70L, "tiles", new BigDecimal("4.00"), "m2",
+                new BigDecimal("1.2000"), false, ConsumptionBasis.PER_ROOM, false);
+        CellDto m2Cell = new CellDto(
+                4L, roomA, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
+                BigDecimal.ZERO, List.of(m2Line), MoneyRange.ZERO, FillState.filled);
+        WorkRowDto m2WorkRow = new WorkRowDto(
+                3L, "work", List.of(), List.of(m2Cell), BigDecimal.ZERO, MoneyRange.ZERO);
+        WorkTypeGroupDto m2Group = new WorkTypeGroupDto(
+                3L, "cat", List.of(m2WorkRow), BranchSubtotals.ZERO, BigDecimal.ZERO, MoneyRange.ZERO);
+        EstimateMatrixDto m2Matrix = new EstimateMatrixDto(
+                1L, true,
+                List.of(new EstimateMatrixRoomDto(roomA, "room-a", null, null)),
+                List.of(m2Group),
+                BranchSubtotals.ZERO, new BigDecimal("100.00"), BigDecimal.ZERO, MoneyRange.ZERO, null);
+
+        MaterialsListDto m2Dto = MaterialsListAssembler.project(m2Matrix, new BigDecimal("23.00"), null, false);
+        MaterialRowDto m2Row = rowFor(m2Dto, ConsumptionBranch.construction, 70L);
+
+        // m2 ⇒ NO rounding: as-is total stays fractional 1.2 (PER_ROOM ⇒ effective == as-is 1.2).
+        assertThat(m2Row.asIsTotalQty())
+                .as("m2 as-is Row_Total stays fractional 1.2 (no piece rounding)")
+                .isEqualByComparingTo(new BigDecimal("1.2000"));
+        assertThat(m2Row.effectiveTotalQty())
+                .as("m2 effective Row_Total stays fractional 1.2 (no piece rounding)")
+                .isEqualByComparingTo(new BigDecimal("1.2000"));
     }
 
     // =============================================================================================
@@ -157,8 +389,10 @@ class MaterialsListAssemblerPropertyTest {
                 BigDecimal net = row.netUnitPrice();
 
                 // ---- Oracle: Σ MaterialLineDto.quantity over every cell of each room using this
-                // material (the resolved, override/basis-aware Physical_Quantity, R7.1, R7.3). ----
-                Map<Long, BigDecimal> asIsByRoom = oracleAsIsByRoom(matrix, row.materialId());
+                // (branch, material id) pair (the resolved, override/basis-aware Physical_Quantity,
+                // R7.1, R7.3). The pair — not the bare id — is the row identity (id-space fix). ----
+                Map<Long, BigDecimal> asIsByRoom =
+                        oracleAsIsByRoom(matrix, group.branch(), row.materialId());
 
                 // The cells align with the room columns, in order (R2.1).
                 assertThat(row.cells()).hasSameSizeAs(roomOrder);
@@ -403,13 +637,16 @@ class MaterialsListAssemblerPropertyTest {
      * in the room order of the matrix, only for rooms that are actually consumed (mirrors the empty
      * placeholder rule, R2.3).
      */
-    private static Map<Long, BigDecimal> oracleAsIsByRoom(EstimateMatrixDto matrix, Long materialId) {
+    private static Map<Long, BigDecimal> oracleAsIsByRoom(
+            EstimateMatrixDto matrix, ConsumptionBranch branch, Long materialId) {
         Map<Long, BigDecimal> byRoom = new LinkedHashMap<>();
         for (WorkTypeGroupDto group : matrix.groups()) {
             for (WorkRowDto row : group.rows()) {
                 for (CellDto cell : row.cells()) {
                     for (MaterialLineDto line : cell.materials()) {
-                        if (materialId.equals(line.concreteMaterialId())) {
+                        // Match on the (branch, concreteMaterialId) pair — the row identity — so a
+                        // same-id line in the other branch does NOT leak into this row's quantities.
+                        if (materialId.equals(line.concreteMaterialId()) && branch == line.branch()) {
                             BigDecimal qty = line.quantity() == null ? BigDecimal.ZERO : line.quantity();
                             byRoom.merge(cell.roomId(), qty, BigDecimal::add);
                         }

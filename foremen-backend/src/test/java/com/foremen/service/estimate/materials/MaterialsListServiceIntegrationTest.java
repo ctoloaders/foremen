@@ -258,11 +258,30 @@ class MaterialsListServiceIntegrationTest {
                 .extracting(MaterialsRoomColumnDto::id)
                 .containsExactly(f.roomId);
 
+        // The room column carries the room type, passed through from the kosztorys (fixes #3/#4).
+        MaterialsRoomColumnDto roomColumn = dto.rooms().get(0);
+        assertThat(roomColumn.roomTypeId())
+                .as("the room column carries the room type id passed through from the kosztorys")
+                .isEqualTo(f.roomTypeId);
+        assertThat(roomColumn.roomTypeName())
+                .as("the room column carries the localized room type name (non-null)")
+                .isNotBlank();
+
         // R1.2/R1.5: exactly one distinct concrete construction row, in the construction branch group.
         MaterialRowDto row = singleConstructionRow(dto);
         assertThat(row.materialId())
                 .as("the row is the chosen concrete construction product (R1.2)")
                 .isEqualTo(f.constructionMaterialId);
+        // The row carries the material TYPE — a filter attribute distinct from the row identity (fix #2).
+        assertThat(row.typeId())
+                .as("the row carries the material type id (filter attribute, not row identity, fix #2)")
+                .isEqualTo(f.constructionTypeId);
+        assertThat(row.typeName())
+                .as("the row carries the localized material type name (non-null)")
+                .isNotBlank();
+        assertThat(row.materialName())
+                .as("the material type name is distinct from the concrete material name (fix #2)")
+                .isNotEqualTo(row.typeName());
         assertThat(row.netUnitPrice())
                 .as("the row net unit price is the chosen product retailNet, verbatim (R2.5, R7.2)")
                 .isEqualByComparingTo(f.constructionRetailNet);
@@ -472,6 +491,8 @@ class MaterialsListServiceIntegrationTest {
         Long roomId;
         Long workItemId;
         Long constructionMaterialId;
+        Long constructionTypeId;
+        Long roomTypeId;
         BigDecimal roomFloorArea;
         BigDecimal constructionRetailNet;
         BigDecimal vatRate;
@@ -514,6 +535,8 @@ class MaterialsListServiceIntegrationTest {
             f.roomId = room.getId();
             f.workItemId = workItem.getId();
             f.constructionMaterialId = constructionMaterial.getId();
+            f.constructionTypeId = constructionType.getId();
+            f.roomTypeId = roomType.getId();
             f.roomFloorArea = floorArea;
             f.constructionRetailNet = constructionRetailNet;
         });
