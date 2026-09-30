@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-06 (R3.1, R3.2, R3.3): material self-cost on finishing_materials.
+
+        Mirror of changeset 126 for the finishing catalog. Adds cost_net NUMERIC(12,2)
+        NOT NULL DEFAULT 0 and back-fills it ONCE from retail_net
+        (cost_net = round(retail_net * 0.9, 2)) where retail_net is non-null; rows with a
+        null retail_net keep the 0 default. cost_net is independent of retail_net after
+        this seed.
+
+        127-add-...-column: the NOT NULL DEFAULT 0 add-column, guarded by NOT columnExists.
+        127-backfill-...: the one-shot back-fill, guarded so it only runs while every row is
+          still at the 0 default (COUNT of non-zero cost_net = 0), overwriting only rows
+          whose retail_net is non-null. MARK_RAN so it applies at most once.
+    -->
+
+    <changeSet id="127-add-finishing-material-cost-net-column" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="finishing_materials" columnName="cost_net"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="finishing_materials">
+            <column name="cost_net" type="NUMERIC(12,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="127-backfill-finishing-material-cost-net" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM finishing_materials WHERE cost_net != 0
+            </sqlCheck>
+        </preConditions>
+        <update tableName="finishing_materials">
+            <column name="cost_net" valueComputed="round(retail_net * 0.9, 2)"/>
+            <where>retail_net IS NOT NULL</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

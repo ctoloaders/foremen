@@ -30,6 +30,7 @@ public record ConstructionMaterialDtoExtendedModel(
         BigDecimal purchasePrice,
         BigDecimal retailGross,
         BigDecimal retailNet,
+        BigDecimal costNet,
         String website,
         String imageUrl,
         boolean active,

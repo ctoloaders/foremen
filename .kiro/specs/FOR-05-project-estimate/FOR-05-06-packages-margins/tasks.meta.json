@@ -1,0 +1,609 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `WorkerTypeEntity` and its schema changeset (`125`)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765101580
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765130565
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765282640
+      }
+    ],
+    "1.2 Seed the four tiers + ABAC `WORKER_TYPES` resource in changeset `125`": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765101626
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765287740
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765392957
+      }
+    ],
+    "1.3 Write the WorkerType migration + seed integration test": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765101669
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765397669
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765576722
+      }
+    ],
+    "2.1 Implement the WorkerType service/controller (generic CRUD) with validation": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765101708
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765580802
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765882492
+      }
+    ],
+    "2.2 Write CRUD + ABAC + startup-annotation tests": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765101773
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765886709
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766168594
+      }
+    ],
+    "3.1 Add `cost_net` to construction & finishing materials (changesets `126`, `127`)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765101852
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766172873
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766271139
+      }
+    ],
+    "3.2 Extend the material entities/DTOs/forms for `cost_net`": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102003
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766275789
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766558048
+      }
+    ],
+    "3.3 Write the material-cost migration integration test": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102030
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766562415
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766746926
+      }
+    ],
+    "4.1 Implement `MarginCostService` (pure cost core)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102071
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766751530
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766905428
+      }
+    ],
+    "4.2 Implement `MarginsListAssembler` (read-only projection, grouped by work type)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102105
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766911315
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767245555
+      }
+    ],
+    "4.3 Add the margins read-model DTOs": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102139
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767250178
+      }
+    ],
+    "4.4 Write property tests — cost core (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102173
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767255348
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767514030
+      }
+    ],
+    "4.5 Write property tests — assembler (jqwik, ≥100 iterations)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102206
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767256693
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767518326
+      }
+    ],
+    "5.1 Implement `MarginsListService` + `EstimateMarginsController`": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102245
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767523895
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767732121
+      }
+    ],
+    "5.2 Write service integration + ABAC/startup tests": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102276
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767737740
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768132681
+      }
+    ],
+    "6. Checkpoint — backend compiles and its tests pass": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102312
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768138675
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768321533
+      }
+    ],
+    "7.1 Implement `features/worker-types/` (list + form) and nav entry": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102345
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768329681
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768720945
+      }
+    ],
+    "7.2 Write WorkerType CRUD component tests": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102380
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768727130
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769077427
+      }
+    ],
+    "8.1 Add `cost_net` column + form field to both material catalogs": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102418
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768737849
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769079430
+      }
+    ],
+    "8.2 Write material cost-field component tests": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102452
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769084448
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769366548
+      }
+    ],
+    "9.1 Scaffold `features/project-margins/` + mirror read-model types + `api/margins-api.ts`": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102486
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769093647
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769368209
+      }
+    ],
+    "9.2 Implement `state/marginsModel.ts` (pure core mirroring the backend)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102519
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769373130
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769595063
+      }
+    ],
+    "9.3 Write property tests — margins model (fast-check, ≥100 iterations)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102563
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769599780
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769802142
+      }
+    ],
+    "10.1 Implement `MarginsMatrix` (works × cost, grouped by work type)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102625
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769807814
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770088138
+      }
+    ],
+    "10.2 Implement `MarginsDashboard`": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102655
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769808960
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770089267
+      }
+    ],
+    "10.3 Implement `MarginsTab` and register the `margins` workspace tab": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102687
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770096045
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770269167
+      }
+    ],
+    "10.4 Write matrix/dashboard/tab component tests": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102723
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770274278
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770524547
+      }
+    ],
+    "11.1 Add all new keys to `pl.json` and `ru.json`": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102754
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770530348
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770823278
+      }
+    ],
+    "11.2 Write locale-parity test": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102790
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770827978
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771023880
+      }
+    ],
+    "12. Checkpoint — frontend compiles and its tests pass": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102826
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771028583
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771089244
+      }
+    ],
+    "13. Author test-cases.md": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102863
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771105480
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771300674
+      }
+    ],
+    "14. Final checkpoint — full verification and per-repo commits": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765102896
+      },
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771308036
+      }
+    ],
+    "1. Backend: WorkerType dictionary (entity + schema + seed)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790765576797
+      }
+    ],
+    "2. Backend: WorkerType CRUD + ABAC": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766168660
+      }
+    ],
+    "3. Backend: material `cost_net` (schema + back-fill + CRUD)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790766746968
+      }
+    ],
+    "4. Backend: cost core + margins projection": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790767518374
+      }
+    ],
+    "5. Backend: margins service + controller": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790768132745
+      }
+    ],
+    "7. Frontend: WorkerType admin CRUD": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769077487
+      }
+    ],
+    "8. Frontend: material `cost_net` UI": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769366629
+      }
+    ],
+    "9. Frontend: pure margins model + api": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790769802463
+      }
+    ],
+    "10. Frontend: Margins matrix, dashboard, tab": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790770524602
+      }
+    ],
+    "11. Frontend: i18n (PL/RU parity)": [
+      {
+        "executionId": "7d830a75-11a2-4233-ac93-0b4d22b88591",
+        "chatSessionId": "sess_74d1cb87-1bc1-4376-b1b7-fae0fb267f94",
+        "timestamp": 1790771023947
+      }
+    ]
+  }
+}

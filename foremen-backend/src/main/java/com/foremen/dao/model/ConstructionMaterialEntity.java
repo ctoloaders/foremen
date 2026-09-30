@@ -54,6 +54,14 @@ public class ConstructionMaterialEntity extends BaseEntity {
     @Column(name = "retail_net", precision = 12, scale = 2)
     private BigDecimal retailNet;
 
+    /**
+     * Materialized self-cost (себестоимость), net. Seeded once as {@code retailNet − 10%} by the
+     * back-fill migration, then edited independently through the material admin CRUD. It is NOT
+     * recomputed from {@code retailNet} on update.
+     */
+    @Column(name = "cost_net", nullable = false, precision = 12, scale = 2)
+    private BigDecimal costNet = BigDecimal.ZERO;
+
     @Column(name = "website", length = 255)
     private String website;
 

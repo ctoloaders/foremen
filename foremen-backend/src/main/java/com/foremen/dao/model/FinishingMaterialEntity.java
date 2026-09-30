@@ -1,13 +1,20 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "finishing_materials")
@@ -60,6 +67,14 @@ public class FinishingMaterialEntity extends BaseEntity {
 
     @Column(name = "retail_net", precision = 12, scale = 2)
     private BigDecimal retailNet;
+
+    /**
+     * Materialized self-cost (себестоимость), net. Seeded once as {@code retailNet − 10%} by the
+     * back-fill migration, then edited independently through the material admin CRUD. It is NOT
+     * recomputed from {@code retailNet} on update.
+     */
+    @Column(name = "cost_net", nullable = false, precision = 12, scale = 2)
+    private BigDecimal costNet = BigDecimal.ZERO;
 
     @Column(name = "link", length = 1024)
     private String link;

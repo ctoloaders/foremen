@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-06 (R1.3, R1.6): worker_types dictionary (cost tiers). A managed reference
+         dictionary { code UNIQUE, name_ru, name_pl, tier_pct NUMERIC(6,4), is_base BOOL,
+         order_no INT, active BOOL, audit cols }. The base tier's tier_pct is the offer share
+         (e.g. 0.40); non-base tiers' tier_pct is the uplift-on-base. Seed of the four tiers and
+         the ABAC WORKER_TYPES resource is a separate changeset (task 1.2). Idempotent via
+         NOT tableExists + onFail="MARK_RAN". -->
+    <changeSet id="125-create-worker-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="worker_types"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="worker_types">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(100)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_worker_types_code"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tier_pct" type="NUMERIC(6,4)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_base" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- FOR-05-06 (R1.4, R6.1, R6.2, R6.3): seed the four cost tiers from the client's Excel
+         `Pracownicy price` sheet. The base tier's tier_pct is the SHARE of the offer price (0.40);
+         the non-base tiers' tier_pct is the UPLIFT ON BASE (hired-no-tools +10%, sole-trader +26.5%,
+         firm +65%). Exactly one row (BASE) is flagged is_base. Idempotent: guarded so a re-run
+         against an already-seeded worker_types inserts nothing. -->
+    <changeSet id="125-seed-worker-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM worker_types</sqlCheck>
+        </preConditions>
+
+        <insert tableName="worker_types">
+            <column name="code" value="BASE"/>
+            <column name="name_ru" value="База"/>
+            <column name="name_pl" value="Baza"/>
+            <column name="tier_pct" valueNumeric="0.4000"/>
+            <column name="is_base" valueBoolean="true"/>
+            <column name="order_no" valueNumeric="1"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="worker_types">
+            <column name="code" value="HIRED_NO_TOOLS"/>
+            <column name="name_ru" value="Наёмный работник без инструмента"/>
+            <column name="name_pl" value="Pracownik najemny bez narzędzi"/>
+            <column name="tier_pct" valueNumeric="0.1000"/>
+            <column name="is_base" valueBoolean="false"/>
+            <column name="order_no" valueNumeric="2"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="worker_types">
+            <column name="code" value="HIRED_SOLE_TRADER"/>
+            <column name="name_ru" value="Наёмный работник (ИП) со всем инструментом"/>
+            <column name="name_pl" value="Pracownik (JDG) z pełnym narzędziem"/>
+            <column name="tier_pct" valueNumeric="0.2650"/>
+            <column name="is_base" valueBoolean="false"/>
+            <column name="order_no" valueNumeric="3"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+        <insert tableName="worker_types">
+            <column name="code" value="FIRM"/>
+            <column name="name_ru" value="Фирма"/>
+            <column name="name_pl" value="Firma"/>
+            <column name="tier_pct" valueNumeric="0.6500"/>
+            <column name="is_base" valueBoolean="false"/>
+            <column name="order_no" valueNumeric="4"/>
+            <column name="active" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+    </changeSet>
+
+    <!-- FOR-05-06 (entity-creation checklist step 1): seed the ABAC WORKER_TYPES resource. -->
+    <changeSet id="125-seed-worker-types-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'WORKER_TYPES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="WORKER_TYPES"/>
+            <column name="name_ru" value="Типы работников"/>
+            <column name="name_pl" value="Typy pracowników"/>
+            <column name="description_ru" value="Управление типами найма работников и их тарифами"/>
+            <column name="description_pl" value="Zarządzanie typami zatrudnienia pracowników i ich stawkami"/>
+        </insert>
+    </changeSet>
+
+    <!-- FOR-05-06 (entity-creation checklist step 2): grant ADMIN full CRUD on WORKER_TYPES. -->
+    <changeSet id="125-seed-worker-types-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'WORKER_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'WORKER_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'WORKER_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- FOR-05-06: grant MANAGER READ on WORKER_TYPES (margin-viewing role). -->
+    <changeSet id="125-seed-worker-types-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'WORKER_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'WORKER_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'WORKER_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- FOR-05-06: grant FOREMAN READ on WORKER_TYPES (margin-viewing role). -->
+    <changeSet id="125-seed-worker-types-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'WORKER_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORKER_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORKER_TYPES';
+        </sql>
+    </changeSet>
+
+    <!-- FOR-05-06: grant FINANCIER READ on WORKER_TYPES (margin-viewing role). -->
+    <changeSet id="125-seed-worker-types-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'WORKER_TYPES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORKER_TYPES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORKER_TYPES';
+        </sql>
+    </changeSet>
+
+    <!--
+        WORKER and CLIENT system roles are intentionally left with no role_resources
+        entry (and therefore no operations) on the WORKER_TYPES resource, expressing
+        deny-by-default. Custom (non-system) roles likewise receive no grant here.
+        Note: ForemenPermissionEvaluator bypasses the matrix for the exact ADMIN role
+        code, so the ADMIN grant above is a completeness/self-describing measure.
+    -->
+
+</databaseChangeLog>

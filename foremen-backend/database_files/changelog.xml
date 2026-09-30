@@ -330,4 +330,19 @@
          no reserves set = identity. Idempotent via NOT columnExists + MARK_RAN. Registered LAST,
          after 123. -->
     <include file="database_files/changesets/124-add-estimate-materials-reserve-map.xml"/>
+
+    <!-- FOR-05-06 (R1.3, R1.6): worker_types cost-tier dictionary { code, name_ru, name_pl,
+         tier_pct NUMERIC(6,4), is_base, order_no, active, audit cols }. Table only; the four-tier
+         seed + ABAC WORKER_TYPES resource is changeset 126+ (task 1.2). Idempotent via
+         NOT tableExists + MARK_RAN. Registered LAST, after 124. -->
+    <include file="database_files/changesets/125-create-worker-types.xml"/>
+
+    <!-- FOR-05-06 (R3.1, R3.2, R3.3): material self-cost. 126 adds
+         construction_materials.cost_net NUMERIC(12,2) NOT NULL DEFAULT 0 and back-fills it
+         once (round(retail_net*0.9, 2) where retail_net non-null; null retail keeps 0); 127
+         is the identical migration for finishing_materials. cost_net is stored/editable and
+         independent of retail_net after seed. Idempotent via NOT columnExists on the add and a
+         one-shot COUNT-guarded back-fill (MARK_RAN). Registered LAST, after 125. -->
+    <include file="database_files/changesets/126-add-construction-material-cost-net.xml"/>
+    <include file="database_files/changesets/127-add-finishing-material-cost-net.xml"/>
 </databaseChangeLog>

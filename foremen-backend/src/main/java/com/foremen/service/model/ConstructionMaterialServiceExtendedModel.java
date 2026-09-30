@@ -31,6 +31,7 @@ public class ConstructionMaterialServiceExtendedModel {
     private BigDecimal purchasePrice;
     private BigDecimal retailGross;
     private BigDecimal retailNet;
+    private BigDecimal costNet;
     private String website;
     private String image;
     private boolean active = true;

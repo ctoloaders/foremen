@@ -244,6 +244,7 @@ class ConstructionMaterialPackageRemovalMapperTest {
                 null,    // purchasePrice
                 null,    // retailGross
                 new BigDecimal("150.00"),
+                new BigDecimal("135.00"), // costNet
                 null,    // website
                 null,    // image
                 null);   // active -> defaults to true
@@ -261,6 +262,7 @@ class ConstructionMaterialPackageRemovalMapperTest {
                 null,
                 null,
                 new BigDecimal("150.00"),
+                new BigDecimal("135.00"), // costNet
                 null,
                 null,
                 null);

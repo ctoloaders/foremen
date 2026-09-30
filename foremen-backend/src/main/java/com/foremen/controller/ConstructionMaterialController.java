@@ -212,6 +212,7 @@ public class ConstructionMaterialController implements AdminController<
                 row.purchasePrice(),
                 row.retailGross(),
                 row.retailNet(),
+                row.costNet(),
                 row.website(),
                 row.imageUrl(),
                 row.active(),

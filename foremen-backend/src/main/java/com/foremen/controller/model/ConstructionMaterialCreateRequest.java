@@ -32,6 +32,7 @@ public record ConstructionMaterialCreateRequest(
     @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal purchasePrice,
     @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal retailGross,
     @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal retailNet,
+    @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal costNet,
     @Size(max = 255) String website,
     @Size(max = 512) String image,
     Boolean active

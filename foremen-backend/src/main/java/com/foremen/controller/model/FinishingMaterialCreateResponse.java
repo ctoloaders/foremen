@@ -31,6 +31,7 @@ public record FinishingMaterialCreateResponse(
         BigDecimal purchasePrice,
         BigDecimal retailGross,
         BigDecimal retailNet,
+        BigDecimal costNet,
         String link,
         String photoUrl,
         boolean active

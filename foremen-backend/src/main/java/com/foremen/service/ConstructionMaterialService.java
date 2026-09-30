@@ -215,6 +215,7 @@ public class ConstructionMaterialService
         validatePrice("purchasePrice", model.getPurchasePrice());
         validatePrice("retailGross", model.getRetailGross());
         validatePrice("retailNet", model.getRetailNet());
+        validatePrice("costNet", model.getCostNet());
     }
 
     private void validatePrice(String field, BigDecimal value) {
@@ -348,6 +349,7 @@ public class ConstructionMaterialService
         snap.put("purchasePrice", entity.getPurchasePrice());
         snap.put("retailGross", entity.getRetailGross());
         snap.put("retailNet", entity.getRetailNet());
+        snap.put("costNet", entity.getCostNet());
         snap.put("website", entity.getWebsite());
         snap.put("image", entity.getImage());
         snap.put("active", entity.isActive());

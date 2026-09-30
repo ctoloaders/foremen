@@ -1,5 +1,17 @@
 package com.foremen.service;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.foremen.dao.FinishingMaterialDao;
 import com.foremen.dao.MaterialCategoryDao;
@@ -22,18 +34,8 @@ import com.foremen.service.image.ImageStorage;
 import com.foremen.service.model.FinishingMaterialServiceExtendedModel;
 import com.foremen.service.model.FinishingMaterialServiceModel;
 import com.foremen.service.model.mapper.FinishingMaterialServiceMapper;
-import jakarta.persistence.EntityManager;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import jakarta.persistence.EntityManager;
 
 /**
  * CRUD service for {@link FinishingMaterialEntity} (FOR-04-18, task 2.2).
@@ -254,6 +256,7 @@ public class FinishingMaterialService
         validatePrice("purchasePrice", model.getPurchasePrice());
         validatePrice("retailGross", model.getRetailGross());
         validatePrice("retailNet", model.getRetailNet());
+        validatePrice("costNet", model.getCostNet());
     }
 
     private void validatePrice(String field, BigDecimal value) {
@@ -394,6 +397,7 @@ public class FinishingMaterialService
         snap.put("purchasePrice", entity.getPurchasePrice());
         snap.put("retailGross", entity.getRetailGross());
         snap.put("retailNet", entity.getRetailNet());
+        snap.put("costNet", entity.getCostNet());
         snap.put("link", entity.getLink());
         snap.put("photo", entity.getPhoto());
         snap.put("active", entity.isActive());

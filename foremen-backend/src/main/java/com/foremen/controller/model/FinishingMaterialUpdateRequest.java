@@ -1,13 +1,13 @@
 package com.foremen.controller.model;
 
+import java.math.BigDecimal;
+import java.util.Set;
+
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-
-import java.math.BigDecimal;
-import java.util.Set;
 
 /**
  * Update payload for a finishing material. Structurally identical to
@@ -29,6 +29,7 @@ public record FinishingMaterialUpdateRequest(
     @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal purchasePrice,
     @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal retailGross,
     @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal retailNet,
+    @DecimalMin("0.00") @DecimalMax("9999999999.99") BigDecimal costNet,
     @Size(max = 1024) String link,
     @Size(max = 512) String photo,
     Boolean active

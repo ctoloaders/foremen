@@ -27,6 +27,7 @@ public record ConstructionMaterialCreateResponse(
         BigDecimal purchasePrice,
         BigDecimal retailGross,
         BigDecimal retailNet,
+        BigDecimal costNet,
         String website,
         String imageUrl,
         boolean active,

@@ -1,12 +1,12 @@
 package com.foremen.service.model;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.util.LinkedHashSet;
 import java.util.Set;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Write-path service model for a finishing material.
@@ -36,6 +36,7 @@ public class FinishingMaterialServiceExtendedModel {
     private BigDecimal purchasePrice;
     private BigDecimal retailGross;
     private BigDecimal retailNet;
+    private BigDecimal costNet;
     private String link;
     private String photo;
     private boolean active = true;

@@ -1,13 +1,14 @@
 package com.foremen.service.model;
 
-import com.foremen.controller.model.RefDto;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.foremen.controller.model.RefDto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Read-path service model for a finishing material.
@@ -39,6 +40,7 @@ public class FinishingMaterialServiceModel {
     private BigDecimal purchasePrice;
     private BigDecimal retailGross;
     private BigDecimal retailNet;
+    private BigDecimal costNet;
     private String link;
     private String photoUrl;
     private boolean active;
