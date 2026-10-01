@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (Requirements 4.1, 4.2, 4.3, 4.6, 4.8, 10.18): the OfferNegotiationRound —
+        a first-class, never-deleted entry of the two-sided negotiation thread. Each round is
+        bound to the Offer_Revision in effect when it was created (R4.6).
+
+        Columns mirror OfferNegotiationRoundEntity (design §Data Models):
+          - offer_id        : owner FK to offers, NOT NULL; ON DELETE CASCADE so deleting an
+                              offer removes its thread. Rounds resolve to a project via
+                              offer.project.id.
+          - offer_revision  : INT NOT NULL; the revision in effect when the round was created
+                              (R4.6).
+          - round_no        : INT NOT NULL; ordinal within the offer.
+          - initiator_role  : VARCHAR(16) NOT NULL; CLIENT / MANAGER.
+          - kind            : VARCHAR(24) NOT NULL; Negotiation_Round_Kind
+                              { DISCOUNT_REQUEST, MANAGER_PROPOSAL, MANAGER_REJECT,
+                                CLIENT_ACCEPT, CLIENT_DECLINE }.
+          - scope           : VARCHAR(16) NULLABLE; on DISCOUNT_REQUEST / MANAGER_PROPOSAL.
+          - target_id       : BIGINT NULLABLE; as per scope.
+          - value_kind      : VARCHAR(16) NULLABLE; the figure lives ONLY on MANAGER_PROPOSAL
+                              (R4.3 / R10.18).
+          - value           : NUMERIC(14,4) NULLABLE; ONLY on MANAGER_PROPOSAL.
+          - justification   : TEXT NULLABLE; on the client DISCOUNT_REQUEST.
+          - explanation     : TEXT NULLABLE; NON-BLANK on MANAGER_REJECT (R4.8).
+          - client_comment  : TEXT NULLABLE; optional, LINE scope (R4.2).
+          - status          : VARCHAR(16) NOT NULL; Negotiation_Round_Status
+                              { OPEN, ACCEPTED, DECLINED, REJECTED, SUPERSEDED }.
+          - admin_approved  : BOOLEAN NOT NULL DEFAULT false; escalation gate (R6.3).
+        Plus the four BaseEntity audit columns.
+
+        FIGURE-OWNERSHIP CHECK (R4.1 / R4.3 / R10.18): value and value_kind are non-null IFF
+        kind = 'MANAGER_PROPOSAL' — a client DISCOUNT_REQUEST carries NO figure; the manager
+        owns the value. This is enforced as a data-shape invariant at the DB level, not just
+        the service layer.
+
+        REJECT-EXPLANATION CHECK (R4.8): a MANAGER_REJECT MUST carry a non-blank explanation.
+
+        DEFERRED FK from changeset 129 (see 129's ORDERING NOTE): 129-create-offer-discounts.xml
+        created offer_discounts.source_round_id (BIGINT nullable) WITHOUT its foreign key,
+        because it references THIS table (offer_negotiation_rounds), created later. This
+        changeset adds that deferred FK after this table exists:
+        offer_discounts.source_round_id -> offer_negotiation_rounds.id, ON DELETE SET NULL
+        (source_round_id is nullable, so removing a round nulls the reference rather than
+        cascading the discount away).
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change.
+    -->
+
+    <changeSet id="130-create-offer-negotiation-rounds" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="offer_negotiation_rounds"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="offer_negotiation_rounds">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="offer_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_revision" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="round_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="initiator_role" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="scope" type="VARCHAR(16)"/>
+            <column name="target_id" type="BIGINT"/>
+            <!-- The figure lives ONLY on MANAGER_PROPOSAL (R4.3 / R10.18). -->
+            <column name="value_kind" type="VARCHAR(16)"/>
+            <column name="value" type="NUMERIC(14,4)"/>
+            <column name="justification" type="TEXT"/>
+            <!-- NON-BLANK on MANAGER_REJECT (R4.8). -->
+            <column name="explanation" type="TEXT"/>
+            <column name="client_comment" type="TEXT"/>
+            <column name="status" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="admin_approved" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting an offer removes its negotiation thread. -->
+        <addForeignKeyConstraint
+            constraintName="fk_offer_negotiation_rounds_offer"
+            baseTableName="offer_negotiation_rounds"
+            baseColumnNames="offer_id"
+            referencedTableName="offers"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- FIGURE-OWNERSHIP (R4.1 / R4.3 / R10.18): value & value_kind are non-null IFF
+             kind = 'MANAGER_PROPOSAL'. Also REJECT-EXPLANATION (R4.8): a MANAGER_REJECT carries
+             a non-blank explanation. -->
+        <sql>
+            ALTER TABLE offer_negotiation_rounds
+                ADD CONSTRAINT ck_offer_rounds_figure_ownership CHECK (
+                    (kind = 'MANAGER_PROPOSAL')
+                        = (value IS NOT NULL AND value_kind IS NOT NULL)
+                );
+            ALTER TABLE offer_negotiation_rounds
+                ADD CONSTRAINT ck_offer_rounds_reject_explanation CHECK (
+                    (kind &lt;&gt; 'MANAGER_REJECT')
+                        OR (explanation IS NOT NULL AND btrim(explanation) &lt;&gt; '')
+                );
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE offer_negotiation_rounds
+                    DROP CONSTRAINT IF EXISTS ck_offer_rounds_reject_explanation;
+                ALTER TABLE offer_negotiation_rounds
+                    DROP CONSTRAINT IF EXISTS ck_offer_rounds_figure_ownership;
+            </sql>
+        </rollback>
+
+        <!-- DEFERRED FK from changeset 129: offer_discounts.source_round_id now that
+             offer_negotiation_rounds exists. ON DELETE SET NULL (the column is nullable). -->
+        <addForeignKeyConstraint
+            constraintName="fk_offer_discounts_source_round"
+            baseTableName="offer_discounts"
+            baseColumnNames="source_round_id"
+            referencedTableName="offer_negotiation_rounds"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

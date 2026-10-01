@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (Requirement 13.1): the Notification — a generic, offer-decoupled, in-app
+        message owned by its recipient user. This table is NOT project-scoped: ownership is
+        enforced by recipient user id (actingUserId at the service layer), never via project
+        filtering (design §Key design decision 7, R10.9 / R10.19).
+
+        Columns mirror NotificationEntity (design §Data Models):
+          - recipient_id : ownership root FK to users, NOT NULL; ON DELETE CASCADE so deleting
+                           a user removes their notifications (recipient-ownership).
+          - type         : VARCHAR(128) NOT NULL; Notification_Type i18n key (R13.2).
+          - body         : TEXT NULLABLE; message body.
+          - deep_link    : VARCHAR(512) NULLABLE; UI target; null => non-interactive (R13.10).
+          - read         : BOOLEAN NOT NULL DEFAULT false; unread badge state (R10.10).
+        Plus the four BaseEntity audit columns. This repo's BaseEntity creation timestamp
+        column is created_date (see 128/130); the design's "(createdAt)" audit note maps to it.
+
+        INDEXES (design §Data Models):
+          - (recipient_id, read)               : the unread-count badge query.
+          - (recipient_id, created_date DESC)  : the recipient's list, newest first. Built via
+            raw CREATE INDEX because Liquibase createIndex does not express a DESC ordering;
+            the descending order is dropped in rollback (matches 128's partial-index style).
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change.
+    -->
+
+    <changeSet id="131-create-notifications" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="notifications"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="notifications">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNERSHIP ROOT: not project-scoped; ownership is by recipient user id. -->
+            <column name="recipient_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="type" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body" type="TEXT"/>
+            <!-- null => non-interactive (R13.10). -->
+            <column name="deep_link" type="VARCHAR(512)"/>
+            <column name="read" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a user removes their notifications (recipient-ownership). -->
+        <addForeignKeyConstraint
+            constraintName="fk_notifications_recipient"
+            baseTableName="notifications"
+            baseColumnNames="recipient_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Unread-count badge query: (recipient_id, read). -->
+        <createIndex tableName="notifications" indexName="ix_notifications_recipient_read">
+            <column name="recipient_id"/>
+            <column name="read"/>
+        </createIndex>
+
+        <!-- Recipient list newest-first: (recipient_id, created_date DESC). Raw SQL because
+             createIndex cannot express the DESC ordering. -->
+        <sql>
+            CREATE INDEX ix_notifications_recipient_created_desc
+                ON notifications (recipient_id, created_date DESC);
+        </sql>
+        <rollback>
+            <sql>
+                DROP INDEX IF EXISTS ix_notifications_recipient_created_desc;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

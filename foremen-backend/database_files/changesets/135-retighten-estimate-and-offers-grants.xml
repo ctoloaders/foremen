@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (R16.1, R16.2, R16.5): retighten the ESTIMATE / OFFERS ABAC role matrix.
+
+        The parent design §5 (seeded in 081-seed-estimate-resource.xml) granted FOREMAN,
+        WORKER, and FINANCIER READ on ESTIMATE. This spec DEVIATES from §5 (R16.5) and
+        restricts the ESTIMATE (kosztorys + FOR-05-06 margins/costs) to MANAGER/ADMIN only
+        (R16.1) and OFFERS to CLIENT(own)/MANAGER/ADMIN only (R16.3, seeded in 133) — so
+        FOREMAN/WORKER/FINANCIER must lose their ESTIMATE grant, and any broader OFFERS grant
+        for those roles the parent §5 matrix implied must be removed too.
+
+        OFFERS note: 133-seed-offers-resource.xml already granted OFFERS ONLY to
+        ADMIN/MANAGER/CLIENT (no FOREMAN/WORKER/FINANCIER), so on a database seeded after 133
+        the OFFERS side removal is already a no-op. This changeset still archives+removes any
+        FOREMAN/WORKER/FINANCIER OFFERS grant that a pre-133 (parent §5) database may carry,
+        so it is correct regardless of seeding history.
+
+        Archive-before-delete convention (mirrors 082/083/090/099): every removed
+        role_resource_operations / role_resources row is first snapshotted into a same-shaped
+        `*_archive` table (with the resolved role/resource/operation codes + archived_at) so
+        the removed grants can be inspected later, then deleted — child operations first,
+        then the now-empty parent role_resources rows.
+
+        Six ordered changesets, each idempotent via a preConditions onFail="MARK_RAN":
+          135a - create role_resource_operations_archive (schema only).
+          135b - create role_resources_archive (schema only).
+          135c - archive the FOREMAN/WORKER/FINANCIER (ESTIMATE, OFFERS) role_resource_operations.
+          135d - archive the FOREMAN/WORKER/FINANCIER (ESTIMATE, OFFERS) role_resources.
+          135e - delete those role_resource_operations (child rows) once archived.
+          135f - delete those now-childless role_resources (parent rows) once archived.
+
+        On a database already retightened (the target rows are gone), 135c/135d insert
+        nothing (NOT EXISTS self-guards) and 135e/135f delete nothing — a full no-op re-run.
+    -->
+
+    <!-- 135a: archive table for the removed role_resource_operations rows. -->
+    <changeSet id="135a-create-role-resource-operations-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="role_resource_operations_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="role_resource_operations_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="role_resource_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="operation_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_code" type="VARCHAR(64)"/>
+            <column name="resource_code" type="VARCHAR(128)"/>
+            <column name="operation_code" type="VARCHAR(64)"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 135b: archive table for the removed role_resources rows. -->
+    <changeSet id="135b-create-role-resources-archive" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="role_resources_archive"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="role_resources_archive">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="original_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role_code" type="VARCHAR(64)"/>
+            <column name="resource_code" type="VARCHAR(128)"/>
+            <column name="created_date" type="TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+            <column name="archived_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <!-- 135c: snapshot the FOREMAN/WORKER/FINANCIER grants on ESTIMATE and OFFERS at the
+         operation level into the archive. NOT EXISTS guards re-insertion so a re-run (or a
+         re-migrate before 135e has deleted the source) inserts nothing new. -->
+    <changeSet id="135c-archive-tightened-role-resource-operations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="role_resource_operations_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resource_operations_archive
+                (role_resource_id, operation_id, role_code, resource_code, operation_code, archived_at)
+            SELECT rro.role_resource_id, rro.operation_id, r.code, res.code, o.code, NOW()
+            FROM role_resource_operations rro
+            JOIN role_resources rr ON rro.role_resource_id = rr.id
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON rro.operation_id = o.id
+            WHERE r.code IN ('FOREMAN', 'WORKER', 'FINANCIER')
+              AND res.code IN ('ESTIMATE', 'OFFERS')
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations_archive a
+                  WHERE a.role_resource_id = rro.role_resource_id
+                    AND a.operation_id = rro.operation_id
+              );
+        </sql>
+    </changeSet>
+
+    <!-- 135d: snapshot the FOREMAN/WORKER/FINANCIER role_resources rows on ESTIMATE and
+         OFFERS into the archive. NOT EXISTS guards re-insertion. -->
+    <changeSet id="135d-archive-tightened-role-resources" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="role_resources_archive"/>
+            </and>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources_archive
+                (original_id, role_id, resource_id, role_code, resource_code,
+                 created_date, created_by, updated_date, updated_by, archived_at)
+            SELECT rr.id, rr.role_id, rr.resource_id, r.code, res.code,
+                   rr.created_date, rr.created_by, rr.updated_date, rr.updated_by, NOW()
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            WHERE r.code IN ('FOREMAN', 'WORKER', 'FINANCIER')
+              AND res.code IN ('ESTIMATE', 'OFFERS')
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources_archive a
+                  WHERE a.original_id = rr.id
+              );
+        </sql>
+    </changeSet>
+
+    <!-- 135e: delete the archived operation grants (child rows) for the tightened
+         (role, resource) pairs. Guarded so the delete only proceeds once every target row
+         has been archived (the "unarchived target rows" count is 0), so no grant is deleted
+         before it has a home. On an already-tightened DB there are no target rows, the guard
+         passes trivially, and the DELETE removes nothing. -->
+    <changeSet id="135e-delete-tightened-role-resource-operations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="role_resource_operations_archive"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*)
+                    FROM role_resource_operations rro
+                    JOIN role_resources rr ON rro.role_resource_id = rr.id
+                    JOIN roles r ON rr.role_id = r.id
+                    JOIN resources res ON rr.resource_id = res.id
+                    WHERE r.code IN ('FOREMAN', 'WORKER', 'FINANCIER')
+                      AND res.code IN ('ESTIMATE', 'OFFERS')
+                      AND NOT EXISTS (
+                          SELECT 1 FROM role_resource_operations_archive a
+                          WHERE a.role_resource_id = rro.role_resource_id
+                            AND a.operation_id = rro.operation_id
+                      )
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            DELETE FROM role_resource_operations rro
+            USING role_resources rr, roles r, resources res
+            WHERE rro.role_resource_id = rr.id
+              AND rr.role_id = r.id
+              AND rr.resource_id = res.id
+              AND r.code IN ('FOREMAN', 'WORKER', 'FINANCIER')
+              AND res.code IN ('ESTIMATE', 'OFFERS');
+        </sql>
+    </changeSet>
+
+    <!-- 135f: delete the now-childless role_resources (parent rows) for the tightened
+         (role, resource) pairs. Guarded so the delete only proceeds once every target row
+         has been archived. On an already-tightened DB there are no target rows and nothing
+         is deleted. -->
+    <changeSet id="135f-delete-tightened-role-resources" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <tableExists tableName="role_resources_archive"/>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*)
+                    FROM role_resources rr
+                    JOIN roles r ON rr.role_id = r.id
+                    JOIN resources res ON rr.resource_id = res.id
+                    WHERE r.code IN ('FOREMAN', 'WORKER', 'FINANCIER')
+                      AND res.code IN ('ESTIMATE', 'OFFERS')
+                      AND NOT EXISTS (
+                          SELECT 1 FROM role_resources_archive a
+                          WHERE a.original_id = rr.id
+                      )
+                </sqlCheck>
+            </and>
+        </preConditions>
+
+        <sql>
+            DELETE FROM role_resources rr
+            USING roles r, resources res
+            WHERE rr.role_id = r.id
+              AND rr.resource_id = res.id
+              AND r.code IN ('FOREMAN', 'WORKER', 'FINANCIER')
+              AND res.code IN ('ESTIMATE', 'OFFERS');
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (Requirements 1.1, 1.3, 1.4, 1.5, 3.1, 7.1, 19.4): the Offer aggregate —
+        a priced proposal built from a PRICED estimate and sent to the client.
+
+        Columns mirror OfferEntity (design §Data Models):
+          - project_id        : scope root FK to projects, NOT NULL; ON DELETE CASCADE so
+                                deleting a project removes its offer. getProjectIdPath =
+                                "project.id" (R1.1).
+          - estimate_id       : LIVE reference FK to estimates, NOT NULL; the offer stores
+                                NO per-line price copy — totals are derived live from the
+                                referenced estimate + discounts (R1.3, R19.4). ON DELETE
+                                CASCADE (an offer cannot outlive its estimate).
+          - selected_package_id : FK to offer_packages, NULLABLE; seeded from the estimate's
+                                applied package (R1.6/R1.7). ON DELETE SET NULL (package
+                                dictionary is reference data).
+          - revision          : INT NOT NULL DEFAULT 1; monotonically increasing (R1.5).
+          - status            : VARCHAR(32) NOT NULL; Offer_Status enum { DRAFT, SENT,
+                                CHANGES_REQUESTED, COUNTERED, APPROVED, REJECTED, WITHDRAWN }
+                                (R3.1). APPROVED/REJECTED/WITHDRAWN are terminal.
+          - approved_revision : INT NULLABLE; the Agreed_Offer_Version recorded at APPROVED
+                                (R7.1).
+          - total_net / total_vat / total_gross : NUMERIC(14,2), a derived convenience cache
+                                recomputed on every discount/package/estimate change — never
+                                a frozen per-line copy (R1.3, R19.4).
+        Plus the four BaseEntity audit columns.
+
+        A PARTIAL UNIQUE INDEX enforces AT MOST ONE non-terminal offer per project (R1.4):
+        UNIQUE (project_id) WHERE status NOT IN ('APPROVED','REJECTED','WITHDRAWN').
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes
+        no schema change.
+    -->
+
+    <changeSet id="128-create-offers" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="offers"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="offers">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- LIVE reference: no per-line estimate price is copied onto the offer. -->
+            <column name="estimate_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="selected_package_id" type="BIGINT"/>
+            <column name="revision" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="approved_revision" type="INT"/>
+            <column name="total_net" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_vat" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_gross" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its offer. -->
+        <addForeignKeyConstraint
+            constraintName="fk_offers_project"
+            baseTableName="offers"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- LIVE estimate reference: an offer cannot outlive its estimate. -->
+        <addForeignKeyConstraint
+            constraintName="fk_offers_estimate"
+            baseTableName="offers"
+            baseColumnNames="estimate_id"
+            referencedTableName="estimates"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Package dictionary is reference data: NULL the selection if the package is removed. -->
+        <addForeignKeyConstraint
+            constraintName="fk_offers_selected_package"
+            baseTableName="offers"
+            baseColumnNames="selected_package_id"
+            referencedTableName="offer_packages"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- R1.4: at most one NON-TERMINAL offer per project. A partial unique index lets any
+             number of terminal (APPROVED/REJECTED/WITHDRAWN) offers coexist while permitting
+             only a single active one. -->
+        <sql>
+            CREATE UNIQUE INDEX ux_offers_active_project
+                ON offers (project_id)
+                WHERE status NOT IN ('APPROVED', 'REJECTED', 'WITHDRAWN');
+        </sql>
+        <rollback>
+            <sql>
+                DROP INDEX IF EXISTS ux_offers_active_project;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

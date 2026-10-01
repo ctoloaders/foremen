@@ -345,4 +345,74 @@
          one-shot COUNT-guarded back-fill (MARK_RAN). Registered LAST, after 125. -->
     <include file="database_files/changesets/126-add-construction-material-cost-net.xml"/>
     <include file="database_files/changesets/127-add-finishing-material-cost-net.xml"/>
+
+    <!-- FOR-05-07 (R1.1, R1.3, R1.4, R1.5, R3.1, R7.1, R19.4): the Offer aggregate — a priced
+         proposal built LIVE-referenced from a PRICED estimate (no per-line price copy). Creates
+         the offers table (project/estimate FKs NOT NULL, nullable selected_package FK, revision,
+         status, approved_revision, total_net/vat/gross NUMERIC(14,2), BaseEntity cols) plus the
+         partial unique index enforcing at most one non-terminal offer per project
+         (UNIQUE (project_id) WHERE status NOT IN ('APPROVED','REJECTED','WITHDRAWN')). Idempotent
+         via NOT tableExists + MARK_RAN. Registered LAST, after 127. -->
+    <include file="database_files/changesets/128-create-offers.xml"/>
+
+    <!-- FOR-05-07 (R2.1, R2.2, R4.5): the OfferDiscount — a scoped discount/rebate line
+         (scope GLOBAL/CATEGORY/LINE, kind PERCENT/ABSOLUTE, value NUMERIC(14,4) with a
+         CHECK value >= 0) owned by the offer (ON DELETE CASCADE). Creates the source_round_id
+         column (nullable) WITHOUT its FK: source_round references offer_negotiation_rounds,
+         which is created in changeset 130 (registered after this), so the
+         offer_discounts.source_round_id -> offer_negotiation_rounds FK is DEFERRED to 130 to
+         keep a fresh forward migrate valid. Idempotent via NOT tableExists + MARK_RAN.
+         Registered LAST, after 128. -->
+    <include file="database_files/changesets/129-create-offer-discounts.xml"/>
+
+    <!-- FOR-05-07 (R4.1, R4.2, R4.3, R4.6, R4.8, R10.18): the OfferNegotiationRound — a
+         first-class, never-deleted entry of the two-sided negotiation thread, each bound to the
+         Offer_Revision in effect when created. Creates offer_negotiation_rounds (offer FK
+         NOT NULL ON DELETE CASCADE, offer_revision/round_no INT, initiator_role, kind, nullable
+         scope/target_id, nullable value_kind/value, TEXT justification/explanation/client_comment,
+         status, admin_approved BOOLEAN DEFAULT false, BaseEntity cols) with two CHECKs: the
+         figure-ownership invariant (value & value_kind non-null IFF kind = 'MANAGER_PROPOSAL')
+         and the MANAGER_REJECT non-blank explanation. Also adds the DEFERRED FK from changeset
+         129 (offer_discounts.source_round_id -> offer_negotiation_rounds.id, ON DELETE SET NULL)
+         now that this table exists. Idempotent via NOT tableExists + MARK_RAN. Registered LAST,
+         after 129. -->
+    <include file="database_files/changesets/130-create-offer-negotiation-rounds.xml"/>
+
+    <!-- FOR-05-07 (R13.1): the Notification — a generic, offer-decoupled, recipient-owned
+         in-app message. NOT project-scoped: ownership is by recipient user id. recipient_id
+         FK -> users ON DELETE CASCADE; indexes (recipient_id, read) for the unread badge and
+         (recipient_id, created_date DESC) for the list. Idempotent via NOT tableExists +
+         MARK_RAN. Registered LAST, after 130. -->
+    <include file="database_files/changesets/131-create-notifications.xml"/>
+    <!-- FOR-05-07 (R6.4): the OfferProjectSettings — a per-project ESCALATION OVERRIDE for the
+         Escalation_Threshold. Holds only the per-project caps; the GLOBAL default lives in
+         application config (foremen.offer.escalation.*), NOT this table. project_id FK ->
+         projects ON DELETE CASCADE, UNIQUE (one settings row per project); nullable
+         escalation_percent_cap NUMERIC(6,4) and escalation_absolute_cap NUMERIC(14,2); BaseEntity
+         audit cols. Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 131. -->
+    <include file="database_files/changesets/132-create-offer-project-settings.xml"/>
+    <!-- FOR-05-07 (R5.1, R5.4, R5.7, R16.3, R16.6): the OFFERS ABAC resource + the custom APPROVE
+         operation + the tightened OFFERS role matrix. Seeds the OFFERS resource row, inserts the
+         new APPROVE operation (003 defines only CREATE/READ/UPDATE/DELETE), and grants ADMIN
+         CRUD+APPROVE, MANAGER CRUD+APPROVE, and CLIENT READ+APPROVE on OFFERS; FOREMAN/WORKER/
+         FINANCIER receive NO OFFERS grant. Idempotent via sqlCheck/MARK_RAN + per-row NOT EXISTS.
+         Registered LAST, after 132. -->
+    <include file="database_files/changesets/133-seed-offers-resource.xml"/>
+    <!-- FOR-05-07 (R13.13): the NOTIFICATIONS ABAC resource + its all-roles role matrix. Seeds the
+         NOTIFICATIONS resource row and grants READ/UPDATE/DELETE to EVERY role (ADMIN, MANAGER,
+         FOREMAN, WORKER, FINANCIER, CLIENT); NO role receives CREATE (notifications are
+         system-emitted; ownership is enforced at the service layer by the acting user's id, not by
+         project-scoping). Idempotent via sqlCheck/MARK_RAN + per-row NOT EXISTS. Registered LAST,
+         after 133. -->
+    <include file="database_files/changesets/134-seed-notifications-resource.xml"/>
+
+    <!-- FOR-05-07 (R16.1, R16.2, R16.5): retighten the ESTIMATE / OFFERS role matrix per the
+         R16 deviation from parent design §5. Archives (into role_resource_operations_archive /
+         role_resources_archive) and then removes the FOREMAN/WORKER/FINANCIER grants on ESTIMATE
+         (seeded in 081) and any such broader OFFERS grant, leaving ESTIMATE = MANAGER/ADMIN and
+         OFFERS = CLIENT(own)/MANAGER/ADMIN only. Archive-before-delete (mirrors 082/083/090/099),
+         child operations removed before their parent role_resources. Idempotent via onFail="MARK_RAN"
+         + NOT EXISTS self-guards, so a re-run against an already-tightened DB is a no-op. Registered
+         LAST, after 134. -->
+    <include file="database_files/changesets/135-retighten-estimate-and-offers-grants.xml"/>
 </databaseChangeLog>

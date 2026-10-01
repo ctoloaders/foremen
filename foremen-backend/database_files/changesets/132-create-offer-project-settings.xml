@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (Requirement 6.4): the OfferProjectSettings — a per-project ESCALATION
+        OVERRIDE for the Escalation_Threshold that gates a MANAGER_PROPOSAL requiring ADMIN
+        approval. This table holds ONLY the per-project override; the GLOBAL default lives in
+        application config (foremen.offer.escalation.percent-cap / ...absolute-cap), NOT here
+        (design §EscalationPolicy, §Data Models).
+
+        Columns mirror OfferProjectSettingsEntity (design §Data Models):
+          - project_id              : owner FK to projects, NOT NULL and UNIQUE — at most one
+                                      settings row per project (one override per project). ON
+                                      DELETE CASCADE so deleting a project removes its settings
+                                      row, consistent with the other project-owned tables
+                                      (offers, etc.).
+          - escalation_percent_cap  : NUMERIC(6,4) NULLABLE; per-project percent cap override
+                                      (R6.4). Null => fall back to the GLOBAL config value.
+          - escalation_absolute_cap : NUMERIC(14,2) NULLABLE; per-project absolute cap override
+                                      (R6.4). Null => fall back to the GLOBAL config value.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change.
+    -->
+
+    <changeSet id="132-create-offer-project-settings" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="offer_project_settings"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="offer_project_settings">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: one settings row per project; UNIQUE enforces the per-project override. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ux_offer_project_settings_project"/>
+            </column>
+            <!-- Per-project percent cap override; null => GLOBAL config default (R6.4). -->
+            <column name="escalation_percent_cap" type="NUMERIC(6,4)"/>
+            <!-- Per-project absolute cap override; null => GLOBAL config default (R6.4). -->
+            <column name="escalation_absolute_cap" type="NUMERIC(14,2)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its escalation-override row. -->
+        <addForeignKeyConstraint
+            constraintName="fk_offer_project_settings_project"
+            baseTableName="offer_project_settings"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

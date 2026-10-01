@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (R5.1, R5.4, R5.7, R16.3, R16.6): seed the OFFERS ABAC resource, the custom
+        APPROVE operation, and the tightened OFFERS role matrix.
+
+        Access model (Requirement 16 tightened):
+          ADMIN    -> CREATE, READ, UPDATE, DELETE, APPROVE
+          MANAGER  -> CREATE, READ, UPDATE, DELETE, APPROVE
+          CLIENT   -> READ, APPROVE            (own project offers only; ownership is enforced
+                                                at the service layer via ProjectScopedService)
+          FOREMAN / WORKER / FINANCIER -> NO OFFERS grant at all.
+
+        The APPROVE operation is NEW: the operations seed (003) defines only CREATE/READ/UPDATE/
+        DELETE, so the client "approve/reject" sub-action becomes a first-class (OFFERS, APPROVE)
+        grant. Follows the 017-seed-users-resource.xml pattern. Every insert is idempotent via a
+        sqlCheck/MARK_RAN precondition and a per-row NOT EXISTS self-guard, so a re-run inserts
+        nothing new. Registered LAST in changelog.xml, after 132.
+    -->
+
+    <!-- Seed OFFERS resource into resources table -->
+    <changeSet id="133-seed-offers-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'OFFERS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="OFFERS"/>
+            <column name="name_ru" value="Оферты"/>
+            <column name="name_pl" value="Oferty"/>
+            <column name="description_ru" value="Оферты, скидки и согласование с клиентом"/>
+            <column name="description_pl" value="Oferty, rabaty i uzgodnienia z klientem"/>
+        </insert>
+    </changeSet>
+
+    <!-- Seed the custom APPROVE operation + the OFFERS role matrix -->
+    <changeSet id="133-seed-offers-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE res.code = 'OFFERS'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- Insert the APPROVE operation (new; 003 seeds only CREATE/READ/UPDATE/DELETE) -->
+        <sql>
+            INSERT INTO operations (code, name_ru, name_pl, created_date, created_by)
+            SELECT 'APPROVE', 'Согласование', 'Zatwierdzanie', NOW(), 'system'
+            WHERE NOT EXISTS (SELECT 1 FROM operations WHERE code = 'APPROVE');
+        </sql>
+
+        <!-- role_resources rows for ADMIN, MANAGER, CLIENT on OFFERS (self-guarded) -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'CLIENT') AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  WHERE rr.role_id = r.id AND rr.resource_id = res.id
+              );
+        </sql>
+
+        <!-- ADMIN: CREATE, READ, UPDATE, DELETE, APPROVE on OFFERS -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE', 'APPROVE')
+            WHERE r.code = 'ADMIN' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER: CREATE, READ, UPDATE, DELETE, APPROVE on OFFERS -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE', 'APPROVE')
+            WHERE r.code = 'MANAGER' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- CLIENT: READ, APPROVE on OFFERS (own project offers; enforced at service layer) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'APPROVE')
+            WHERE r.code = 'CLIENT' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

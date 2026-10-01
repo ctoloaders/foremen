@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (R13.13): seed the NOTIFICATIONS ABAC resource and its all-roles role matrix.
+
+        Access model (Requirement 13.13):
+          ADMIN, MANAGER, FOREMAN, WORKER, FINANCIER, CLIENT -> READ, UPDATE, DELETE
+          NO role (not even ADMIN) receives CREATE — notifications are system-emitted via
+          NotificationService.create(...), which has no end-user CREATE grant. Ownership is
+          enforced at the service layer by the acting user's id (actingUserId), not by
+          project-scoping (NotificationService is NOT a ProjectScopedService).
+
+        Follows the 017-seed-users-resource.xml / 133-seed-offers-resource.xml pattern. Every
+        insert is idempotent via a sqlCheck/MARK_RAN precondition and a per-row NOT EXISTS
+        self-guard, so a re-run inserts nothing new. Registered LAST in changelog.xml, after 133.
+    -->
+
+    <!-- Seed NOTIFICATIONS resource into resources table -->
+    <changeSet id="134-seed-notifications-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'NOTIFICATIONS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="NOTIFICATIONS"/>
+            <column name="name_ru" value="Уведомления"/>
+            <column name="name_pl" value="Powiadomienia"/>
+            <column name="description_ru" value="Уведомления пользователя (колокольчик в приложении)"/>
+            <column name="description_pl" value="Powiadomienia użytkownika (dzwonek w aplikacji)"/>
+        </insert>
+    </changeSet>
+
+    <!-- Seed the NOTIFICATIONS role matrix: READ/UPDATE/DELETE for every role, no CREATE -->
+    <changeSet id="134-seed-notifications-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE res.code = 'NOTIFICATIONS'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- role_resources rows for every role on NOTIFICATIONS (self-guarded) -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'FOREMAN', 'WORKER', 'FINANCIER', 'CLIENT')
+              AND res.code = 'NOTIFICATIONS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  WHERE rr.role_id = r.id AND rr.resource_id = res.id
+              );
+        </sql>
+
+        <!-- Every role: READ, UPDATE, DELETE on NOTIFICATIONS (no CREATE) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE', 'DELETE')
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'FOREMAN', 'WORKER', 'FINANCIER', 'CLIENT')
+              AND res.code = 'NOTIFICATIONS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
