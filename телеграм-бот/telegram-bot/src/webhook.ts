@@ -69,8 +69,17 @@ export async function bitrixWebhook(req: any, res: any): Promise<void> {
 
     const data: WebhookRequest = req.body;
 
-    // Validate secret
+    // Validate secret. NOTE: this endpoint expects our custom `{secret, action, ...}` body
+    // (Apps Script / robot style). Bitrix *outgoing* webhooks (event bindings) do NOT send
+    // this secret — they must target the `bitrix-event` function instead, which authenticates
+    // differently and fetches deal data from Bitrix itself. A 401 here almost always means an
+    // outgoing webhook was mis-pointed at this endpoint; we log it (without leaking the secret)
+    // so the mismatch is diagnosable.
     if (data.secret !== config.appsScript.webhookSecret) {
+      logger.warn("Bitrix webhook rejected: invalid/missing secret", {
+        action: data.action ?? null,
+        hasSecret: Boolean(data.secret),
+      });
       res.status(401).json({ status: "error", message: "invalid secret" });
       return;
     }
