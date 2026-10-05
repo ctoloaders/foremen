@@ -24,9 +24,11 @@ APP_DIR=/opt/foremen
 # so CI and admins invoke the same way without being in the docker group.
 SUDO="sudo"
 COMPOSE=(${SUDO} docker compose -f "${APP_DIR}/docker-compose.dev.yml" --env-file "${APP_DIR}/.env")
-# Lock in /tmp (world-writable) so any OS Login user can open it without sudo.
-# flock serializes backend+frontend deploys on this single VM.
-LOCK=/tmp/foremen-deploy.lock
+# flock serializes backend+frontend deploys on this single VM. The lock file is
+# shared across DIFFERENT OS Login users (CI SA vs. admins), each a distinct
+# POSIX uid, so it must be world-writable. Ensure that via sudo before opening.
+LOCK=/var/lock/foremen-deploy.lock
+${SUDO} sh -c ": >> '${LOCK}' && chmod 0666 '${LOCK}'" 2>/dev/null || true
 
 # --- serialize all deploys on this VM (wait up to 10 min for the other one) ---
 exec 9>"${LOCK}"
