@@ -19,8 +19,14 @@ case "${SERVICE}" in
 esac
 
 APP_DIR=/opt/foremen
-COMPOSE=(docker compose -f "${APP_DIR}/docker-compose.dev.yml" --env-file "${APP_DIR}/.env")
-LOCK=/var/lock/foremen-deploy.lock
+# Run docker/compose as root: /opt/foremen/.env is root-owned (0600) and the
+# docker socket needs privilege. OS Login (osAdminLogin) grants passwordless sudo,
+# so CI and admins invoke the same way without being in the docker group.
+SUDO="sudo"
+COMPOSE=(${SUDO} docker compose -f "${APP_DIR}/docker-compose.dev.yml" --env-file "${APP_DIR}/.env")
+# Lock in /tmp (world-writable) so any OS Login user can open it without sudo.
+# flock serializes backend+frontend deploys on this single VM.
+LOCK=/tmp/foremen-deploy.lock
 
 # --- serialize all deploys on this VM (wait up to 10 min for the other one) ---
 exec 9>"${LOCK}"
@@ -56,7 +62,7 @@ STABLE=0
 elapsed=0
 echo ">> waiting for ${SERVICE} to become stably healthy (need ${NEED_STABLE} in a row, up to ${MAX_WAIT}s)"
 while [ "${elapsed}" -lt "${MAX_WAIT}" ]; do
-  STATUS="$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${CID}" 2>/dev/null || echo "unknown")"
+  STATUS="$(${SUDO} docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "${CID}" 2>/dev/null || echo "unknown")"
   case "${STATUS}" in
     healthy|running)
       STABLE=$((STABLE+1))
@@ -84,5 +90,5 @@ if [ "${STABLE}" -lt "${NEED_STABLE}" ]; then
 fi
 
 # --- tidy up dangling images from the previous version ---
-docker image prune -f >/dev/null 2>&1 || true
+${SUDO} docker image prune -f >/dev/null 2>&1 || true
 echo ">> [$(date -u +%H:%M:%S)] deploy of ${SERVICE} complete"
