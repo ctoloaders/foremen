@@ -1,0 +1,7 @@
+# Never commit local secret material or generated env overrides.
+# NOTE: secrets.template.env (placeholders only) IS committed; filled copies are not.
+*.env.local
+secrets.local.env
+.env
+*.key
+*.pem
