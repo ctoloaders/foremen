@@ -1,110 +1,102 @@
-# Foremen DEV — CI/CD (GitHub Actions)
+# Foremen DEV — CI/CD (Cloud Build) + IaC (Terraform)
 
-Two repositories, two workflows, one VM. Each repo builds **its own** image on a
-native-amd64 GitHub runner, pushes to Artifact Registry, then restarts **only its
-own** service on the dev VM. Authentication is keyless via Workload Identity
-Federation (WIF). Near-simultaneous backend+frontend deploys are serialized on
-the VM by a file lock.
+CI/CD is **Google Cloud Build**, triggered by push to `main` in each GitHub repo.
+Infrastructure is described as code in `infra/dev/terraform/` (Terraform).
 
 ```
-ctoloaders/foremen            (.github/workflows/deploy-backend.yml)  -> backend:dev  -> VM: deploy-service.sh backend
-ctoloaders/foremen-frontend   (.github/workflows/deploy-frontend.yml) -> frontend:dev -> VM: deploy-service.sh frontend
+ctoloaders/foremen            push main -> Cloud Build trigger foremen-backend-deploy  -> build backend  -> push :dev + :sha -> deploy backend  on VM
+ctoloaders/foremen-frontend   push main -> Cloud Build trigger foremen-frontend-deploy -> build frontend -> push :dev + :sha -> deploy frontend on VM
 ```
 
-## How a deploy flows
+Each repo has a build config at its root:
+- `cloudbuild.backend.yaml`  (in `ctoloaders/foremen`)
+- `cloudbuild.frontend.yaml` (in `ctoloaders/foremen-frontend`)
 
-1. Push / merge PR to `main` in a repo.
-2. The repo's workflow authenticates to GCP via WIF (OIDC, no keys), builds the
-   image, and pushes two tags: `:dev` (moving pointer the VM tracks) and
-   `:<git-sha>` (immutable, for rollback).
-3. The workflow SSHes to the VM **through IAP** (port 22 is open only to Google's
-   IAP range, never the internet) and runs `/opt/foremen/deploy-service.sh <service>`.
-4. `deploy-service.sh`:
-   - takes a `flock` so a backend and a frontend deploy can't interleave;
-   - pulls only that service's image;
-   - for backend, runs pending Liquibase migrations first (schema-first);
-   - recreates only that service (`up -d --no-deps <service>`);
-   - waits until the container is **stably healthy** (3 consecutive healthy
-     checks) before reporting success.
+A build: builds the image, pushes `:dev` (moving pointer the VM tracks) and
+`:<short-sha>` (immutable, for rollback), then SSHes to the VM via IAP and runs
+`/opt/foremen/deploy-service.sh <service>` — which locks (flock), pulls only that
+service, runs Liquibase first for backend, recreates only that service, and waits
+for a stable healthy state.
 
-## One-time setup
+## Why Cloud Build (not GitHub Actions)
 
-### 1. Run the WIF script (creates keyless auth)
+GitHub-hosted runners were unreliable for these repos (jobs stuck queued). Cloud
+Build runs on Google's infrastructure, in the same project as everything else, so
+there are no runner/billing surprises and auth is native (no WIF/keys needed for
+the build itself — Cloud Build runs as a project service account).
+
+## Infrastructure as Code (Terraform)
+
+Everything in the dev environment is managed in `infra/dev/terraform/`:
+
+| File | Manages |
+|------|---------|
+| `versions.tf`          | providers; auth via `GOOGLE_OAUTH_ACCESS_TOKEN` (see below) |
+| `variables.tf`         | project/region/names, image paths (locals) |
+| `apis.tf`              | enabled Google APIs |
+| `registry_secrets.tf`  | Artifact Registry repo; Secret Manager **containers** (never values) |
+| `iam.tf`               | VM + CI service accounts and their roles |
+| `wif.tf`               | Workload Identity Federation (kept from the GH Actions era) |
+| `vm.tf`                | static IP, firewalls (web + IAP SSH), the VM |
+| `cloudbuild.tf`        | repo links, Cloud Build SA roles, the two triggers |
+
+### Running Terraform
+
+Terraform authenticates with a short-lived token from the gcloud CLI (no
+`gcloud auth application-default login` / browser needed):
 
 ```bash
-cd infra/dev
-./70-github-wif.sh
+cd infra/dev/terraform
+export GOOGLE_OAUTH_ACCESS_TOKEN="$(gcloud auth print-access-token --account=info@foremen.eu)"
+terraform plan      # should say: No changes. Your infrastructure matches the configuration.
+terraform apply
 ```
 
-It prints the values to copy into **both** GitHub repos.
+State is local (`terraform.tfstate`, git-ignored). For a team, switch to a GCS
+backend (see the commented block in `versions.tf`). The existing cloud resources
+were imported into state with `import-existing.sh`.
 
-### 2. Add GitHub Actions repository VARIABLES
+## One-time manual step (already done): connect GitHub to Cloud Build
 
-In each repo: **Settings -> Secrets and variables -> Actions -> Variables tab**.
-These are not secrets (nothing sensitive), so use *Variables*, not *Secrets*.
+The Cloud Build <-> GitHub OAuth handshake cannot be automated. It was done once:
+a 2nd-gen host connection named **`github-foremen`** in region **europe-central2**,
+authorizing the `ctoloaders` org and both repos. Terraform then manages the repo
+links and triggers on top of that connection. If the connection is ever recreated,
+update `var.cb_connection_name` if the name changes.
 
-Common to both repos:
+Console: https://console.cloud.google.com/cloud-build/repositories/2nd-gen?project=starry-tracker-505110-s3
 
-| Variable | Value (from 70-github-wif.sh output) |
-|----------|--------------------------------------|
-| `GCP_PROJECT_ID`   | `starry-tracker-505110-s3` |
-| `GCP_ZONE`         | `europe-central2-a` |
-| `GCP_WIF_PROVIDER` | `projects/<number>/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
-| `GCP_CI_SA`        | `foremen-ci@starry-tracker-505110-s3.iam.gserviceaccount.com` |
-| `AR_HOST`          | `europe-central2-docker.pkg.dev` |
-| `VM_NAME`          | `foremen-dev` |
+## 2nd-gen trigger gotcha
 
-Per repo (the image path differs):
-
-| Repo | Variable | Value |
-|------|----------|-------|
-| `ctoloaders/foremen` (backend)           | `AR_IMAGE` | `europe-central2-docker.pkg.dev/starry-tracker-505110-s3/foremen/backend` |
-| `ctoloaders/foremen-frontend` (frontend) | `AR_IMAGE` | `europe-central2-docker.pkg.dev/starry-tracker-505110-s3/foremen/frontend` |
-
-### 3. Ensure the VM exists with IAP SSH + OS Login
-
-`50-vm.sh` already:
-- opens tcp:22 **only** to `35.235.240.0/20` (IAP), and
-- sets `enable-oslogin=TRUE` on the VM, and
-- stages `deploy-service.sh` to `/opt/foremen/`.
-
-If the VM was created before these were added, re-run `50-vm.sh` (it is
-idempotent) or apply them manually.
-
-## Why keyless (WIF) and IAP
-
-- **No long-lived secrets** in GitHub: the runner gets a short-lived OIDC token
-  that GCP exchanges for temporary CI-service-account credentials. Nothing to
-  rotate or leak.
-- **SSH without public exposure**: `--tunnel-through-iap` means the VM's port 22
-  is reachable only via Google IAP, authorized by the CI service account's
-  `iap.tunnelResourceAccessor` + `compute.osAdminLogin` roles. GitHub runners
-  have no fixed IP, so an IP-allowlist on port 22 would not work — IAP solves
-  this cleanly.
+Cloud Build 2nd-gen triggers **require an explicit build service account**
+(`service_account` in Terraform). Without it the API returns a bare
+`INVALID_ARGUMENT`. The triggers use `820040091656@cloudbuild.gserviceaccount.com`,
+which is granted: `artifactregistry.writer`, `compute.osAdminLogin`,
+`compute.instanceAdmin.v1`, `iap.tunnelResourceAccessor`, `logging.logWriter`, and
+`iam.serviceAccountUser` on the VM SA.
 
 ## Rollback
 
-Every build is also tagged with the commit sha. To roll a service back:
+Each build is tagged with the commit sha. To roll a service back, retag the old
+sha image as `:dev` and re-run the deploy, or trigger a rebuild of the previous
+commit. Images live in Artifact Registry
+(`europe-central2-docker.pkg.dev/starry-tracker-505110-s3/foremen/{backend,frontend}`).
+
+## Operating the VM
 
 ```bash
-gcloud compute ssh foremen-dev --zone=europe-central2-a --tunnel-through-iap --command '\
-  cd /opt/foremen && \
-  docker tag <AR_IMAGE>:<old-sha> <AR_IMAGE>:dev && \
-  ./deploy-service.sh <backend|frontend>'
+gcloud compute ssh foremen-dev --zone=europe-central2-a --tunnel-through-iap
+sudo tail -f /var/log/foremen-startup.log
+cd /opt/foremen && sudo docker compose -f docker-compose.dev.yml ps
 ```
 
-(Or re-point `:dev` by re-pushing the old sha image as `:dev` from a machine with
-registry access.)
+Public URL (no TLS yet): http://34.116.142.204/
 
 ## Notes / caveats
 
-- **No TLS yet.** The app is served over `http://` on the VM's public hostname;
-  CI/CD is unaffected by that.
-- **Backend CORS** is currently pinned to `http://localhost:3000` in
-  `application-docker.yml`. The SPA proxies `/api` same-origin, so this is fine
-  for the browser; revisit when adding `dev.foremen.eu`.
-- The frontend repo needs the workflow file committed at
-  `.github/workflows/deploy-frontend.yml` **inside that repo** (it is tracked
-  there, not in the root repo).
-- First-ever deploy still requires the VM and stack to exist (run `40`/`50` once,
-  or let the first CI run build+push and then `50-vm.sh` bring the stack up).
+- **No HTTPS** on the bare IP / `*.bc.googleusercontent.com`. TLS comes with
+  `dev.foremen.eu` later (DNS at home.pl).
+- **Secrets** live only in Secret Manager; Terraform manages the containers, never
+  the values. Load/rotate with `infra/dev/21-load-secrets.sh` / `22-rotate-db-password.sh`.
+- The older step scripts (`10..70`) remain as an imperative alternative/reference,
+  but Terraform is now the source of truth for the infrastructure.

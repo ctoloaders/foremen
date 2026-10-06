@@ -1,0 +1,7 @@
+# Terraform — never commit state (may contain sensitive values), local dirs, or plans.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
