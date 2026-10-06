@@ -34,27 +34,16 @@ resource "google_cloudbuildv2_repository" "frontend" {
   remote_uri        = "https://github.com/${var.github_owner}/${var.github_repo_frontend}.git"
 }
 
-# --- Cloud Build service account: roles needed to build, push, and deploy ---
-# Cloud Build runs as the legacy builder SA (820040091656@cloudbuild...). Grant
-# it the same deploy capabilities the CI SA had so builds can push images and
-# redeploy the VM over IAP SSH.
-resource "google_project_iam_member" "cloudbuild_roles" {
-  for_each = toset([
-    "roles/artifactregistry.writer",
-    "roles/compute.osAdminLogin",
-    "roles/compute.instanceAdmin.v1",
-    "roles/iap.tunnelResourceAccessor",
-    "roles/logging.logWriter",
-  ])
+# --- Build service account ---
+# Cloud Build 2nd-gen builds REQUIRE a user-managed service account (the legacy
+# Google-managed 820040091656@cloudbuild SA is rejected with
+# "provide a user-managed service account"). We reuse the user-managed CI SA,
+# which already has deploy roles (iam.tf). With a user-specified build SA and
+# CLOUD_LOGGING_ONLY, it also needs logging.logWriter to write build logs.
+resource "google_project_iam_member" "ci_logwriter" {
   project = var.project_id
-  role    = each.value
-  member  = "serviceAccount:${local.cloudbuild_sa}"
-}
-
-resource "google_service_account_iam_member" "cloudbuild_actas_vm" {
-  service_account_id = google_service_account.vm.name
-  role               = "roles/iam.serviceAccountUser"
-  member             = "serviceAccount:${local.cloudbuild_sa}"
+  role    = "roles/logging.logWriter"
+  member  = "serviceAccount:${google_service_account.ci.email}"
 }
 
 # --- Backend trigger: push to main builds + deploys only the backend ---
@@ -72,7 +61,7 @@ resource "google_cloudbuild_trigger" "backend" {
   filename = "cloudbuild.backend.yaml"
 
   # 2nd-gen triggers require an explicit build service account.
-  service_account = "projects/${var.project_id}/serviceAccounts/${local.cloudbuild_sa}"
+  service_account = google_service_account.ci.id
 
   substitutions = {
     _AR_IMAGE = local.image_backend
@@ -81,7 +70,7 @@ resource "google_cloudbuild_trigger" "backend" {
     _SERVICE  = "backend"
   }
 
-  depends_on = [google_project_iam_member.cloudbuild_roles]
+  depends_on = [google_project_iam_member.ci_roles, google_project_iam_member.ci_logwriter]
 }
 
 # --- Frontend trigger: push to main builds + deploys only the frontend ---
@@ -99,7 +88,7 @@ resource "google_cloudbuild_trigger" "frontend" {
   filename = "cloudbuild.frontend.yaml"
 
   # 2nd-gen triggers require an explicit build service account.
-  service_account = "projects/${var.project_id}/serviceAccounts/${local.cloudbuild_sa}"
+  service_account = google_service_account.ci.id
 
   substitutions = {
     _AR_IMAGE = local.image_frontend
@@ -108,5 +97,5 @@ resource "google_cloudbuild_trigger" "frontend" {
     _SERVICE  = "frontend"
   }
 
-  depends_on = [google_project_iam_member.cloudbuild_roles]
+  depends_on = [google_project_iam_member.ci_roles, google_project_iam_member.ci_logwriter]
 }
