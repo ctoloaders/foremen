@@ -84,8 +84,10 @@ services:
 
   frontend:
     image: ${IMAGE_FRONTEND}
-    ports:
-      - "80:3000"          # public entry: http://<VM_IP>/  (serves SPA, proxies /api -> backend:8080)
+    # No host port: the frontend is reached through Caddy (TLS) on 80/443.
+    # It still serves the SPA and proxies /api -> backend:8080 internally.
+    expose:
+      - "3000"
     depends_on:
       backend:
         condition: service_healthy
@@ -98,5 +100,21 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"      # ACME HTTP-01 challenge + HTTP->HTTPS redirect
+      - "443:443"    # public HTTPS entry for https://dev.foremen.eu
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # persisted certificates (survive restarts)
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

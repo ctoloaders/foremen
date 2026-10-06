@@ -1,0 +1,14 @@
+# Caddy reverse proxy for the Foremen dev VM.
+# Terminates TLS for dev.foremen.eu with an automatic Let's Encrypt certificate
+# (HTTP-01 challenge on :80, served HTTPS on :443) and proxies everything to the
+# frontend container, which serves the SPA and already proxies /api -> backend.
+#
+# The email is used by Let's Encrypt for expiry/renewal notices.
+{
+	email cto@loaders.dev
+}
+
+dev.foremen.eu {
+	encode gzip
+	reverse_proxy frontend:3000
+}

@@ -8,13 +8,13 @@ resource "google_compute_address" "vm_ip" {
 resource "google_compute_firewall" "web" {
   name          = "allow-${var.network_tag}"
   network       = "default"
-  description   = "Foremen dev inbound"
+  description   = "Foremen dev inbound (HTTP for ACME + redirect, HTTPS)"
   direction     = "INGRESS"
   source_ranges = ["0.0.0.0/0"]
   target_tags   = [var.network_tag]
   allow {
     protocol = "tcp"
-    ports    = ["80"]
+    ports    = ["80", "443"]
   }
 }
 

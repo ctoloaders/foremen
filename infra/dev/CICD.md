@@ -90,12 +90,15 @@ sudo tail -f /var/log/foremen-startup.log
 cd /opt/foremen && sudo docker compose -f docker-compose.dev.yml ps
 ```
 
-Public URL (no TLS yet): http://34.116.142.204/
+Public URL: **https://dev.foremen.eu/** (TLS via Caddy + Let's Encrypt; HTTP
+redirects to HTTPS). The frontend container is no longer published directly;
+Caddy owns ports 80/443 and reverse-proxies to it.
 
 ## Notes / caveats
 
-- **No HTTPS** on the bare IP / `*.bc.googleusercontent.com`. TLS comes with
-  `dev.foremen.eu` later (DNS at home.pl).
+- **HTTPS** is served by a Caddy container (auto Let's Encrypt) for
+  `dev.foremen.eu`. The DNS A record (`dev.foremen.eu -> 34.116.142.204`) lives at
+  home.pl. Caddy persists its certs in the `caddy_data` volume and auto-renews.
 - **Secrets** live only in Secret Manager; Terraform manages the containers, never
   the values. Load/rotate with `infra/dev/21-load-secrets.sh` / `22-rotate-db-password.sh`.
 - The older step scripts (`10..70`) remain as an imperative alternative/reference,
