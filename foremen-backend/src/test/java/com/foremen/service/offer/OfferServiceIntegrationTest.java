@@ -1,6 +1,7 @@
 package com.foremen.service.offer;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -56,8 +57,8 @@ import jakarta.persistence.PersistenceContext;
  * lifecycle contract the task enumerates:
  *
  * <ul>
- *   <li>{@code prepareOffer} requires a {@code PRICED} estimate (R1.2) and rejects a
- *       non-{@code PRICED} one without creating an offer;</li>
+ *   <li>{@code prepareOffer} succeeds from an estimate in any status (R1.1/R1.2) — pricing is no
+ *       longer a precondition, so a non-{@code PRICED} (DRAFT) estimate still yields a DRAFT offer;</li>
  *   <li>{@code prepareOffer} seeds {@code selectedPackage} from the estimate's
  *       {@code appliedPackageCode} (R1.6) and is null-safe when the code is unset or unresolved
  *       (R1.7);</li>
@@ -179,7 +180,7 @@ class OfferServiceIntegrationTest {
     }
 
     // =====================================================================================
-    // prepareOffer: PRICED precondition (R1.2)
+    // prepareOffer: succeeds from an estimate in any status (R1.1/R1.2)
     // =====================================================================================
 
     @Test
@@ -197,19 +198,26 @@ class OfferServiceIntegrationTest {
     }
 
     @Test
-    @DisplayName("prepareOffer rejects a non-PRICED (DRAFT) estimate and creates no offer (R1.2)")
-    void prepareRejectsNonPricedEstimate() {
+    @DisplayName("prepareOffer succeeds from a non-PRICED (DRAFT) estimate and yields a DRAFT offer (R1.1/R1.2)")
+    void prepareSucceedsFromNonPricedEstimate() {
         Fixture f = createFixture(EstimateStatus.DRAFT, null);
 
-        assertThatThrownBy(() -> offerService.prepareOffer(f.projectId))
-                .as("prepareOffer must reject a non-PRICED estimate (R1.2)")
-                .isInstanceOf(ForemenApiException.class)
-                .hasMessageContaining("error.offer.estimate.not.priced");
+        OfferEntity offer = offerService.prepareOffer(f.projectId);
+
+        // R1.1/R1.2: pricing is no longer a precondition — a DRAFT (non-PRICED) estimate prepares a
+        // fresh DRAFT, revision-1 offer rather than being rejected.
+        assertThat(offer.getId())
+                .as("prepareOffer must persist an offer even for a non-PRICED estimate (R1.1/R1.2)")
+                .isNotNull();
+        assertThat(offer.getStatus()).as("a fresh offer is DRAFT (R1.1)").isEqualTo(OfferStatus.DRAFT);
+        assertThat(offer.getRevision()).as("a fresh offer is revision 1 (R1.5)").isEqualTo(1);
+        assertThat(offer.getProject().getId()).isEqualTo(f.projectId);
+        assertThat(offer.getEstimate().getId()).isEqualTo(f.estimateId);
 
         tx().executeWithoutResult(status ->
                 assertThat(offerDao.findByProjectIdOrderByIdAsc(f.projectId))
-                        .as("no offer may be created when the estimate is not PRICED (R1.2)")
-                        .isEmpty());
+                        .as("the prepared offer is persisted for a non-PRICED estimate (R1.1/R1.2)")
+                        .hasSize(1));
     }
 
     // =====================================================================================
@@ -360,6 +368,55 @@ class OfferServiceIntegrationTest {
                     .as("approve must advance the project OFFERED->APPROVED (R3.5)")
                     .isEqualTo(ProjectStatus.APPROVED);
         });
+    }
+
+    // =====================================================================================
+    // getCurrentOfferByProject: by-project current-offer resolution (empty / active / terminal)
+    // =====================================================================================
+
+    @Test
+    @DisplayName("getCurrentOfferByProject returns empty when the project has NO offer")
+    void currentOfferEmptyWhenNoOffer() {
+        Fixture f = createFixture(EstimateStatus.PRICED, null);
+
+        assertThat(offerService.getCurrentOfferByProject(f.projectId))
+                .as("a project with no offer resolves to Optional.empty()")
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("getCurrentOfferByProject returns the active (non-terminal) DRAFT offer")
+    void currentOfferReturnsActiveDraftOffer() {
+        Fixture f = createFixture(EstimateStatus.PRICED, null);
+        OfferEntity active = offerService.prepareOffer(f.projectId);
+
+        Optional<OfferEntity> current = offerService.getCurrentOfferByProject(f.projectId);
+
+        assertThat(current)
+                .as("a project with an active DRAFT offer resolves to that offer")
+                .isPresent();
+        assertThat(current.get().getId()).isEqualTo(active.getId());
+        assertThat(current.get().getStatus()).isEqualTo(OfferStatus.DRAFT);
+    }
+
+    @Test
+    @DisplayName("getCurrentOfferByProject falls back to the latest terminal offer when none is active")
+    void currentOfferFallsBackToLatestTerminalOffer() {
+        Fixture f = createFixture(EstimateStatus.PRICED, null);
+
+        // Prepare then withdraw an offer, leaving the project with only a terminal (WITHDRAWN) offer.
+        OfferEntity first = offerService.prepareOffer(f.projectId);
+        authenticateAdmin();
+        offerService.withdraw(first.getId());
+        SecurityContextHolder.clearContext();
+
+        Optional<OfferEntity> current = offerService.getCurrentOfferByProject(f.projectId);
+
+        assertThat(current)
+                .as("with no active offer, the latest terminal offer is returned")
+                .isPresent();
+        assertThat(current.get().getId()).isEqualTo(first.getId());
+        assertThat(current.get().getStatus()).isEqualTo(OfferStatus.WITHDRAWN);
     }
 
     // =====================================================================================

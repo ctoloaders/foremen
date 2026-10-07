@@ -1,6 +1,12 @@
 package com.foremen.qa.support;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.microsoft.playwright.APIRequest;
@@ -8,10 +14,6 @@ import com.microsoft.playwright.APIRequestContext;
 import com.microsoft.playwright.APIResponse;
 import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.options.RequestOptions;
-
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Thin HTTP client used for scenario <b>setup and teardown</b>, and for asserting UI-invisible
@@ -302,6 +304,111 @@ public final class ApiHelper implements AutoCloseable {
     }
 
     /**
+     * Idempotently GRANT a single {@code (resource, operation)} to a role via the roles admin API,
+     * preserving every other grant the role already holds. This replicates the roles admin-panel
+     * action and persists in the DB (no seed changeset): a {@code PUT /api/roles/{id}/permissions}
+     * REPLACES the whole matrix, so the current matrix is first read via
+     * {@code GET /api/roles/{id}/permissions}, the target operation merged into the target resource's
+     * operation set (adding the resource entry if the role did not grant it at all), and the merged
+     * matrix PUT back.
+     *
+     * <p>Resource/role/operation ids are database-generated, so they are resolved at run time from
+     * their codes. Idempotent: if the operation is already present the merged set is identical and the
+     * PUT is a harmless no-op, so re-runs are safe. Requires a prior {@link #loginAdmin()}.
+     *
+     * @param roleCode      the role code to grant on (e.g. {@code CLIENT})
+     * @param resourceCode  the resource code (e.g. {@code OFFERS})
+     * @param operationCode the operation code to add (e.g. {@code UPDATE})
+     */
+    public void grantRoleOperation(String roleCode, String resourceCode, String operationCode) {
+        long roleId = resolveRoleIdByCode(roleCode);
+        long resourceId = resolveResourceId(resourceCode);
+        long operationId = resolveOperationId(operationCode);
+        Map<Long, List<Long>> matrix = currentRoleMatrix(roleId);
+        List<Long> ops = matrix.computeIfAbsent(resourceId, k -> new ArrayList<>());
+        if (!ops.contains(operationId)) {
+            ops.add(operationId);
+        }
+        putRoleMatrix(roleId, matrix);
+    }
+
+    /**
+     * Idempotently REVOKE a single {@code (resource, operation)} from a role via the roles admin API,
+     * preserving every other grant — the inverse of {@link #grantRoleOperation}. Used by a scenario's
+     * teardown to restore a mutated shared system role to its original matrix. Best-effort/idempotent:
+     * if the operation (or resource) is already absent the matrix is PUT back unchanged. If removing
+     * the operation empties a resource's operation set the resource entry is dropped entirely (the
+     * backend treats a resource with no operations as no grant). Requires a prior {@link #loginAdmin()}.
+     *
+     * @param roleCode      the role code to revoke on (e.g. {@code CLIENT})
+     * @param resourceCode  the resource code (e.g. {@code OFFERS})
+     * @param operationCode the operation code to remove (e.g. {@code UPDATE})
+     */
+    public void revokeRoleOperation(String roleCode, String resourceCode, String operationCode) {
+        long roleId = resolveRoleIdByCode(roleCode);
+        long resourceId = resolveResourceId(resourceCode);
+        long operationId = resolveOperationId(operationCode);
+        Map<Long, List<Long>> matrix = currentRoleMatrix(roleId);
+        List<Long> ops = matrix.get(resourceId);
+        if (ops != null) {
+            ops.remove(operationId);
+            if (ops.isEmpty()) {
+                matrix.remove(resourceId);
+            }
+        }
+        putRoleMatrix(roleId, matrix);
+    }
+
+    /**
+     * Read a role's current permission matrix via {@code GET /api/roles/{id}/permissions} and map it
+     * down to the PUT request shape: {@code resourceId -> [operationId...]}. The GET response
+     * ({@code RolePermissionResponse}) carries richer objects
+     * ({@code permissions[].{resourceId, resourceCode, operations[].operationId}}); only the ids are
+     * kept so the result can be PUT back as {@code RolePermissionRequest}. Insertion order is
+     * preserved (LinkedHashMap) so a round-trip without edits re-PUTs an equivalent matrix.
+     */
+    private Map<Long, List<Long>> currentRoleMatrix(long roleId) {
+        APIResponse response = request.get("/api/roles/" + roleId + "/permissions", withAuth());
+        JsonObject json = okJson(response, "GET /api/roles/" + roleId + "/permissions");
+        Map<Long, List<Long>> matrix = new LinkedHashMap<>();
+        if (json.has("permissions") && json.get("permissions").isJsonArray()) {
+            for (JsonElement permEl : json.getAsJsonArray("permissions")) {
+                JsonObject perm = permEl.getAsJsonObject();
+                long resourceId = getLong(perm, "resourceId");
+                List<Long> ops = new ArrayList<>();
+                if (perm.has("operations") && perm.get("operations").isJsonArray()) {
+                    for (JsonElement opEl : perm.getAsJsonArray("operations")) {
+                        ops.add(getLong(opEl.getAsJsonObject(), "operationId"));
+                    }
+                }
+                matrix.put(resourceId, ops);
+            }
+        }
+        return matrix;
+    }
+
+    /**
+     * Replace a role's permission matrix via {@code PUT /api/roles/{id}/permissions} from the
+     * {@code resourceId -> [operationId...]} map, serializing each entry as the backend
+     * {@code PermissionEntryRequest{resourceId, operationIds}}. The PUT is per-role (it never touches
+     * any other role) and the backend validates every resource/operation id exists. Expects 2xx.
+     */
+    private void putRoleMatrix(long roleId, Map<Long, List<Long>> matrix) {
+        List<Map<String, Object>> permissions = new ArrayList<>();
+        for (Map.Entry<Long, List<Long>> entry : matrix.entrySet()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("resourceId", entry.getKey());
+            m.put("operationIds", entry.getValue());
+            permissions.add(m);
+        }
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("permissions", permissions);
+        APIResponse response = request.put("/api/roles/" + roleId + "/permissions",
+                withAuth().setData(body));
+        expectOk(response, "PUT /api/roles/" + roleId + "/permissions");
+    }
+
+    /**
      * Delete a role via {@code DELETE /api/roles/{id}}. Idempotent: a {@code 404} is treated as
      * already-deleted so LIFO teardown never fails on an already-clean state.
      */
@@ -361,6 +468,98 @@ public final class ApiHelper implements AutoCloseable {
         String path = "/api/projects/" + id;
         APIResponse response = request.delete(path, withAuth());
         expectDeleted(response, "DELETE " + path);
+    }
+
+    // ---- Roles (project-member role resolution, FOR-QA-AUTO-05) ----
+
+    /**
+     * Resolve a role's numeric id from its {@code code} via {@code GET /api/roles} (a paginated
+     * {@code Page<{id, code, ...}>}). Role ids are database-generated, so the CLIENT project-role id
+     * used in a project-member assignment must be looked up at run time rather than hard-coded.
+     * Thin public wrapper over the shared code-lookup. Requires a prior {@link #loginAdmin()}.
+     *
+     * @param code the role code (e.g. {@code CLIENT})
+     * @return the role id
+     * @throws IllegalStateException if no role with that code exists
+     */
+    public long resolveRoleIdByCode(String code) {
+        return resolveIdByCode("/api/roles", code, "role");
+    }
+
+    // ---- Rooms (project-scoped CRUD; FOR-QA-AUTO-05 setup/teardown) ----
+
+    /**
+     * Create a room via {@code POST /api/rooms} with a caller-supplied body (the
+     * {@code RoomCreateRequest}-shaped {@link Map}/record; {@code projectId} and {@code roomTypeId}
+     * are mandatory), returning the generated id. The generic CRUD create returns HTTP 200 with a
+     * body carrying {@code id}. Requires a prior {@link #loginAdmin()}.
+     *
+     * @param body the room create request body
+     * @return the created room id
+     */
+    public long createRoom(Object body) {
+        APIResponse response = request.post("/api/rooms", withAuth().setData(body));
+        JsonObject json = okJson(response, "POST /api/rooms");
+        return getLong(json, "id");
+    }
+
+    /**
+     * Delete a room via {@code DELETE /api/rooms/{id}}. Idempotent on {@code 404} so LIFO teardown
+     * converges even when a project delete already cascaded the room away. Requires a prior
+     * {@link #loginAdmin()}.
+     *
+     * @param id the room id to delete
+     */
+    public void deleteRoom(long id) {
+        String path = "/api/rooms/" + id;
+        APIResponse response = request.delete(path, withAuth());
+        expectDeleted(response, "DELETE " + path);
+    }
+
+    /**
+     * Return the id of the FIRST row on a paginated list endpoint (Spring {@code Page<{id,...}>}),
+     * e.g. the first seeded room type via {@code /api/room-types}. Used to pick a MINIMAL valid
+     * {@code roomTypeId} for a room without assuming a particular seed code exists. Requires a prior
+     * {@link #loginAdmin()}.
+     *
+     * @param resourcePath the collection path, e.g. {@code /api/room-types}
+     * @return the id of the first row
+     * @throws IllegalStateException if the endpoint returns no rows
+     */
+    public long resolveFirstRowId(String resourcePath) {
+        APIResponse response = request.get(resourcePath,
+                withAuth().setQueryParam("page", "0").setQueryParam("size", "1"));
+        JsonObject json = okJson(response, "GET " + resourcePath);
+        if (!json.has("content") || !json.get("content").isJsonArray()
+                || json.getAsJsonArray("content").isEmpty()) {
+            throw new IllegalStateException(
+                    "GET " + resourcePath + " returned no rows; expected at least one seeded row: "
+                            + json);
+        }
+        JsonObject first = json.getAsJsonArray("content").get(0).getAsJsonObject();
+        return getLong(first, "id");
+    }
+
+    // ---- Project members (FOR-QA-AUTO-05 setup) ----
+
+    /**
+     * Assign a user to a project under a project role via {@code POST /api/project-members} with the
+     * body {@code {userId, projectId, projectRoleId}}. The endpoint returns HTTP 201 Created
+     * ({@code AssignProjectMemberRequest} → {@code ProjectMemberResponse}); the membership is removed
+     * for free when the project (and the client user) are torn down. Requires a prior
+     * {@link #loginAdmin()}.
+     *
+     * @param userId        the user to assign
+     * @param projectId     the target project
+     * @param projectRoleId the project-role id the member is assigned under
+     */
+    public void assignProjectMember(long userId, long projectId, long projectRoleId) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("userId", userId);
+        body.put("projectId", projectId);
+        body.put("projectRoleId", projectRoleId);
+        APIResponse response = request.post("/api/project-members", withAuth().setData(body));
+        expectOk(response, "POST /api/project-members");
     }
 
     // ---- Lifecycle ----

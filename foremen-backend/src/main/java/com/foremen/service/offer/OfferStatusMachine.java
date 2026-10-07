@@ -44,8 +44,19 @@ public class OfferStatusMachine {
     /** Localized message code for a rejected transition (R3.8 / R10.5). */
     static final String ILLEGAL_TRANSITION_MESSAGE = "error.offer.illegal.transition";
 
-    /** Executor role codes (MANAGER/ADMIN) — the offer/discount side (Glossary: Executor). */
-    private static final Set<String> EXECUTOR_ROLES = Set.of("MANAGER", "ADMIN");
+    /**
+     * Executor role codes (MANAGER/ADMIN/ESTIMATOR) — the offer/discount side (Glossary: Executor).
+     *
+     * <p>ESTIMATOR is an executor for offer preparation and the executor offer actions (SEND,
+     * PROPOSE, WITHDRAW here; discount writes via {@link OfferDiscountService}; manager negotiation
+     * proposals/rejects via {@link NegotiationService}) through the tightened {@code OFFERS}
+     * {@code READ}/{@code CREATE}/{@code UPDATE} grant (FOR-05-07, Requirements 5.1, 5.4, 16).
+     * ESTIMATOR intentionally has <b>no</b> {@code OFFERS APPROVE} grant: the client-only
+     * {@code APPROVE}/{@code REJECT} transitions are predicated on {@link #isClient(String)} (not on
+     * executor-hood), and the {@code (OFFERS, APPROVE)} ABAC grant is not seeded for ESTIMATOR, so
+     * adding ESTIMATOR here never admits it to approving/rejecting an offer (R5.4).
+     */
+    private static final Set<String> EXECUTOR_ROLES = Set.of("MANAGER", "ADMIN", "ESTIMATOR");
 
     /** The single client role code. */
     private static final String CLIENT_ROLE = "CLIENT";

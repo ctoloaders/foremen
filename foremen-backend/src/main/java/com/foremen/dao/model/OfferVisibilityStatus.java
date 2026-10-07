@@ -5,10 +5,12 @@ package com.foremen.dao.model;
  *
  * <p>This is a <b>derived</b> projection of {@link OfferStatus}, never a second, independent state
  * machine: {@code DRAFT → DRAFT}; {@code SENT}/{@code CHANGES_REQUESTED}/{@code COUNTERED →
- * ON_APPROVAL}; {@code APPROVED → APPROVED}. It is the gate that controls whether a CLIENT may see
- * the offer at all — a {@link #DRAFT}-visibility offer is invisible to the client. The mapping lives
- * in {@code OfferVisibilityResolver} and this enum is never persisted independently of the offer
- * status it is computed from.
+ * ON_APPROVAL}; {@code APPROVED → APPROVED}; the terminal {@code REJECTED}/{@code WITHDRAWN →
+ * CLOSED}. It is the gate that controls whether a CLIENT may see the offer at all — a
+ * {@link #DRAFT}-visibility offer is invisible to the client, while a {@link #CLOSED} offer (a dead
+ * rejected/withdrawn offer) is still readable by the client who owns it but sits outside the
+ * {@link #ON_APPROVAL} negotiable window. The mapping lives in {@code OfferVisibilityResolver} and
+ * this enum is never persisted independently of the offer status it is computed from.
  *
  * <p>The enum is stored/rendered as a string. Each value carries a localized {@code nameRU}/{@code
  * namePL} label so no raw key or untranslated identifier is ever surfaced to the user;
@@ -17,7 +19,13 @@ package com.foremen.dao.model;
 public enum OfferVisibilityStatus {
     DRAFT("Черновик", "Szkic"),
     ON_APPROVAL("На согласовании", "W uzgodnieniu"),
-    APPROVED("Утверждено", "Zatwierdzono");
+    APPROVED("Утверждено", "Zatwierdzono"),
+    /**
+     * Terminal visibility of a dead rejected/withdrawn offer: still readable by the owning client
+     * (so the client sees the terminal result of a reject/withdraw), but outside the
+     * {@link #ON_APPROVAL} negotiable window.
+     */
+    CLOSED("Закрыто", "Zamknięte");
 
     private final String nameRU;
     private final String namePL;

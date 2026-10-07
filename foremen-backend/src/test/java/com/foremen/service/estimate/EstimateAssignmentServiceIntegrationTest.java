@@ -414,6 +414,71 @@ class EstimateAssignmentServiceIntegrationTest {
     }
 
     @Test
+    @DisplayName("chooseConcrete with a null materialId un-chooses the product: the finishing line's "
+            + "concrete FK and concreteNet are cleared back to a Placeholder, while its range band and "
+            + "normQty are preserved and the line still exists (R6.6/R6.4)")
+    void chooseConcreteNullUnchoosesToPlaceholder() {
+        Fixture f = createFixture();
+        EstimateLineRoomQtyEntity roomQty = assignmentService.assign(f.projectId, f.workItemId, f.roomId, null);
+
+        // Resolve the seeded finishing material line + the seeded finishing product of its type.
+        Long finishingLineId = tx().execute(status -> {
+            EstimateLineRoomQtyEntity rq = estimateLineRoomQtyDao.findById(roomQty.getId()).orElseThrow();
+            return rq.getMaterials().stream()
+                    .filter(m -> m.getBranch() == ConsumptionBranch.finishing)
+                    .map(EstimateLineRoomMaterialEntity::getId)
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("a finishing material line must have been seeded"));
+        });
+        Long finishingMaterialId = tx().execute(status -> entityManager.createQuery(
+                        "select fm.id from FinishingMaterialEntity fm where fm.active = true "
+                                + "and fm.retailNet is not null order by fm.id desc",
+                        Long.class)
+                .setMaxResults(1)
+                .getSingleResult());
+
+        // First choose the concrete product so there is something to un-choose, and capture the band.
+        assignmentService.chooseConcrete(f.projectId, finishingLineId, finishingMaterialId);
+
+        BigDecimal[] band = tx().execute(status -> {
+            EstimateLineRoomMaterialEntity line =
+                    estimateLineRoomMaterialDao.findById(finishingLineId).orElseThrow();
+            assertThat(line.getConcreteFinishingMaterial())
+                    .as("precondition: the finishing product must be chosen before un-choosing").isNotNull();
+            assertThat(line.getConcreteNet())
+                    .as("precondition: choosing collapses the line to the product retailNet").isNotNull();
+            assertThat(line.getRangeMin()).as("the frozen band min must be seeded (non-null)").isNotNull();
+            assertThat(line.getRangeMax()).as("the frozen band max must be seeded (non-null)").isNotNull();
+            return new BigDecimal[] {line.getRangeMin(), line.getRangeMax(), line.getNormQty()};
+        });
+
+        // Un-choose: a null materialId clears the choice without deleting the line.
+        assignmentService.chooseConcrete(f.projectId, finishingLineId, null);
+
+        tx().executeWithoutResult(status -> {
+            EstimateLineRoomMaterialEntity line =
+                    estimateLineRoomMaterialDao.findById(finishingLineId).orElse(null);
+            assertThat(line).as("un-choose must NOT delete the material line (R6.6)").isNotNull();
+            assertThat(line.getConcreteFinishingMaterial())
+                    .as("un-choose clears the finishing concrete FK (back to Placeholder, R6.6)").isNull();
+            assertThat(line.getConcreteConstructionMaterial())
+                    .as("un-choose clears the construction concrete FK too (branch-agnostic)").isNull();
+            assertThat(line.getConcreteNet())
+                    .as("un-choose clears concreteNet so the line contributes its range band again (R6.4)")
+                    .isNull();
+            assertThat(line.getRangeMin())
+                    .as("un-choose leaves the copied Type_Price_Range band min untouched")
+                    .isEqualByComparingTo(band[0]);
+            assertThat(line.getRangeMax())
+                    .as("un-choose leaves the copied Type_Price_Range band max untouched")
+                    .isEqualByComparingTo(band[1]);
+            assertThat(line.getNormQty())
+                    .as("un-choose leaves the copied consumption norm untouched")
+                    .isEqualByComparingTo(band[2]);
+        });
+    }
+
+    @Test
     @DisplayName("bulkChooseConcreteForWork fills a (branch, type) across all of a work's assigned "
             + "cells (R9.3)")
     void bulkChooseConcreteAcrossCells() {

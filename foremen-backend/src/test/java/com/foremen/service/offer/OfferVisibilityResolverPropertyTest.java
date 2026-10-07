@@ -1,10 +1,9 @@
 package com.foremen.service.offer;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import java.util.EnumSet;
 import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.foremen.dao.model.OfferStatus;
 import com.foremen.dao.model.OfferVisibilityStatus;
@@ -32,7 +31,7 @@ import net.jqwik.api.Tag;
 @Tag("Feature: FOR-05-07-offer-approval, Property 10: Offer visibility is a consistent projection of the offer status")
 class OfferVisibilityResolverPropertyTest {
 
-    /** Statuses the Requirement 17.4 mapping assigns a visibility projection to. */
+    /** The non-terminal statuses whose visibility is DRAFT / ON_APPROVAL / APPROVED. */
     private static final Set<OfferStatus> MAPPED_STATUSES = EnumSet.of(
             OfferStatus.DRAFT,
             OfferStatus.SENT,
@@ -40,8 +39,8 @@ class OfferVisibilityResolverPropertyTest {
             OfferStatus.COUNTERED,
             OfferStatus.APPROVED);
 
-    /** Terminal statuses R17.4 leaves undefined (dead offers with no client-visibility window). */
-    private static final Set<OfferStatus> UNMAPPED_STATUSES = EnumSet.of(
+    /** The terminal statuses whose visibility projection is CLOSED (dead rejected/withdrawn offers). */
+    private static final Set<OfferStatus> TERMINAL_STATUSES = EnumSet.of(
             OfferStatus.REJECTED,
             OfferStatus.WITHDRAWN);
 
@@ -66,6 +65,8 @@ class OfferVisibilityResolverPropertyTest {
             case REJECTED, WITHDRAWN ->
                     throw new AssertionError("mappedStatuses generator must not yield " + status);
         };
+
+        // (terminal REJECTED/WITHDRAWN -> CLOSED is asserted by Property 10d below)
 
         assertThat(actual)
                 .as("visibility projection of %s", status)
@@ -105,35 +106,59 @@ class OfferVisibilityResolverPropertyTest {
             case ON_APPROVAL -> assertThat(status).isIn(
                     OfferStatus.SENT, OfferStatus.CHANGES_REQUESTED, OfferStatus.COUNTERED);
             case APPROVED -> assertThat(status).isEqualTo(OfferStatus.APPROVED);
+            case CLOSED -> assertThat(status).isIn(OfferStatus.REJECTED, OfferStatus.WITHDRAWN);
         }
     }
 
     // ------------------------------------------------------------------------------------------
-    // Property 10d: the undefined terminal statuses (REJECTED / WITHDRAWN) carry no projection --
-    // the resolver rejects them rather than inventing a mapping R17.4 does not define.
-    // Validates: Requirement 17.4 (faithful, total projection of only the documented states)
+    // Property 10d: the projection is TOTAL -- the terminal statuses (REJECTED / WITHDRAWN) project
+    // to CLOSED rather than throwing, so a terminal offer still yields a non-null visibility and the
+    // client can read the terminal result of a reject/withdraw.
+    // Validates: Requirement 17.4 (faithful, total projection over all offer states)
     // ------------------------------------------------------------------------------------------
 
     @Property(tries = 100)
     @Tag("Feature: FOR-05-07-offer-approval, Property 10: Offer visibility is a consistent projection of the offer status")
-    void undefinedTerminalStatusesHaveNoProjection(@ForAll("unmappedStatuses") OfferStatus status) {
-        assertThatThrownBy(() -> resolver.visibilityOf(status))
-                .isInstanceOf(IllegalArgumentException.class);
+    void terminalStatusesProjectToClosed(@ForAll("terminalStatuses") OfferStatus status) {
+        assertThat(resolver.visibilityOf(status))
+                .as("terminal status %s projects to CLOSED", status)
+                .isEqualTo(OfferVisibilityStatus.CLOSED);
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Property 10e: the projection is total over EVERY OfferStatus value -- no legal status yields
+    // null or throws (only null input throws). Guards against a future OfferStatus being added
+    // without a visibility mapping.
+    // Validates: Requirement 17.4 (total projection of all documented states)
+    // ------------------------------------------------------------------------------------------
+
+    @Property(tries = 100)
+    @Tag("Feature: FOR-05-07-offer-approval, Property 10: Offer visibility is a consistent projection of the offer status")
+    void projectionIsTotalOverEveryStatus(@ForAll("anyStatus") OfferStatus status) {
+        assertThat(resolver.visibilityOf(status))
+                .as("every offer status has a non-null visibility projection: %s", status)
+                .isNotNull();
     }
 
     // ------------------------------------------------------------------------------------------
     // Generators
     // ------------------------------------------------------------------------------------------
 
-    /** Every {@link OfferStatus} R17.4 assigns a visibility projection to. */
+    /** The non-terminal statuses projecting to DRAFT / ON_APPROVAL / APPROVED. */
     @Provide
     Arbitrary<OfferStatus> mappedStatuses() {
         return Arbitraries.of(MAPPED_STATUSES.toArray(new OfferStatus[0]));
     }
 
-    /** The terminal statuses R17.4 leaves without a visibility projection. */
+    /** The terminal statuses projecting to CLOSED. */
     @Provide
-    Arbitrary<OfferStatus> unmappedStatuses() {
-        return Arbitraries.of(UNMAPPED_STATUSES.toArray(new OfferStatus[0]));
+    Arbitrary<OfferStatus> terminalStatuses() {
+        return Arbitraries.of(TERMINAL_STATUSES.toArray(new OfferStatus[0]));
+    }
+
+    /** Every legal {@link OfferStatus} value — the resolver is total over all of them. */
+    @Provide
+    Arbitrary<OfferStatus> anyStatus() {
+        return Arbitraries.of(OfferStatus.values());
     }
 }

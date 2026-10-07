@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 (R16.7, R16.8, R16.1, R16.3): seed the NEW system role ESTIMATOR
+        (Russian label "Сметчик", Polish label "Kosztorysant").
+
+        Its grant set is the FULL FOREMAN resource grant set (derived at seed time by
+        INSERT ... SELECT joins against FOREMAN's actual role_resources /
+        role_resource_operations rows, so ESTIMATOR mirrors FOREMAN exactly and stays
+        correct no matter which resources FOREMAN holds) PLUS two grants FOREMAN lacks:
+          - OFFERS   READ + CREATE + UPDATE   (NO APPROVE, NO DELETE)
+          - ESTIMATE READ + CREATE + UPDATE
+        ESTIMATOR is therefore an offer/estimate executor but can NOT approve an offer
+        and is excluded from the FOR-05-06 cost/margin views (ADMIN/MANAGER only, R16).
+
+        R16.8 — retighten ordering: this changeset is registered LAST, AFTER changeset
+        135 (retighten-estimate-and-offers-grants), which archives+removes only the
+        FOREMAN / WORKER / FINANCIER grants on ESTIMATE / OFFERS. Because ESTIMATOR is a
+        brand-new role (not in that set) and is seeded here, after 135, its ESTIMATE and
+        OFFERS grants are NOT caught by that retighten — they are intentional and persist
+        across re-apply.
+
+        Idempotency: the role insert is guarded by onFail="MARK_RAN" on
+        roles.code = 'ESTIMATOR'; every grant block is self-guarded by a NOT EXISTS
+        precondition / clause, so a re-run against an already-seeded DB inserts nothing.
+    -->
+
+    <!-- changeSet 1: insert the ESTIMATOR role (idempotent). -->
+    <changeSet id="136-seed-estimator-role" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE code = 'ESTIMATOR'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="roles">
+            <column name="code" value="ESTIMATOR"/>
+            <column name="name_ru" value="Сметчик"/>
+            <column name="name_pl" value="Kosztorysant"/>
+            <column name="description_ru" value="Подготовка смет и коммерческих предложений"/>
+            <column name="description_pl" value="Przygotowanie kosztorysów i ofert handlowych"/>
+            <column name="system" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+    </changeSet>
+
+    <!-- changeSet 2: replicate the FULL FOREMAN grant set onto ESTIMATOR.
+         Derived from FOREMAN's actual rows (do NOT hand-enumerate). First copy every
+         role_resources row FOREMAN has (that ESTIMATOR does not yet have), then copy
+         every role_resource_operations row for those mirrored (resource, operation)
+         pairs. Each INSERT ... SELECT is self-guarded by a NOT EXISTS clause for
+         idempotency. -->
+    <changeSet id="136-seed-estimator-foreman-equivalent-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM roles WHERE code = 'ESTIMATOR'</sqlCheck>
+        </preConditions>
+
+        <!-- Mirror FOREMAN's role_resources onto ESTIMATOR for every resource FOREMAN holds. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT est.id, frr.resource_id, NOW(), 'system'
+            FROM roles est
+            JOIN role_resources frr ON frr.role_id = (SELECT id FROM roles WHERE code = 'FOREMAN')
+            WHERE est.code = 'ESTIMATOR'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources err
+                  WHERE err.role_id = est.id
+                    AND err.resource_id = frr.resource_id
+              );
+        </sql>
+
+        <!-- Mirror FOREMAN's role_resource_operations onto the matching ESTIMATOR
+             role_resources rows: for each resource FOREMAN holds, grant ESTIMATOR the
+             same operations FOREMAN has on that resource. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT err.id, frro.operation_id
+            FROM role_resources err
+            JOIN roles est ON err.role_id = est.id AND est.code = 'ESTIMATOR'
+            JOIN role_resources frr
+                ON frr.resource_id = err.resource_id
+               AND frr.role_id = (SELECT id FROM roles WHERE code = 'FOREMAN')
+            JOIN role_resource_operations frro ON frro.role_resource_id = frr.id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations erro
+                WHERE erro.role_resource_id = err.id
+                  AND erro.operation_id = frro.operation_id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- changeSet 3: the two grants FOREMAN LACKS.
+         OFFERS   = READ + CREATE + UPDATE (NO APPROVE, NO DELETE)
+         ESTIMATE = READ + CREATE + UPDATE
+         Each role_resources + role_resource_operations insert guarded by NOT EXISTS. -->
+    <changeSet id="136-seed-estimator-offers-estimate-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM roles WHERE code = 'ESTIMATOR'</sqlCheck>
+        </preConditions>
+
+        <!-- ESTIMATOR x OFFERS role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ESTIMATOR' AND res2.code = 'OFFERS'
+              );
+        </sql>
+
+        <!-- ESTIMATOR x OFFERS operations: READ + CREATE + UPDATE (no APPROVE, no DELETE). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE', 'UPDATE')
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- ESTIMATOR x ESTIMATE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'ESTIMATE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ESTIMATOR' AND res2.code = 'ESTIMATE'
+              );
+        </sql>
+
+        <!-- ESTIMATOR x ESTIMATE operations: READ + CREATE + UPDATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE', 'UPDATE')
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'ESTIMATE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

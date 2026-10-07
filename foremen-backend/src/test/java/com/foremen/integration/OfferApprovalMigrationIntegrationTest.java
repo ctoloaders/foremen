@@ -374,6 +374,49 @@ class OfferApprovalMigrationIntegrationTest {
                 .isGreaterThan(0L);
     }
 
+    // --- 136: the ESTIMATOR role + its FOREMAN-equivalent + OFFERS/ESTIMATE grants (R16.7, R16.8, R16.1, R16.3) ---
+
+    @Test
+    @DisplayName("changeset 136 seeds the ESTIMATOR role")
+    void estimatorRoleSeeded() throws Exception {
+        assertThat(queryForLong("SELECT COUNT(*) FROM roles WHERE code = 'ESTIMATOR'"))
+                .as("the ESTIMATOR role must be seeded by changeset 136")
+                .isEqualTo(1L);
+    }
+
+    @Test
+    @DisplayName("ESTIMATOR holds OFFERS READ/CREATE/UPDATE and NOT APPROVE/DELETE")
+    void estimatorOffersGrantsSeeded() throws Exception {
+        assertThat(operationsFor("ESTIMATOR", "OFFERS"))
+                .as("ESTIMATOR OFFERS grants must be READ/CREATE/UPDATE only (no APPROVE, no DELETE)")
+                .containsExactlyInAnyOrder("READ", "CREATE", "UPDATE");
+    }
+
+    @Test
+    @DisplayName("ESTIMATOR holds ESTIMATE READ/CREATE/UPDATE")
+    void estimatorEstimateGrantsSeeded() throws Exception {
+        assertThat(operationsFor("ESTIMATOR", "ESTIMATE"))
+                .as("ESTIMATOR ESTIMATE grants must be READ/CREATE/UPDATE")
+                .containsExactlyInAnyOrder("READ", "CREATE", "UPDATE");
+    }
+
+    @Test
+    @DisplayName("ESTIMATOR mirrors FOREMAN's full grant set (plus OFFERS/ESTIMATE it adds)")
+    void estimatorMirrorsForemanGrantSet() throws Exception {
+        // For every resource FOREMAN holds, ESTIMATOR must hold the SAME operation set — proving the
+        // INSERT ... SELECT replication copied FOREMAN's grants exactly. OFFERS/ESTIMATE are the two
+        // grants FOREMAN lacks (added separately) and are asserted by the tests above, so they are
+        // excluded here.
+        for (String resource : resourcesHeldBy("FOREMAN")) {
+            if (resource.equals("OFFERS") || resource.equals("ESTIMATE")) {
+                continue;
+            }
+            assertThat(operationsFor("ESTIMATOR", resource))
+                    .as("ESTIMATOR must mirror FOREMAN's operations on %s", resource)
+                    .containsExactlyInAnyOrderElementsOf(operationsFor("FOREMAN", resource));
+        }
+    }
+
     // --- idempotency: re-running 128–135 is a no-op ---
 
     @Test
@@ -564,6 +607,25 @@ class OfferApprovalMigrationIntegrationTest {
             }
         }
         return operations;
+    }
+
+    /** Returns the resource codes a role holds any grant on. */
+    private List<String> resourcesHeldBy(String roleCode) throws Exception {
+        List<String> resources = new ArrayList<>();
+        String sql = "SELECT DISTINCT res.code "
+                + "FROM role_resources rr "
+                + "JOIN roles r ON rr.role_id = r.id "
+                + "JOIN resources res ON rr.resource_id = res.id "
+                + "WHERE r.code = '" + roleCode + "'";
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             var stmt = connection.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                resources.add(rs.getString("code"));
+            }
+        }
+        return resources;
     }
 
     private long queryForLong(String sql) throws Exception {

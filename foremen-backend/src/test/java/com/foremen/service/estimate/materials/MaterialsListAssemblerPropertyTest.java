@@ -173,14 +173,14 @@ class MaterialsListAssemblerPropertyTest {
                 1L, ConsumptionBranch.construction, 500L, "adhesive-type",
                 BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                 sharedId, "tile adhesive", new BigDecimal("10.00"), "kg",
-                new BigDecimal("208.0000"), false, ConsumptionBasis.PER_UNIT, false);
+                new BigDecimal("208.0000"), false, ConsumptionBasis.PER_UNIT, false, null, false);
 
         // Finishing line: WC set, PER_ROOM, quantity 1 — same numeric id, different id space.
         MaterialLineDto finishing = new MaterialLineDto(
                 2L, ConsumptionBranch.finishing, 600L, "wc-set-type",
                 BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                 sharedId, "WC set", new BigDecimal("300.00"), "szt",
-                new BigDecimal("1.0000"), false, ConsumptionBasis.PER_ROOM, false);
+                new BigDecimal("1.0000"), false, ConsumptionBasis.PER_ROOM, false, null, false);
 
         CellDto cell = new CellDto(
                 1L, roomId, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
@@ -259,12 +259,12 @@ class MaterialsListAssemblerPropertyTest {
                 1L, ConsumptionBranch.construction, 7L, "type",
                 BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                 50L, "screws", new BigDecimal("3.00"), "szt",
-                new BigDecimal("0.7000"), false, ConsumptionBasis.PER_ROOM, false);
+                new BigDecimal("0.7000"), false, ConsumptionBasis.PER_ROOM, false, null, false);
         MaterialLineDto lineB = new MaterialLineDto(
                 2L, ConsumptionBranch.construction, 7L, "type",
                 BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                 50L, "screws", new BigDecimal("3.00"), "szt",
-                new BigDecimal("0.5000"), false, ConsumptionBasis.PER_ROOM, false);
+                new BigDecimal("0.5000"), false, ConsumptionBasis.PER_ROOM, false, null, false);
 
         CellDto cellA = new CellDto(
                 1L, roomA, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
@@ -307,7 +307,7 @@ class MaterialsListAssemblerPropertyTest {
                 3L, ConsumptionBranch.finishing, 8L, "type",
                 BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                 60L, "sockets", new BigDecimal("5.00"), "szt",
-                new BigDecimal("2.5000"), false, ConsumptionBasis.PER_UNIT, false);
+                new BigDecimal("2.5000"), false, ConsumptionBasis.PER_UNIT, false, null, false);
         CellDto perUnitCell = new CellDto(
                 3L, roomA, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
                 BigDecimal.ZERO, List.of(perUnit), MoneyRange.ZERO, FillState.filled);
@@ -341,7 +341,7 @@ class MaterialsListAssemblerPropertyTest {
                 4L, ConsumptionBranch.construction, 9L, "type",
                 BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                 70L, "tiles", new BigDecimal("4.00"), "m2",
-                new BigDecimal("1.2000"), false, ConsumptionBasis.PER_ROOM, false);
+                new BigDecimal("1.2000"), false, ConsumptionBasis.PER_ROOM, false, null, false);
         CellDto m2Cell = new CellDto(
                 4L, roomA, true, BigDecimal.ONE, "floorArea", "floorArea", false, false,
                 BigDecimal.ZERO, List.of(m2Line), MoneyRange.ZERO, FillState.filled);
@@ -792,7 +792,7 @@ class MaterialsListAssemblerPropertyTest {
             }
             return new MaterialLineDto(
                     1L, br, 7L, "type", BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
-                    id, id == null ? null : "mat-" + id, net, "m2", q, false, ba, false);
+                    id, id == null ? null : "mat-" + id, net, "m2", q, false, ba, false, null, false);
         });
     }
 }

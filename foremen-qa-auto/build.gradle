@@ -168,6 +168,28 @@ tasks.register('featureTestForQaAuto05', Test) {
     }
 }
 
+// Sub-sliced alias for the FOR-QA-AUTO-05 offer prepare/approval E2E slice. Both
+// working_project_surface and offer_approval share @FOR-QA-AUTO-05, so the offer feature carries an
+// extra @offer-approval tag and this task pins all three tags to run that slice alone. -DQA_TAGS is
+// only an override.
+tasks.register('featureTestForQaAuto05OfferApproval', Test) {
+    group = 'verification'
+    description = 'Runs the @detailed @FOR-QA-AUTO-05 @offer-approval offer prepare/approval E2E slice.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    def tags = System.getProperty('QA_TAGS', System.getenv('QA_TAGS') ?: '@detailed and @FOR-QA-AUTO-05 and @offer-approval')
+    systemProperty 'cucumber.filter.tags', tags
+    systemProperty 'cucumber.execution.enabled', 'true'
+    systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
 // Downloads the Playwright browser binaries so a clean checkout can run the suite
 // after the documented setup step (Requirement 1.5). Uses Playwright's own CLI
 // entry point off the test classpath, so no extra tooling is required.

@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
@@ -13,7 +12,6 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.http.HttpStatus;
 
 import com.foremen.dao.EstimateDao;
 import com.foremen.dao.EstimateLineRoomMaterialDao;
@@ -26,7 +24,6 @@ import com.foremen.dao.model.OfferEntity;
 import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.OfferStatus;
 import com.foremen.dao.model.ProjectEntity;
-import com.foremen.exception.ForemenApiException;
 import com.foremen.service.OfferService;
 import com.foremen.service.ProjectAccessCache;
 import com.foremen.service.estimate.DraftGateGuard;
@@ -41,10 +38,11 @@ import net.jqwik.api.Provide;
 import net.jqwik.api.Tag;
 
 /**
- * Property-based tests for {@link OfferService#prepareOffer(Long)} — the offer-preparation
- * precondition (a {@code PRICED} estimate is required) and the initial-package seeding rule (the new
- * offer's {@code selectedPackage} is resolved from the estimate's {@code appliedPackageCode},
- * null-safe) (FOR-05-07, design §Property 16 and §Property 17).
+ * Property-based tests for {@link OfferService#prepareOffer(Long)} — the offer-preparation rule (an
+ * offer can be prepared from an estimate in <b>any</b> status; the former {@code PRICED} precondition
+ * is removed per R1.1/R1.2) and the initial-package seeding rule (the new offer's
+ * {@code selectedPackage} is resolved from the estimate's {@code appliedPackageCode}, null-safe)
+ * (FOR-05-07, design §Property 16 and §Property 17).
  *
  * <p><b>Chosen test level.</b> {@code prepareOffer} is not a pure function — it reads the project's
  * estimate, checks for an existing non-terminal offer, resolves the package, computes totals, and
@@ -56,60 +54,39 @@ import net.jqwik.api.Tag;
  * {@link OfferStatusMachine}). This runs entirely in memory over 100+ iterations with no Spring
  * context and no Testcontainers.
  *
- * <p><b>Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer requires a PRICED
- * estimate</b> — <b>Validates: Requirements 1.2</b>
+ * <p><b>Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer succeeds from an estimate
+ * in any status</b> — <b>Validates: Requirements 1.1, 1.2</b>
  *
  * <p><b>Feature: FOR-05-07-offer-approval, Property 17: The initial package is seeded from the
  * estimate's applied package</b> — <b>Validates: Requirements 1.6, 1.7</b>
  */
-@Tag("Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer requires a PRICED estimate")
+@Tag("Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer succeeds from an estimate in any status")
 @Tag("Feature: FOR-05-07-offer-approval, Property 17: The initial package is seeded from the estimate's applied package")
 class OfferServicePrepareOfferPropertyTest {
 
     private static final long PROJECT_ID = 42L;
 
     // ------------------------------------------------------------------------------------------
-    // Property 16: Preparing an offer requires a PRICED estimate.
-    // For all estimate statuses OTHER than PRICED, prepareOffer is rejected with
-    // 400 error.offer.estimate.not.priced and NO offer is created (nothing saved).
-    // Validates: Requirements 1.2
-    // ------------------------------------------------------------------------------------------
-
-    @Property(tries = 200)
-    @Tag("Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer requires a PRICED estimate")
-    void nonPricedEstimateIsRejectedAndNoOfferCreated(@ForAll("nonPricedStatuses") EstimateStatus status) {
-        Fixture f = new Fixture();
-        EstimateEntity estimate = estimate(status, null);
-        when(f.estimateDao.findByProjectId(PROJECT_ID)).thenReturn(Optional.of(estimate));
-
-        ForemenApiException ex = catchThrowableOfType(
-                () -> f.service.prepareOffer(PROJECT_ID), ForemenApiException.class);
-
-        assertThat(ex).isNotNull();
-        assertThat(ex.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(ex.getMessageCode()).isEqualTo("error.offer.estimate.not.priced");
-        // No offer created: the active-offer check and the save are never reached.
-        verify(f.offerDao, never()).save(any());
-        verify(f.offerDao, never()).findByProjectIdAndStatusNotIn(anyLong(), any());
-    }
-
-    // ------------------------------------------------------------------------------------------
-    // Property 16 (complement): a PRICED estimate is accepted -- prepareOffer creates a DRAFT,
-    // revision-1 offer (the accepting branch, contrasting the rejection above so the property is not
-    // vacuously about rejection alone).
+    // Property 16: Preparing an offer succeeds from an estimate in ANY status.
+    // For all estimate statuses (including DRAFT and other non-PRICED statuses), prepareOffer
+    // SUCCEEDS and creates a DRAFT, revision-1 offer. The former PRICED precondition and its
+    // error.offer.estimate.not.priced message are removed (R1.1/R1.2); the only prepare guards are
+    // the single-active-offer rule and entity existence.
     // Validates: Requirements 1.1, 1.2
     // ------------------------------------------------------------------------------------------
 
-    @Property(tries = 100)
-    @Tag("Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer requires a PRICED estimate")
-    void pricedEstimateIsAcceptedAndCreatesDraftOffer() {
+    @Property(tries = 200)
+    @Tag("Feature: FOR-05-07-offer-approval, Property 16: Preparing an offer succeeds from an estimate in any status")
+    void anyStatusEstimateIsAcceptedAndCreatesDraftOffer(@ForAll("anyStatuses") EstimateStatus status) {
         Fixture f = new Fixture();
-        EstimateEntity estimate = estimate(EstimateStatus.PRICED, null);
+        EstimateEntity estimate = estimate(status, null);
         when(f.estimateDao.findByProjectId(PROJECT_ID)).thenReturn(Optional.of(estimate));
         when(f.offerDao.findByProjectIdAndStatusNotIn(anyLong(), any())).thenReturn(List.of());
 
         OfferEntity created = f.service.prepareOffer(PROJECT_ID);
 
+        // R1.1/R1.2: an estimate in any status prepares a fresh DRAFT, revision-1 offer; no status
+        // gate rejects a non-PRICED estimate.
         assertThat(created).isNotNull();
         assertThat(created.getStatus()).isEqualTo(OfferStatus.DRAFT);
         assertThat(created.getRevision()).isEqualTo(1);
@@ -265,10 +242,13 @@ class OfferServicePrepareOfferPropertyTest {
 
     // ---- Generators ----
 
-    /** Every {@link EstimateStatus} except {@code PRICED} — the statuses R1.2 must reject. */
+    /**
+     * Every {@link EstimateStatus} — preparation now succeeds from an estimate in any status
+     * (including the non-{@code PRICED} ones that the removed R1.2 gate used to reject).
+     */
     @Provide
-    Arbitrary<EstimateStatus> nonPricedStatuses() {
-        return Arbitraries.of(EstimateStatus.DRAFT, EstimateStatus.APPROVED, EstimateStatus.SIGNED);
+    Arbitrary<EstimateStatus> anyStatuses() {
+        return Arbitraries.of(EstimateStatus.values());
     }
 
     /**
