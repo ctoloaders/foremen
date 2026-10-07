@@ -36,6 +36,16 @@ import com.foremen.dao.model.ConsumptionBranch;
  *                             ({@code norm × Volume}) or {@code PER_ROOM} ({@code norm}, once per
  *                             assigned room). Serialized by its enum name; the frontend mirrors it as
  *                             {@code 'PER_UNIT' | 'PER_ROOM'}
+ * @param appliedFromPackage   {@code true} iff this line was placed by an applied offer package
+ *                             (FOR-05-05 Amendment A1)
+ * @param chosenProductPackageName a representative localized package name of the chosen finishing
+ *                             product, present ONLY when {@code chosenPackageDiffersFromApplied} is
+ *                             {@code true}; {@code null} otherwise (and {@code null} for construction
+ *                             lines, Placeholders, and when the estimate has no applied package)
+ * @param chosenPackageDiffersFromApplied {@code true} when the line's chosen concrete FINISHING
+ *                             product is NOT in the estimate's applied package (compared by package
+ *                             code); {@code false} for construction lines, Placeholders, and when the
+ *                             estimate has no applied package
  */
 public record MaterialLineDto(
         Long id,
@@ -52,7 +62,9 @@ public record MaterialLineDto(
         BigDecimal quantity,
         boolean quantityOverridden,
         ConsumptionBasis consumptionBasis,
-        boolean appliedFromPackage) {
+        boolean appliedFromPackage,
+        String chosenProductPackageName,
+        boolean chosenPackageDiffersFromApplied) {
 
     /** Whether this line has a chosen concrete product (⇒ its contribution is a point, R6.4). */
     public boolean isConcrete() {

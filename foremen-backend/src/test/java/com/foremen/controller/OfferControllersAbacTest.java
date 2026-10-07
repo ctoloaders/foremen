@@ -16,7 +16,6 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
@@ -202,12 +201,28 @@ class OfferControllersAbacTest {
         }
 
         @Test
-        @DisplayName("negotiation round mutators are each (OFFERS, UPDATE)")
-        void negotiationRoundsAreOffersUpdate() {
+        @DisplayName("GET /project/{projectId} → (OFFERS, READ) — the by-project current-offer read")
+        void getCurrentOfferByProjectIsOffersRead() {
+            assertResolvesTo(offerHandler("getCurrentOfferByProject", Long.class), OFFERS, READ);
+        }
+
+        @Test
+        @DisplayName("client-initiated negotiation rounds (discount-request/accept/decline) are each (OFFERS, APPROVE)")
+        void clientInitiatedNegotiationRoundsAreOffersApprove() {
+            // Req 5.2: the CLIENT holds OFFERS READ+APPROVE (never UPDATE), so its negotiation
+            // participation is gated by APPROVE — gating these on UPDATE would 403 the client before
+            // the NegotiationService role check runs (FOR-05-07 Defect 3 / task 19.4).
             assertResolvesTo(
                     negotiationHandler("openDiscountRequest", Long.class,
                             OfferNegotiationController.DiscountRequest.class),
-                    OFFERS, UPDATE);
+                    OFFERS, APPROVE);
+            assertResolvesTo(negotiationHandler("accept", Long.class), OFFERS, APPROVE);
+            assertResolvesTo(negotiationHandler("decline", Long.class), OFFERS, APPROVE);
+        }
+
+        @Test
+        @DisplayName("manager-initiated negotiation rounds (propose/reject) are each (OFFERS, UPDATE)")
+        void managerInitiatedNegotiationRoundsAreOffersUpdate() {
             assertResolvesTo(
                     negotiationHandler("propose", Long.class,
                             OfferNegotiationController.ProposeRequest.class),
@@ -216,8 +231,6 @@ class OfferControllersAbacTest {
                     negotiationHandler("reject", Long.class,
                             OfferNegotiationController.RejectRequest.class),
                     OFFERS, UPDATE);
-            assertResolvesTo(negotiationHandler("accept", Long.class), OFFERS, UPDATE);
-            assertResolvesTo(negotiationHandler("decline", Long.class), OFFERS, UPDATE);
         }
 
         @Test
@@ -269,6 +282,7 @@ class OfferControllersAbacTest {
             assertComplete(offerHandler("approve", Long.class));
             assertComplete(offerHandler("reject", Long.class));
             assertComplete(offerHandler("getOffer", Long.class));
+            assertComplete(offerHandler("getCurrentOfferByProject", Long.class));
         }
 
         @Test
@@ -516,6 +530,223 @@ class OfferControllersAbacTest {
             assertThat(changeset)
                     .as("134 must NOT grant CREATE on NOTIFICATIONS (system-emitted only, R13.13)")
                     .doesNotContain("'create'");
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 8. ESTIMATOR executor access (FOR-05-07 task 18.4, R2.8, R5.1, R5.4, R16.3): ESTIMATOR is an
+    //    offer executor through the OFFERS READ+CREATE+UPDATE grant (seeded by 136) and the
+    //    OfferStatusMachine executor set, so it may prepare / read / update (select-package / write
+    //    discount) an offer and read the estimate; (OFFERS, APPROVE) is NOT granted to ESTIMATOR, so
+    //    the approve/reject sub-actions (which the mapping shows resolve to (OFFERS, APPROVE)) are
+    //    denied. APPROVE is additionally a client-only transition in the status machine, so admitting
+    //    ESTIMATOR as an executor never lets it approve/reject.
+    // ---------------------------------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("ESTIMATOR executor access — OFFERS R/C/U granted, APPROVE denied (R2.8, R5.1, R5.4, R16.3)")
+    class EstimatorExecutorAccess {
+
+        private static final String ESTIMATOR = "ESTIMATOR";
+        private final com.foremen.service.offer.OfferStatusMachine statusMachine =
+                new com.foremen.service.offer.OfferStatusMachine();
+
+        private List<String> executorRoles() {
+            return com.foremen.service.offer.OfferStatusMachine.executorRoles();
+        }
+
+        @Test
+        @DisplayName("136 grants ESTIMATOR OFFERS READ + CREATE + UPDATE and NOT APPROVE / DELETE")
+        void estimatorOffersReadCreateUpdateNoApprove() throws IOException {
+            String changeset =
+                    readChangeset("136-seed-estimator-role.xml").toLowerCase(Locale.ROOT);
+            // The ESTIMATOR x OFFERS grant exists and is confined to READ/CREATE/UPDATE.
+            assertThat(changeset)
+                    .as("136 must grant ESTIMATOR OFFERS and seed its operations")
+                    .contains("res.code = 'offers'")
+                    .contains("o.code in ('read', 'create', 'update')");
+            // No APPROVE / DELETE operation on the ESTIMATOR OFFERS grant, so (OFFERS, APPROVE) — the
+            // operation the approve/reject handlers resolve to — is denied for ESTIMATOR.
+            assertThat(changeset)
+                    .as("136 must NOT grant ESTIMATOR OFFERS APPROVE (approve/reject stay client-only, R5.4)")
+                    .doesNotContain("'read', 'create', 'update', 'approve'")
+                    .doesNotContain("'approve'");
+            assertThat(changeset)
+                    .as("136 must NOT grant ESTIMATOR OFFERS DELETE (R16.7/R16.8)")
+                    .doesNotContain("'delete'");
+        }
+
+        @Test
+        @DisplayName("136 grants ESTIMATOR ESTIMATE READ (+CREATE+UPDATE) so it can read the estimate")
+        void estimatorEstimateRead() throws IOException {
+            String changeset =
+                    readChangeset("136-seed-estimator-role.xml").toLowerCase(Locale.ROOT);
+            assertThat(changeset)
+                    .as("136 must grant ESTIMATOR ESTIMATE READ+CREATE+UPDATE")
+                    .contains("res.code = 'estimate'")
+                    .contains("o.code in ('read', 'create', 'update')");
+        }
+
+        @Test
+        @DisplayName("the OfferStatusMachine treats ESTIMATOR as an executor (prepare/send/propose/withdraw)")
+        void estimatorIsExecutorInStatusMachine() {
+            assertThat(executorRoles())
+                    .as("ESTIMATOR must be an executor so the OFFERS write paths "
+                            + "(OfferDiscountService / NegotiationService / status machine) admit it (R5.4)")
+                    .contains(ESTIMATOR);
+
+            // Executor transitions ESTIMATOR may perform (R3.2/R3.4/R3.7): SEND, PROPOSE, WITHDRAW.
+            assertThat(statusMachine.canTransition(
+                    OfferStatus.DRAFT, com.foremen.dao.model.OfferAction.SEND, ESTIMATOR))
+                    .as("ESTIMATOR may SEND a DRAFT offer (executor, R3.2)")
+                    .isTrue();
+            assertThat(statusMachine.canTransition(
+                    OfferStatus.CHANGES_REQUESTED, com.foremen.dao.model.OfferAction.PROPOSE, ESTIMATOR))
+                    .as("ESTIMATOR may PROPOSE on a CHANGES_REQUESTED offer (executor, R3.4)")
+                    .isTrue();
+            assertThat(statusMachine.canTransition(
+                    OfferStatus.SENT, com.foremen.dao.model.OfferAction.WITHDRAW, ESTIMATOR))
+                    .as("ESTIMATOR may WITHDRAW a non-terminal offer (executor, R3.7)")
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("ESTIMATOR cannot APPROVE/REJECT in the status machine (client-only transition, R5.4)")
+        void estimatorCannotApproveOrRejectInStatusMachine() {
+            for (OfferStatus negotiable : List.of(OfferStatus.SENT, OfferStatus.COUNTERED)) {
+                assertThat(statusMachine.canTransition(
+                        negotiable, com.foremen.dao.model.OfferAction.APPROVE, ESTIMATOR))
+                        .as("ESTIMATOR must NOT be able to APPROVE a %s offer (approve is client-only, R5.4)",
+                                negotiable)
+                        .isFalse();
+                assertThat(statusMachine.canTransition(
+                        negotiable, com.foremen.dao.model.OfferAction.REJECT, ESTIMATOR))
+                        .as("ESTIMATOR must NOT be able to REJECT a %s offer (reject is client-only, R5.4)",
+                                negotiable)
+                        .isFalse();
+            }
+        }
+
+        @Test
+        @DisplayName("the endpoints ESTIMATOR exercises resolve to OFFERS operations it holds; approve/reject to APPROVE it lacks")
+        void estimatorEndpointOperationsMatchGrant() {
+            // Prepare resolves to (OFFERS, CREATE) — granted to ESTIMATOR.
+            assertResolvesTo(offerHandler("prepare", Long.class), OFFERS, CREATE);
+            // Read resolves to (OFFERS, READ) — granted to ESTIMATOR.
+            assertResolvesTo(offerHandler("getOffer", Long.class), OFFERS, READ);
+            // Select-package / write-paths resolve to (OFFERS, UPDATE) — granted to ESTIMATOR.
+            assertResolvesTo(offerHandler("send", Long.class), OFFERS, UPDATE);
+            assertResolvesTo(
+                    offerHandler("selectPackage", Long.class, OfferController.SelectPackageRequest.class),
+                    OFFERS, UPDATE);
+            assertResolvesTo(
+                    negotiationHandler("propose", Long.class,
+                            OfferNegotiationController.ProposeRequest.class),
+                    OFFERS, UPDATE);
+            // Approve/reject resolve to (OFFERS, APPROVE) — NOT granted to ESTIMATOR → interceptor 403.
+            assertResolvesTo(offerHandler("approve", Long.class), OFFERS, APPROVE);
+            assertResolvesTo(offerHandler("reject", Long.class), OFFERS, APPROVE);
+        }
+
+        @Test
+        @DisplayName("adding ESTIMATOR as an executor leaves every handler COMPLETE (no new unannotated handler)")
+        void estimatorAdmissionKeepsStartupComplete() {
+            // No new handler is introduced by task 18.4; the full handler set still classifies COMPLETE,
+            // so PermissionAnnotationValidator startup is unaffected.
+            assertComplete(offerHandler("prepare", Long.class));
+            assertComplete(offerHandler("getOffer", Long.class));
+            assertComplete(offerHandler("approve", Long.class));
+            assertComplete(offerHandler("reject", Long.class));
+            assertComplete(negotiationHandler("propose", Long.class,
+                    OfferNegotiationController.ProposeRequest.class));
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // 9. Negotiation-round ABAC split (FOR-05-07 Defect 3 / task 19.4, R5.1, R5.2, R5.6, R4.1, R4.4):
+    //    client-initiated rounds (discount-request/accept/decline) resolve to (OFFERS, APPROVE) — the
+    //    operation the CLIENT holds (READ+APPROVE per 133) — so the client passes the ABAC gate;
+    //    manager/executor-initiated rounds (propose/reject) resolve to (OFFERS, UPDATE), which the
+    //    CLIENT lacks (denied, correct — the client never proposes/rejects) but ESTIMATOR/MANAGER hold.
+    // ---------------------------------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("negotiation-round ABAC split — client rounds APPROVE, manager rounds UPDATE (R5.2, Defect 3 / task 19.4)")
+    class NegotiationRoundAbacSplit {
+
+        /**
+         * The three client-initiated round mutators resolve to the operation the CLIENT holds
+         * ({@code APPROVE}), so the CLIENT clears the ABAC gate; a UPDATE gate (the old mapping) would
+         * have denied the client 403 before the service role check — the root cause of Defect 3.
+         */
+        @Test
+        @DisplayName("CLIENT (OFFERS READ+APPROVE) clears the ABAC gate on discount-request/accept/decline — they are APPROVE")
+        void clientRoundsResolveToApproveClientHolds() {
+            // 133 grants CLIENT READ+APPROVE (asserted in TightenedRoleModel#offersGrantsClientApprove);
+            // these handlers resolving to APPROVE is exactly what lets the CLIENT through the interceptor.
+            assertResolvesTo(
+                    negotiationHandler("openDiscountRequest", Long.class,
+                            OfferNegotiationController.DiscountRequest.class),
+                    OFFERS, APPROVE);
+            assertResolvesTo(negotiationHandler("accept", Long.class), OFFERS, APPROVE);
+            assertResolvesTo(negotiationHandler("decline", Long.class), OFFERS, APPROVE);
+        }
+
+        /**
+         * propose/reject resolve to UPDATE — which the CLIENT does NOT hold (READ+APPROVE only), so a
+         * CLIENT is correctly denied 403 at the ABAC layer on those (the client never proposes/rejects).
+         */
+        @Test
+        @DisplayName("propose/reject are UPDATE — CLIENT lacks UPDATE so is denied those at the ABAC layer (correct)")
+        void managerRoundsResolveToUpdateClientLacks() {
+            assertResolvesTo(
+                    negotiationHandler("propose", Long.class,
+                            OfferNegotiationController.ProposeRequest.class),
+                    OFFERS, UPDATE);
+            assertResolvesTo(
+                    negotiationHandler("reject", Long.class,
+                            OfferNegotiationController.RejectRequest.class),
+                    OFFERS, UPDATE);
+        }
+
+        /**
+         * ESTIMATOR holds OFFERS READ+CREATE+UPDATE (136), not APPROVE: it clears the ABAC gate on
+         * propose/reject (UPDATE) but is denied discount-request/accept/decline (APPROVE) — acceptable,
+         * those are client actions. Asserted via the resolved operation vs. the ESTIMATOR grant surface.
+         */
+        @Test
+        @DisplayName("ESTIMATOR (OFFERS UPDATE, no APPROVE): UPDATE on propose/reject, APPROVE (denied) on client rounds")
+        void estimatorRoundsSplit() {
+            // UPDATE rounds — ESTIMATOR holds UPDATE → clears the gate.
+            assertResolvesTo(
+                    negotiationHandler("propose", Long.class,
+                            OfferNegotiationController.ProposeRequest.class),
+                    OFFERS, UPDATE);
+            assertResolvesTo(
+                    negotiationHandler("reject", Long.class,
+                            OfferNegotiationController.RejectRequest.class),
+                    OFFERS, UPDATE);
+            // APPROVE rounds — ESTIMATOR lacks APPROVE → denied at the ABAC layer (client-only, correct).
+            assertResolvesTo(
+                    negotiationHandler("openDiscountRequest", Long.class,
+                            OfferNegotiationController.DiscountRequest.class),
+                    OFFERS, APPROVE);
+            assertResolvesTo(negotiationHandler("accept", Long.class), OFFERS, APPROVE);
+            assertResolvesTo(negotiationHandler("decline", Long.class), OFFERS, APPROVE);
+        }
+
+        /** The re-mapped handlers stay COMPLETE — APPROVE is a seeded OFFERS operation (133). */
+        @Test
+        @DisplayName("every negotiation handler stays COMPLETE after the APPROVE re-map (PermissionAnnotationValidator)")
+        void negotiationHandlersStayComplete() {
+            assertComplete(negotiationHandler("openDiscountRequest", Long.class,
+                    OfferNegotiationController.DiscountRequest.class));
+            assertComplete(negotiationHandler("accept", Long.class));
+            assertComplete(negotiationHandler("decline", Long.class));
+            assertComplete(negotiationHandler("propose", Long.class,
+                    OfferNegotiationController.ProposeRequest.class));
+            assertComplete(negotiationHandler("reject", Long.class,
+                    OfferNegotiationController.RejectRequest.class));
         }
     }
 

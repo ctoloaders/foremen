@@ -289,9 +289,150 @@ fast-check + Vitest.
   - Create `test-cases.md` in the spec folder following the `.kiro/steering/test-cases.md` standard (feature grouping, step-by-step scenarios, repeatability via generator/clean-up, regression group, MD report template), written in Russian. This spec has both UI screens (the reused Offer tab, negotiation thread, client finishing selection, the notification Bell) → browser-engine scenarios with MD-report artifacts; and API surfaces against the Dockerized app (`http://localhost:8080`) → API scenarios: prepare offer from a PRICED estimate, discount validation, the negotiation round flow (request → propose → accept/reject, escalation), client choose-concrete on a finishing Placeholder, the `OFFERS`/`NOTIFICATIONS` ABAC gating incl. `(OFFERS, APPROVE)`, the CLIENT confidentiality (no cost/margin field), the `DRAFT`-visibility client-access gate, and the notification ownership/badge endpoints. Repeatability via a per-run generator (unique project/offer per run-id) or explicit teardown.
   - _Requirements: 1.x, 2.x, 3.x, 4.x, 5.x, 6.x, 7.x, 8.x, 11.x, 12.x, 13.x, 14.x, 15.x, 16.x, 17.x, 18.x, 20.x_
 
-- [-] 17. Final checkpoint — full verification and per-repo commits
+- [x] 17. Final checkpoint — full verification and per-repo commits
   - Backend: `getDiagnostics` + compile, then run only the affected test classes with `--tests` (temp log; verify via JUnit XML). Frontend: type-check + property/component/locale tests (single-run).
   - Commit per the two-repo rule: backend (the five entities/services, migrations 128–135, ABAC seeds, read-model assemblers) + spec docs from the **root repo**; all frontend (`features/project-offer/*`, `features/notifications/*`, the `workspaceTabs.ts` re-gate, `TopBar` bell, locales) from **inside `foremen-frontend/`**. Two commits, one per repo. Commit only when the user asks; new branch only; no force-push; no git-config changes.
+
+## Section 18: ESTIMATOR role, prepare-from-any-status, and the Estimate-screen prepare entry point
+
+These tasks amend the shipped feature per the updated Requirements 1, 2.8, 5, 8.3, 16 (criteria 16.1–16.4, 16.7, 16.8), and the new Requirement 21. Backend + spec changes commit from the root repo; the Estimate-screen UI commits from inside foremen-frontend/.
+
+- [x] 18.1 Seed the new ESTIMATOR system role and its grants
+  - Add a new Liquibase changeset database_files/changesets/136-seed-estimator-role.xml and register it last in database_files/changelog.xml. ChangeSet 1: insert role ESTIMATOR (code ESTIMATOR, name_ru "Сметчик", name_pl "Kosztorysant"), guarded onFail="MARK_RAN" by SELECT COUNT(*) FROM roles WHERE code = 'ESTIMATOR' = 0. ChangeSet 2: seed role_resources + role_resource_operations replicating the full FOREMAN grant set (INSERT ... SELECT joining the FOREMAN grants so ESTIMATOR mirrors FOREMAN exactly) PLUS OFFERS READ+CREATE+UPDATE (no APPROVE/DELETE) and ESTIMATE READ+CREATE+UPDATE, each block self-guarded by NOT EXISTS. Runs after 135, so ESTIMATOR grants are retained.
+  - _Requirements: 16.7, 16.8, 16.1, 16.3_
+- [x] 18.2 Remove the PRICED precondition from OfferService.prepareOffer
+  - Delete the estimate != PRICED guard and the ESTIMATE_NOT_PRICED_MESSAGE constant/throw in OfferService.prepareOffer; remove the now-unused error.offer.estimate.not.priced key from messages.properties and messages_ru.properties. Keep package-seeding (1.6/1.7) and totals (1.3).
+  - _Requirements: 1.1, 1.2_
+- [x] 18.3 Update affected backend tests for prepare-from-any-status
+  - Update OfferServicePrepareOfferPropertyTest and OfferServiceIntegrationTest so a non-PRICED (DRAFT) estimate prepares successfully; drop assertions keyed on error.offer.estimate.not.priced. Run only affected --tests classes (temp log + JUnit XML).
+  - _Requirements: 1.1, 1.2, 10.3_
+- [x] 18.4 Add ESTIMATOR to offer ABAC + executor authorization and update the ABAC test
+  - Treat ESTIMATOR as executor (READ+CREATE+UPDATE) on OFFERS write/discount paths while (OFFERS, APPROVE) stays denied to ESTIMATOR. Extend OfferControllersAbacTest with ESTIMATOR cases (prepare/read/update + write discounts OK; approve denied; estimate read OK). Verify startup annotation-completeness unaffected.
+  - _Requirements: 2.8, 5.1, 5.4, 16.3_
+- [x] 18.5 Add the "Prepare offer" action on the Estimate screen (frontend)
+  - In foremen-frontend, add a "Prepare offer" button to the project Estimate screen, shown only to OFFERS/CREATE callers (MANAGER/ADMIN/ESTIMATOR), always enabled (no PRICED gate). On click call POST /api/offers/project/{projectId}/prepare (reuse usePrepareOffer/prepareOffer); on success navigate to the Offer/approval tab; on failure show a localized toast and stay. Keep the OfferTab prepare entry point unchanged. Add pl.json/ru.json keys at strict parity.
+  - _Requirements: 21.1, 21.2, 21.3, 21.4, 21.5, 21.6, 21.7_
+- [x] 18.6 Component test for the Estimate-screen prepare action
+  - Vitest/RTL: action visible for executor, absent for non-executor; click calls prepare with project id; success navigates to the offer tab; failure renders the toast and does not navigate; i18n keys resolve. Single-run.
+  - _Requirements: 21.1, 21.3, 21.4, 21.5, 21.7_
+- [x] 18.7 Update test-cases.md for the Section 18 changes
+  - Extend test-cases.md (Russian) with API cases: prepare from a non-PRICED (DRAFT) estimate succeeds; ESTIMATOR prepare/read/update + write discounts OK but (OFFERS, APPROVE) 403; ESTIMATOR FOREMAN-equivalent reads + estimate read; UI case for the Estimate-screen Prepare button. Keep run-id/teardown repeatability + regression group.
+  - _Requirements: 1.1, 1.2, 16.1, 16.3, 16.7, 21.1_
+- [x] 18.8 Section 18 checkpoint — verification and per-repo commits
+  - Backend: getDiagnostics + compile, then affected --tests classes (OfferService*, OfferControllersAbacTest, new-changeset migration IT) — temp log + JUnit XML. Frontend: type-check + new component test (single-run) + i18n parity. Commit per the two-repo rule: 136 changeset + changelog + OfferService/messages + backend tests + spec docs from the root repo; the Estimate-screen UI + locales from inside foremen-frontend/. Two commits. Commit only when the user asks; new branch only; no force-push; no git-config changes.
+  - _Requirements: 1.1, 16.7, 21.1_
+
+## Section 19: Post-release defect remediation (offer approval E2E)
+
+Two defects shipped in the FOR-05-07 implementation were caught by the FOR-QA-AUTO-05 offer-approval
+E2E slice (they slipped past the unit/property/component tests because those mock the API layer and
+the visibility resolver was never exercised for a terminal client read). Backend+spec changes commit
+from the root repo; the frontend fix commits from inside foremen-frontend/.
+
+- [x] 19.1 Backend: make the client visibility projection total for terminal offers
+  - `reject()` / `withdraw()` (and any `getOffer` of a terminal offer) returned HTTP 500 because
+    `OfferVisibilityResolver.visibilityOf` threw for REJECTED/WITHDRAWN while
+    `ClientOfferReadModelAssembler.toClientReadModel` always projects a visibility. Add a terminal
+    `OfferVisibilityStatus.CLOSED`, map REJECTED/WITHDRAWN → CLOSED (projection now total), and keep
+    `assertClientVisible` denying only DRAFT (the owning client may read its own closed offer).
+    Update Property 10's test to assert the total projection (REJECTED/WITHDRAWN → CLOSED).
+  - _Requirements: 3.6, 3.7, 5.6, 5.9, 17.4, 17.9_
+- [x] 19.2 Frontend: align the negotiation API paths to the OfferNegotiationController contract
+  - `features/project-offer/api/offer-api.ts` posted to unmapped paths (401): fix
+    open-discount-request → `/{offerId}/rounds/discount-request`, propose/reject/accept/decline →
+    `/rounds/{roundId}/{action}` (reject, not reject-round; no offerId segment on the round actions).
+    Add `'CLOSED'` to the frontend `OfferVisibilityStatus` union to mirror the backend enum.
+  - _Requirements: 4.1, 4.3, 4.4, 4.8, 8.4_
+- [x] 19.3 Re-verify the FOR-QA-AUTO-05 offer-approval E2E slice is green end to end
+  - Rebuild the backend + frontend docker images, bring the stack up, and run
+    `./gradlew featureTestForQaAuto05OfferApproval` — all five scenarios (TC-07-01..05) pass.
+  - _Requirements: 3.6, 4.x, 8.4_
+- [x] 19.4 Backend: gate client-initiated negotiation rounds under (OFFERS, APPROVE)
+  - `OfferNegotiationController` annotated every round mutator `(OFFERS, UPDATE)`, but a CLIENT holds
+    only `OFFERS READ + APPROVE` (Req 5.2), so discount-request / accept / decline returned 403 before
+    the service role check. Re-map the three client-initiated mutators to `(OFFERS, APPROVE)`; keep
+    propose / reject on `(OFFERS, UPDATE)` (manager/ESTIMATOR); the NegotiationService role split stays
+    the second gate. Update OfferControllersAbacTest.
+  - _Requirements: 5.1, 5.2, 5.6, 4.1, 4.4_
+- [x] 19.5 Backend (follow-up, NOT required for the E2E): client select-package / choose-concrete ABAC
+  - Per Req 5.2 the CLIENT also selects the commercial package and chooses a concrete finishing
+    material for a Placeholder, but `OfferController.selectPackage` and
+    `ClientOfferController.chooseConcrete` are gated `(OFFERS, UPDATE)` which the client lacks — so a
+    client package/concrete selection would also 403. These endpoints are performed by BOTH the client
+    (APPROVE) and executors incl. ESTIMATOR (UPDATE), and `@RequiresPermission` supports only one
+    operation (no OR), so the correct fix needs either an OR-capable permission check or a dedicated
+    operation. Not exercised by the FOR-QA-AUTO-05 E2E (the admin selects the package there), so it is
+    tracked here as a follow-up rather than fixed in the E2E remediation pass.
+  - RESOLVED (permissions-only, no app-code change): the gap is closed by granting the CLIENT role
+    `(OFFERS, UPDATE)` AND `(MATERIALS_FINISHING, READ)` AND `(OFFER_PACKAGES, READ)` through the
+    roles admin API (GET the role matrix + add the operation + PUT the merged matrix back — NOT a seed
+    changeset). OFFERS:UPDATE unblocks the choose-concrete / select-package write endpoints;
+    MATERIALS_FINISHING:READ lets the client load the concrete-product picker options (the finishing
+    picker reads `GET /api/finishing-materials`, gated `MATERIALS_FINISHING:READ`) — without it the
+    picker shows a no-access state and the client has no products to choose; OFFER_PACKAGES:READ lets
+    the client load the selectable commercial packages (`GET /api/offer-packages`, gated
+    `OFFER_PACKAGES:READ`) so the per-line package Select renders — without it the fetch 403s,
+    `packageOptions` stays empty, and the "choose from another package" path cannot run. Both reads
+    are read-only reference-catalog grants (safe). This is safe because the
+    service layer keeps the dangerous transitions client-inaccessible even with UPDATE:
+    `OfferStatusMachine` requires an EXECUTOR role for SEND/WITHDRAW, `NegotiationService` role-gates
+    PROPOSE/REJECT, and `OfferService.chooseFinishingConcrete` enforces finishing-Placeholder-only +
+    non-terminal + negotiable with project-scope confinement — so UPDATE only unblocks the client's
+    legitimate choose-concrete / select-package. Covered by the E2E scenario TC-07-08 (client picks a
+    product for a placeholder from the offered package AND from another package; `choose-concrete`
+    returns 2xx — no longer 403). All three grants are applied idempotently in the test and reverted
+    in teardown so the shared CLIENT role is restored to `OFFERS {READ, APPROVE}` (no OFFER_PACKAGES /
+    MATERIALS_FINISHING / OFFERS:UPDATE left behind).
+  - _Requirements: 5.2, 11.3, 12.1_
+- [x] 19.6 Backend: expose the round id (and adminApproved) on the negotiation read model
+  - The backend `NegotiationRoundView` omitted the round `id` (and `adminApproved`) that the frontend
+    `NegotiationRoundView` contract consumes, so client round-action URLs were built as
+    `/rounds/undefined/{propose|accept|decline|reject}` → 500. Add `id` (first component) and
+    `adminApproved` to the record and populate them in
+    `ClientOfferReadModelAssembler.negotiationThread`; update all call sites + DTO/assembler tests.
+  - _Requirements: 4.3, 4.5, 6.3, 8.5, 15.1_
+- [x] 19.7 Backend: persist offer-negotiation notifications (REQUIRES_NEW)
+  - `NotificationService.create` ran `@Transactional` (REQUIRED) and called `entityManager.flush()`,
+    but `OfferNotificationEmitter` invokes it from an `AFTER_COMMIT` `@TransactionalEventListener`
+    (no active transaction), so the flush threw `TransactionRequiredException` and NO notification was
+    ever persisted (the bell was always empty; the emitter swallowed the error best-effort). Change
+    `create` to `@Transactional(propagation = REQUIRES_NEW)` so the post-commit emission writes in its
+    own transaction. Verified by FOR-QA-AUTO-05 TC-07-06 (manager receives the client's
+    discount-request notification; client receives the manager's proposal notification).
+  - _Requirements: 13.1, 13.2, 14.1, 14.2, 14.5_
+- [x] 19.8 Frontend/QA: offer-tab chosen-material card, bell deep-link E2E, settled screenshots, initiator i18n
+  - Chosen finishing lines now render a product mini-card (thumbnail + concrete product name + price +
+    Change) instead of a bare type dropdown (the picker shows only on Change). Added
+    `offer.round.initiator.ADMIN`/`ESTIMATOR` i18n keys (ADMIN-initiated rounds showed a raw key).
+    Added NotificationBell testids + an E2E step that opens the bell, verifies the manager-proposal
+    notification title (localized, not a raw key) and unread badge, and follows the deep link to the
+    offer tab. Report screenshots now wait for content (no skeleton). Added an i18n raw-key guard on
+    the bell.
+  - _Requirements: 8.6, 11.3, 13.3, 13.5, 13.10, 13.11, 9.2, 9.3_
+
+- [x] 19.9 Backend: chosen finishing-product name shows product model + manufacturer
+  - The offer chosen-material card showed only the generic material/type name (e.g. "Двери"). Compose
+    `ClientOfferReadModelAssembler` `chosenProductName` from the finishing product's `model` (its
+    specific name, material-name fallback) + its `producer` (manufacturer) as "{model} · {producer}";
+    fetch `concreteFinishingMaterial.producer` in the DAO entity graph. Update the assembler tests.
+  - _Requirements: 8.6, 11.4, 15.1_
+
+- [x] 19.10 QA: E2E — explicit un-choose of two package finishing materials after apply-cheapest
+  - New TC-07-07: after apply-cheapest (readiness 100%), the admin opens estimate cells and un-chooses
+    two FINISHING package materials via the CellReport eraser (back to Placeholder), saves, and the
+    scenario asserts readiness drops below 100% and the offer tab shows ≥2 unchosen Placeholder
+    positions. Added EstimateTab cell-report helpers (assigned-cell scan, open/close report, un-choose
+    finishing line) and OfferTab placeholder/chosen counters.
+  - _Requirements: 11.4, 17.7, 8.6_
+
+- [x] 19.11 Frontend: product-picker filter uses the AND keyword (not ';') so package-filtered options load
+  - The offer `finishingConcreteFilter` and the estimate `concreteFilter` / `bulkConcreteFilter` joined
+    the type clause and the package clause with `;`, which the backend QueryTokenizer rejects (400),
+    so the concrete-product pickers never loaded options when a package clause was present. Switched
+    the combinator to the ` AND ` keyword (QueryParser's AND token). Fixes the client self-service
+    product choice (offered package + another package) and the estimate concrete pickers. Covered by
+    E2E TC-07-08.
+  - _Requirements: 11.3, 11.4, 8.6_
 
 ## Notes
 
@@ -326,7 +467,8 @@ fast-check + Vitest.
     { "id": 11, "tasks": ["11.2", "12.1"] },
     { "id": 12, "tasks": ["12.2", "13.1", "13.2"] },
     { "id": 13, "tasks": ["13.3", "14.1"] },
-    { "id": 14, "tasks": ["14.2"] }
+    { "id": 14, "tasks": ["14.2"] },
+    { "id": 15, "tasks": ["18.1", "18.2", "18.3", "18.4", "18.5", "18.6", "18.7", "18.8"] }
   ]
 }
 ```

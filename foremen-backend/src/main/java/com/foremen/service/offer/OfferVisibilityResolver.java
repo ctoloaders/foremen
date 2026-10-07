@@ -20,15 +20,18 @@ import com.foremen.exception.ForemenApiException;
  *       {@link OfferStatus#COUNTERED} &rarr; {@link OfferVisibilityStatus#ON_APPROVAL} (the
  *       client-visible negotiable window);</li>
  *   <li>{@link OfferStatus#APPROVED} &rarr; {@link OfferVisibilityStatus#APPROVED} (agreed, ready to
- *       sign).</li>
+ *       sign);</li>
+ *   <li>the terminal {@link OfferStatus#REJECTED} / {@link OfferStatus#WITHDRAWN} &rarr;
+ *       {@link OfferVisibilityStatus#CLOSED} (a dead offer, still readable by the owning client as
+ *       the terminal result of a reject/withdraw, but outside the negotiable window).</li>
  * </ul>
  *
- * <p>The Requirement 17.4 mapping covers exactly those {@link OfferStatus} values. The remaining
- * terminal statuses {@link OfferStatus#REJECTED} and {@link OfferStatus#WITHDRAWN} are deliberately
- * <b>not</b> assigned a visibility projection by Requirement 17.4 (they are dead offers with no
- * client-visibility window), so {@link #visibilityOf(OfferStatus)} rejects them rather than
- * inventing a mapping the specification does not define — keeping this resolver a faithful, total
- * projection of only the documented states.
+ * <p>The projection is <b>total</b> over every {@link OfferStatus} value: the terminal statuses
+ * {@link OfferStatus#REJECTED} and {@link OfferStatus#WITHDRAWN} map to
+ * {@link OfferVisibilityStatus#CLOSED} rather than throwing, so a client that rejects or withdraws
+ * an offer can still read the terminal result through {@code ClientOfferReadModelAssembler} (which
+ * always projects a visibility). This keeps the resolver a faithful, total projection of all offer
+ * states.
  *
  * <p>{@link #assertClientVisible(OfferStatus, Object)} is the server-side client-visibility gate: a
  * CLIENT reaching an offer whose visibility is {@link OfferVisibilityStatus#DRAFT} is denied with a
@@ -50,13 +53,11 @@ public class OfferVisibilityResolver {
      * Projects an {@link OfferStatus} onto its client-facing {@link OfferVisibilityStatus} per the
      * Requirement 17.4 mapping.
      *
-     * @param offerStatus the offer's lifecycle status; must be non-null and one of the statuses the
-     *                    Requirement 17.4 mapping covers ({@code DRAFT} / {@code SENT} /
-     *                    {@code CHANGES_REQUESTED} / {@code COUNTERED} / {@code APPROVED})
+     * @param offerStatus the offer's lifecycle status; must be non-null. The projection is total
+     *                    over every {@link OfferStatus} value — the terminal {@code REJECTED} /
+     *                    {@code WITHDRAWN} map to {@link OfferVisibilityStatus#CLOSED}
      * @return the derived visibility projection
-     * @throws IllegalArgumentException if {@code offerStatus} is {@code null}, or is a terminal
-     *                                  status ({@code REJECTED} / {@code WITHDRAWN}) for which
-     *                                  Requirement 17.4 defines no visibility projection
+     * @throws IllegalArgumentException if {@code offerStatus} is {@code null}
      */
     public OfferVisibilityStatus visibilityOf(OfferStatus offerStatus) {
         if (offerStatus == null) {
@@ -66,15 +67,15 @@ public class OfferVisibilityResolver {
             case DRAFT -> OfferVisibilityStatus.DRAFT;
             case SENT, CHANGES_REQUESTED, COUNTERED -> OfferVisibilityStatus.ON_APPROVAL;
             case APPROVED -> OfferVisibilityStatus.APPROVED;
-            case REJECTED, WITHDRAWN -> throw new IllegalArgumentException(
-                    "No client-visibility projection is defined for terminal offer status " + offerStatus);
+            case REJECTED, WITHDRAWN -> OfferVisibilityStatus.CLOSED;
         };
     }
 
     /**
      * Asserts a CLIENT may see the offer at the given lifecycle status: it is client-visible unless
      * its derived visibility is {@link OfferVisibilityStatus#DRAFT}. Returns normally when the offer
-     * is client-visible ({@code ON_APPROVAL} or {@code APPROVED}); throws the
+     * is client-visible ({@code ON_APPROVAL}, {@code APPROVED}, or the terminal {@code CLOSED} — the
+     * owning client may read its own rejected/withdrawn offer); throws the
      * {@code Access_Denied_Outcome} otherwise.
      *
      * <p>The denial is a {@code 404 error.entity.not.found} carrying the offer id, so a

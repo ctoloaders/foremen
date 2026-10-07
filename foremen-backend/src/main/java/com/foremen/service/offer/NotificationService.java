@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.NotificationDao;
@@ -70,6 +71,17 @@ public class NotificationService {
      * method carries <b>no</b> acting-user ownership check: it is an internal write reached only from
      * server-side flows (e.g. {@code OfferNotificationEmitter}), never from an end-user CREATE grant.
      *
+     * <p><b>Transaction semantics.</b> This method runs in its <b>own</b>
+     * {@link Propagation#REQUIRES_NEW REQUIRES_NEW} transaction so it can be safely invoked from an
+     * {@code AFTER_COMMIT} {@code @TransactionalEventListener} (e.g. {@code OfferNotificationEmitter})
+     * where no transaction is active: a plain {@code REQUIRED} propagation would leave the
+     * {@code entityManager.flush()} below without a usable transaction and throw
+     * {@code TransactionRequiredException}, silently dropping the notification. REQUIRES_NEW suspends
+     * any (normally absent) outer transaction and commits the row independently of — and after — the
+     * triggering negotiation transaction. This matches the best-effort, decoupled emission design: a
+     * notification failure never rolls back or blocks the triggering transition (the emitter wraps
+     * this call in try/catch).
+     *
      * @param recipientUserId the user to notify (ownership root); must resolve to a user
      * @param type            the {@code Notification_Type} i18n key (R13.2)
      * @param body            the message body; may be {@code null}
@@ -77,7 +89,7 @@ public class NotificationService {
      * @return the persisted notification entity
      * @throws ForemenApiException 404 when {@code recipientUserId} resolves to no user
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public NotificationEntity create(Long recipientUserId, String type, String body, String deepLink) {
         UserEntity recipient = userDao.findById(recipientUserId)
                 .orElseThrow(() -> new ForemenApiException(

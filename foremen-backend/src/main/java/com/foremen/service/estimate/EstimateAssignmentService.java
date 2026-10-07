@@ -1000,11 +1000,24 @@ public class EstimateAssignmentService
      * Sets the branch-matched concrete product on {@code material} and copies its {@code retailNet}
      * into {@code concreteNet}, collapsing the line to a point (R6.4). The chosen product's branch
      * must match the material line's branch.
+     *
+     * <p>A {@code null} {@code materialId} un-chooses the product (branch-agnostic): both concrete
+     * FKs and {@code concreteNet} are cleared, restoring the line to an unfilled Placeholder that
+     * contributes its {@code rangeMin}/{@code rangeMax} band again (R6.6/R6.4). The copied range band
+     * and {@code normQty} are left untouched and the line is NOT deleted.
      */
     private void applyChooseConcrete(EstimateLineRoomMaterialEntity material, Long materialId) {
+        if (materialId == null) {
+            // Un-choose: clear the concrete product on both branches and the concrete price,
+            // leaving the line as a Placeholder (range band + normQty preserved). Branch-agnostic.
+            material.setConcreteConstructionMaterial(null);
+            material.setConcreteFinishingMaterial(null);
+            material.setConcreteNet(null);
+            estimateLineRoomMaterialDao.save(material);
+            return;
+        }
         if (material.getBranch() == ConsumptionBranch.construction) {
-            ConstructionMaterialEntity product = materialId == null ? null
-                    : constructionMaterialDao.findById(materialId).orElse(null);
+            ConstructionMaterialEntity product = constructionMaterialDao.findById(materialId).orElse(null);
             if (product == null) {
                 throw new ForemenApiException(
                         HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "materialId", materialId);
@@ -1013,8 +1026,7 @@ public class EstimateAssignmentService
             material.setConcreteFinishingMaterial(null);
             material.setConcreteNet(product.getRetailNet());
         } else if (material.getBranch() == ConsumptionBranch.finishing) {
-            FinishingMaterialEntity product = materialId == null ? null
-                    : finishingMaterialDao.findById(materialId).orElse(null);
+            FinishingMaterialEntity product = finishingMaterialDao.findById(materialId).orElse(null);
             if (product == null) {
                 throw new ForemenApiException(
                         HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "materialId", materialId);

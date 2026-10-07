@@ -18,11 +18,14 @@ import com.foremen.dao.model.NegotiationRoundStatus;
  * margin, or worker rate. A client {@code DISCOUNT_REQUEST} carries no figure. It holds <b>no</b>
  * cost, margin, worker rate, or estimate-internal unit-price field (Property 21).
  *
+ * @param id            the round entity id (R4.5) — the stable identifier the client uses to build
+ *                      round-action URLs ({@code /rounds/{id}/propose|accept|decline|reject})
  * @param roundNo       the ordinal of the round within the offer
  * @param offerRevision the offer revision in effect when the round was created
  * @param initiatorRole who opened the round ({@code CLIENT}/{@code MANAGER})
  * @param kind          the round kind
  * @param status        the round resolution status
+ * @param adminApproved whether an ADMIN approved an over-threshold proposal on this round (R6.3)
  * @param scope         the discount scope on a request/proposal, or {@code null}
  * @param targetId      the scope target id, or {@code null}
  * @param valueKind     the proposed discount kind — present ONLY on a {@code MANAGER_PROPOSAL}
@@ -33,11 +36,13 @@ import com.foremen.dao.model.NegotiationRoundStatus;
  * @param createdDate   when the round was created
  */
 public record NegotiationRoundView(
+        Long id,
         Integer roundNo,
         Integer offerRevision,
         String initiatorRole,
         NegotiationRoundKind kind,
         NegotiationRoundStatus status,
+        boolean adminApproved,
         DiscountScope scope,
         Long targetId,
         DiscountKind valueKind,

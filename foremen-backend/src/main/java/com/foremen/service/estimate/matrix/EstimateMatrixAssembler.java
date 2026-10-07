@@ -25,6 +25,7 @@ import com.foremen.dao.model.EstimateLineRoomMaterialEntity;
 import com.foremen.dao.model.EstimateLineRoomQtyEntity;
 import com.foremen.dao.model.FinishingMaterialEntity;
 import com.foremen.dao.model.MaterialTypeEntity;
+import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
@@ -88,6 +89,9 @@ public class EstimateMatrixAssembler {
      */
     public EstimateMatrixDto assemble(EstimateEntity estimate, Long projectId, boolean editable) {
         boolean ru = isRussianLocale();
+        // The estimate's applied package code (or null): threaded down to each finishing material line
+        // so it can flag when its chosen product belongs to a DIFFERENT package than the applied one.
+        String appliedPackageCode = estimate.getAppliedPackageCode();
 
         List<RoomEntity> rooms = roomDao.findByProjectId(projectId);
         List<EstimateMatrixRoomDto> roomDtos = new ArrayList<>(rooms.size());
@@ -146,7 +150,8 @@ public class EstimateMatrixAssembler {
                     continue;
                 }
                 EstimateLineEntity line = lineByWork.get(work.getId());
-                CellDto cell = assembleCell(work, room, roomQty, line, defaultFormula, ru, consumptionsByWorkId);
+                CellDto cell = assembleCell(
+                        work, room, roomQty, line, defaultFormula, ru, consumptionsByWorkId, appliedPackageCode);
                 cells.add(cell);
                 group.fold.add(cell);
                 headerFold.add(cell);
@@ -190,7 +195,8 @@ public class EstimateMatrixAssembler {
             EstimateLineEntity line,
             WorkVolumeFormulaEntity defaultFormula,
             boolean ru,
-            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId) {
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId,
+            String appliedPackageCode) {
         BigDecimal volume = roomQty.getQuantity() != null ? roomQty.getQuantity() : BigDecimal.ZERO;
 
         // Volume provenance for the Cell_Report (R4.4, R5.3): re-derived, package-less, via the pure
@@ -215,7 +221,8 @@ public class EstimateMatrixAssembler {
         int concreteCount = 0;
         int total = 0;
         for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
-            MaterialLineDto dto = materialLineDto(work, material, volume, ru, consumptionsByWorkId);
+            MaterialLineDto dto = materialLineDto(
+                    work, material, volume, ru, consumptionsByWorkId, appliedPackageCode);
             materialDtos.add(dto);
             materialsRange = add(materialsRange, materialContribution(dto));
             total++;
@@ -251,12 +258,16 @@ public class EstimateMatrixAssembler {
      */
     private MaterialLineDto materialLineDto(
             WorkItemEntity work, EstimateLineRoomMaterialEntity material, BigDecimal volume, boolean ru,
-            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId) {
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWorkId, String appliedPackageCode) {
         ConsumptionBranch branch = material.getBranch();
         Long typeId;
         String typeName;
         Long concreteId = null;
         String concreteName = null;
+        // Package-divergence surface (mirrors the offer side): defaults for construction lines and
+        // Placeholders are false / null; only a chosen FINISHING product can diverge.
+        boolean chosenPackageDiffersFromApplied = false;
+        String chosenProductPackageName = null;
 
         if (branch == ConsumptionBranch.construction) {
             ConstructionMaterialTypeEntity type = material.getConstructionType();
@@ -275,6 +286,9 @@ public class EstimateMatrixAssembler {
             if (concrete != null) {
                 concreteId = concrete.getId();
                 concreteName = finishingMaterialName(concrete, ru);
+                boolean differs = chosenPackageDiffersFromApplied(concrete, appliedPackageCode);
+                chosenPackageDiffersFromApplied = differs;
+                chosenProductPackageName = differs ? representativePackageName(concrete, ru) : null;
             }
         }
 
@@ -300,7 +314,40 @@ public class EstimateMatrixAssembler {
                 resolvedQty,
                 material.isQtyOverridden(),
                 basis,
-                material.isAppliedFromPackage());
+                material.isAppliedFromPackage(),
+                chosenProductPackageName,
+                chosenPackageDiffersFromApplied);
+    }
+
+    /**
+     * Whether the chosen product's packages do NOT contain the estimate's applied package (compared
+     * by package code). Returns {@code false} when there is no applied package (nothing to differ
+     * from), so a line is only ever flagged as "differs" against a real applied package. Mirrors the
+     * offer side's {@code ClientOfferReadModelAssembler.chosenPackageDiffersFromSelected} (which
+     * compares against the offer's selected {@code OfferPackageEntity} code).
+     */
+    private static boolean chosenPackageDiffersFromApplied(
+            FinishingMaterialEntity concrete, String appliedPackageCode) {
+        if (appliedPackageCode == null) {
+            return false;
+        }
+        return concrete.getPackages().stream()
+                .map(OfferPackageEntity::getCode)
+                .noneMatch(code -> java.util.Objects.equals(code, appliedPackageCode));
+    }
+
+    /**
+     * A deterministic, representative localized package name of the chosen product: the lowest
+     * package code's localized name (so multi-package products resolve to a stable choice across
+     * reads), or {@code null} when the product has no packages. Mirrors the offer side's
+     * {@code ClientOfferReadModelAssembler.representativePackageName}.
+     */
+    private static String representativePackageName(FinishingMaterialEntity concrete, boolean ru) {
+        return concrete.getPackages().stream()
+                .filter(pkg -> pkg.getCode() != null)
+                .min(java.util.Comparator.comparing(OfferPackageEntity::getCode))
+                .map(pkg -> localizedName(ru, pkg.getNameRU(), pkg.getNamePL()))
+                .orElse(null);
     }
 
     /**

@@ -3,9 +3,11 @@
 ## Introduction
 
 This spec (**FOR-05-07-offer-approval**) covers the **offer preparation and client-negotiation stage**
-of a project in the design (`DRAFT`) stage. It introduces the **Offer** (built from a priced estimate),
-**offer discounts/rebates**, and a **two-sided negotiation loop** between the executor (MANAGER/ADMIN)
-and the CLIENT that culminates in an **approved, immutable agreed offer version**. That approved
+of a project in the design (`DRAFT`) stage. It introduces the **Offer** (built from the project's
+estimate in **any** status — pricing is no longer a precondition for preparing an offer),
+**offer discounts/rebates**, and a **two-sided negotiation loop** between the executor
+(MANAGER/ADMIN/ESTIMATOR) and the CLIENT that culminates in an **approved, immutable agreed offer
+version**. That approved
 version is the hand-off point that downstream specs consume: FOR-05-14 freezes it into an
 `OfferPriceSnapshot` and seeds the `OFFER_BASE` project price, and FOR-05-09 turns it into a contract.
 
@@ -20,10 +22,11 @@ prices, materials, or volumes goes through **amendments** (FOR-06), not direct e
 
 The feature has four parts:
 
-1. **Offer lifecycle + entity.** Prepare an `Offer` from a `PRICED` estimate (parent design §4.2:
-   `Offer{ project, estimate, selectedPackage?, status, totals }`), send it to the client, run the
-   negotiation status machine, and reach a terminal state (`APPROVED` / `REJECTED` / `WITHDRAWN`).
-   Offer totals = estimate totals minus the effective applied discounts.
+1. **Offer lifecycle + entity.** Prepare an `Offer` from the project's estimate **in any status**
+   (parent design §4.2: `Offer{ project, estimate, selectedPackage?, status, totals }`) — pricing
+   (`PRICED`) is NOT a precondition; readiness is always visible rather than gating preparation — send
+   it to the client, run the negotiation status machine, and reach a terminal state (`APPROVED` /
+   `REJECTED` / `WITHDRAWN`). Offer totals = estimate totals minus the effective applied discounts.
 
 2. **Offer discounts (`OfferDiscount`).** Parent design §4.2: `OfferDiscount{ offer, scope
    (GLOBAL/CATEGORY/LINE), targetId, kind (PERCENT/ABSOLUTE), value }`. This spec defines their
@@ -132,7 +135,10 @@ This spec also encodes four cross-cutting product decisions that tighten and ext
   status, totalNet, totalVat, totalGross }` (parent §4.2), representing a priced proposal sent to the
   client. Project-scoped (`offer.project.id`).
 - **PRICED estimate**: an `Estimate` whose status is `PRICED` (parent §4.2 estimate statuses
-  `DRAFT/PRICED/APPROVED/SIGNED`) — the precondition for preparing an Offer.
+  `DRAFT/PRICED/APPROVED/SIGNED`). `PRICED` is **no longer a precondition for preparing an Offer** —
+  an Offer may be prepared from the project's estimate in ANY status (including `DRAFT`); the
+  `PRICED` state now only informs the offer's readiness surface, not whether preparation is allowed
+  (Requirement 1).
 - **OfferDiscount**: a discount/rebate line `OfferDiscount{ offer (FK), scope (GLOBAL/CATEGORY/LINE),
   targetId, kind (PERCENT/ABSOLUTE), value }` (parent §4.2), applied on top of estimate totals.
 - **Discount_Scope**: `GLOBAL` (whole offer), `CATEGORY` (a work category, `targetId` = category id),
@@ -163,7 +169,20 @@ This spec also encodes four cross-cutting product decisions that tighten and ext
   per-project override (configurable).
 - **Offer_Status**: one of `DRAFT`, `SENT`, `CHANGES_REQUESTED`, `COUNTERED`, `APPROVED`, `REJECTED`,
   `WITHDRAWN` (Requirement 3). `APPROVED` / `REJECTED` / `WITHDRAWN` are **terminal states**.
-- **Executor**: a MANAGER (or ADMIN) acting on the offer/discount side; distinct from the CLIENT side.
+- **Executor**: a MANAGER, ADMIN, or ESTIMATOR acting on the offer/discount side; distinct from the
+  CLIENT side. (ESTIMATOR shares the executor OFFERS write set `READ`/`CREATE`/`UPDATE` but, unlike
+  MANAGER/ADMIN, has **no** `OFFERS APPROVE` grant — see the ESTIMATOR role glossary entry and
+  Requirement 16.)
+- **ESTIMATOR**: a new system role (code `ESTIMATOR`, Russian label "Сметчик", Polish label
+  "Kosztorysant") whose resource grants are **exactly the FOREMAN resource grant set** (every resource
+  and operation FOREMAN holds today — e.g. `READ` on `ROOM_TYPES`, `WORK_CATEGORIES`,
+  `MEASUREMENT_UNITS`, `MATERIAL_SELLERS`, `MATERIALS`, `OFFER_PACKAGES`, `VAT_RATES`, `WORK_CATALOG`,
+  `WORKER_TYPES`, `DELIVERY_STATUSES`, `MATERIALS_CONSTRUCTION`, and the rest; `READ`+`UPDATE` on
+  `ROOMS`; `READ` on `PROJECT_MEMBERS`) PLUS two grants FOREMAN lacks: `OFFERS` with `READ`+`CREATE`+
+  `UPDATE` (**no** `APPROVE`, no `DELETE`) and `ESTIMATE` with `READ`+`CREATE`+`UPDATE`. ESTIMATOR is
+  an executor for offer preparation and the executor offer actions but can NOT approve an offer, and
+  does NOT receive the FOR-05-06 cost/margin read models beyond what the `ESTIMATE` grant already
+  conveys (Requirement 16).
 - **Offer_Tab**: the in-workspace project tab ("Оферта / согласование" — Offer / approval), rendering
   the offer, discounts, and negotiation thread. Design/DRAFT stage.
 - **Concrete_Material** (per FOR-05-05): a specific chosen `ConstructionMaterial` / `FinishingMaterial`
@@ -275,19 +294,23 @@ This spec also encodes four cross-cutting product decisions that tighten and ext
 
 ## Requirements
 
-### Requirement 1: Prepare an Offer from a priced estimate
+### Requirement 1: Prepare an Offer from the project's estimate (any status)
 
-**User Story:** As an executor (MANAGER), I want to prepare an offer from a priced estimate, so that I
-have a proposal to send to the client.
+**User Story:** As an executor (MANAGER/ADMIN/ESTIMATOR), I want to prepare an offer from the project's
+estimate regardless of its pricing status, so that I have a proposal to send to the client without
+waiting for the estimate to reach `PRICED`.
 
 #### Acceptance Criteria
 
-1. WHEN an executor prepares an offer for a project WHOSE estimate status is `PRICED`, THE System SHALL
-   create an `Offer` linked to that project and that estimate (parent §4.2), with `status = DRAFT`,
-   `revision = 1`, and `selectedPackage` seeded (copied) from the estimate's applied package per
-   criterion 1.6.
-2. IF an executor attempts to prepare an offer for a project whose estimate is not `PRICED`, THEN THE
-   System SHALL reject the request with a localized validation message and SHALL NOT create an Offer.
+1. WHEN an executor (MANAGER/ADMIN/ESTIMATOR) prepares an offer for a project, THE System SHALL create
+   an `Offer` linked to that project and that estimate (parent §4.2) **regardless of the estimate's
+   status** (including `DRAFT`), with `status = DRAFT`, `revision = 1`, and `selectedPackage` seeded
+   (copied) from the estimate's applied package per criterion 1.6; pricing (`PRICED`) is NOT a
+   precondition for preparation.
+2. THE System SHALL NOT require the estimate to be `PRICED` to prepare an offer and SHALL NOT reject
+   preparation on the grounds that the estimate is not `PRICED`; the only guards on preparation are the
+   single-active-offer rule (criterion 1.4) and the existence of the project and its estimate. (The
+   former not-`PRICED` rejection and its `error.offer.estimate.not.priced` message are removed.)
 3. THE System SHALL compute the Offer totals as the estimate totals minus the effective applied
    discounts: `totalNet = estimate.totalNet − Σ Effective_Discount(net)`, with `totalVat` and
    `totalGross` recomputed from the discounted net using the project VAT rate; THE System SHALL compute
@@ -348,8 +371,9 @@ rebates are reflected in the offer totals.
    Requirement 1.3.
 7. THE System SHALL ensure the resulting Offer `totalNet` is never negative and no single discount's
    `Effective_Discount` exceeds its scope base.
-8. WHILE a discount write is attempted by a non-executor (not MANAGER/ADMIN), THE System SHALL reject
-   it server-side (discounts remain MANAGER-controlled writes, parent §5).
+8. WHILE a discount write is attempted by a non-executor (not MANAGER/ADMIN/ESTIMATOR), THE System
+   SHALL reject it server-side (discounts remain executor-controlled writes via the `OFFERS` write
+   grant, parent §5 as tightened by Requirement 16; the CLIENT never writes discounts directly).
 
 ### Requirement 3: Offer negotiation status machine
 
@@ -433,7 +457,8 @@ project's offer, so that I can negotiate and accept the proposal.
 1. THE System SHALL gate all Offer and negotiation operations behind the project-scoped ABAC resource
    `OFFERS` (`getProjectIdPath = offer.project.id`, parent §5), auto-filtered to the caller's project
    membership (`own`), and SHALL restrict `OFFERS` access to `CLIENT` (own project, visibility-gated),
-   `MANAGER`, and `ADMIN` only — no other role has offer access (Requirement 16).
+   `MANAGER`, `ADMIN`, and `ESTIMATOR` only — no other role has offer access (Requirement 16).
+   `ESTIMATOR` holds `OFFERS` `READ`+`CREATE`+`UPDATE` but NOT `APPROVE`.
 2. WHERE a caller is a `CLIENT` project member with `OFFERS R(own)+approve`, THE System SHALL permit the
    CLIENT to: approve the current offer version, reject it, open a discount request (Requirement 4),
    select the commercial package (START/COMFORT/PRESTIGE), **choose a `Concrete_Material` for a
@@ -443,8 +468,10 @@ project's offer, so that I can negotiate and accept the proposal.
 3. WHERE a caller is a `CLIENT` project member, THE System SHALL deny that caller any write to
    `OfferDiscount` rows directly (discounts remain MANAGER-controlled, parent §5); the CLIENT influences
    discounts only through negotiation rounds.
-4. WHERE a caller is a MANAGER or ADMIN with `OFFERS` write, THE System SHALL permit preparing, sending,
-   countering, withdrawing offers and writing discounts.
+4. WHERE a caller is a MANAGER, ADMIN, or ESTIMATOR with `OFFERS` write, THE System SHALL permit
+   preparing, sending, countering, withdrawing offers and writing discounts; WHERE the caller is an
+   ESTIMATOR, THE System SHALL additionally deny the `OFFERS APPROVE` sub-action server-side (ESTIMATOR
+   has no `APPROVE` grant), so an ESTIMATOR cannot approve/reject an offer on the client's behalf.
 5. WHERE a project has multiple `CLIENT` members (parent §4.2), THE System SHALL apply the CLIENT
    read/approve grants to every CLIENT member equally.
 6. IF a caller without the required `OFFERS` grant attempts any offer/negotiation operation, THEN THE
@@ -533,9 +560,10 @@ the offer inside the single project workspace.
 2. THE Offer_Tab SHALL render the current offer (status, revision, selected package, totals), the
    applied discounts, and the negotiation thread (ordered rounds with initiator, kind, value,
    justification, and status).
-3. WHERE the caller has `OFFERS` write (MANAGER/ADMIN), THE Offer_Tab SHALL expose the executor actions
-   (prepare, set package, add/edit/remove discounts, send, counter, withdraw) subject to the current
-   status machine state.
+3. WHERE the caller has `OFFERS` write (MANAGER/ADMIN/ESTIMATOR), THE Offer_Tab SHALL expose the
+   executor actions (prepare, set package, add/edit/remove discounts, send, counter, withdraw) subject
+   to the current status machine state; WHERE the caller is an ESTIMATOR, THE Offer_Tab SHALL NOT
+   expose any offer-approval action (ESTIMATOR has `OFFERS READ`+`CREATE`+`UPDATE` but no `APPROVE`).
 4. WHERE the caller is a CLIENT member, THE Offer_Tab SHALL expose the client actions (approve, reject,
    request discount, select package) subject to the current status.
 5. THE System SHALL delegate the dedicated **client-facing portal** rendering of the offer to FOR-09;
@@ -809,17 +837,24 @@ only the people who should see internal pricing or negotiate the offer can reach
 
 #### Acceptance Criteria
 
-1. THE System SHALL restrict access to the ESTIMATE (kosztorys) and to the FOR-05-06 margins/cost model
-   (costs, tier costs, worker-type tiers, material `cost_net`, per-branch/per-tier margins) to
-   `MANAGER` and `ADMIN` only.
+1. THE System SHALL restrict access to the ESTIMATE (kosztorys) to `MANAGER`, `ADMIN`, and `ESTIMATOR`
+   only (`ESTIMATOR` holds `ESTIMATE` `READ`+`CREATE`+`UPDATE`); and SHALL restrict the FOR-05-06
+   margins/cost model (costs, tier costs, worker-type tiers, material `cost_net`, per-branch/per-tier
+   margins) to `MANAGER` and `ADMIN` only (criterion 16.4) — the ESTIMATOR's ESTIMATE grant does NOT
+   itself grant the FOR-05-06 cost/margin read models beyond what the ESTIMATE grant already conveys.
 2. IF a caller whose role is `FOREMAN`, `WORKER`, `FINANCIER`, `CLIENT`, or any role other than
-   `MANAGER` / `ADMIN` attempts to access the estimate or any cost/margin data, THEN THE System SHALL
-   reject the request server-side with a localized error.
+   `MANAGER` / `ADMIN` / `ESTIMATOR` attempts to access the estimate, THEN THE System SHALL reject the
+   request server-side with a localized error; AND IF a caller whose role is other than `MANAGER` /
+   `ADMIN` attempts to access any FOR-05-06 cost/margin data, THEN THE System SHALL reject the request
+   server-side with a localized error (ESTIMATOR is NOT on the cost/margin allow-list).
 3. THE System SHALL restrict `OFFERS` access to `CLIENT` (their own project, subject to the
-   client-visibility gate of Requirement 17), `MANAGER`, and `ADMIN` only; no other role has any offer
-   access.
+   client-visibility gate of Requirement 17), `MANAGER`, `ADMIN`, and `ESTIMATOR` only; no other role
+   has any offer access. `ESTIMATOR` holds `OFFERS` `READ`+`CREATE`+`UPDATE` (NO `APPROVE`,
+   no `DELETE`), so an ESTIMATOR may prepare/read/update offers and discounts but may not approve.
 4. THE System SHALL expose all FOR-05-06 margin/cost read models to `ADMIN` and `MANAGER` only,
-   reaffirming that costs and margins never reach a `CLIENT` (Requirement 15).
+   reaffirming that costs and margins never reach a `CLIENT` and are NOT granted to `ESTIMATOR` beyond
+   what already flows from the ESTIMATE grant — costs/margins remain `ADMIN`/`MANAGER`-only
+   (Requirement 15).
 5. THE System SHALL record that this role model **DEVIATES from parent design §5** — which granted
    `FOREMAN` / `WORKER` / `FINANCIER` `R(own)` on ESTIMATE and defined a broader `OFFERS` matrix — and
    SHALL tighten those grants to the model stated in this requirement; the deviation is intentional and
@@ -827,6 +862,22 @@ only the people who should see internal pricing or negotiate the offer can reach
 6. THE System SHALL seed and enforce these tightened grants through the ABAC matrix per
    `entity-creation-rules` (resource seed + role-matrix rows + class-level `@PermissionResource` +
    startup annotation-completeness), so the restriction is server-enforced, not UI-only.
+7. THE System SHALL seed a NEW system role `ESTIMATOR` (code `ESTIMATOR`, Russian label "Сметчик",
+   Polish label "Kosztorysant") whose grant set is **exactly the FOREMAN resource grant set** (every
+   resource/operation FOREMAN holds today — e.g. `READ` on `ROOM_TYPES`, `WORK_CATEGORIES`,
+   `MEASUREMENT_UNITS`, `MATERIAL_SELLERS`, `MATERIALS`, `OFFER_PACKAGES`, `VAT_RATES`, `WORK_CATALOG`,
+   `WORKER_TYPES`, `DELIVERY_STATUSES`, `MATERIALS_CONSTRUCTION`, and the rest; `READ`+`UPDATE` on
+   `ROOMS`; `READ` on `PROJECT_MEMBERS`) PLUS the two extra grants FOREMAN lacks: `OFFERS`
+   `READ`+`CREATE`+`UPDATE` (NO `APPROVE`, no `DELETE`) and `ESTIMATE` `READ`+`CREATE`+`UPDATE`. THE
+   System SHALL seed the role idempotently (insert the role guarded by an `onFail="MARK_RAN"`
+   precondition on `roles.code = 'ESTIMATOR'`), then seed the `role_resources` + `role_resource_operations`
+   grant rows (each self-guarded by a `NOT EXISTS` precondition), in a new Liquibase changeset
+   registered **LAST** in `changelog.xml`, per `entity-creation-rules` / the existing role-seed pattern.
+8. THE System SHALL seed the `ESTIMATOR` grants as fresh, intentional grants that are NOT subject to the
+   changeset-135 (`retighten-estimate-and-offers-grants`) removal: changeset 135 archives and removes
+   only the `FOREMAN` / `WORKER` / `FINANCIER` grants on `ESTIMATE` / `OFFERS`, so because `ESTIMATOR`
+   is a brand-new role (not in that set) and is seeded in a later changeset (after 135), its ESTIMATE
+   and OFFERS grants are retained and intentional — the retighten SHALL NOT catch or remove them.
 
 ### Requirement 17: Reuse the pricing tab as the offer surface, manager-gated client visibility, and offer visibility status
 
@@ -948,6 +999,33 @@ any later change is a controlled amendment rather than an ad-hoc edit.
    guarantee the offer always references the estimate by id and the offer read model's client price
    equals the live estimate client-facing final price minus applied discounts, never a stored copy and
    never a cost/margin (Requirement 10.15, Requirement 19).
+
+### Requirement 21: "Prepare offer" action on the Estimate screen
+
+**User Story:** As an executor (MANAGER/ADMIN/ESTIMATOR), I want a "Prepare offer" action directly on
+the project's Estimate screen, so that I can start an offer from the estimate I am working on without
+first navigating to the Offer tab and regardless of whether the estimate is priced.
+
+#### Acceptance Criteria
+
+1. WHERE the caller is a `MANAGER`, `ADMIN`, or `ESTIMATOR` (an executor with `OFFERS CREATE`), THE
+   System SHALL present a "Prepare offer" action on the project's Estimate screen; WHERE the caller is
+   any other role, THE System SHALL NOT present the action.
+2. THE System SHALL keep the "Prepare offer" action **always enabled** for an executor regardless of
+   the estimate's status (no `PRICED` gate on the action), consistent with Requirement 1.
+3. WHEN an executor activates the "Prepare offer" action, THE System SHALL call
+   `POST /api/offers/project/{projectId}/prepare` for the current project.
+4. WHEN the prepare call succeeds, THE System SHALL navigate the caller into the Offer / approval tab
+   (the Offer_Tab, Requirement 8 / Requirement 17) of the current project.
+5. IF the prepare call fails (for example because the project already has a non-terminal offer per
+   Requirement 1.4), THEN THE System SHALL surface the error as a localized toast and SHALL NOT
+   navigate away from the Estimate screen.
+6. THE System SHALL keep the EXISTING prepare entry point in the Offer_Tab (Requirement 8.3) unchanged;
+   the Estimate-screen action is an ADDITIONAL entry point to the same server operation, not a
+   replacement.
+7. THE System SHALL localize the "Prepare offer" action label and its error-toast text via i18n keys
+   present in BOTH `pl.json` and `ru.json` at strict key parity with non-empty values, and SHALL never
+   surface a raw i18n key (Requirement 9).
 
 ## Non-Goals
 

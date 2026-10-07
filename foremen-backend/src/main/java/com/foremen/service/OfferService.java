@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -26,7 +27,6 @@ import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
 import com.foremen.dao.model.EstimateLineRoomMaterialEntity;
 import com.foremen.dao.model.EstimateLineRoomQtyEntity;
-import com.foremen.dao.model.EstimateStatus;
 import com.foremen.dao.model.OfferAction;
 import com.foremen.dao.model.OfferDiscountEntity;
 import com.foremen.dao.model.OfferEntity;
@@ -71,9 +71,10 @@ import jakarta.persistence.EntityManager;
  *
  * <h2>Lifecycle methods (task 5.1)</h2>
  * <ul>
- *   <li>{@link #prepareOffer(Long)} — precondition {@code estimate.status == PRICED} (else 400
- *       {@code error.offer.estimate.not.priced}); rejects a second non-terminal offer (409
- *       {@code error.offer.active.exists}); creates {@code Offer{status=DRAFT, revision=1}}, seeds
+ *   <li>{@link #prepareOffer(Long)} — prepares an offer from the project's estimate in <b>any</b>
+ *       status (pricing is no longer a precondition, R1.1/R1.2); the only prepare guards are entity
+ *       existence (404) and the single-active-offer rule — a second non-terminal offer is rejected
+ *       (409 {@code error.offer.active.exists}); creates {@code Offer{status=DRAFT, revision=1}}, seeds
  *       {@code selectedPackage} from {@code estimate.appliedPackageCode} (null-safe, R1.7), and
  *       computes totals from the live-referenced estimate prices (R1.3).</li>
  *   <li>{@link #selectPackage(Long, String)} — persists the selection, re-derives the finishing
@@ -94,9 +95,6 @@ import jakarta.persistence.EntityManager;
 @Service
 public class OfferService
         implements ProjectScopedService<OfferServiceModel, OfferServiceExtendedModel, OfferEntity, Long> {
-
-    /** 400 when {@code prepareOffer} is attempted on a non-{@code PRICED} estimate (R1.2). */
-    static final String ESTIMATE_NOT_PRICED_MESSAGE = "error.offer.estimate.not.priced";
 
     /** 409 when a project already has a non-terminal (active) offer (R1.4). */
     static final String ACTIVE_OFFER_EXISTS_MESSAGE = "error.offer.active.exists";
@@ -224,10 +222,12 @@ public class OfferService
     /**
      * Prepares a new {@code Offer} for {@code projectId} from its {@code PRICED} estimate.
      *
+     * <p>Preparation works from an estimate in <b>any</b> status — pricing is no longer a
+     * precondition (R1.1/R1.2); readiness is always visible rather than gating preparation.
+     *
      * <ol>
-     *   <li>Resolves the project's estimate; if its status is not {@link EstimateStatus#PRICED} the
-     *       request is rejected with {@code 400 error.offer.estimate.not.priced} and no offer is
-     *       created (R1.2).</li>
+     *   <li>Resolves the project's estimate; if the project has no estimate the request is rejected
+     *       with {@code 404 error.entity.not.found}.</li>
      *   <li>Rejects a second active offer: if the project already has a non-terminal offer, throws
      *       {@code 409 error.offer.active.exists} (R1.4).</li>
      *   <li>Creates {@code Offer{status=DRAFT, revision=1}} linked to the project and estimate
@@ -241,8 +241,8 @@ public class OfferService
      *
      * @param projectId the owning project id
      * @return the persisted offer entity
-     * @throws ForemenApiException 404 when the project has no estimate; 400 when it is not PRICED;
-     *                             409 when an active offer already exists
+     * @throws ForemenApiException 404 when the project has no estimate; 409 when an active offer
+     *                             already exists
      */
     @Transactional
     public OfferEntity prepareOffer(Long projectId) {
@@ -250,10 +250,7 @@ public class OfferService
                 .orElseThrow(() -> new ForemenApiException(
                         HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "projectId", projectId));
 
-        // R1.2: only a PRICED estimate may be turned into an offer.
-        if (estimate.getStatus() != EstimateStatus.PRICED) {
-            throw new ForemenApiException(HttpStatus.BAD_REQUEST, ESTIMATE_NOT_PRICED_MESSAGE);
-        }
+        // R1.1/R1.2: preparation works from an estimate in ANY status (no PRICED precondition).
 
         // R1.4: at most one non-terminal offer per project.
         if (!offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES).isEmpty()) {
@@ -572,6 +569,45 @@ public class OfferService
     @Transactional(readOnly = true)
     public OfferEntity getOffer(Long offerId) {
         return resolveOffer(offerId);
+    }
+
+    /**
+     * Resolves a project's <b>current</b> offer by project id — the by-project read entry point the
+     * Offer tab uses on a fresh page load, when it holds the project id rather than an offer id and
+     * cannot otherwise discover the project's existing offer (the only prior offer-id source was the
+     * in-memory result of a successful {@code prepareOffer}).
+     *
+     * <p>Resolution order:
+     * <ol>
+     *   <li>the single non-terminal (active) offer if one exists
+     *       ({@code findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES)} — the one-active-offer
+     *       invariant, R1.4, normally yields at most one; if more than one somehow exists, the latest
+     *       by id is taken);</li>
+     *   <li>otherwise the latest offer overall ({@code findByProjectIdOrderByIdAsc} &rarr; last) — e.g.
+     *       the most recent terminal offer when the project has no active one;</li>
+     *   <li>{@link Optional#empty()} when the project has NO offer at all.</li>
+     * </ol>
+     *
+     * <p>Unlike the by-id read it does not apply the client-visibility gate — the caller
+     * (the controller) applies {@link OfferVisibilityResolver#assertClientVisible} on the resolved
+     * offer for a CLIENT, so a DRAFT-visibility (not-yet-sent) offer still stays hidden (R5.9/R17.5).
+     *
+     * @param projectId the owning project id
+     * @return the project's current offer, or empty when the project has no offer
+     */
+    @Transactional(readOnly = true)
+    public Optional<OfferEntity> getCurrentOfferByProject(Long projectId) {
+        // R1.4: prefer the single active (non-terminal) offer; defensively take the latest by id if
+        // the invariant were ever violated.
+        Optional<OfferEntity> active = offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES)
+                .stream()
+                .reduce((first, second) -> second);
+        if (active.isPresent()) {
+            return active;
+        }
+        // Otherwise fall back to the latest offer overall (e.g. the most recent terminal offer).
+        return offerDao.findByProjectIdOrderByIdAsc(projectId).stream()
+                .reduce((first, second) -> second);
     }
 
     /**

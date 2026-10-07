@@ -496,7 +496,7 @@ class MarginsListAssemblerPropertyTest {
                     BigDecimal.ONE, BigDecimal.ZERO, BigDecimal.ZERO,
                     concreteId, concreteId == null ? null : "mat-" + concreteId,
                     concreteId == null ? null : ret,
-                    "szt", q, false, ConsumptionBasis.PER_UNIT, false);
+                    "szt", q, false, ConsumptionBasis.PER_UNIT, false, null, false);
         });
     }
 }

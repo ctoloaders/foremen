@@ -21,6 +21,18 @@ import java.math.BigDecimal;
  * @param priceRangeMin    the offer-facing minimum type price (Type_Price_Range low), or {@code null}
  * @param priceRangeMax    the offer-facing maximum type price (Type_Price_Range high), or {@code null}
  * @param chosenOfferPrice the chosen product's offer price, or {@code null} when still a Placeholder
+ * @param appliedFromPackage whether this finishing line was applied from a package (the FE filters
+ *                           the offer finishing surface to the package lines on this flag)
+ * @param finishingTypeId  the finishing TYPE id of the line, or {@code null} when the line carries no
+ *                         type (lets the FE per-line product picker filter by {@code type.id})
+ * @param imageUrl         the chosen product's resolved CDN image URL, or {@code null} when there is
+ *                         no chosen product, the product has no photo, or image storage is disabled
+ * @param chosenProductPackageName a localized representative package name of the chosen product when
+ *                         that product is NOT in the offer's selected package, else {@code null}
+ * @param chosenPackageDiffersFromSelected whether there IS a chosen product whose packages do NOT
+ *                         contain the offer's selected package; {@code false} for Placeholders, when
+ *                         the chosen product IS in the selected package, or when there is no selected
+ *                         package
  */
 public record FinishingSelectionView(
         Long materialLineId,
@@ -30,5 +42,10 @@ public record FinishingSelectionView(
         String chosenProductName,
         BigDecimal priceRangeMin,
         BigDecimal priceRangeMax,
-        BigDecimal chosenOfferPrice) {
+        BigDecimal chosenOfferPrice,
+        boolean appliedFromPackage,
+        Long finishingTypeId,
+        String imageUrl,
+        String chosenProductPackageName,
+        boolean chosenPackageDiffersFromSelected) {
 }

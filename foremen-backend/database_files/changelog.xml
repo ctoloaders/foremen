@@ -415,4 +415,13 @@
          + NOT EXISTS self-guards, so a re-run against an already-tightened DB is a no-op. Registered
          LAST, after 134. -->
     <include file="database_files/changesets/135-retighten-estimate-and-offers-grants.xml"/>
+    <!-- FOR-05-07 (R16.7, R16.8, R16.1, R16.3): seed the NEW system role ESTIMATOR ("Сметчик" /
+         "Kosztorysant"). Grants = the FULL FOREMAN resource grant set (derived via INSERT ... SELECT
+         joins against FOREMAN's actual role_resources / role_resource_operations rows, so ESTIMATOR
+         mirrors FOREMAN exactly) PLUS OFFERS READ+CREATE+UPDATE (NO APPROVE, NO DELETE) and ESTIMATE
+         READ+CREATE+UPDATE. Idempotent: role insert guarded onFail="MARK_RAN" on roles.code =
+         'ESTIMATOR'; each grant block self-guarded by NOT EXISTS. Registered LAST, AFTER 135 — because
+         ESTIMATOR is a brand-new role seeded after the retighten (which strips only FOREMAN/WORKER/
+         FINANCIER ESTIMATE/OFFERS grants), its grants are NOT caught by 135 and persist (R16.8). -->
+    <include file="database_files/changesets/136-seed-estimator-role.xml"/>
 </databaseChangeLog>

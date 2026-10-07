@@ -1,5 +1,7 @@
 package com.foremen.controller;
 
+import java.util.Optional;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -49,6 +51,9 @@ import lombok.RequiredArgsConstructor;
  *       visibility ({@link OfferVisibilityResolver#assertClientVisible}) and served the confidential
  *       {@link ClientOfferReadModel}; MANAGER/ADMIN reads are served the {@link ExecutorOfferReadModel}
  *       (R5.9, R15.1, R15.4, R15.5, R17.5).</li>
+ *   <li>{@code GET /project/{projectId}} — the by-project current-offer read, {@code OFFERS} READ.
+ *       Same audience branching as {@code GET /{offerId}}; returns {@code 204 No Content} when the
+ *       project has no offer so the Offer tab can resolve the current offer on a fresh page load.</li>
  * </ul>
  *
  * <p>Reads branch on the caller role resolved from the security context (mirroring
@@ -160,6 +165,47 @@ public class OfferController {
         if (isClient()) {
             // R5.9/R17.5: a not-yet-sent (DRAFT-visibility) offer is indistinguishable from missing.
             offerVisibilityResolver.assertClientVisible(offer.getStatus(), offerId);
+            return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
+        }
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));
+    }
+
+    /**
+     * Reads the project's <b>current</b> offer by project id — the by-project lookup the Offer tab
+     * uses on a fresh page load to resolve the project's existing offer (it previously could obtain an
+     * offer id only from the in-memory result of a successful {@code prepareOffer}, so a reload showed
+     * only "Prepare offer" even when the project already had an offer). {@code OFFERS} READ.
+     *
+     * <p>Project-scoped like {@link #prepare(Long)} (also under {@code /project/{projectId}}): the
+     * ABAC {@code OFFERS} resource scopes by {@code offer.project.id}, and for a project-id-path
+     * endpoint the {@code PermissionInterceptor} resolves the scope from the {@code projectId} path
+     * variable — so this read is authorized exactly as {@code prepare} is.
+     *
+     * <p>HTTP contract:
+     * <ul>
+     *   <li><b>204 No Content</b> when the project has NO offer at all — lets the frontend cleanly
+     *       distinguish "no offer yet" from an error (we deliberately do NOT 404 here; 404 is reserved
+     *       for the DRAFT-visibility client hide below).</li>
+     *   <li><b>200</b> with the audience-branched read model when an offer exists — a CLIENT is served
+     *       the confidential {@link ClientOfferReadModel} after the visibility gate, a
+     *       MANAGER/ADMIN/ESTIMATOR the {@link ExecutorOfferReadModel}.</li>
+     *   <li><b>404 {@code error.entity.not.found}</b> when a CLIENT reaches a DRAFT-visibility
+     *       (not-yet-sent) offer — it stays hidden (R5.9/R17.5), indistinguishable from missing.</li>
+     * </ul>
+     */
+    @GetMapping("/project/{projectId}")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
+    public ResponseEntity<?> getCurrentOfferByProject(@PathVariable Long projectId) {
+        Optional<OfferEntity> current = offerService.getCurrentOfferByProject(projectId);
+        if (current.isEmpty()) {
+            // 204: the project has no offer yet — an unambiguous "no offer" for the by-project lookup.
+            return ResponseEntity.noContent().build();
+        }
+        OfferEntity offer = current.get();
+        if (isClient()) {
+            // R5.9/R17.5: a not-yet-sent (DRAFT-visibility) offer stays hidden as 404, even via the
+            // by-project read.
+            offerVisibilityResolver.assertClientVisible(offer.getStatus(), offer.getId());
             return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
         }
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));

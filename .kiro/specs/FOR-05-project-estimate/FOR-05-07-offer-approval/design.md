@@ -3,7 +3,8 @@
 ## Overview
 
 FOR-05-07-offer-approval is the **offer preparation and client-negotiation** slice of a project
-in the `DRAFT` design stage. It introduces the `Offer` (built from a `PRICED` estimate), scoped
+in the `DRAFT` design stage. It introduces the `Offer` (built from the project estimate in any
+status; the former `PRICED` precondition has been removed per Requirements 1.1/1.2), scoped
 `OfferDiscount`s, a two-sided threaded negotiation, a manager-gated client-visibility projection,
 a confidential client read model, a client finishing-material selection surface that reuses the
 FOR-05-05 `chooseConcrete` write path, and a **generic, offer-decoupled** notification service with
@@ -152,7 +153,7 @@ sequenceDiagram
     participant N as NegotiationService
     participant NT as NotificationService
 
-    M->>O: prepareOffer(project)  [estimate PRICED]
+    M->>O: prepareOffer(project)  [estimate in any status]
     O-->>M: Offer{status=DRAFT, rev=1, selectedPackage from appliedPackageCode}
     M->>O: send()  → SENT, project OFFERED, visibility ON_APPROVAL
     C->>N: openDiscountRequest(scope,target,justification)  [no figure]
@@ -179,6 +180,14 @@ sequenceDiagram
 - `Client_Staging` is a zustand store + pure reducer in `features/project-offer/state/`, modeled
   directly on `reserveDraftStore.ts`: pure, property-testable transforms with an undo/redo history
   stack, committed only on explicit save via the Requirement 11 write path.
+- **Second prepare entry point (Requirement 21).** In addition to the OfferTab prepare action, the
+  project **Estimate screen** gets a "Prepare offer" button, shown only to OFFERS/CREATE callers
+  (MANAGER/ADMIN/ESTIMATOR) and **always enabled** (no `PRICED` gate, matching the removed
+  precondition). On click it calls `POST /api/offers/project/{projectId}/prepare` (reusing the same
+  `usePrepareOffer`/`prepareOffer` client as the OfferTab); on success it navigates to the
+  Offer/approval tab, and on failure (e.g. an active offer already exists) it shows a localized toast
+  and stays on the Estimate screen. The existing OfferTab prepare entry point is unchanged; both call
+  the same endpoint. New `pl.json`/`ru.json` keys are added at strict parity.
 
 ### Technology choices
 
@@ -199,11 +208,13 @@ Implements `ProjectScopedService<OfferServiceModel, OfferServiceExtendedModel, O
 with `getProjectIdPath() = "project.id"` and `allowedProjectIds` wired to `ProjectAccessCache`.
 Owns the offer lifecycle:
 
-- `prepareOffer(projectId)` — precondition `estimate.status == PRICED` (else `400
-  error.offer.estimate.not.priced`); rejects a second non-terminal offer (`409
-  error.offer.active.exists`); creates `Offer{status=DRAFT, revision=1}`, resolves
-  `estimate.appliedPackageCode → OfferPackage` for `selectedPackage` (null-safe per R1.7), computes
-  totals.
+- `prepareOffer(projectId)` — preparation works from an estimate in **any** status (the former
+  `PRICED` gate and its `error.offer.estimate.not.priced` message are removed per R1.1/R1.2; the
+  `ESTIMATE_NOT_PRICED_MESSAGE` constant/throw no longer exists). The only prepare guards are the
+  single-active-offer rule (rejects a second non-terminal offer, `409 error.offer.active.exists`)
+  and entity existence; readiness remains visible. Creates `Offer{status=DRAFT, revision=1}`,
+  resolves `estimate.appliedPackageCode → OfferPackage` for `selectedPackage` (null-safe per R1.7),
+  computes totals.
 - `selectPackage(offerId, packageCode)` — persists selection, re-derives the finishing selection
   (delegates to FOR-05-05 propagation), recomputes totals, bumps revision when the priced proposal
   changes.
@@ -226,8 +237,11 @@ throws `409 error.offer.illegal.transition`. This is the single source of truth 
   covering the line's work-type group, else the line's own `LINE` discount — and clamp its effective
   amount to the line's net base. Pure and order-independent (R2.5 / R4.9 / R10.16).
 - `OfferDiscountService.write(...)` validates `value >= 0` (R2.2), `PERCENT <= 100` (R2.3),
-  `ABSOLUTE <= scope base` (R2.4); rejects non-MANAGER/ADMIN writers server-side (R2.8 / R5.3);
-  rejects writes on a terminal offer (R3.9). Recomputes totals on every change (R2.6).
+  `ABSOLUTE <= scope base` (R2.4); admits only executor writers — MANAGER/ADMIN/ESTIMATOR
+  (ESTIMATOR holds OFFERS READ+CREATE+UPDATE) — and rejects every other caller server-side
+  (R2.8 / R5.3); rejects writes on a terminal offer (R3.9). Recomputes totals on every change
+  (R2.6). Note `(OFFERS, APPROVE)` is **not** granted to ESTIMATOR — approve stays MANAGER/ADMIN
+  plus the CLIENT approve sub-action.
 
 #### `OfferTotalsCalculator` (pure)
 
@@ -283,7 +297,7 @@ visibility is `ON_APPROVAL`; MAY surface through the FOR-05-01 ReadinessWidget.
 
 `ClientOfferController` exposes:
 - `POST /api/offers/{offerId}/finishing/{materialLineId}/choose-concrete` — CLIENT (own project) or
-  MANAGER/ADMIN. Delegates to the **existing** `EstimateAssignmentService.chooseConcrete(projectId,
+  MANAGER/ADMIN/ESTIMATOR. Delegates to the **existing** `EstimateAssignmentService.chooseConcrete(projectId,
   materialLineId, materialId)` after asserting: the line is `branch = finishing` AND a Placeholder
   (`concrete*Material == null`) AND the offer is non-terminal negotiable AND the estimate is `DRAFT`
   (R11.3/R11.5/R11.7). Any other client material write is rejected server-side (R5.8 / R11.4).
@@ -421,9 +435,10 @@ The GLOBAL default lives in application config (`foremen.offer.escalation.percen
   only), `perCategoryOfferPrice[]`, `packagePrices[]`, `appliedDiscounts[]`, `finishing[]`
   (`Type_Price_Range` or chosen product price), `negotiationThread[]`, `readiness`. **Contains no**
   cost/margin/worker-rate/estimate-unit-price field; references the estimate only by id (R15/R19.3).
-- **`ExecutorOfferReadModel`** (MANAGER/ADMIN): the client fields plus manager controls state; still
-  the offer domain (kosztorys/cost/margin remain their own ESTIMATE/margins read models,
-  MANAGER/ADMIN-only per R16).
+- **`ExecutorOfferReadModel`** (MANAGER/ADMIN/ESTIMATOR): the client fields plus manager controls
+  state; still the offer domain. The kosztorys cost/margin read models remain separate: ESTIMATE is
+  MANAGER/ADMIN/ESTIMATOR (ESTIMATOR READ+CREATE+UPDATE), while the FOR-05-06 cost/margin views stay
+  **ADMIN/MANAGER only** (ESTIMATOR is excluded from cost/margin) per R16.
 - **`AgreedOfferView`** (downstream FOR-05-14/09): the approved revision's totals, selected package,
   and applied discounts (R7.4).
 
@@ -451,10 +466,28 @@ tableExists` / `NOT columnExists`.
 | NNN+6 | `seed-offers-resource` | `OFFERS` resource + ADMIN grant + role matrix (CLIENT/MANAGER only) + `APPROVE` operation seed |
 | NNN+7 | `seed-notifications-resource` | `NOTIFICATIONS` resource + ADMIN grant + READ/UPDATE/DELETE for **every** role |
 | NNN+8 | `retighten-estimate-and-offers-grants` | remove FOREMAN/WORKER/FINANCIER ESTIMATE + OFFERS grants (R16 deviation), archive-before-delete |
+| 136 | `seed-estimator-role` | new system role `ESTIMATOR` + its grants (FOREMAN-equivalent + OFFERS R/C/U + ESTIMATE R/C/U), registered **last** after `135` |
 
 The `OFFERS` seed adds a custom `APPROVE` operation row (idempotent) alongside CRUD so the CLIENT
-"approve" sub-action is a first-class `(OFFERS, APPROVE)` grant. `NOTIFICATIONS` grants
-READ/UPDATE/DELETE to every role and **no** `CREATE` to end users (R13.13).
+"approve" sub-action is a first-class `(OFFERS, APPROVE)` grant. The `OFFERS` role matrix grants
+MANAGER/ADMIN the executor operations and CLIENT the `(READ(own), APPROVE)` pair; the separately
+seeded `ESTIMATOR` role (changeset `136`, below) adds OFFERS `READ+CREATE+UPDATE` (no APPROVE/DELETE)
+as a third executor. `NOTIFICATIONS` grants READ/UPDATE/DELETE to every role and **no** `CREATE` to
+end users (R13.13).
+
+#### ESTIMATOR role seed (changeset `136`)
+
+A new system role `ESTIMATOR` (code `ESTIMATOR`, `name_ru` "Сметчик", `name_pl` "Kosztorysant") is
+seeded by changeset `136-seed-estimator-role.xml`, registered **last** in `changelog.xml` after the
+existing head changeset `135`. Its grants are the **full FOREMAN grant set** (seeded by an
+`INSERT ... SELECT` that joins the FOREMAN grants so ESTIMATOR mirrors FOREMAN exactly) **plus**
+OFFERS `READ+CREATE+UPDATE` (no `APPROVE`, no `DELETE`) and ESTIMATE `READ+CREATE+UPDATE`. ESTIMATOR
+is therefore an offer/estimate executor but is excluded from `(OFFERS, APPROVE)` and from the
+FOR-05-06 cost/margin views (which stay ADMIN/MANAGER only, R16). The changeset is idempotent (role
+insert guarded `onFail="MARK_RAN"` by `SELECT COUNT(*) FROM roles WHERE code = 'ESTIMATOR'` = 0; each
+grant block self-guarded `NOT EXISTS`). Because `ESTIMATOR` is a **new** role added *after* the
+grant-retighten changeset `135`, its grants are **not** caught by that retighten (which only strips
+FOREMAN/WORKER/FINANCIER rows), so a re-apply retains the ESTIMATOR grants (R16.7, R16.8).
 
 ---
 
@@ -592,12 +625,13 @@ any further action on that round is rejected.
 
 **Validates: Requirements 4.7**
 
-### Property 16: Preparing an offer requires a PRICED estimate
+### Property 16: Preparing an offer succeeds from an estimate in any status
 
-*For all* estimate statuses other than `PRICED`, preparing an offer is rejected and no `Offer` is
-created.
+*For all* estimate statuses, preparing an offer succeeds (the former `PRICED` precondition and its
+`error.offer.estimate.not.priced` message are removed per R1.1/R1.2); the only prepare guards are the
+single-active-offer rule and entity existence.
 
-**Validates: Requirements 1.2**
+**Validates: Requirements 1.1, 1.2**
 
 ### Property 17: The initial package is seeded from the estimate's applied package
 

@@ -55,7 +55,30 @@ public final class AppShell {
     /** Wait for the shell to render (topbar visible), useful right after a login navigation. */
     public AppShell waitUntilRendered() {
         topBar().first().waitFor();
+        // The landing surface (dashboard/Panel) streams its data via React-Query and shows
+        // animate-pulse skeleton placeholders until the query resolves AND re-renders. The topbar
+        // appears before that, so without this extra settle the per-step report screenshot can catch
+        // the page mid-load (skeleton). Wait for the skeletons to clear.
+        waitUntilSettled();
         return this;
+    }
+
+    /**
+     * Best-effort, bounded wait that the page is no longer showing skeleton placeholders: the
+     * dashboard skeleton uses {@code .animate-pulse} blocks that persist until the React-Query data
+     * resolves and re-renders. Waits (≤5s) until there are zero {@code .animate-pulse} elements, so
+     * the per-step screenshot captures real content rather than the skeleton. Swallows a timeout so a
+     * page that keeps an animated element around can never hang / fail a scenario.
+     */
+    public void waitUntilSettled() {
+        try {
+            page.waitForFunction(
+                    "() => document.querySelectorAll('.animate-pulse').length === 0",
+                    null,
+                    new Page.WaitForFunctionOptions().setTimeout(5000));
+        } catch (RuntimeException ignored) {
+            // Best-effort: proceed if the skeletons don't fully clear within the bounded window.
+        }
     }
 
     /** The topbar header element. */
