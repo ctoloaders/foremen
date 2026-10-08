@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R1.1, R1.2, R1.8, R3.5, R5.2): the SignableDocument domain root — one row per
+        document instance, PROJECT-SCOPED (getProjectIdPath = "project.id"), bound to a
+        SignableDocumentType, progressing through the DRAFT -> PENDING_SIGNATURES -> SIGNED (+ VOID)
+        lifecycle. The signature/media/form-field children scope through document.project.id.
+
+        Columns mirror SignableDocumentEntity (design §Data Models):
+          - project_id       : FK -> projects, NOT NULL (R1.1, R1.8). Scope root. ON DELETE CASCADE
+                               — a document cannot outlive its project.
+          - document_type_id : FK -> signable_document_types, NOT NULL (R1.1). ON DELETE RESTRICT
+                               — a type in use may not be hard-deleted (R2.5 deactivate-never-delete).
+          - status           : VARCHAR(24) NOT NULL DEFAULT 'DRAFT'; DRAFT/PENDING_SIGNATURES/
+                               SIGNED/VOID (R1.2). SIGNED is derived (recomputeSignedState), never
+                               set imperatively.
+          - title            : VARCHAR(255) NULLABLE (R1.1).
+          - source_ref       : VARCHAR(255) NULLABLE; optional originating-object ref, e.g. an
+                               offer id (R1.1, R14.1).
+          - signature_level  : VARCHAR(8) NULLABLE; document-level default eIDAS level, AdES
+                               default applied at service layer (R5.2).
+          - template_locale  : VARCHAR(16) NULLABLE; locale used at generation (R3.2).
+          - document_uri     : VARCHAR(512) NULLABLE; DRAFT body / frozen PDF uri in object storage
+                               (R1.1, R3.5).
+          - content_hash     : VARCHAR(128) NULLABLE; sha-256 of the body / frozen PDF (R1.1, R3.5,
+                               R6.4).
+          - created_by_id    : FK -> users, NOT NULL; the owner (R1.1, R11.2). ON DELETE RESTRICT
+                               — keep the owner row (created_by_id is NOT NULL).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change. Registered LAST in changelog.xml, AFTER 137 creates signable_document_types.
+    -->
+
+    <changeSet id="141-create-signable-documents" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="signable_documents"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="signable_documents">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="document_type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(24)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)"/>
+            <column name="source_ref" type="VARCHAR(255)"/>
+            <column name="signature_level" type="VARCHAR(8)"/>
+            <column name="template_locale" type="VARCHAR(16)"/>
+            <column name="document_uri" type="VARCHAR(512)"/>
+            <column name="content_hash" type="VARCHAR(128)"/>
+            <column name="created_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Scope root: a document cannot outlive its project. -->
+        <addForeignKeyConstraint
+            constraintName="fk_signable_documents_project"
+            baseTableName="signable_documents"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Type binding: a referenced type is deactivated, never hard-deleted (R2.5). -->
+        <addForeignKeyConstraint
+            constraintName="fk_signable_documents_type"
+            baseTableName="signable_documents"
+            baseColumnNames="document_type_id"
+            referencedTableName="signable_document_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Owner provenance; keep the user row (created_by_id is NOT NULL). -->
+        <addForeignKeyConstraint
+            constraintName="fk_signable_documents_created_by"
+            baseTableName="signable_documents"
+            baseColumnNames="created_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>

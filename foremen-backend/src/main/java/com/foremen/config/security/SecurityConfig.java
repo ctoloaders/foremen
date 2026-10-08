@@ -74,6 +74,16 @@ public class SecurityConfig {
                         // /api/auth/resend-invite matchers declared above. Verified: no new matcher is
                         // needed for the OTP endpoints.
                         .requestMatchers("/api/auth/**").permitAll()
+                        // FOR-05-08 (5.3, 6.4, 13.1): the signing-provider webhook
+                        // POST /api/signatures/callback is an unauthenticated external provider
+                        // callback (QTSP / Profil Zaufany / StubSignatureProvider), like the
+                        // /api/auth/** endpoints. It carries none of the three permission
+                        // annotations; its authenticity is enforced inside SignatureService by
+                        // matching the providerRef to a pending signature and verifying the sealed
+                        // evidence against the document's stored contentHash, not by the security
+                        // layer. Admitted here so an unauthenticated provider request reaches the
+                        // controller rather than being rejected with 401 by the catch-all below.
+                        .requestMatchers(HttpMethod.POST, "/api/signatures/callback").permitAll()
                         // FOR-04-13 (5.6): the standalone Google Places proxy AddressController is
                         // cross-cutting and intentionally NOT tied to the PROJECTS ABAC resource. It
                         // carries none of the three permission annotations (authenticated-any-user),

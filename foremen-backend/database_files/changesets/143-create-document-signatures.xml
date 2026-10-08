@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R4.1, R4.4, R5.1, R5.2, R6.1, R6.5): the DocumentSignature child — one row per
+        designated signer; a document is SIGNED iff every one of its signatures is SIGNED (parent
+        Property 16). Project-scoped via document.project.id.
+
+        Columns mirror DocumentSignatureEntity (design §Data Models):
+          - document_id   : FK -> signable_documents, NOT NULL (R4.1). Scope via document.project.id.
+                            ON DELETE CASCADE — a signature cannot outlive its document.
+          - signer_user_id: FK -> users, NULLABLE (R4.1, R4.3); explicit signer, null => resolved
+                            by role. ON DELETE RESTRICT — keep the signer row where set.
+          - signer_role   : VARCHAR(16) NULLABLE; e.g. CLIENT; CLIENT resolves to project CLIENT
+                            member(s), sign-any (R4.3, decision 8).
+          - method        : VARCHAR(24) NOT NULL; SignatureMethod PRINT/ONLINE/PODPIS_GOV_PL/
+                            TABLET_INITIALS (R4.1, R6.1).
+          - level         : VARCHAR(8) NOT NULL DEFAULT 'AdES'; SignatureLevel SES/AdES/QES (R4.1,
+                            R5.1, R5.2).
+          - provider_ref  : VARCHAR(255) NULLABLE; provider session ref for ONLINE/PODPIS_GOV_PL
+                            (R4.1).
+          - signed_at     : TIMESTAMP NULLABLE; set on completion, every method (R4.1, R6.5).
+          - evidence_uri  : VARCHAR(512) NULLABLE; scan / tablet image / sealed PDF uri (R4.1).
+          - status        : VARCHAR(16) NOT NULL DEFAULT 'PENDING'; PENDING/SIGNED/DECLINED (R4.1,
+                            R4.4).
+          - decline_reason: TEXT NULLABLE; on DECLINED (R4.4).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change. Registered LAST in changelog.xml, AFTER 141 creates signable_documents.
+    -->
+
+    <changeSet id="143-create-document-signatures" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_signatures"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="document_signatures">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="signer_user_id" type="BIGINT"/>
+            <column name="signer_role" type="VARCHAR(16)"/>
+            <column name="method" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="level" type="VARCHAR(8)" defaultValue="AdES">
+                <constraints nullable="false"/>
+            </column>
+            <column name="provider_ref" type="VARCHAR(255)"/>
+            <column name="signed_at" type="TIMESTAMP"/>
+            <column name="evidence_uri" type="VARCHAR(512)"/>
+            <column name="status" type="VARCHAR(16)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decline_reason" type="TEXT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Owner document: a signature cannot outlive its document. -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_signatures_document"
+            baseTableName="document_signatures"
+            baseColumnNames="document_id"
+            referencedTableName="signable_documents"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Explicit signer provenance (nullable; role-resolved when null). Keep the user row. -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_signatures_signer_user"
+            baseTableName="document_signatures"
+            baseColumnNames="signer_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>

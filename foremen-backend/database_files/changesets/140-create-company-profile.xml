@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R3.3, design decision 7 / Open Question 1): the CompanyProfile reference —
+        the executor (Wykonawca) requisites source read by CompanyRequisitesResolver when
+        merging a document body. A single admin-managed row (global reference, admin-only,
+        standard CRUD), cleaner than scattering requisites across app config.
+
+        Columns mirror CompanyProfileEntity (design §Data Models):
+          - full_name           : VARCHAR(255) NOT NULL; company legal/full name.
+          - registered_address  : VARCHAR(512) NOT NULL; registered seat address.
+          - nip                 : VARCHAR(32)  NOT NULL; tax id.
+          - regon               : VARCHAR(32)  NULLABLE; statistical id.
+          - representative_name : VARCHAR(255) NULLABLE; signing representative.
+          - representative_role : VARCHAR(255) NULLABLE; representative's role/title.
+          - email               : VARCHAR(255) NULLABLE; contact email.
+        Plus the four BaseEntity audit columns.
+
+        The "single-row" intent is a service-layer invariant (the resolver reads the one row);
+        the schema stays a plain table. Idempotent via NOT tableExists + MARK_RAN: a re-run
+        against an existing table makes no schema change. Registered LAST in changelog.xml.
+    -->
+
+    <changeSet id="140-create-company-profile" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="company_profile"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="company_profile">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="full_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="registered_address" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="nip" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="regon" type="VARCHAR(32)"/>
+            <column name="representative_name" type="VARCHAR(255)"/>
+            <column name="representative_role" type="VARCHAR(255)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

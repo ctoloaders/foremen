@@ -68,6 +68,15 @@ dependencies {
     // Not managed by the Spring Boot BOM, so pin the version.
     implementation "com.google.cloud:google-cloud-storage:${googleCloudStorageVersion}"
 
+    // OpenHTMLtoPDF - HTML→PDF renderer isolated behind PdfFreezeService (FOR-05-08 task 6.3):
+    // renders the frozen signing artifact. Not managed by the Spring Boot BOM, so pin the version.
+    implementation "com.openhtmltopdf:openhtmltopdf-core:${openHtmlToPdfVersion}"
+    implementation "com.openhtmltopdf:openhtmltopdf-pdfbox:${openHtmlToPdfVersion}"
+
+    // Apache POI (OOXML) - DOCX text extraction isolated behind DocumentTemplateService's .docx
+    // import (FOR-05-08 task 10.1). Not managed by the Spring Boot BOM, so pin the version.
+    implementation "org.apache.poi:poi-ooxml:${apachePoiVersion}"
+
     // Jackson JSR310 (for JavaTimeModule in audit serialization)
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 

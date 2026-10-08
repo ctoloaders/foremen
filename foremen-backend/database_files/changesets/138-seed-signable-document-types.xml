@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R2.3): idempotent seed of the 14 SignableDocumentType rows that match the
+        business templates in docs/templates/ (contracts, amendment, handover/acceptance
+        protocols, defect form, works-manager statement, room acceptance, key handover).
+
+        Each insert is its own <changeSet> guarded by <preConditions onFail="MARK_RAN"> +
+        <sqlCheck expectedResult="0"> on the type code, so a re-run (or a run against a
+        database that already seeded a given type) inserts nothing — per-row NOT EXISTS
+        idempotency. active defaults to true; name_ru carries the RU i18n value.
+
+        Registered LAST in changelog.xml, AFTER 137 creates the table it seeds.
+    -->
+
+    <changeSet id="138-seed-signable-document-type-contract-works" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_WORKS'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_WORKS"/>
+            <column name="name_pl" value="Umowa o wykonanie prac wykończeniowych"/>
+            <column name="name_ru" value="Договор на выполнение отделочных работ"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-contract-works-pl-ru" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_WORKS_PL_RU'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_WORKS_PL_RU"/>
+            <column name="name_pl" value="Umowa PL-RU o wykonanie prac wykończeniowych"/>
+            <column name="name_ru" value="Договор (PL-RU) на отделочные работы"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-contract-design" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_DESIGN'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_DESIGN"/>
+            <column name="name_pl" value="Umowa o wykonanie projektu aranżacji wnętrza"/>
+            <column name="name_ru" value="Договор на дизайн-проект интерьера"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-contract-complex" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_COMPLEX'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_COMPLEX"/>
+            <column name="name_pl" value="Umowa kompleks (prace + projekt)"/>
+            <column name="name_ru" value="Комплексный договор (работы + проект)"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-contract-packages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_PACKAGES'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_PACKAGES"/>
+            <column name="name_pl" value="Umowa Pakiety Foremen"/>
+            <column name="name_ru" value="Договор «Пакеты Foremen»"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-contract-reservation" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_RESERVATION'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_RESERVATION"/>
+            <column name="name_pl" value="Umowa rezerwacyjna usług wykończeniowych"/>
+            <column name="name_ru" value="Договор резервации отделочных услуг"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-contract-subcontractor" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'CONTRACT_SUBCONTRACTOR'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="CONTRACT_SUBCONTRACTOR"/>
+            <column name="name_pl" value="Umowa o podwykonawstwo"/>
+            <column name="name_ru" value="Договор субподряда"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-amendment" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'AMENDMENT'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="AMENDMENT"/>
+            <column name="name_pl" value="Aneks do umowy"/>
+            <column name="name_ru" value="Анекс к договору"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-handover-to-renovation" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'HANDOVER_TO_RENOVATION'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="HANDOVER_TO_RENOVATION"/>
+            <column name="name_pl" value="Protokół przekazania lokalu do remontu"/>
+            <column name="name_ru" value="Протокол передачи помещения в ремонт"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-works-acceptance" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'WORKS_ACCEPTANCE'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="WORKS_ACCEPTANCE"/>
+            <column name="name_pl" value="Protokół odbioru prac wykończeniowych"/>
+            <column name="name_ru" value="Протокол приёмки отделочных работ"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-defect-form" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'DEFECT_FORM'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="DEFECT_FORM"/>
+            <column name="name_pl" value="Formularz usterkowy wewnętrzny"/>
+            <column name="name_ru" value="Внутренний дефектный формуляр"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-works-manager-statement" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'WORKS_MANAGER_STATEMENT'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="WORKS_MANAGER_STATEMENT"/>
+            <column name="name_pl" value="Oświadczenie kierownika robót"/>
+            <column name="name_ru" value="Заявление руководителя работ"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-room-acceptance" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'ROOM_ACCEPTANCE'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="ROOM_ACCEPTANCE"/>
+            <column name="name_pl" value="Protokół odbioru pomieszczenia"/>
+            <column name="name_ru" value="Протокол приёмки помещения"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="138-seed-signable-document-type-key-handover" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM signable_document_types WHERE code = 'KEY_HANDOVER'</sqlCheck>
+        </preConditions>
+        <insert tableName="signable_document_types">
+            <column name="code" value="KEY_HANDOVER"/>
+            <column name="name_pl" value="Przekazanie kluczy"/>
+            <column name="name_ru" value="Передача ключей"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

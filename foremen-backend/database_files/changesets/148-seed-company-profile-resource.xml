@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R8.1, R8.7): seed the GLOBAL COMPANY_PROFILE ABAC resource (the single admin-
+        managed executor-requisites row, changeset 140, read by CompanyRequisitesResolver) and the
+        ADMIN full-CRUD grant. Global admin reference resource (NOT project-scoped), so only ADMIN
+        receives a grant — mirrors the USERS/ROLES/RESOURCES/OPERATIONS/AUDIT reference resources.
+        Standard CRUD only (R8.2); no new operation. Follows the 017-seed-users-resource.xml
+        two-changeSet pattern. Idempotent via sqlCheck/MARK_RAN. Registered LAST in sequence,
+        after 147.
+    -->
+
+    <!-- Seed COMPANY_PROFILE resource into resources table -->
+    <changeSet id="148-seed-company-profile-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'COMPANY_PROFILE'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="COMPANY_PROFILE"/>
+            <column name="name_ru" value="Реквизиты компании"/>
+            <column name="name_pl" value="Dane firmy"/>
+            <column name="description_ru" value="Реквизиты исполнителя для генерации документов"/>
+            <column name="description_pl" value="Dane wykonawcy do generowania dokumentów"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on COMPANY_PROFILE resource -->
+    <changeSet id="148-seed-company-profile-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_PROFILE'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- Create role_resources entry for ADMIN + COMPANY_PROFILE -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_PROFILE';
+        </sql>
+
+        <!-- Grant full CRUD operations -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_PROFILE';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

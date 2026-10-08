@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R8.1, R8.7): seed the GLOBAL DOCUMENT_TEMPLATES ABAC resource (the admin-managed
+        versioned merge-template store, changeset 139) and the ADMIN full-CRUD grant. Global admin
+        reference resource (NOT project-scoped), so only ADMIN receives a grant — mirrors the
+        USERS/ROLES/RESOURCES/OPERATIONS/AUDIT reference resources. Standard CRUD only (R8.2); no new
+        operation. Follows the 017-seed-users-resource.xml two-changeSet pattern. Idempotent via
+        sqlCheck/MARK_RAN. Registered LAST in sequence, after 146.
+    -->
+
+    <!-- Seed DOCUMENT_TEMPLATES resource into resources table -->
+    <changeSet id="147-seed-document-templates-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'DOCUMENT_TEMPLATES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="DOCUMENT_TEMPLATES"/>
+            <column name="name_ru" value="Шаблоны документов"/>
+            <column name="name_pl" value="Szablony dokumentów"/>
+            <column name="description_ru" value="Версионируемые шаблоны для генерации документов"/>
+            <column name="description_pl" value="Wersjonowane szablony do generowania dokumentów"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on DOCUMENT_TEMPLATES resource -->
+    <changeSet id="147-seed-document-templates-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'DOCUMENT_TEMPLATES'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- Create role_resources entry for ADMIN + DOCUMENT_TEMPLATES -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'DOCUMENT_TEMPLATES';
+        </sql>
+
+        <!-- Grant full CRUD operations -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'DOCUMENT_TEMPLATES';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

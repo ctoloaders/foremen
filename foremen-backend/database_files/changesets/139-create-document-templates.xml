@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R3.1, R3.2, R3a.5): the DocumentTemplate reference — a GLOBAL (not
+        project-scoped), VERSIONED store of the source body (with {Token} merge placeholders)
+        bound to a document type and locale; the source for generated bodies.
+
+        Columns mirror DocumentTemplateEntity (design §Data Models):
+          - document_type_id : FK -> signable_document_types, NOT NULL (R3.1). ON DELETE
+                               CASCADE — a template cannot outlive its type.
+          - name             : VARCHAR(255) NOT NULL.
+          - locale           : VARCHAR(16) NOT NULL; PL / RU / BILINGUAL (R3.1).
+          - storage_uri      : VARCHAR(512) NOT NULL; stored source file in object storage (R3.1).
+          - version          : INT NOT NULL DEFAULT 1; bumped on edit, prior versions retained
+                               (R3a.5).
+          - active           : BOOLEAN NOT NULL DEFAULT true; exactly one active per
+                               (document_type_id, locale) (R3.2).
+          - uploaded_by_id   : FK -> users, NOT NULL (R3.1). ON DELETE SET NULL would lose the
+                               NOT NULL guarantee, so RESTRICT (keep the uploader row).
+        Plus the four BaseEntity audit columns (created_date = uploadedAt).
+
+        A PARTIAL UNIQUE INDEX enforces AT MOST ONE active template per (document_type_id,
+        locale): UNIQUE (document_type_id, locale) WHERE active = true (R3.2). Any number of
+        inactive (prior-version / superseded) templates may coexist.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change. Registered LAST in changelog.xml, AFTER 137 creates signable_document_types.
+    -->
+
+    <changeSet id="139-create-document-templates" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_templates"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="document_templates">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="document_type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="locale" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_uri" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="version" type="INT" defaultValueNumeric="1">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Owner type: a template cannot outlive its document type. -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_templates_type"
+            baseTableName="document_templates"
+            baseColumnNames="document_type_id"
+            referencedTableName="signable_document_types"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Uploader provenance; keep the user row (uploaded_by_id is NOT NULL). -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_templates_uploaded_by"
+            baseTableName="document_templates"
+            baseColumnNames="uploaded_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- R3.2: at most ONE active template per (document_type_id, locale). A partial unique
+             index lets any number of inactive (prior-version / superseded) templates coexist
+             while permitting only a single active one per type/locale. -->
+        <sql>
+            CREATE UNIQUE INDEX ux_document_templates_active_type_locale
+                ON document_templates (document_type_id, locale)
+                WHERE active = true;
+        </sql>
+        <rollback>
+            <sql>
+                DROP INDEX IF EXISTS ux_document_templates_active_type_locale;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

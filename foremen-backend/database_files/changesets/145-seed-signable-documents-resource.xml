@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R8.1, R8.3, R8.7): seed the project-scoped SIGNABLE_DOCUMENTS ABAC resource and
+        the full R8.3 role matrix. Standard CRUD only — the module introduces NO new ABAC
+        action/operation (R8.2): signing is modelled as an UPDATE of the document (the signer
+        updates their own DocumentSignature), and the CLIENT/service-level ownership constraints of
+        R8.4 are enforced server-side, not by a bespoke operation.
+
+        Role matrix (R8.3, standard CRUD only):
+          ADMIN     -> CREATE, READ, UPDATE, DELETE
+          MANAGER   -> CREATE, READ, UPDATE, DELETE   (own-project; enforced at service layer)
+          FOREMAN   -> CREATE, READ, UPDATE           (own-project; enforced at service layer)
+          WORKER    -> READ                           (own-project; enforced at service layer)
+          FINANCIER -> READ                           (own-project; enforced at service layer)
+          CLIENT    -> READ, UPDATE                   (own-signature UPDATE only; R8.4 service guard)
+
+        Project-scoping (getProjectIdPath = document.project.id) is implemented on the service per
+        the entity-creation-rules checklist step 4; this changeset covers steps 1-2 (resource row +
+        role-matrix grants). Follows the 017/133 two-changeSet pattern. Every insert is idempotent
+        via a sqlCheck/MARK_RAN precondition plus a per-row NOT EXISTS self-guard, so a re-run
+        against an already-seeded database inserts nothing. Registered LAST in sequence, after 144.
+    -->
+
+    <!-- Seed SIGNABLE_DOCUMENTS resource into resources table -->
+    <changeSet id="145-seed-signable-documents-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'SIGNABLE_DOCUMENTS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="SIGNABLE_DOCUMENTS"/>
+            <column name="name_ru" value="Подписываемые документы"/>
+            <column name="name_pl" value="Dokumenty do podpisu"/>
+            <column name="description_ru" value="Генерация, подписание и хранение документов проекта"/>
+            <column name="description_pl" value="Generowanie, podpisywanie i przechowywanie dokumentów projektu"/>
+        </insert>
+    </changeSet>
+
+    <!-- Seed the SIGNABLE_DOCUMENTS role matrix (R8.3, standard CRUD only) -->
+    <changeSet id="145-seed-signable-documents-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE res.code = 'SIGNABLE_DOCUMENTS'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- role_resources rows for ADMIN, MANAGER, FOREMAN, WORKER, FINANCIER, CLIENT (self-guarded) -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'FOREMAN', 'WORKER', 'FINANCIER', 'CLIENT')
+              AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  WHERE rr.role_id = r.id AND rr.resource_id = res.id
+              );
+        </sql>
+
+        <!-- ADMIN: CREATE, READ, UPDATE, DELETE on SIGNABLE_DOCUMENTS -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER: CREATE, READ, UPDATE, DELETE on SIGNABLE_DOCUMENTS (own-project; service layer) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'MANAGER' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FOREMAN: CREATE, READ, UPDATE on SIGNABLE_DOCUMENTS (own-project; service layer) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE')
+            WHERE r.code = 'FOREMAN' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- WORKER: READ on SIGNABLE_DOCUMENTS (own-project; service layer) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FINANCIER: READ on SIGNABLE_DOCUMENTS (own-project; service layer) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- CLIENT: READ, UPDATE on SIGNABLE_DOCUMENTS (own-signature UPDATE only; R8.4 service guard) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE')
+            WHERE r.code = 'CLIENT' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

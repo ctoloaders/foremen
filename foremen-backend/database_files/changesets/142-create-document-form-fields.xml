@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R3.6, R1.5, R8.4): the DocumentFormField child — declared fill-in blanks on a
+        document (template-declared, copied onto the document at generation). Form fields are part
+        of the frozen artifact and are the ONLY textual content a signer may add after the freeze
+        (editable only while PENDING_SIGNATURES). Project-scoped via document.project.id.
+
+        Columns mirror DocumentFormFieldEntity (design §Data Models):
+          - document_id : FK -> signable_documents, NOT NULL. Scope via document.project.id. ON
+                          DELETE CASCADE — a form field cannot outlive its document.
+          - key         : VARCHAR(128) NOT NULL; field key (e.g. pesel, idDocNumber).
+          - label       : VARCHAR(255) NULLABLE; display label (localized on FE).
+          - owner_role  : VARCHAR(16) NULLABLE; which signer role may fill it (CLIENT own-fields
+                          constraint, R8.4).
+          - value       : TEXT NULLABLE; filled value; editable only while PENDING_SIGNATURES
+                          (R1.5).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change. Registered LAST in changelog.xml, AFTER 141 creates signable_documents.
+    -->
+
+    <changeSet id="142-create-document-form-fields" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_form_fields"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="document_form_fields">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="key" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="label" type="VARCHAR(255)"/>
+            <column name="owner_role" type="VARCHAR(16)"/>
+            <column name="value" type="TEXT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Owner document: a form field cannot outlive its document. -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_form_fields_document"
+            baseTableName="document_form_fields"
+            baseColumnNames="document_id"
+            referencedTableName="signable_documents"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

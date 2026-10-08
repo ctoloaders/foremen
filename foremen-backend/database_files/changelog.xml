@@ -424,4 +424,75 @@
          ESTIMATOR is a brand-new role seeded after the retighten (which strips only FOREMAN/WORKER/
          FINANCIER ESTIMATE/OFFERS grants), its grants are NOT caught by 135 and persist (R16.8). -->
     <include file="database_files/changesets/136-seed-estimator-role.xml"/>
+
+    <!-- FOR-05-08 (R2.1, R2.2, R2.5, R12.1): the SignableDocumentType reference — a GLOBAL i18n
+         dictionary (code UNIQUE, name_pl NOT NULL, name_ru, active, default_signature_level +
+         BaseEntity cols) of the kinds of document the platform signs. Table only; the 14-type
+         seed is 138. Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 136. -->
+    <include file="database_files/changesets/137-create-signable-document-types.xml"/>
+    <!-- FOR-05-08 (R2.3): idempotent seed of the 14 SignableDocumentType rows matching the
+         business templates (contracts, amendment, handover/acceptance protocols, defect form,
+         works-manager statement, room acceptance, key handover). Each insert is its own changeSet
+         guarded by sqlCheck/MARK_RAN per-row NOT EXISTS. Registered LAST, after 137 creates the
+         table it seeds. -->
+    <include file="database_files/changesets/138-seed-signable-document-types.xml"/>
+    <!-- FOR-05-08 (R3.1, R3.2, R3a.5): the DocumentTemplate reference — a GLOBAL, VERSIONED store
+         (document_type FK NOT NULL ON DELETE CASCADE, name, locale, storage_uri, version, active,
+         uploaded_by FK + BaseEntity cols) of the merge-placeholder source body, plus the PARTIAL
+         UNIQUE INDEX enforcing at most one active template per (document_type_id, locale)
+         (UNIQUE (document_type_id, locale) WHERE active = true). Idempotent via NOT tableExists +
+         MARK_RAN. Registered LAST, after 137. -->
+    <include file="database_files/changesets/139-create-document-templates.xml"/>
+    <!-- FOR-05-08 (R3.3, design decision 7): the CompanyProfile reference — the single
+         admin-managed executor-requisites row (full_name, registered_address, nip, regon,
+         representative_name/role, email + BaseEntity cols) read by CompanyRequisitesResolver.
+         Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 139. -->
+    <include file="database_files/changesets/140-create-company-profile.xml"/>
+    <!-- FOR-05-08 (R1.1, R1.2, R1.8, R3.5, R5.2): the SignableDocument domain root — one row per
+         document instance, PROJECT-SCOPED (project_id FK NOT NULL ON DELETE CASCADE, scope root),
+         bound to a signable_document_types (ON DELETE RESTRICT, deactivate-never-delete), with
+         status DEFAULT 'DRAFT' (DRAFT/PENDING_SIGNATURES/SIGNED/VOID; SIGNED is derived), nullable
+         title/source_ref/signature_level/template_locale/document_uri/content_hash, created_by FK
+         + BaseEntity cols. Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 140,
+         after 137 creates the type table. -->
+    <include file="database_files/changesets/141-create-signable-documents.xml"/>
+    <!-- FOR-05-08 (R3.6, R1.5, R8.4): the DocumentFormField child — declared fill-in blanks
+         (document FK NOT NULL ON DELETE CASCADE, key, label, owner_role, value TEXT + BaseEntity
+         cols); the only textual content a signer may add after the freeze, editable only while
+         PENDING_SIGNATURES. Project-scoped via document.project.id. Idempotent via NOT tableExists
+         + MARK_RAN. Registered LAST, after 141. -->
+    <include file="database_files/changesets/142-create-document-form-fields.xml"/>
+    <!-- FOR-05-08 (R4.1, R4.4, R5.2, R6.1): the DocumentSignature child — one row per designated
+         signer (document FK NOT NULL ON DELETE CASCADE, nullable signer_user FK, signer_role,
+         method, level DEFAULT 'AdES', provider_ref, signed_at, evidence_uri, status DEFAULT
+         'PENDING' PENDING/SIGNED/DECLINED, decline_reason + BaseEntity cols). A document is SIGNED
+         iff every signature is SIGNED (parent Property 16). Project-scoped via document.project.id.
+         Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 141. -->
+    <include file="database_files/changesets/143-create-document-signatures.xml"/>
+    <!-- FOR-05-08 (R7.1, R7.2, R7.3, R7.4): the DocumentMedia child — evidence/attachments
+         (document FK NOT NULL ON DELETE CASCADE, file_name, content_type, size_bytes, storage_uri,
+         kind SCAN/TABLET_INITIAL/RENDERED_BODY/ATTACHMENT, uploaded_by FK + BaseEntity cols) stored
+         in object storage with only metadata in the DB. Project-scoped via document.project.id.
+         Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 141. -->
+    <include file="database_files/changesets/144-create-document-media.xml"/>
+
+    <!-- FOR-05-08 (R8.1, R8.3, R8.7; entity-creation-rules steps 1-2): the project-scoped
+         SIGNABLE_DOCUMENTS ABAC resource + the full R8.3 role matrix (ADMIN CRUD, MANAGER CRUD,
+         FOREMAN CRU, WORKER R, FINANCIER R, CLIENT RU). Standard CRUD only — NO new ABAC operation
+         (signing is an UPDATE of the document; CLIENT own-signature + per-role ownership are
+         enforced server-side). Follows the 017/133 two-changeSet pattern; idempotent via
+         sqlCheck/MARK_RAN + per-row NOT EXISTS. Registered LAST in sequence, after 144. -->
+    <include file="database_files/changesets/145-seed-signable-documents-resource.xml"/>
+    <!-- FOR-05-08 (R8.1, R8.7): the GLOBAL SIGNABLE_DOCUMENT_TYPES ABAC resource + ADMIN CRUD grant
+         (admin-managed document-type dictionary, 137/138). Admin reference resource (NOT
+         project-scoped) -> ADMIN only. Idempotent via sqlCheck/MARK_RAN. Registered LAST, after 145. -->
+    <include file="database_files/changesets/146-seed-signable-document-types-resource.xml"/>
+    <!-- FOR-05-08 (R8.1, R8.7): the GLOBAL DOCUMENT_TEMPLATES ABAC resource + ADMIN CRUD grant
+         (versioned merge-template store, 139). Admin reference resource (NOT project-scoped) ->
+         ADMIN only. Idempotent via sqlCheck/MARK_RAN. Registered LAST, after 146. -->
+    <include file="database_files/changesets/147-seed-document-templates-resource.xml"/>
+    <!-- FOR-05-08 (R8.1, R8.7): the GLOBAL COMPANY_PROFILE ABAC resource + ADMIN CRUD grant (the
+         single admin-managed executor-requisites row, 140). Admin reference resource (NOT
+         project-scoped) -> ADMIN only. Idempotent via sqlCheck/MARK_RAN. Registered LAST, after 147. -->
+    <include file="database_files/changesets/148-seed-company-profile-resource.xml"/>
 </databaseChangeLog>

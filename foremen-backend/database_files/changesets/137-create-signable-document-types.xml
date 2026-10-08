@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R2.1, R2.2, R2.5, R12.1, R12.3): the SignableDocumentType reference —
+        a GLOBAL (not project-scoped) i18n dictionary of the kinds of document the platform
+        signs. One row per document kind; the body/signing lifecycle binds to it by code.
+
+        Columns mirror SignableDocumentTypeEntity (design §Data Models):
+          - code                   : VARCHAR(64) UNIQUE NOT NULL; stable business key, matched
+                                     by the CONTRACT_* prefix for the activation hand-off (R10.1).
+          - name_pl                : VARCHAR(255) NOT NULL; the ONLY backend i18n field (PL), the
+                                     display fallback (R2.1, R2.2, R12.1, R12.3).
+          - name_ru                : VARCHAR(255) NULLABLE; i18n (RU) (R2.2, R2.3).
+          - active                 : BOOLEAN NOT NULL DEFAULT true; deactivated, never deleted
+                                     (R2.5).
+          - default_signature_level: VARCHAR(8) NULLABLE; optional per-type default eIDAS level
+                                     (R2.1).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change. The 14-type seed is changeset 138. Registered LAST in changelog.xml.
+    -->
+
+    <changeSet id="137-create-signable-document-types" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="signable_document_types"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="signable_document_types">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uk_signable_document_types_code"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)"/>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="default_signature_level" type="VARCHAR(8)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+</databaseChangeLog>

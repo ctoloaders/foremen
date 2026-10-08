@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-08 (R7.1, R7.2, R7.3, R7.4): the DocumentMedia child — evidence and attachments
+        (scans, tablet-parafka images, rendered bodies, generic attachments) stored in object
+        storage (FOR-12) with only metadata + kind in the DB, mirroring RoomMedia/ProjectMedia.
+        Project-scoped via document.project.id. Deleting the media that backs a SIGNED signature
+        is rejected at the service layer (R7.4).
+
+        Columns mirror DocumentMediaEntity (design §Data Models):
+          - document_id   : FK -> signable_documents, NOT NULL (R7.1). Scope via document.project.id.
+                            ON DELETE CASCADE — media cannot outlive its document.
+          - file_name     : VARCHAR(255) NOT NULL (R7.1).
+          - content_type  : VARCHAR(128) NOT NULL; validated on upload (R7.3).
+          - size_bytes    : BIGINT NOT NULL; validated on upload (R7.3).
+          - storage_uri   : VARCHAR(512) NOT NULL; object storage (FOR-12) (R7.2).
+          - kind          : VARCHAR(24) NOT NULL; SCAN/TABLET_INITIAL/RENDERED_BODY/ATTACHMENT
+                            (R7.1).
+          - uploaded_by_id: FK -> users, NOT NULL (R7.1). ON DELETE RESTRICT — keep the uploader
+                            row (uploaded_by_id is NOT NULL).
+        Plus the four BaseEntity audit columns (created_date = uploadedAt).
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes no
+        schema change. Registered LAST in changelog.xml, AFTER 141 creates signable_documents.
+    -->
+
+    <changeSet id="144-create-document-media" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="document_media"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="document_media">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size_bytes" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_uri" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Owner document: media cannot outlive its document. -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_media_document"
+            baseTableName="document_media"
+            baseColumnNames="document_id"
+            referencedTableName="signable_documents"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Uploader provenance; keep the user row (uploaded_by_id is NOT NULL). -->
+        <addForeignKeyConstraint
+            constraintName="fk_document_media_uploaded_by"
+            baseTableName="document_media"
+            baseColumnNames="uploaded_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>
