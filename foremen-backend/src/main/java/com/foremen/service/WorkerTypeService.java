@@ -4,7 +4,9 @@ import java.math.BigDecimal;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.WorkerTypeDao;
 import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.exception.ForemenApiException;
@@ -59,6 +61,12 @@ public class WorkerTypeService implements AdminService<
     /** Message code for removing the only base tier (400). */
     static final String BASE_REQUIRED_MESSAGE = "error.worker.type.base.required";
 
+    /**
+     * FOR-05-09 Req 14.11: message code (409) for deleting a Worker_Type still referenced by one or
+     * more Project_Members. Deactivation (Req 14.10) remains allowed; only hard delete is guarded.
+     */
+    static final String IN_USE_MESSAGE = "error.worker.type.in.use";
+
     /** Exclusive lower bound of a valid base-tier share (Requirement 1.5). */
     private static final BigDecimal BASE_SHARE_MIN_EXCLUSIVE = BigDecimal.ZERO;
 
@@ -69,15 +77,18 @@ public class WorkerTypeService implements AdminService<
     private final WorkerTypeServiceMapper mapper;
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
+    private final ProjectMemberDao projectMemberDao;
 
     public WorkerTypeService(WorkerTypeDao dao,
                              WorkerTypeServiceMapper mapper,
                              AuditLogDao auditLogDao,
-                             EntityManager entityManager) {
+                             EntityManager entityManager,
+                             ProjectMemberDao projectMemberDao) {
         this.dao = dao;
         this.mapper = mapper;
         this.auditLogDao = auditLogDao;
         this.entityManager = entityManager;
+        this.projectMemberDao = projectMemberDao;
     }
 
     // --- CRUD plumbing ---
@@ -106,6 +117,28 @@ public class WorkerTypeService implements AdminService<
     @Override
     public Class<WorkerTypeEntity> getDaoModelClass() {
         return WorkerTypeEntity.class;
+    }
+
+    // --- Delete guard (FOR-05-09 Req 14.10 / 14.11) ---
+
+    /**
+     * FOR-05-09 Req 14.11 — guards the FOR-05-06 Worker_Type hard delete. Before delegating to the
+     * generic {@link AdminService#deleteById(Object)} (which writes the DELETE audit row and removes
+     * the row), this rejects the deletion of a Worker_Type still referenced by any Project_Member
+     * with HTTP 409 and message code {@link #IN_USE_MESSAGE}, leaving the Worker_Type and every
+     * referencing Project_Member unchanged. A nonexistent id falls through to the generic 404.
+     *
+     * <p>Only hard delete is guarded. Deactivation (setting {@code active = false} via the normal
+     * {@link #update(Object, Object)} path) stays allowed per Req 14.10 — a deactivated-but-referenced
+     * Worker_Type keeps its members, and the Team_API reports it with {@code active = false}.
+     */
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        if (projectMemberDao.existsByWorkerTypeId(id)) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, IN_USE_MESSAGE, id);
+        }
+        AdminService.super.deleteById(id);
     }
 
     // --- Pre-persist validation ---

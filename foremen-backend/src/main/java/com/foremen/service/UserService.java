@@ -4,6 +4,8 @@ import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.dao.model.UserStatus;
+import com.foremen.dao.model.WorkerKind;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.UserServiceExtendedModel;
@@ -169,6 +171,89 @@ public class UserService implements AdminService<
         }
         return dao.findById(created.id())
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.INTERNAL_SERVER_ERROR, "error.entity.not.found", created.id()));
+    }
+
+    // --- Worker record creation (uninvited WORKER, no password, no email) ---
+
+    /**
+     * FOR-05-09 (task 14.2, Requirement 13 criterion 1) — creates an <b>uninvited</b> WORKER user
+     * for the {@code Worker_Record_Flow}, distinct from both the generic {@code POST /api/users}
+     * create and the {@link #createClient} path: the user is persisted with a {@code null} password
+     * so it cannot authenticate, status {@link UserStatus#INVITED} that reflects "not invited" (no
+     * invite token is issued and <b>no invitation email is sent</b>), and {@code active = true}
+     * (Requirement 13 criterion 1, D-new). The role is the caller-resolved WORKER role, fixed
+     * server-side; any role / status / active flag from the request is ignored by the caller before
+     * this method runs.
+     *
+     * <p>Unlike {@link #createClient}, this does <b>not</b> go through the framework
+     * {@code create(...)} path, because that path's {@link #afterCreate(UserEntity)} hook issues an
+     * invite token and dispatches an invitation email — exactly what an uninvited worker record must
+     * not do. Instead the {@link UserEntity} is built and saved directly (mirroring the bespoke
+     * {@link #deleteById} write), carrying the new nullable worker attributes
+     * ({@code workerKind}/{@code contactPerson}/{@code nip}, D8) that the generic service model does
+     * not express, and a single {@code CREATE} audit row is written. The whole write runs inside the
+     * class-level transaction, so a failure here rolls back with the enclosing
+     * {@code WorkerRecordService} flow (Requirement 13 criterion 12).
+     *
+     * <p><b>Duplicate email (Requirement 13 criterion 7).</b> A supplied email is checked
+     * case-insensitively against every existing user; a match is rejected with the same 409
+     * {@code error.user.email.already.exists} the client-registration flow surfaces. A {@code null}
+     * email (an uninvited worker record without an email) skips the check and is never a duplicate.
+     * Under a race the application check may pass for two concurrent inserts; the {@code users.email}
+     * unique constraint then admits at most one and the loser's
+     * {@link org.springframework.dao.DataIntegrityViolationException} is translated to the same 409,
+     * so exactly one worker is committed (Requirement 13 criterion 7).
+     *
+     * @param name          the display name (trimmed person or company name)
+     * @param email         the stored email, or {@code null} for an uninvited worker without one
+     * @param phone         the stored phone, or {@code null}
+     * @param workerRole    the server-resolved WORKER role
+     * @param workerKind    {@code PERSON} / {@code COMPANY} (D8)
+     * @param contactPerson the stored contact person ({@code COMPANY} only), or {@code null}
+     * @param nip           the normalized NIP ({@code COMPANY} only), or {@code null}
+     * @return the persisted, uninvited WORKER {@link UserEntity}
+     * @throws ForemenApiException 409 {@code error.user.email.already.exists} on a duplicate email
+     */
+    public UserEntity createWorkerRecord(String name,
+                                         String email,
+                                         String phone,
+                                         RoleEntity workerRole,
+                                         WorkerKind workerKind,
+                                         String contactPerson,
+                                         String nip) {
+        // Req 13.7 — case-insensitive duplicate-email guard. A null email is never a duplicate.
+        if (email != null) {
+            dao.findByEmailIgnoreCase(email).ifPresent(existing -> {
+                throw new ForemenApiException(
+                        HttpStatus.CONFLICT, "error.user.email.already.exists", email);
+            });
+        }
+
+        UserEntity user = new UserEntity();
+        user.setName(name);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setRole(workerRole);
+        user.setActive(true);                 // Req 13.1 — active = true
+        user.setPasswordHash(null);           // Req 13.1 — no password, cannot authenticate
+        user.setStatus(UserStatus.INVITED);   // Req 13.1 — "not invited": no token issued, no email
+        user.setLocale("ru");                 // users.locale is NOT NULL; the worker form carries none
+        user.setWorkerKind(workerKind);       // D8 — PERSON / COMPANY
+        user.setContactPerson(contactPerson); // D8 — COMPANY only, else null
+        user.setNip(nip);                     // D8 — COMPANY only, else null
+
+        UserEntity saved;
+        try {
+            saved = dao.save(user);
+            entityManager.flush();            // surface a unique-constraint race as a 409 here (Req 13.7)
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new ForemenApiException(
+                    HttpStatus.CONFLICT, "error.user.email.already.exists", email);
+        }
+
+        // Exactly one CREATE audit row for the new worker user, mirroring the generic create audit.
+        saveAudit(null, saved, "CREATE");
+        return saved;
     }
 
     // --- Soft-delete (set active = false) ---

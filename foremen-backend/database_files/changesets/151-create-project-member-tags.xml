@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-09 (R15.1): project_member_tags — the ordered 0–10 free-text tag list that
+        belongs to a single Project_Member (design §Data Models "Tag storage", D11).
+
+        Modeled as a child table (not an array column) so JPA can map an
+        @OrderColumn-mapped List<String> on ProjectMemberEntity, preserving tag order:
+
+          id                 BIGSERIAL  — surrogate primary key.
+          project_member_id  BIGINT     — owner FK to project_members, NOT NULL;
+                                          ON DELETE CASCADE so a membership's tags are
+                                          discarded when the membership is removed (D11).
+          tag                VARCHAR(50) NOT NULL — a single normalized tag (1–50 code points).
+          order_no           INT NOT NULL        — the @OrderColumn position (0-based) that
+                                                    preserves the submitted tag order.
+
+        Idempotent via NOT tableExists + MARK_RAN, so a re-run against an already-migrated
+        database makes no change (R19.2). Registered LAST in changelog.xml, after 150.
+    -->
+
+    <changeSet id="151-create-project-member-tags" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_member_tags"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="project_member_tags">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_member_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tag" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- Owner FK: NOT NULL, ON DELETE CASCADE — removing a membership discards its tags. -->
+        <addForeignKeyConstraint
+            constraintName="fk_project_member_tags_member"
+            baseTableName="project_member_tags"
+            baseColumnNames="project_member_id"
+            referencedTableName="project_members"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

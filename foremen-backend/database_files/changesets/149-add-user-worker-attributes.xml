@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-09 (R13.16): worker attributes on users for the Worker_Record_Flow. Three
+        nullable columns, carried only by WORKER records created through the worker flow:
+
+          worker_kind    VARCHAR       — PERSON / COMPANY; null for every non-worker-record
+                                         user and treated as PERSON for a WORKER view.
+          contact_person VARCHAR(255)  — COMPANY only.
+          nip            VARCHAR(10)    — COMPANY only; normalized 10-digit, checksum-validated.
+
+        No backfill: every user existing before this changeset and every user created by a
+        path other than the Worker_Record_Flow keeps all three columns empty (NULL).
+
+        Idempotent: each column is added only when it does not already exist
+        (NOT columnExists) and the changeSet is MARK_RAN, so a re-run against an
+        already-migrated database makes no schema change. Registered LAST in sequence.
+    -->
+
+    <changeSet id="149-add-user-worker-kind" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="users" columnName="worker_kind"/></not>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="worker_kind" type="VARCHAR"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="149-add-user-contact-person" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="users" columnName="contact_person"/></not>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="contact_person" type="VARCHAR(255)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="149-add-user-nip" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="users" columnName="nip"/></not>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="nip" type="VARCHAR(10)"/>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

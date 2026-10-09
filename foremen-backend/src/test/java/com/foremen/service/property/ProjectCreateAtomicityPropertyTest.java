@@ -157,8 +157,12 @@ class ProjectCreateAtomicityPropertyTest {
                 long failingUserId = members.get(idx).userId();
                 RuntimeException ex = new ForemenApiException(
                         HttpStatus.CONFLICT, "error.project.member.duplicate", failingUserId, 1L);
-                // Make the member assign throw for the chosen member's userId; others succeed.
-                when(f.projectMemberService.assign(org.mockito.ArgumentMatchers.eq(failingUserId), anyLong(), anyLong()))
+                // Make the member assign throw for the chosen member's userId; others succeed. The
+                // Project_Creation_Orchestrator now assigns members[] through assignAtCreation (FOR-05-09
+                // task 15.1), so the failure is injected on that method.
+                when(f.projectMemberService.assignAtCreation(
+                        org.mockito.ArgumentMatchers.eq(failingUserId), anyLong(), anyLong(),
+                        org.mockito.ArgumentMatchers.any()))
                         .thenThrow(ex);
                 return ex;
             }
@@ -249,6 +253,10 @@ class ProjectCreateAtomicityPropertyTest {
                 return e;
             };
             when(projectDao.save(any(ProjectEntity.class))).thenAnswer(saveAnswer);
+            // members[] now flows through assignAtCreation (FOR-05-09 task 15.1); the client block
+            // still uses the three-arg assign.
+            when(projectMemberService.assignAtCreation(anyLong(), anyLong(), anyLong(), org.mockito.ArgumentMatchers.any()))
+                    .thenAnswer(inv -> member(inv.getArgument(0)));
             when(projectMemberService.assign(anyLong(), anyLong(), anyLong()))
                     .thenAnswer(inv -> member(inv.getArgument(0)));
             when(roleDao.findByCode("CLIENT")).thenReturn(Optional.of(clientRole));

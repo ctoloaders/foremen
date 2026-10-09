@@ -26,6 +26,14 @@ import java.util.Set;
 
 public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoModel, ID> {
 
+    /**
+     * The role codes whose caller is an Internal_Attribute_Viewer for admin-only-field masking —
+     * ADMIN plus the admin-staff roles MANAGER / FOREMAN / ESTIMATOR / FINANCIER. WORKER and CLIENT
+     * are intentionally absent, so their readers have the admin-only fields omitted (FOR-05-09 D12,
+     * Requirement 4.10/4.11).
+     */
+    Set<String> ADMIN_STAFF_ROLE_CODES = Set.of("ADMIN", "MANAGER", "FOREMAN", "ESTIMATOR", "FINANCIER");
+
     // --- Abstract methods (must be implemented by concrete service) ---
 
     ServiceToDaoMapper<DaoModel, ServiceModel, ServiceExtendedModel> getMapper();
@@ -239,10 +247,11 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         Set<String> adminFields = getAdminOnlyFields();
         if (adminFields.isEmpty()) return;
 
-        // Check if the caller has admin role
-        if (isCallerAdmin()) return;
+        // Internal_Attributes are visible to admin-staff (ADMIN + MANAGER/FOREMAN/ESTIMATOR/
+        // FINANCIER) and omitted for WORKER/CLIENT readers (FOR-05-09 D12, Requirement 4.10/4.11).
+        if (isCallerAdminStaff()) return;
 
-        // Null out admin-only fields for non-admin callers
+        // Null out admin-only fields for non-admin-staff callers
         for (String fieldName : adminFields) {
             nullOutField(model, fieldName);
         }
@@ -276,14 +285,33 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         return "PL";
     }
 
-    private boolean isCallerAdmin() {
+    /**
+     * True iff the authenticated caller is an Internal_Attribute_Viewer — ADMIN or any admin-staff
+     * role (MANAGER / FOREMAN / ESTIMATOR / FINANCIER) — and false for WORKER / CLIENT (and for an
+     * unauthenticated caller). This is the gate for the admin-only-field masking: Internal_Attributes
+     * are visible to admin-staff and omitted for everyone else (FOR-05-09 D12, Requirement 4.10/4.11).
+     *
+     * <p>The widening from the former ADMIN-only gate is safe for the other admin services because
+     * {@link #getAdminOnlyFields()} returns an empty set for them, so {@link #maskAdminOnlyFields}
+     * returns before this predicate is ever consulted; only a service that declares admin-only fields
+     * (e.g. the project-members Team_Member_View) exercises this gate.
+     */
+    private boolean isCallerAdminStaff() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated()) {
             return false;
         }
-        return auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .anyMatch(role -> role.equals("ROLE_ADMIN") || role.equals("ADMIN"));
+        for (GrantedAuthority ga : auth.getAuthorities()) {
+            String authority = ga.getAuthority();
+            if (authority == null) {
+                continue;
+            }
+            String code = authority.startsWith("ROLE_") ? authority.substring("ROLE_".length()) : authority;
+            if (ADMIN_STAFF_ROLE_CODES.contains(code)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void nullOutField(Object model, String fieldName) {

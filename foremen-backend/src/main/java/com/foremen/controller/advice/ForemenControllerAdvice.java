@@ -1,6 +1,7 @@
 package com.foremen.controller.advice;
 
 import com.foremen.config.i18n.MessageResolver;
+import com.foremen.exception.FieldValidationException;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.exception.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -50,6 +51,33 @@ public class ForemenControllerAdvice {
         );
 
         return ResponseEntity.status(status).body(response);
+    }
+
+    /**
+     * FOR-05-09 (Requirement 13 criterion 4) — a business-rule validation failure that reports
+     * multiple offending fields at once. Each map value is a message code, resolved to the request
+     * language here (mirroring {@link #handleForemenApiException}), so the body lists every offending
+     * field with a localized message under {@code fieldErrors} and a localized top-level
+     * {@code error.validation} message, with HTTP 400.
+     */
+    @ExceptionHandler(FieldValidationException.class)
+    public ResponseEntity<ErrorResponse> handleFieldValidation(
+            FieldValidationException ex, HttpServletRequest request, Locale locale) {
+
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        ex.getFieldErrors().forEach((field, code) ->
+                fieldErrors.put(field, messageResolver.resolve(code, null, locale)));
+
+        String message = messageResolver.resolve("error.validation", null, locale);
+
+        logError(request, 400, "error.validation", false, ex);
+
+        ErrorResponse response = new ErrorResponse(
+                Instant.now(), 400, "Bad Request", message,
+                request.getRequestURI(), fieldErrors
+        );
+
+        return ResponseEntity.badRequest().body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

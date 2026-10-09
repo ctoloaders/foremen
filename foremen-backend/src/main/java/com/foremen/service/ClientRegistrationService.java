@@ -59,7 +59,14 @@ public class ClientRegistrationService {
         // Req 10.6, 10.9 - attach to the project under the CLIENT project role; a duplicate
         // (userId, projectId) throws 409 error.project.member.duplicate, rolling back the whole
         // transaction (Req 10.7).
-        projectMemberService.assign(client.getId(), request.projectId(), clientRole.getId());
+        //
+        // FOR-05-09 (task 14.1, Requirement 12.1 / 15.2) - the optional tags are passed through the
+        // 5-arg assign overload (workerType = null for a CLIENT; a CLIENT is never a worker). The
+        // assign normalizes them via Tag_Normalization (TagNormalizer) and stores them on the CLIENT
+        // membership. A request without tags (null) yields an empty tag list, so the flow behaves
+        // exactly as before this spec and the OTP invitation email is unchanged.
+        projectMemberService.assign(
+                client.getId(), request.projectId(), clientRole.getId(), null, request.tags());
 
         return new ClientRegistrationResponse(client.getId(), client.getEmail(), request.projectId());
     }

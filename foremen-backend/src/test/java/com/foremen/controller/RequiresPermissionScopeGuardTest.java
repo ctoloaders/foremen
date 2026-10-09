@@ -30,16 +30,22 @@ import static org.assertj.core.api.Assertions.assertThat;
  * the {@code com.foremen.testsupport} test-source package, so it is outside the scanned package and
  * is correctly not flagged.
  *
- * <p><strong>FOR-03-04 exception:</strong> FOR-03-04 (project ownership) intentionally ships
- * {@code com.foremen.controller.ProjectMemberController} as the first legitimately-protected
- * production controller — its endpoints are guarded by {@code @RequiresPermission} on the
- * {@code PROJECT_MEMBERS} resource, in scope for that spec (FOR-03-04 Requirement 10). This is the
- * documented exception to the FOR-03-08 deferral: only ProjectMemberController is whitelisted here,
- * and every OTHER production controller must still remain free of {@code @RequiresPermission} until
- * the wholesale FOR-03-08 migration. Do NOT add further entries to the whitelist as part of
- * migrating other controllers — that belongs to FOR-03-08.
+ * <p><strong>FOR-03-05 exception:</strong> {@code com.foremen.controller.UserController} is the one
+ * production controller legitimately carrying {@code @RequiresPermission} ahead of the wholesale
+ * FOR-03-08 migration: its {@code registerClient} endpoint (POST /api/users/client) is guarded by
+ * {@code @RequiresPermission} on the {@code PROJECTS} resource (FOR-03-05 Requirement 10.2). It is
+ * the sole whitelisted controller; every OTHER production controller must still remain free of
+ * {@code @RequiresPermission}. Do NOT add further entries to the whitelist.
  *
- * <p>Requirements: 11.4 (FOR-03-03), 10 (FOR-03-04)
+ * <p><strong>FOR-05-09 note:</strong> {@code ProjectMemberController} used to be whitelisted here
+ * because FOR-03-04 guarded it with per-method {@code @RequiresPermission} on {@code PROJECT_MEMBERS}.
+ * FOR-05-09 task 5.2 migrated it onto a class-level {@code @PermissionResource("PROJECT_MEMBERS")}
+ * plus a per-handler {@code @PermissionOperation}, so it no longer carries {@code @RequiresPermission}
+ * at all and is therefore removed from the whitelist — it now passes this guard like any other
+ * {@code @PermissionResource}-guarded controller. Its {@code (PROJECT_MEMBERS, op)} resolution is
+ * asserted by {@code ControllerResourceMappingTest} (FOR-05-09 TC-RP-03 / REG-03).
+ *
+ * <p>Requirements: 11.4 (FOR-03-03), 10.2 (FOR-03-05), 2 (FOR-05-09)
  */
 @DisplayName("RequiresPermission scope guard - no production controller is annotated (FOR-03-08 deferral)")
 class RequiresPermissionScopeGuardTest {
@@ -49,16 +55,16 @@ class RequiresPermissionScopeGuardTest {
 
     /**
      * Controllers explicitly permitted to carry {@code @RequiresPermission} ahead of the wholesale
-     * FOR-03-08 migration. {@code ProjectMemberController} is the first legitimately-protected
-     * production controller, delivered by FOR-03-04 (Requirement 10). {@code UserController} is
-     * whitelisted for FOR-03-05 (Requirement 10.2): its {@code registerClient} endpoint
-     * (POST /api/users/client) legitimately carries {@code @RequiresPermission} on the
-     * {@code PROJECTS} resource. Every OTHER production controller must still remain unannotated; do
-     * NOT extend this set as part of migrating other controllers (that is FOR-03-08's job).
+     * FOR-03-08 migration. {@code UserController} is whitelisted for FOR-03-05 (Requirement 10.2):
+     * its {@code registerClient} endpoint (POST /api/users/client) legitimately carries
+     * {@code @RequiresPermission} on the {@code PROJECTS} resource. {@code ProjectMemberController}
+     * is intentionally NOT whitelisted: FOR-05-09 task 5.2 moved it from {@code @RequiresPermission}
+     * onto {@code @PermissionResource("PROJECT_MEMBERS")} + per-handler {@code @PermissionOperation},
+     * so it carries no {@code @RequiresPermission} and must pass this guard unaided. Every OTHER
+     * production controller must likewise remain unannotated; do NOT extend this set.
      */
     private static final Set<String> WHITELISTED_CONTROLLERS =
             Set.of(
-                    "com.foremen.controller.ProjectMemberController",
                     "com.foremen.controller.UserController");
 
     @Test

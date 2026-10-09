@@ -45,4 +45,24 @@ public class UserEntity extends BaseEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> displayPreferences;
+
+    /**
+     * FOR-05-09 (R13.16, D8) — worker kind for a WORKER record created through the
+     * Worker_Record_Flow. Nullable: every non-worker-record user keeps it {@code null},
+     * which a WORKER view treats as {@link WorkerKind#PERSON}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "worker_kind")
+    private WorkerKind workerKind;
+
+    /** FOR-05-09 (R13.16, D8) — contact person; COMPANY worker records only, else empty. */
+    @Column(name = "contact_person", length = 255)
+    private String contactPerson;
+
+    /**
+     * FOR-05-09 (R13.5, R13.16, D8) — normalized 10-digit, checksum-validated NIP;
+     * COMPANY worker records only, else empty.
+     */
+    @Column(name = "nip", length = 10)
+    private String nip;
 }

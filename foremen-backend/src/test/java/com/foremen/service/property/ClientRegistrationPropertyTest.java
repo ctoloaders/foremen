@@ -29,6 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.RecordComponent;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +37,7 @@ import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -82,7 +84,7 @@ class ClientRegistrationPropertyTest {
 
         Fixture f = new Fixture();
         ClientRegistrationRequest request =
-                new ClientRegistrationRequest(name, email, phone, locale, projectId);
+                new ClientRegistrationRequest(name, email, phone, locale, projectId, null);
 
         f.service.register(request);
 
@@ -121,13 +123,16 @@ class ClientRegistrationPropertyTest {
         Fixture f = new Fixture();
         f.createdUser.setId(userId);
         ClientRegistrationRequest request =
-                new ClientRegistrationRequest(name, email, null, null, projectId);
+                new ClientRegistrationRequest(name, email, null, null, projectId, null);
 
         ClientRegistrationResponse response = f.service.register(request);
 
-        // Exactly one membership assignment, linking (userId, projectId, CLIENT role id).
-        verify(f.projectMemberService, times(1)).assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID));
-        verify(f.projectMemberService, times(1)).assign(anyLong(), anyLong(), anyLong());
+        // Exactly one membership assignment, linking (userId, projectId, CLIENT role id), through
+        // the 5-arg overload with no worker type (CLIENT) and no tags.
+        verify(f.projectMemberService, times(1))
+                .assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID), isNull(), isNull());
+        verify(f.projectMemberService, times(1))
+                .assign(anyLong(), anyLong(), anyLong(), any(), any());
         // The created user is INVITED (reused invite create path).
         assertThat(f.createdUser.getStatus()).isEqualTo(UserStatus.INVITED);
         // Response echoes the persisted client and the supplied project.
@@ -148,11 +153,11 @@ class ClientRegistrationPropertyTest {
         Fixture f = new Fixture();
         f.createdUser.setId(userId);
         // The membership assignment fails, e.g. duplicate (userId, projectId) -> 409.
-        when(f.projectMemberService.assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID)))
+        when(f.projectMemberService.assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID), isNull(), isNull()))
                 .thenThrow(new ForemenApiException(
                         HttpStatus.CONFLICT, "error.project.member.duplicate", userId, projectId));
         ClientRegistrationRequest request =
-                new ClientRegistrationRequest(name, email, null, null, projectId);
+                new ClientRegistrationRequest(name, email, null, null, projectId, null);
 
         ForemenApiException ex = catchThrowableOfType(
                 () -> f.service.register(request), ForemenApiException.class);
@@ -164,7 +169,8 @@ class ClientRegistrationPropertyTest {
         assertThat(ex.getMessageCode()).isEqualTo("error.project.member.duplicate");
         // The user was created before the failing assign (ordering), and the assign was attempted once.
         verify(f.userService).createClient(any(), any(), any(), any(), any());
-        verify(f.projectMemberService, times(1)).assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID));
+        verify(f.projectMemberService, times(1))
+                .assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID), isNull(), isNull());
     }
 
     @Property(tries = 100)
@@ -177,7 +183,7 @@ class ClientRegistrationPropertyTest {
         // CLIENT role not seeded -> findByCode returns empty.
         when(f.roleDao.findByCode("CLIENT")).thenReturn(Optional.empty());
         ClientRegistrationRequest request =
-                new ClientRegistrationRequest(name, email, null, null, projectId);
+                new ClientRegistrationRequest(name, email, null, null, projectId, null);
 
         ForemenApiException ex = catchThrowableOfType(
                 () -> f.service.register(request), ForemenApiException.class);
@@ -187,7 +193,62 @@ class ClientRegistrationPropertyTest {
         assertThat(ex.getMessageCode()).isEqualTo("error.role.client.missing");
         // No side effects when the role is missing.
         verify(f.userService, never()).createClient(any(), any(), any(), any(), any());
-        verify(f.projectMemberService, never()).assign(anyLong(), anyLong(), anyLong());
+        verify(f.projectMemberService, never()).assign(anyLong(), anyLong(), anyLong(), any(), any());
+    }
+
+    // ---- FOR-05-09 task 14.1: optional tags pass-through to the membership assign (Req 12.1, 15.2) ----
+
+    /**
+     * When the request carries a {@code tags} list, that exact list is handed through to the 5-arg
+     * {@link ProjectMemberService#assign} overload (with a null worker type for a CLIENT), so the
+     * membership stores the Tag_Normalization performed inside {@code assign}. The service passes the
+     * tags verbatim — normalization is {@code assign}'s responsibility (TagNormalizer), not this
+     * orchestrator's. <b>Validates: Requirements 12.1, 15.2</b>
+     */
+    @Property(tries = 100)
+    void suppliedTagsArePassedThroughToTheMembershipAssign(
+            @ForAll("names") String name,
+            @ForAll("emails") String email,
+            @ForAll @LongRange(min = 1L, max = 1_000_000L) long projectId,
+            @ForAll @LongRange(min = 1L, max = 1_000_000L) long userId,
+            @ForAll("tagLists") List<String> tags) {
+
+        Fixture f = new Fixture();
+        f.createdUser.setId(userId);
+        ClientRegistrationRequest request =
+                new ClientRegistrationRequest(name, email, null, null, projectId, tags);
+
+        f.service.register(request);
+
+        // The same tag list the caller supplied reaches assign unchanged (CLIENT -> null worker type).
+        ArgumentCaptor<List<String>> tagsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(f.projectMemberService, times(1))
+                .assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID), isNull(), tagsCaptor.capture());
+        assertThat(tagsCaptor.getValue()).isSameAs(tags);
+    }
+
+    /**
+     * A request without tags (null) behaves exactly as before this spec: {@code register} still calls
+     * the 5-arg assign with a null tags argument (and a null worker type), so {@code assign} applies
+     * its empty-list default — no change to the pre-FOR-05-09 contract. <b>Validates: Requirements
+     * 12.1, 12.6, 15.2</b>
+     */
+    @Property(tries = 100)
+    void aRequestWithoutTagsAssignsWithNullTags(
+            @ForAll("names") String name,
+            @ForAll("emails") String email,
+            @ForAll @LongRange(min = 1L, max = 1_000_000L) long projectId,
+            @ForAll @LongRange(min = 1L, max = 1_000_000L) long userId) {
+
+        Fixture f = new Fixture();
+        f.createdUser.setId(userId);
+        ClientRegistrationRequest request =
+                new ClientRegistrationRequest(name, email, null, null, projectId, null);
+
+        f.service.register(request);
+
+        verify(f.projectMemberService, times(1))
+                .assign(eq(userId), eq(projectId), eq(CLIENT_ROLE_ID), isNull(), isNull());
     }
 
     // ---- Fixture and helpers ----
@@ -212,7 +273,7 @@ class ClientRegistrationPropertyTest {
                 createdUser.setEmail(inv.getArgument(1));
                 return createdUser;
             });
-            when(projectMemberService.assign(anyLong(), anyLong(), anyLong()))
+            when(projectMemberService.assign(anyLong(), anyLong(), anyLong(), any(), any()))
                     .thenReturn(new ProjectMemberEntity());
             service = new ClientRegistrationService(userService, roleDao, projectMemberService);
         }
@@ -256,5 +317,16 @@ class ClientRegistrationPropertyTest {
     @Provide
     Arbitrary<String> optionalStrings() {
         return Arbitraries.strings().ofMaxLength(15);
+    }
+
+    /**
+     * Arbitrary (possibly empty) tag lists. The service passes these through to {@code assign}
+     * verbatim; it does not normalize or validate them, so the generator need not constrain the
+     * input space — any list (including empty) exercises the pass-through contract.
+     */
+    @Provide
+    Arbitrary<List<String>> tagLists() {
+        return Arbitraries.strings().ofMinLength(1).ofMaxLength(20)
+                .list().ofMaxSize(5);
     }
 }

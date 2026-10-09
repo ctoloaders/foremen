@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-09 (R14.12, R27.1): assignment attributes on project_members.
+
+          worker_type_id    BIGINT FK -> worker_types(id)  — WORKER members only; null = an
+                            Uncategorized_Worker. Nullable, with NO backfill (R14.12): every
+                            existing WORKER member becomes an Uncategorized_Worker, independent
+                            of the worker type's is_base flag. The FK is ON DELETE RESTRICT: a
+                            worker type referenced by any member cannot be hard-deleted (the
+                            FOR-05-06 delete guard surfaces this as 409 error.worker.type.in.use),
+                            while deactivation stays allowed.
+
+          assignment_status VARCHAR  — ACTIVE / INACTIVE; NOT NULL, DEFAULT 'ACTIVE'. Every row
+                            existing before this changeset is backfilled to 'ACTIVE' (R27.1) so
+                            the readiness FOREMAN count and the last-ACTIVE-MANAGER/CLIENT
+                            invariants have a well-defined status for pre-existing members.
+
+        Idempotent: each column is added only when it does not already exist (NOT columnExists)
+        and the changeSet is MARK_RAN, so a re-run against an already-migrated database makes no
+        schema change and no data change. Registered LAST in sequence, after 149.
+    -->
+
+    <changeSet id="150-add-pm-worker-type" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="project_members" columnName="worker_type_id"/></not>
+        </preConditions>
+        <addColumn tableName="project_members">
+            <column name="worker_type_id" type="BIGINT"/>
+        </addColumn>
+        <addForeignKeyConstraint
+            constraintName="fk_project_members_worker_type"
+            baseTableName="project_members"
+            baseColumnNames="worker_type_id"
+            referencedTableName="worker_types"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+    <changeSet id="150-add-pm-assignment-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="project_members" columnName="assignment_status"/></not>
+        </preConditions>
+        <addColumn tableName="project_members">
+            <column name="assignment_status" type="VARCHAR" defaultValue="ACTIVE">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+</databaseChangeLog>

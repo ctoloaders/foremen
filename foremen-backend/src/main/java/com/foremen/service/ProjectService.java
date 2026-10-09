@@ -18,6 +18,7 @@ import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
@@ -30,6 +31,9 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -77,6 +81,9 @@ public class ProjectService
 
     /** The server-resolved project role {@code code} always used for the client member (Requirements 2.7, 2.8). */
     static final String CLIENT_ROLE_CODE = "CLIENT";
+
+    /** The WORKER project-role code; worker-type/NIP Internal_Attributes apply to WORKER members only (Requirement 19 criterion 8). */
+    static final String WORKER_ROLE_CODE = "WORKER";
 
     /** Message code returned when the {@code CLIENT} role is not seeded (Requirement 2.8, Error Handling table). */
     static final String CLIENT_ROLE_MISSING_MESSAGE = "error.role.client.missing";
@@ -302,8 +309,17 @@ public class ProjectService
         List<ProjectMemberInput> members = request.members();
         if (members != null) {
             for (ProjectMemberInput member : members) {
-                ProjectMemberEntity assigned =
-                        projectMemberService.assign(member.userId(), projectId, member.projectRoleId());
+                // FOR-05-09 (task 15.1, Requirement 26): the creation-restricted assign rejects a
+                // Worker_Role entry (error.project.member.role.not.allowed.at.creation), any non-null
+                // workerTypeId (error.project.member.worker.type.not.allowed), an ADMIN / non-system
+                // role (error.project.member.role.not.assignable), a projectRoleId != Company_Role
+                // (error.project.member.role.mismatch), and a repeated userId
+                // (error.project.member.duplicate), in the per-entry order of Requirement 26 criterion
+                // 5; a Client_Role entry for a CLIENT user stays accepted (criterion 4). Any rejection
+                // propagates and the @Transactional boundary rolls the whole creation back (criterion
+                // 2, 5).
+                ProjectMemberEntity assigned = projectMemberService.assignAtCreation(
+                        member.userId(), projectId, member.projectRoleId(), member.workerTypeId());
                 memberSummaries.add(toSummary(assigned));
             }
         }
@@ -393,9 +409,14 @@ public class ProjectService
         return byId;
     }
 
-    /** Builds a {@link ProjectListDto} from the base model plus the entity's hydrated members. */
+    /**
+     * Builds a {@link ProjectListDto} from the base model plus the entity's hydrated members,
+     * applying the FOR-05-09 Requirement 19 multi-client projection and CLIENT-caller suppression.
+     */
     private ProjectListDto toListDto(ProjectServiceModel model, ProjectEntity entity) {
-        List<ProjectMemberSummaryDto> members = projectMembers(entity);
+        boolean clientCaller = isCallerClient();
+        List<ProjectMemberSummaryDto> members = clientCaller ? null : projectMembers(entity);
+        List<ProjectMemberSummaryDto> clients = clientCaller ? null : deriveClients(entity);
         return new ProjectListDto(
                 model.getId(),
                 model.getName(),
@@ -409,12 +430,18 @@ public class ProjectService
                 model.getEndDate(),
                 model.getStatus(),
                 members,
-                deriveClient(members));
+                clients,
+                firstOrNull(clients));
     }
 
-    /** Builds a {@link ProjectReadDto} from the base model plus the entity's hydrated members. */
+    /**
+     * Builds a {@link ProjectReadDto} from the base model plus the entity's hydrated members,
+     * applying the FOR-05-09 Requirement 19 multi-client projection and CLIENT-caller suppression.
+     */
     private ProjectReadDto toReadDto(ProjectServiceExtendedModel model, ProjectEntity entity) {
-        List<ProjectMemberSummaryDto> members = projectMembers(entity);
+        boolean clientCaller = isCallerClient();
+        List<ProjectMemberSummaryDto> members = clientCaller ? null : projectMembers(entity);
+        List<ProjectMemberSummaryDto> clients = clientCaller ? null : deriveClients(entity);
         return new ProjectReadDto(
                 model.id(),
                 model.name(),
@@ -428,39 +455,59 @@ public class ProjectService
                 model.endDate(),
                 model.status(),
                 members,
-                deriveClient(members));
+                clients,
+                firstOrNull(clients));
     }
 
     /**
      * Maps a project entity's read-only {@code members} collection into member summaries, reusing
-     * the same {@link #toSummary(ProjectMemberEntity)} / {@link #localizedRoleName(RoleEntity)}
-     * helpers that build the create-response projection (task 3.5), so list/read and create stay
-     * consistent. Returns an empty list when the project has no members.
+     * the {@link #toSummary(ProjectMemberEntity)} helper (which applies the admin-staff masking of
+     * Requirement 19 criterion 8). Returns an empty list when the project has no members.
      */
     private List<ProjectMemberSummaryDto> projectMembers(ProjectEntity entity) {
         if (entity == null || entity.getMembers() == null) {
             return List.of();
         }
+        boolean adminStaff = isCallerAdminStaff();
+        boolean russian = isRussianLocale();
         List<ProjectMemberSummaryDto> summaries = new ArrayList<>();
         for (ProjectMemberEntity member : entity.getMembers()) {
-            summaries.add(toSummary(member));
+            summaries.add(toSummary(member, russian, adminStaff));
         }
         return summaries;
     }
 
     /**
-     * Derives the {@code client} projection: the single member whose {@code roleCode == "CLIENT"}
-     * (one client per project via the FOR-03-05 flow), or {@code null} when the project has no CLIENT
-     * member. {@code client} is derived from {@code project_members}, never persisted as a column.
+     * Derives the {@code clients} projection (Requirement 19 criteria 1–3): one summary per
+     * Project_Member whose Project_Role code is {@code CLIENT}, ordered by membership id ascending,
+     * including CLIENT members whose user is INVITED/inactive or whose Assignment_Status is INACTIVE.
+     * Returns an empty list (never {@code null} for a non-CLIENT caller) when the project has no
+     * CLIENT member. Each entry carries the same admin-staff masking as {@link #projectMembers}.
      */
-    private static ProjectMemberSummaryDto deriveClient(List<ProjectMemberSummaryDto> members) {
-        if (members == null) {
-            return null;
+    private List<ProjectMemberSummaryDto> deriveClients(ProjectEntity entity) {
+        if (entity == null || entity.getMembers() == null) {
+            return List.of();
         }
-        return members.stream()
-                .filter(m -> CLIENT_ROLE_CODE.equals(m.roleCode()))
-                .findFirst()
-                .orElse(null);
+        boolean adminStaff = isCallerAdminStaff();
+        boolean russian = isRussianLocale();
+        return entity.getMembers().stream()
+                .filter(m -> {
+                    RoleEntity role = m.getProjectRole();
+                    return role != null && CLIENT_ROLE_CODE.equals(role.getCode());
+                })
+                .sorted(java.util.Comparator.comparing(
+                        ProjectMemberEntity::getId,
+                        java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                .map(m -> toSummary(m, russian, adminStaff))
+                .collect(java.util.stream.Collectors.toCollection(ArrayList::new));
+    }
+
+    /**
+     * The derived {@code client}: the lowest-membership-id CLIENT member = {@code clients[0]}
+     * (Requirement 19 criterion 3), or {@code null} when the project has no CLIENT member.
+     */
+    private static ProjectMemberSummaryDto firstOrNull(List<ProjectMemberSummaryDto> clients) {
+        return clients == null || clients.isEmpty() ? null : clients.get(0);
     }
 
     /**
@@ -491,13 +538,23 @@ public class ProjectService
                     newClient.email(),
                     newClient.phone(),
                     newClient.locale(),
-                    projectId));
+                    projectId,
+                    null)); // no tags from the project-creation client path (FOR-05-09 task 14.1)
             RoleEntity clientRole = resolveClientRole();
+            boolean russian = isRussianLocale();
+            boolean adminStaff = isCallerAdminStaff();
             return new ProjectMemberSummaryDto(
                     null,
                     newClient.name(),
                     clientRole.getCode(),
-                    localizedRoleName(clientRole));
+                    localizedRoleName(clientRole, russian),
+                    com.foremen.dao.model.AssignmentStatus.ACTIVE,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    adminStaff ? List.of() : null);
         }
 
         return null;
@@ -510,21 +567,141 @@ public class ProjectService
                         HttpStatus.INTERNAL_SERVER_ERROR, CLIENT_ROLE_MISSING_MESSAGE));
     }
 
-    /** Builds a member summary DTO from a persisted membership row. */
+    /**
+     * Builds a member summary DTO from a persisted membership row for the create/update response
+     * projection, resolved in the request locale with the current caller's admin-staff masking.
+     */
     private ProjectMemberSummaryDto toSummary(ProjectMemberEntity member) {
+        return toSummary(member, isRussianLocale(), isCallerAdminStaff());
+    }
+
+    /**
+     * Builds a {@link ProjectMemberSummaryDto} from a persisted membership row (FOR-05-09
+     * Requirement 19). The base fields ({@code userId}, {@code userName}, {@code roleCode},
+     * {@code roleName}) and the never-internal {@code assignmentStatus} are always populated. The
+     * Internal_Attributes (worker type id/code/name/active, NIP, tags) are populated only for a
+     * WORKER member and only when {@code adminStaff} is {@code true}; otherwise they are left
+     * {@code null}/omitted (Requirement 19 criterion 8, D12 admin-staff masking). {@code tags} is
+     * copied as an immutable list for an admin-staff reader (empty when none), and nulled — hence
+     * omitted by {@code @JsonInclude(NON_NULL)} — for a non-admin-staff reader.
+     */
+    private ProjectMemberSummaryDto toSummary(ProjectMemberEntity member, boolean russian, boolean adminStaff) {
         UserEntity user = member.getUser();
         RoleEntity role = member.getProjectRole();
+        String roleCode = role == null ? null : role.getCode();
+
+        boolean worker = roleCode != null && WORKER_ROLE_CODE.equals(roleCode);
+
+        Long workerTypeId = null;
+        String workerTypeCode = null;
+        String workerTypeName = null;
+        Boolean workerTypeActive = null;
+        String nip = null;
+        List<String> tags = null;
+
+        if (adminStaff) {
+            WorkerTypeEntity type = member.getWorkerType();
+            if (type != null) {
+                workerTypeId = type.getId();
+                workerTypeCode = type.getCode();
+                workerTypeName = localizedWorkerTypeName(type, russian);
+                workerTypeActive = type.isActive();
+            }
+            if (worker && user != null) {
+                nip = user.getNip();
+            }
+            tags = member.getTags() == null ? List.of() : List.copyOf(member.getTags());
+        }
+
         return new ProjectMemberSummaryDto(
                 user != null ? user.getId() : null,
                 user != null ? user.getName() : null,
-                role != null ? role.getCode() : null,
-                role != null ? localizedRoleName(role) : null);
+                roleCode,
+                role != null ? localizedRoleName(role, russian) : null,
+                member.getAssignmentStatus(),
+                workerTypeId,
+                workerTypeCode,
+                workerTypeName,
+                workerTypeActive,
+                nip,
+                tags);
     }
 
-    /** Returns the locale-resolved project-role name, matching the codebase RU/PL convention. */
-    private static String localizedRoleName(RoleEntity role) {
-        Locale locale = LocaleContextHolder.getLocale();
-        boolean russian = locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
+    /**
+     * The localized Project_Role name: {@code nameRU} for a {@code ru} request, {@code namePL}
+     * otherwise, matching the codebase RU/PL convention. (Masking never applies to the role name.)
+     */
+    private static String localizedRoleName(RoleEntity role, boolean russian) {
         return russian ? role.getNameRU() : role.getNamePL();
+    }
+
+    /**
+     * The localized Worker_Type name: {@code nameRU} for a {@code ru} request, {@code namePL}
+     * otherwise, falling back to the worker-type {@code code} when the chosen name is blank.
+     */
+    private static String localizedWorkerTypeName(WorkerTypeEntity type, boolean russian) {
+        String name = russian ? type.getNameRU() : type.getNamePL();
+        if (name == null || name.isBlank()) {
+            return type.getCode();
+        }
+        return name;
+    }
+
+    /** True iff the request locale language is {@code ru} (case-insensitive). */
+    private static boolean isRussianLocale() {
+        Locale locale = LocaleContextHolder.getLocale();
+        return locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
+    }
+
+    /**
+     * True iff the authenticated caller's Company_Role is {@code CLIENT}. A CLIENT caller has the
+     * {@code members}, {@code clients}, and {@code client} projections suppressed (Requirement 19
+     * criterion 9). False for an unauthenticated caller and for every non-CLIENT role.
+     */
+    private static boolean isCallerClient() {
+        return callerHasRole(CLIENT_ROLE_CODE);
+    }
+
+    /**
+     * True iff the authenticated caller is an Internal_Attribute_Viewer — ADMIN or any admin-staff
+     * role (MANAGER / FOREMAN / ESTIMATOR / FINANCIER) — the gate for the Requirement 19 criterion 8
+     * admin-staff masking (D12), shared with {@link ReadOnlyAdminService#ADMIN_STAFF_ROLE_CODES}.
+     * False for WORKER / CLIENT and for an unauthenticated caller.
+     */
+    private static boolean isCallerAdminStaff() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        for (GrantedAuthority ga : auth.getAuthorities()) {
+            String authority = ga.getAuthority();
+            if (authority == null) {
+                continue;
+            }
+            String code = authority.startsWith("ROLE_") ? authority.substring("ROLE_".length()) : authority;
+            if (ReadOnlyAdminService.ADMIN_STAFF_ROLE_CODES.contains(code)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True iff the authenticated caller carries the given role authority ({@code ROLE_<code>}/{@code <code>}). */
+    private static boolean callerHasRole(String roleCode) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        for (GrantedAuthority ga : auth.getAuthorities()) {
+            String authority = ga.getAuthority();
+            if (authority == null) {
+                continue;
+            }
+            String code = authority.startsWith("ROLE_") ? authority.substring("ROLE_".length()) : authority;
+            if (roleCode.equals(code)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

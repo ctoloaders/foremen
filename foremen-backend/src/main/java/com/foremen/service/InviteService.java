@@ -140,6 +140,45 @@ public class InviteService {
     }
 
     /**
+     * FOR-05-09 (task 14.3, Requirement 13.17) &mdash; the worker invite / re-send primitive used by
+     * the {@code Worker_Invitation_Flow}. Invalidates every outstanding unused invite token for the
+     * target WORKER user, mints a fresh single-use set-password token, and dispatches the standard
+     * FOR-03-02 <strong>staff</strong> password-set email (never the client-portal OTP variant),
+     * then marks the user {@link UserStatus#INVITED}.
+     *
+     * <p>Unlike {@link #resend(Long)}, this method performs <em>no</em> status gating of its own: the
+     * caller ({@code WorkerInvitationService}) owns the full Requirement 13.18 rejection order
+     * (non-existent user, non-WORKER, already-activated, missing email) and only reaches this method
+     * for a WORKER user that has a stored email and has not yet activated. Re-sending to a
+     * still-not-activated worker is allowed and issues a fresh link that supersedes any earlier
+     * unused one, because the mint step marks every prior unused token {@code used = true}
+     * (Requirement 13.17 last sentence).
+     *
+     * <p><b>Transactionality.</b> Token invalidation + mint are transactional (this service is
+     * {@code @Transactional}); the email itself is published as an {@link InvitationEmailEvent} and
+     * delivered asynchronously after commit, mirroring {@link #generateAndSend(UserEntity)} so a mail
+     * failure never rolls back the status change.
+     *
+     * @param user the WORKER user to invite / re-invite; must carry a stored email (enforced upstream)
+     */
+    public void inviteWorker(UserEntity user) {
+        // Invalidate every outstanding unused token so the freshly minted link is the only valid one
+        // (Requirement 13.17 — "issue a fresh password-set link, invalidating any earlier unused link").
+        String token = mintSetPasswordToken(user);
+
+        // Always the staff set-password variant: a WORKER follows the invite link and sets their own
+        // password (D-new), never the CLIENT OTP flow.
+        String inviteLink = InviteLinkBuilder.buildInviteLink(
+                mailInviteProperties.inviteBaseUrl(), token);
+        eventPublisher.publishEvent(new InvitationEmailEvent(user, false, inviteLink));
+
+        // The user's lifecycle now reflects "invited" (email sent, password-set link issued); the
+        // worker reaches "active" only after setting a password through that link.
+        user.setStatus(UserStatus.INVITED);
+        userDao.save(user);
+    }
+
+    /**
      * Admin resend: invalidates any outstanding invite token for the target user and issues a
      * fresh one with a new invitation email (Requirement 6.6&ndash;6.9).
      *

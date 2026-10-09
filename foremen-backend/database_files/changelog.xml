@@ -495,4 +495,26 @@
          single admin-managed executor-requisites row, 140). Admin reference resource (NOT
          project-scoped) -> ADMIN only. Idempotent via sqlCheck/MARK_RAN. Registered LAST, after 147. -->
     <include file="database_files/changesets/148-seed-company-profile-resource.xml"/>
+
+    <!-- FOR-05-09 (R13.16): worker attributes on users for the Worker_Record_Flow — nullable
+         worker_kind (VARCHAR; PERSON/COMPANY, null => PERSON for a WORKER view), contact_person
+         (VARCHAR(255), COMPANY only), and nip (VARCHAR(10), COMPANY only, normalized/checksum-
+         validated). No backfill: every pre-existing user and every non-worker-record user keeps
+         them empty. Each column guarded by NOT columnExists + MARK_RAN. Registered LAST, after 148. -->
+    <include file="database_files/changesets/149-add-user-worker-attributes.xml"/>
+
+    <!-- FOR-05-09 (R14.12, R27.1): assignment attributes on project_members — nullable
+         worker_type_id (BIGINT FK -> worker_types(id), ON DELETE RESTRICT; WORKER members only,
+         null => Uncategorized_Worker, NO backfill independent of is_base) and assignment_status
+         (VARCHAR NOT NULL DEFAULT 'ACTIVE'; existing rows backfilled to ACTIVE). Each guarded by
+         NOT columnExists + MARK_RAN. Registered LAST, after 149. -->
+    <include file="database_files/changesets/150-add-project-member-attributes.xml"/>
+
+    <!-- FOR-05-09 (R15.1): project_member_tags — the ordered 0–10 free-text tag child table owned
+         by a Project_Member. Columns id (BIGSERIAL PK), project_member_id (BIGINT FK ->
+         project_members(id), NOT NULL, ON DELETE CASCADE so tags are discarded with the
+         membership, D11), tag (VARCHAR(50) NOT NULL), order_no (INT NOT NULL, the @OrderColumn
+         position preserving tag order). Guarded by NOT tableExists + MARK_RAN. Registered LAST,
+         after 150. -->
+    <include file="database_files/changesets/151-create-project-member-tags.xml"/>
 </databaseChangeLog>

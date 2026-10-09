@@ -47,11 +47,13 @@ public interface ProjectControllerMapper extends ControllerToServiceMapper<
 
     @Override
     @Mapping(target = "members", ignore = true)
+    @Mapping(target = "clients", ignore = true)
     @Mapping(target = "client", ignore = true)
     ProjectListDto toDto(ProjectServiceModel source);
 
     @Override
     @Mapping(target = "members", ignore = true)
+    @Mapping(target = "clients", ignore = true)
     @Mapping(target = "client", ignore = true)
     ProjectReadDto toExtendedDto(ProjectServiceExtendedModel source);
 

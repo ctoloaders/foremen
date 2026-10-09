@@ -174,6 +174,7 @@ public class ProjectController implements AdminController<
                 dto.endDate(),
                 dto.status(),
                 dto.members(),
+                dto.clients(),
                 dto.client());
     }
 }
