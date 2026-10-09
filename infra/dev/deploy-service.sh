@@ -1,21 +1,32 @@
 #!/usr/bin/env bash
 # VM-side deploy helper. Lives at /opt/foremen/deploy-service.sh on the VM and is
-# invoked by CI (over SSH) as:  deploy-service.sh backend   |   deploy-service.sh frontend
+# invoked by CI (over SSH) as:
+#     deploy-service.sh backend [DB_FILES_SRC]   |   deploy-service.sh frontend
+#
+# DB_FILES_SRC (backend only, optional): path on the VM to a freshly staged copy
+#   of the repo's database_files (CI SCPs it there before calling this script).
+#   When provided, it is swapped into /opt/foremen/database_files BEFORE the
+#   Liquibase migration runs, so the migrations the VM applies match the image
+#   being deployed. Omit it to migrate with whatever files already sit on the VM
+#   (manual/legacy invocation).
 #
 # Guarantees:
 #   - Only the named service is pulled and recreated (the other keeps running).
 #   - A flock serializes near-simultaneous backend+frontend deploys so two
 #     `compose up` calls never interleave (the second waits for the first).
-#   - For backend, pending Liquibase migrations are applied BEFORE the backend
-#     is recreated (schema-first), using the one-shot `liquibase` service.
+#   - For backend: the staged database_files (if given) are swapped in, then the
+#     one-shot `liquibase` service is force-recreated to apply pending migrations
+#     BEFORE the backend is recreated (schema-first). This ordering is what keeps
+#     a validate-mode backend from crash-looping on a missing table.
 #   - After recreating, it waits until the container reports a STABLE healthy
 #     state (several consecutive healthy checks) before returning success.
 set -euo pipefail
 
 SERVICE="${1:-}"
+DB_FILES_SRC="${2:-}"
 case "${SERVICE}" in
   backend|frontend) ;;
-  *) echo "usage: $0 <backend|frontend>"; exit 2 ;;
+  *) echo "usage: $0 <backend|frontend> [DB_FILES_SRC]"; exit 2 ;;
 esac
 
 APP_DIR=/opt/foremen
@@ -42,10 +53,39 @@ cd "${APP_DIR}"
 echo ">> pulling ${SERVICE} image"
 "${COMPOSE[@]}" pull "${SERVICE}"
 
-# --- backend: run pending migrations first (schema-first), then recreate ---
+# --- backend: sync changesets, migrate (schema-first), then recreate ---
 if [ "${SERVICE}" = "backend" ]; then
-  echo ">> running Liquibase migrations"
-  # `run --rm` executes the one-shot liquibase service to completion.
+  # 1) Swap in the staged changesets so the migration source matches the image.
+  if [ -n "${DB_FILES_SRC}" ]; then
+    if [ ! -d "${DB_FILES_SRC}" ]; then
+      echo "!! staged database_files not found at ${DB_FILES_SRC}"; exit 1
+    fi
+    if [ ! -f "${DB_FILES_SRC}/changelog.xml" ]; then
+      echo "!! ${DB_FILES_SRC} does not look like a database_files dir (no changelog.xml)"; exit 1
+    fi
+    echo ">> syncing Liquibase changesets from ${DB_FILES_SRC}"
+    if [ -d "${APP_DIR}/database_files" ]; then
+      BACKUP="${APP_DIR}/database_files.bak.$(date -u +%Y%m%d-%H%M%S)"
+      echo ">> backing up current changesets to ${BACKUP}"
+      ${SUDO} cp -a "${APP_DIR}/database_files" "${BACKUP}"
+      # keep only the 5 most recent backups
+      ${SUDO} sh -c "ls -1dt '${APP_DIR}'/database_files.bak.* 2>/dev/null | tail -n +6 | xargs -r rm -rf" || true
+    fi
+    ${SUDO} rm -rf "${APP_DIR}/database_files"
+    ${SUDO} cp -a "${DB_FILES_SRC}" "${APP_DIR}/database_files"
+    ${SUDO} rm -rf "${DB_FILES_SRC}" || true
+  else
+    echo ">> no DB_FILES_SRC given; migrating with existing ${APP_DIR}/database_files"
+  fi
+
+  # 2) Run the one-shot liquibase service to apply pending migrations BEFORE the
+  #    backend is recreated. `run --rm` always spins up a FRESH container (and
+  #    removes it after), so it runs against the just-synced changesets rather
+  #    than reusing a stale one — no --force-recreate needed (that flag belongs to
+  #    `compose up`, not `compose run`). Clear any leftover one-shot container
+  #    first so a prior failed/exited run can't linger.
+  echo ">> running Liquibase migrations (fresh one-shot service, before backend)"
+  "${COMPOSE[@]}" rm -fsv liquibase >/dev/null 2>&1 || true
   "${COMPOSE[@]}" run --rm liquibase || { echo "!! liquibase failed"; exit 1; }
 fi
 

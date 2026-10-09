@@ -1,7 +1,18 @@
 # Cloud Build — backend (dev). Triggered by push to main in ctoloaders/foremen.
-# Builds the backend image, pushes :dev + :<short-sha>, then redeploys ONLY the
-# backend service on the dev VM over IAP SSH (schema migration + health-wait are
-# handled by /opt/foremen/deploy-service.sh on the VM).
+# Builds the backend image, pushes :dev + :<short-sha>, syncs the Liquibase
+# changesets to the dev VM, then redeploys ONLY the backend service on the dev VM
+# over IAP SSH.
+#
+# IMPORTANT (schema-first invariant): the one-shot `liquibase` service on the VM
+# mounts `./database_files` from the VM filesystem — NOT from the backend image
+# (the runtime image only ships app.jar). So the migrations the VM applies are
+# only as fresh as the files on disk at /opt/foremen/database_files. If the image
+# moves ahead of those files, the backend (SPRING_JPA_HIBERNATE_DDL_AUTO=validate)
+# crash-loops on a missing table and every /api/* returns 502. To keep the image
+# and the migration source in lockstep, this pipeline COPIES the repo's
+# database_files to the VM BEFORE the deploy step runs liquibase + recreates the
+# backend. deploy-service.sh then swaps those staged files into
+# /opt/foremen/database_files, runs liquibase, and only then recreates backend.
 #
 # Substitutions are provided by the Terraform-managed trigger:
 #   _AR_IMAGE  e.g. europe-central2-docker.pkg.dev/<proj>/foremen/backend
@@ -40,15 +51,37 @@ steps:
     name: gcr.io/cloud-builders/docker
     args: ["push", "${_AR_IMAGE}:${SHORT_SHA}"]
 
+  # Stage the Liquibase changesets on the VM BEFORE deploying. The deploy step
+  # swaps these into /opt/foremen/database_files so the migrations the VM runs
+  # match the image being deployed (schema-first lockstep). Staged under a
+  # per-build dir so concurrent builds don't clobber each other.
+  - id: copy-db-files
+    name: gcr.io/google.com/cloudsdktool/cloud-sdk
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        set -euo pipefail
+        STAGE="/tmp/foremen-db-sync-${SHORT_SHA}"
+        gcloud compute ssh "${_VM_NAME}" \
+          --zone="${_ZONE}" --tunnel-through-iap --quiet \
+          --command="rm -rf '${STAGE}' && mkdir -p '${STAGE}'"
+        gcloud compute scp --recurse \
+          --zone="${_ZONE}" --tunnel-through-iap --quiet \
+          foremen-backend/database_files \
+          "${_VM_NAME}:${STAGE}/"
+
   - id: deploy
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
     entrypoint: bash
     args:
       - -c
       - |
+        set -euo pipefail
+        STAGE="/tmp/foremen-db-sync-${SHORT_SHA}/database_files"
         gcloud compute ssh "${_VM_NAME}" \
           --zone="${_ZONE}" --tunnel-through-iap --quiet \
-          --command="/opt/foremen/deploy-service.sh ${_SERVICE}"
+          --command="/opt/foremen/deploy-service.sh ${_SERVICE} '${STAGE}'"
 
 images:
   - "${_AR_IMAGE}:dev"
