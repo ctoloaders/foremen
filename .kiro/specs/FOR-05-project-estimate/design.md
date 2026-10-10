@@ -33,19 +33,25 @@ The ten lifecycle stages the workspace must surface as tabs/areas:
    ("typical set") with the ability to exclude unwanted items.
 4. **Estimate of works + materials (kosztorys)** — priced works × rooms, plus the derived
    bill of materials from consumption norms.
-5. **Client price approval** — discounts, package selection, special project prices,
+5. **Client price approval** — offer preparation, discounts/rebates, package selection,
    approve/reject the offer.
-6. **Contract & amendment signing** — online e-signatures, legally compatible with Polish
-   law (see §11).
+6. **Document & contract signing** — online e-signatures, legally compatible with Polish
+   law (see §11); amendment signing happens after the contract is signed (FOR-06).
 7. **Team selection** — assign foreman + workers to the project.
-8. **Work schedule** — Gantt/calendar (primarily **FOR-06**, surfaced here as a tab).
-9. **Procurement & delivery tracking** — (primarily **FOR-07**, surfaced here as a tab).
-10. **Work reporting** — completed-work reporting from both foreman and worker sides.
+8. **Work schedule** — the design-stage **planning Gantt** (FOR-05-10); the execution
+   plan/actual Gantt and its updates belong to **FOR-06**.
+9. **Procurement & delivery tracking** — execution stage (**FOR-06**, backed by FOR-07 data).
+10. **Work reporting** — completed-work reporting from both foreman and worker sides
+    (execution stage, **FOR-06**).
 
-FOR-05 **owns** stages 2 (room enrichment), 3, 4, 5, 6, 7, 10 and the workspace shell
-itself. Stages 8 and 9 are **owned by sibling specs** (FOR-06, FOR-07) and stage 5's
-client-facing surface is shared with **FOR-09**; the workspace **embeds** those surfaces
-as tabs so the project stays "one context." §2 makes this ownership boundary explicit.
+FOR-05 **owns** the design stage (project `DRAFT`, before the contract is signed): stages 2
+(rooms & dimensions), 3, 4, 5, 6 (document and contract signing), 7, the planning part of
+stage 8, the project readiness tracker, and the workspace shell itself. Everything that
+happens after the contract is signed (amendments and their signing, work reporting,
+plan/actual Gantt updates, procurement tracking) is owned by **FOR-06
+"Project in progress"**; stage 5's client-facing surface is shared with **FOR-09**. The
+workspace **embeds** those surfaces as tabs so the project stays "one context." §2 makes this
+ownership boundary explicit.
 
 ### Context: what already exists
 
@@ -82,7 +88,7 @@ as tabs so the project stays "one context." §2 makes this ownership boundary ex
 
 This section is a **first-class, up-front analysis** of whether the "one page + tabs"
 solution is the right information architecture, grounded in established UX guidance. It
-drives the layout decisions in §7 and §10.
+drives the layout decisions in §7 and §8.
 
 ### 1.1 Why one workspace (not ten menu items)
 
@@ -148,12 +154,17 @@ Applied here:
 ### 1.4 Readiness / checklist pattern (design mode)
 
 Before signing, the workspace's job is to answer "what still blocks us from signing?" A
-**readiness checklist** is the natural pattern: a compact list of stage gates (rooms
-defined, works added, estimate priced, client approved, team assigned) each showing
-done / partial / blocked, with a single headline "readiness %". This is progressive
-disclosure applied to *process*: the summary is always visible; the detail (which line
-item is missing a price, which room has no dimensions) is one click away. The readiness
-widget lives in the workspace header so it's visible from every tab.
+**readiness checklist** is the natural pattern: a compact list of stage gates (rooms and
+dimensions defined — 02, works added and priced with a complete BoM — 03/05, offer approved
+— 07, documents signed — 08, team assigned — gate `team`, 09, planning schedule complete —
+gate `schedule`, 10) each showing done / partial / blocked, with a single headline
+"readiness %". This is progressive disclosure applied to *process*: the summary is always
+visible; the detail (which line item is missing a price, which room has no dimensions) is one
+click away. The readiness widget lives in the workspace header so it's visible from every
+tab. The widget shell ships with FOR-05-01; the aggregated readiness endpoint, the real
+checklist in the `readiness` tab (each gate linking to its tab), and the switch of the
+widget to that endpoint are delivered by the last child spec, **FOR-05-11-project-readiness**
+(§6.3).
 
 ### 1.5 Dense data tables + charts
 
@@ -197,47 +208,35 @@ ownership boundary and how the specs connect.
 
 | Spec | Owns | Surfaced in the FOR-05 workspace as |
 |------|------|-------------------------------------|
-| **FOR-05** project-estimate | Workspace shell + tabs, rooms enrichment (plan/media), works composition, estimate + BoM, client approval (server side), contract & e-signature, team selection, work reporting | The workspace itself |
-| **FOR-06** work-schedule | Gantt, calendars, foreman/worker scheduling data | "Schedule" tab (embedded) |
+| **FOR-05** project-estimate (design stage, `DRAFT`) | Workspace shell + tabs, rooms & dimensions, estimate + BoM + list of materials, packages/cost/margins, offer preparation + approval (server side), document & contract signing, team selection, planning Gantt, project readiness | The workspace itself (design-stage tabs) |
+| **FOR-06** project-in-progress (execution stage) | Everything after the contract is signed: amendments + amendment signing, work reporting (`WorkReport`), plan/actual Gantt updates, procurement tracking, execution-stage tabs | Execution-stage tabs (owned by FOR-06) |
 | **FOR-07** procurement-tracking | Purchase/delivery orders, delivery statuses, receiving | "Procurement" tab (embedded) |
 | **FOR-08** ai-estimate | AI orchestrator + tools + per-project chat to *assist* building the estimate | An "AI assist" panel inside the Works/Estimate tabs |
 | **FOR-09** client-portal | Read-only client views + client-side communication (approval, discounts, package choice, delivery variant choice) | The **client-facing** rendering of the Offer/Approval tab |
-| **FOR-10** financial-accounting | Primary docs, bank transactions, cost allocation, **worker cost rates** (`WorkerServiceRate`, §4.7) | "Finances" surfaced from procurement/estimate cost data; worker rate consumed by FOR-05 work reports |
-| **FOR-11** payroll | **Worker payout computation** built on `WorkerServiceRate` + approved `WorkReport`s | consumes FOR-05 `WorkReport` cost side |
+| **FOR-10** financial-accounting | Primary docs, bank transactions, cost allocation, **worker cost rates** (`WorkerServiceRate`, §4.7) | "Finances" surfaced from procurement/estimate cost data |
+| **FOR-11** payroll | **Worker payout computation** built on worker cost rates + approved FOR-06 `WorkReport`s | consumes the FOR-06 `WorkReport` cost side |
 
 **Ownership rule of thumb:** FOR-05 owns *the offer/estimate domain and the workspace that
-frames the project*; the schedule (FOR-06), procurement (FOR-07), AI (FOR-08), client portal
-(FOR-09) and finance (FOR-10) own their data and their pages, and the workspace embeds a thin
-"tab host" that lazy-loads their feature module. If a sibling spec is not yet built, its tab
-renders a graceful "coming soon / not configured" placeholder (the prototype in §10 uses
-hardcoded fixtures for exactly these tabs).
+frames the project* in the design stage; the execution stage (FOR-06), procurement data
+(FOR-07), AI (FOR-08), client portal (FOR-09) and finance/payroll (FOR-10/FOR-11) own their
+data and their pages, and the workspace embeds a thin "tab host" that lazy-loads their
+feature module. If a sibling spec is not yet built, its tab renders a graceful "coming soon /
+not configured" placeholder.
 
-**Cost/payroll boundary (`WorkerServiceRate`).** FOR-05's enriched `WorkReport` (§4.4)
-carries **both** the revenue side (client price) and the cost side (worker rate). FOR-05
-owns the revenue side, the report, and the approval; the **`WorkerServiceRate` table (§4.7),
-its write path, and payout computation are owned by FOR-10 (finance) / FOR-11 (payroll)**.
-The table is *defined* in this FOR-05 design only so the model is complete now; FOR-05 reads
-it read-only. This keeps a single source of truth for worker rates in the finance/payroll
-domain while letting the work report compute `margin` today.
+**Cost boundary.** In the design stage FOR-05 computes cost and margin from the
+**`WorkerType` tiers** (hiring-type rate as a % of the offer price) and the materialized
+material cost, delivered by **FOR-05-06-packages-margins**. Per-worker cost rates
+(`WorkerServiceRate`) and payouts are a **FOR-10 (finance) / FOR-11 (payroll)** concern
+(§4.7); FOR-05 does not define or read them.
 
-**Execution-stage tab embedding (who owns what behind the tab).** Several execution-stage
-workspace tabs (§8, §6.10) are *hosted* by FOR-05 but *owned* by siblings — FOR-05 supplies
-the tab slot, the sibling owns the data/computation:
-
-- **Procurement** tab embeds **FOR-07** (purchase/delivery orders, receiving).
-- **Source / primary documents** tab embeds **FOR-10** — FOR-05 hosts the tab, FOR-10 owns
-  the primary-document data.
-- **Worker payroll (this project)** tab embeds **FOR-11** — FOR-05 hosts the tab, FOR-11 owns
-  the payout computation; it reads the **cost side** of FOR-05's `WorkReport` (§4.4/§4.7).
-- **Both Gantts relate to FOR-06.** The **design-stage** project-estimation Gantt is
-  **planning-only** (a schedule view of estimated works; the full scheduling engine is
-  FOR-06). The **execution-stage** plan/actual Gantt **overlays the FOR-06 schedule with
-  FOR-05 `WorkReport` progress** (per-work % completion). FOR-05 hosts both as tabs; FOR-06
-  owns the scheduling engine and FOR-05 owns the report/progress side.
-
-In every case FOR-05 renders a thin tab host that lazy-loads the sibling feature module (or a
-graceful "not configured" placeholder while the sibling is unbuilt); the sibling owns the
-data and computation.
+**Execution-stage tabs (owned by FOR-06).** After the contract is signed the workspace
+switches to the execution-stage tab set (procurement, source/primary documents, plan/actual
+Gantt, payroll, amendment signing). Those tabs, their data, and the integrations behind them
+(FOR-07 procurement data, FOR-10 primary documents, FOR-11 payroll) are owned by **FOR-06
+"Project in progress"**; FOR-05 only provides the tab-host contract and the stage resolver
+(§6.10). The **design-stage planning Gantt** (tab `scheduleDesign`) is owned by
+**FOR-05-10-project-gantt** and becomes read-only once the project is `ACTIVE`; it is the
+baseline FOR-06 builds its plan/actual Gantt on.
 
 ### 2.2 Dependency graph (specs)
 
@@ -256,9 +255,10 @@ graph TD
       WK[Project works composition + templates]
       EST[Estimate + Bill of Materials]
       APR[Offer / client approval - server]
-      SIG[Signable documents + e-signature: Contract is a specialization - §4.8]
+      SIG[Document signing incl. the contract - SignableDocument engine §4.8]
       TEAM[Team selection]
-      REP[Work reporting]
+      GANTT[Planning Gantt - scheduleDesign]
+      READY[Project readiness - aggregated gates]
     end
 
     P --> WS
@@ -270,7 +270,14 @@ graph TD
     EST --> APR
     APR --> SIG
     P --> TEAM
-    EST --> REP
+    EST --> GANTT
+    TEAM --> GANTT
+    RM --> READY
+    EST --> READY
+    APR --> READY
+    SIG --> READY
+    TEAM --> READY
+    GANTT --> READY
 
     WS --- RM
     WS --- WK
@@ -278,25 +285,26 @@ graph TD
     WS --- APR
     WS --- SIG
     WS --- TEAM
-    WS --- REP
+    WS --- GANTT
+    WS --- READY
 
-    EST -->|schedule consumes works| F06[FOR-06 work-schedule]
+    SIG ==>|contract signed| F06[FOR-06 project-in-progress]
+    GANTT ==>|planning baseline| F06
     EST -->|BoM feeds purchase orders| F07[FOR-07 procurement-tracking]
     WK  -->|AI assists composition| F08[FOR-08 ai-estimate]
     APR -->|client reads + approves| F09[FOR-09 client-portal]
     EST -->|cost lines| F10[FOR-10 financial-accounting]
-    TEAM --> F06
-    REP  --> F10
 
-    WS -.embeds tab.-> F06
-    WS -.embeds tab.-> F07
+    WS -.execution tabs.-> F06
     WS -.client view.-> F09
 ```
 
 **Reading the graph.** FOR-05 hard-depends on `Project` and `Room` (FOR-04) and on the work
 catalog/prices/packages. Within FOR-05, works composition feeds the estimate; the estimate
-feeds client approval, which gates contract signing. The estimate is also the *upstream
-source* for siblings: FOR-06 schedules the works, FOR-07 orders the BoM materials, FOR-09
+feeds offer approval, which gates document/contract signing; the estimate and the team feed
+the planning Gantt; all design-stage gates roll up into project readiness. The signed
+contract and the planning Gantt hand the project over to FOR-06 (execution stage). The
+estimate is also the *upstream source* for siblings: FOR-07 orders the BoM materials, FOR-09
 shows and approves the offer, FOR-10 books the cost lines. The dotted edges are the
 *embed* relationships (workspace hosts sibling tabs).
 
@@ -311,7 +319,7 @@ graph TD
     subgraph FE["Frontend (React / Vite / TS, mobile-first)"]
       NAV[NAV_CONFIG + AppShell + BottomNav]
       WSROUTE["/projects/:projectId (ProjectWorkspacePage)"]
-      TABS[Tab host: Overview · Rooms · Works · Estimate · Offer · Contract · Team · Schedule · Procurement · Reporting]
+      TABS[Tab host - design stage: Overview · Readiness · Offer · Rooms · Estimate · Materials · Margins · Schedule · Document signing · Team; execution tabs owned by FOR-06]
       READY[Readiness header widget]
       REUSE[Reused feature modules: rooms, work-catalog, offer-packages, deliveries]
     end
@@ -324,7 +332,8 @@ graph TD
       OFFERC[OfferController - discounts/packages/approval]
       CONTRACTC[ContractController + SignatureService]
       TEAMC[ProjectTeamController]
-      REPC[WorkReportController]
+      SCHEDC[ProjectScheduleController - planning Gantt]
+      READYC[ReadinessController - aggregated gates]
       MEDIAC[RoomMediaController]
     end
 
@@ -337,7 +346,8 @@ graph TD
     NAV --> WSROUTE --> TABS
     WSROUTE --> READY
     TABS --> REUSE
-    TABS --> ESTC & LINEC & OFFERC & CONTRACTC & TEAMC & REPC & MEDIAC & TMPLC
+    TABS --> ESTC & LINEC & OFFERC & CONTRACTC & TEAMC & SCHEDC & MEDIAC & TMPLC
+    READY --> READYC
     ESTC --> DB
     LINEC --> DB
     BOMC --> DB
@@ -347,7 +357,8 @@ graph TD
     CONTRACTC --> ESIGN
     MEDIAC --> OBJ
     MEDIAC --> DB
-    REPC --> DB
+    SCHEDC --> DB
+    READYC --> DB
     TEAMC --> DB
 ```
 
@@ -387,7 +398,6 @@ erDiagram
     ESTIMATE_AMENDMENT ||--o{ AMENDMENT_LINE : changes
     PROJECT ||--o{ OFFER : offered
     OFFER ||--o{ OFFER_DISCOUNT : discounts
-    OFFER ||--o{ OFFER_PRICE_SNAPSHOT : freezes
     OFFER ||--|| CONTRACT : results_in
     CONTRACT ||--o{ CONTRACT_SIGNATURE : signed_by
     CONTRACT ||--o{ CONTRACT : amends
@@ -397,11 +407,9 @@ erDiagram
     SIGNABLE_DOCUMENT ||--o{ DOCUMENT_MEDIA : evidence
     ESTIMATE_LINE ||--o{ WORK_REPORT : reported
     WORK_TEMPLATE ||--o{ WORK_TEMPLATE_ITEM : contains
-    PROJECT ||--o{ PROJECT_SERVICE_PRICE : priced_over_time
-    PROJECT_SERVICE_PRICE }o--|| WORK_ITEM : for
-    PROJECT_SERVICE_PRICE }o--o| ESTIMATE_AMENDMENT : introduced_by
-    WORK_ITEM ||--o{ WORKER_SERVICE_RATE : cost_rate
-    WORKER_SERVICE_RATE }o--|| USER : for_worker
+    PROJECT ||--o| PROJECT_SCHEDULE : planned_by
+    PROJECT_SCHEDULE ||--o{ PROJECT_SCHEDULE_BAR : bars
+    PROJECT_SCHEDULE_BAR }o--|| WORK_CATEGORY : for_category
     PROJECT ||--o{ WORK_REPORT : tracked
     WORK_REPORT }o--|| USER : performed_by
     WORK_REPORT ||--o{ WORK_REPORT_ROOM : volume_split
@@ -419,22 +427,28 @@ erDiagram
 | `MaterialRequirement` | line (FK), materialName (i18n), materialCategory (FK), unit (FK), consumptionPerUnit (`NA JM`), quantity (derived = consumption × line qty), materialCatalogItem (FK, nullable) | `line.estimate.project.id` | `MATERIAŁ 1..5` + `NA JM` + `ILOŚĆ` |
 | `EstimateLinePackage` | line (FK), offerPackage (FK), unitPrice, valueNet | `line.estimate.project.id` | `PAKIET START/COMFORT/PRESTIGE`, `WARTOŚĆ START/COMFORT/PRESTIGE` |
 | `EstimateLineMargin` | line (FK), unitMarginPlan, costPlan, profitPlan, marginPctPlan, costFact, profitFact, marginPctFact | `line.estimate.project.id` | `Marż J`, `Koszt`, `Profit`, `Marż W` (plan + fact) |
-| `EstimateAmendment` | estimate (FK), createdBy, createdAt, status, reason | `estimate.project.id` | `ZMIANA +/-` block |
-| `AmendmentLine` | amendment (FK), line (FK), deltaQty, extraUnitPrice (`CENA DOP`), deltaValue | `amendment.estimate.project.id` | `ZMIANA +/-`, `CENA DOP` |
 | `Offer` | project (FK), estimate (FK), selectedPackage (FK, nullable), status (`SENT`/`APPROVED`/`REJECTED`), totals | `project.id` | package selection + `SUMA OFERTY` |
 | `OfferDiscount` | offer (FK), scope (`GLOBAL`/`CATEGORY`/`LINE`), targetId, kind (`PERCENT`/`ABSOLUTE`), value | `offer.project.id` | negotiated discount |
 | `Contract` | project (FK), offer (FK), parentContract (FK, nullable for amendments), status (`DRAFT`/`PENDING_SIGNATURES`/`SIGNED`/`VOID`), documentUri, contentHash, signatureLevel | `project.id` | signing stage |
 | `ContractSignature` | contract (FK), signerUser (FK, nullable), signerRole, level (`SES`/`AdES`/`QES`), providerRef, signedAt, evidenceUri, status | `contract.project.id` | signing stage |
 | `ProjectMember` | project (FK), user (FK), projectRole (`MANAGER`/`FOREMAN`/`WORKER`/`CLIENT`/`FINANCIER`) | `project.id` (extends FOR-03-04) | `Pracownik` columns. **Multiple `CLIENT` members allowed** — a project may have `>= 1` member with `projectRole = CLIENT`, and CLIENT membership may be **added at any point during the project lifecycle** (not only at creation), see note below |
-| `WorkReport` | worker (user FK), project (FK), workItem (FK), performedFrom (date), performedTo (date), approvedBy (user FK, nullable), status (`DRAFT`/`SUBMITTED`/`APPROVED`/`REJECTED`), clientUnitPrice, workerUnitPrice, totalQuantity (derived), revenueValue (derived), costValue (derived), margin (derived), note | `project.id` | `Progres`/`%`/`Wart Progres` + weekly `Pracownik`+dates (see §4.4) |
-| `WorkReportRoom` | report (FK), room (FK), quantity | `report.project.id` | per-room progress split |
+| `WorkerType` | code, nameRU/PL, rate (% of the offer price: base tier 0.4, other tiers = uplift on the base), active | global (CRUD + ABAC `WORKER_TYPES`, FOR-05-06) | `Pracownicy price` sheet |
+| `ProjectSchedule` | project (FK, unique 1:1), version | `project.id` | planning Gantt header (FOR-05-10, table `project_schedules`) |
+| `ProjectScheduleBar` | schedule (FK), workCategory (FK, unique per schedule), startDay (≥ 1), durationDays (≥ 1) | `schedule.project.id` | one bar per estimate work category (FOR-05-10, table `project_schedule_bars`) |
 | `RoomMedia` | room (FK), fileName, contentType, sizeBytes, storageUri, uploadedBy, uploadedAt | `room.project.id` | deferred from FOR-04-14 |
 | `ProjectMedia` | project (FK), fileName, contentType, sizeBytes, storageUri, uploadedBy, uploadedAt | `project.id` | project-level attachments (photos/docs) |
-| `ProjectServicePrice` | project (FK), workItem (FK), currency (FK), clientUnitPrice, effectiveFrom (date), effectiveTo (date, nullable=open), source (`OFFER_BASE`/`AMENDMENT`), amendment (FK, nullable) | `project.id` | temporal client price schedule (see §4.5) |
-| `OfferPriceSnapshot` | offer (FK), contract (FK, nullable), workItem (FK), unitPrice, quantity, valueNet, frozenAt | `offer.project.id` | frozen offer/contract prices (see §4.6) |
-| `WorkerServiceRate` | worker (user FK), workItem (FK), currency (FK), unitRate, effectiveFrom (date), effectiveTo (date, nullable) | not project-scoped (global worker rate; owned by FOR-10/FOR-11 — see §4.7) | internal cost/payout rate |
 | `WorkTemplate` | code, nameRU/PL, roomType (FK, nullable), active | global | "typical set" |
 | `WorkTemplateItem` | template (FK), workItem (FK), defaultQtyExpr (nullable), includedByDefault | global | template contents |
+
+**Execution-stage entities (owned by FOR-06, listed for context).** They read the FOR-05
+estimate but are created only after the contract is signed:
+
+| Entity | Key fields | Scope / `getProjectIdPath()` | Excel origin |
+|--------|-----------|------------------------------|--------------|
+| `EstimateAmendment` | estimate (FK), createdBy, createdAt, status, reason | `estimate.project.id` | `ZMIANA +/-` block |
+| `AmendmentLine` | amendment (FK), line (FK), deltaQty, extraUnitPrice (`CENA DOP`), deltaValue | `amendment.estimate.project.id` | `ZMIANA +/-`, `CENA DOP` |
+| `WorkReport` | worker (user FK), project (FK), workItem (FK), performedFrom (date), performedTo (date), approvedBy (user FK, nullable), status (`DRAFT`/`SUBMITTED`/`APPROVED`/`REJECTED`), clientUnitPrice, workerUnitPrice, totalQuantity (derived), revenueValue (derived), costValue (derived), margin (derived), note | `project.id` | `Progres`/`%`/`Wart Progres` + weekly `Pracownik`+dates (see §4.4) |
+| `WorkReportRoom` | report (FK), room (FK), quantity | `report.project.id` | per-room progress split |
 
 **Derivations (never hand-entered):**
 - `EstimateLine.quantity` = Σ `EstimateLineRoomQty.quantity` for the line.
@@ -443,8 +457,9 @@ erDiagram
 - `EstimateLinePackage.valueNet` = `package unitPrice × quantity`.
 - `Estimate.totalNet` = Σ line `valueNet` (+ approved amendment deltas); `totalGross`
   applies the project VAT rate; `Offer` totals apply discounts on top.
-- `WorkReport` derived fields (see §4.4): `totalQuantity` = Σ `WorkReportRoom.quantity`;
-  `revenueValue` = `clientUnitPrice × totalQuantity`; `costValue` = `workerUnitPrice ×
+- `WorkReport` derived fields (FOR-06, see §4.4): `totalQuantity` = Σ `WorkReportRoom.quantity`;
+  `revenueValue` = `clientUnitPrice × totalQuantity`, where `clientUnitPrice` is the frozen
+  `EstimateLine.unitPrice` plus signed amendment deltas; `costValue` = `workerUnitPrice ×
   totalQuantity`; `margin` = `revenueValue − costValue`.
 
 **Multi-client membership (client-call decision).** A project is not limited to a single
@@ -454,94 +469,48 @@ also mid-project (design or execution) — through the normal Team surface (§8,
 uniqueness constraint restricts the project to one CLIENT; ABAC read/approve grants apply to
 every CLIENT member equally.
 
-### 4.3a Offer price snapshot / price freeze (denormalization)
+### 4.3a Offer price freeze (denormalization on the estimate line)
 
 When a catalog price enters an offer/estimate line, that price is **frozen (denormalized)**
 onto the line and no longer tracks later catalog changes:
 
 - `EstimateLine.unitPrice` is a **stored snapshot** copied from the `WorkPrice` valid at the
-  moment the line is priced. The `workPrice` FK is retained purely for **provenance** (which
-  catalog price the value came from); the numeric `unitPrice` on the line is the **frozen
-  source of truth**. Later edits to `WorkPrice` do not retroactively change `unitPrice`.
-- When an `Offer` is **APPROVED/SIGNED**, the priced lines are snapshotted into
-  `OfferPriceSnapshot` rows tied to the `Offer` (and, once a `Contract` is generated, to the
-  `Contract`). Subsequent catalog edits never alter a signed offer/contract. See §4.6.
+  moment the line is priced (FOR-05-03). The `workPrice` FK is retained purely for
+  **provenance** (which catalog price the value came from); the numeric `unitPrice` on the
+  line is the **frozen source of truth**. Later edits to `WorkPrice` do not retroactively
+  change `unitPrice`.
+- The offer (FOR-05-07) is built on these frozen line prices; discounts/rebates are applied
+  on top at the offer level. Once the offer is approved and the contract is signed, the
+  client price of a line changes only through a signed amendment (FOR-06), never through a
+  catalog edit.
 
-### 4.4 Enriched WorkReport (revenue vs. cost, multi-room, temporal)
+### 4.4 Enriched WorkReport (execution stage, owned by FOR-06)
 
-A `WorkReport` aggregates a worker's completed work over an interval and carries **both price
-sides** evaluated at the interval date:
+`WorkReport` belongs to the execution stage and is owned by **FOR-06 "Project in progress"**;
+it is summarized here only because it reads the FOR-05 estimate. A `WorkReport` aggregates a
+worker's completed work over an interval:
 
 - **Association & interval:** `worker` (user FK), `project` (FK), `workItem` (FK), the work
   interval `[performedFrom, performedTo]` (dates), and a foreman approval (`approvedBy` FK
   nullable + `status`).
 - **Multi-room volume split:** a report relates to `0..n` rooms via `WorkReportRoom`
   (`report` FK, `room` FK, `quantity`). `totalQuantity` = Σ `WorkReportRoom.quantity`.
-- **Revenue side (incoming — what the CLIENT pays):** `clientUnitPrice` is resolved via
-  `resolveClientPrice(project, workItem, intervalDate)` (§4.5, §6.6) — the temporally
-  effective project client price at the interval date.
-- **Cost side (outgoing — what the WORKER is paid):** `workerUnitPrice` is resolved from an
-  **internal worker rate** that is **temporal AND per-worker** (different workers may have
-  different rates for the same work), via `resolveWorkerRate(worker, workItem, intervalDate)`
-  (§4.7, §6.7).
+- **Revenue side (incoming — what the CLIENT pays):** `clientUnitPrice` = the frozen
+  `EstimateLine.unitPrice` (§4.3a) of the reported work plus the signed amendment deltas
+  (`AmendmentLine.extraUnitPrice`) that apply to it. Both the amendments and this valuation
+  are owned by FOR-06.
+- **Cost side (outgoing — what the WORKER is paid):** `workerUnitPrice` comes from the worker
+  cost rates owned by FOR-10/FOR-11 (§4.7).
 - **Derived value fields:** `revenueValue = clientUnitPrice × totalQuantity`;
   `costValue = workerUnitPrice × totalQuantity`; `margin = revenueValue − costValue`.
 - **Approval:** an approve action sets `approvedBy` + moves `status` to `APPROVED`.
 
-> **Ownership boundary.** The **revenue side + approval + tracking** of `WorkReport` stays in
-> **FOR-05**. The **`WorkerServiceRate` table (cost/payroll side)** is *defined here* (§4.7)
-> so `WorkReport` can carry both sides, but its authoritative ownership and payout computation
-> live **downstream in FOR-10 (finance) and FOR-11 (payroll)**; FOR-05 consumes it read-only.
+### 4.7 Worker cost rates — FOR-10/FOR-11 concern
 
-### 4.5 Temporal project pricing (client price effective by date)
-
-Within a project, the client price for a service can change **from a given date** (on top of
-the frozen offer base), and completed-work tracking must value work at the price effective on
-the **work interval's date**. This is modelled by `ProjectServicePrice` (a per-project price
-schedule):
-
-- Fields: `project` (FK), `workItem` (FK), `currency` (FK), `clientUnitPrice`,
-  `effectiveFrom` (date), `effectiveTo` (date, nullable = open interval), `source`
-  (`OFFER_BASE` | `AMENDMENT`), `amendment` (FK, nullable).
-- The `OFFER_BASE` row is the **frozen offer price** (§4.3a) with `effectiveFrom` = the
-  **contract signing date**. `AMENDMENT` rows are **temporal overrides**, each with its own
-  `effectiveFrom`, and each references the `EstimateAmendment` that introduced it.
-- **Resolution rule:** the client price for `(workItem, date)` is the `ProjectServicePrice`
-  row whose half-open interval `[effectiveFrom, effectiveTo)` contains `date`; for any overlap
-  the **latest `effectiveFrom` wins**. See `resolveClientPrice` (§6.6).
-- **Worked example:** шпатлёвка (plastering) = **100 PLN/m²** in May, changes to **120 PLN/m²
-  from June 1**. Work performed **in May** — even if the report is *entered* in June — is
-  valued at **100 PLN/m²**, because resolution uses the *interval date*, not the entry date.
-- **Amendment linkage:** an **approved amendment** that changes a price
-  (`EstimateAmendment`/`AmendmentLine`, §4.2) **creates a new `ProjectServicePrice` interval**
-  (`source = AMENDMENT`) starting at the amendment's effective date; this closes the prior
-  open interval (`effectiveTo` set to the new `effectiveFrom`).
-
-### 4.6 Immutable offer price snapshot (`OfferPriceSnapshot`)
-
-`OfferPriceSnapshot` captures the priced lines of an offer at freeze time so a signed
-offer/contract is immutable against later catalog or estimate edits:
-
-- Fields: `offer` (FK), `contract` (FK, nullable until a contract is generated), `workItem`
-  (FK), `unitPrice`, `quantity`, `valueNet`, `frozenAt`.
-- Created when the `Offer` transitions to `APPROVED`/`SIGNED`. Once frozen, the client unit
-  price of a snapshot line is **immutable except via an amendment** (which adds a new
-  `ProjectServicePrice` interval per §4.5 and, on signing, a new snapshot tied to the child
-  `Contract`).
-- The `OFFER_BASE` `ProjectServicePrice` row (§4.5) is seeded from this snapshot at signing.
-
-### 4.7 Worker service rate (`WorkerServiceRate`) — cost side (FOR-10/FOR-11 owned)
-
-The internal cost/payout rate is **temporal and per-worker**:
-
-- Fields: `worker` (user FK), `workItem` (FK), `currency` (FK), `unitRate`, `effectiveFrom`
-  (date), `effectiveTo` (date, nullable = open).
-- Resolved via `resolveWorkerRate(worker, workItem, date)` (§6.7) using the same half-open
-  interval / latest-`effectiveFrom`-wins rule as client prices.
-- **Ownership:** the *table definition* lives in this FOR-05 design for model coherence (so
-  `WorkReport` can compute `costValue`/`margin`), but the **payroll/finance usage and payout
-  computation are owned by FOR-10 (finance) and FOR-11 (payroll)**. FOR-05 reads it; it does
-  not own its write path.
+Per-worker cost/payout rates (`WorkerServiceRate`) are owned by **FOR-10 (finance) / FOR-11
+(payroll)** and are not part of the FOR-05 model. FOR-05 cost and margin in the design stage
+use the **`WorkerType` tiers** (rate as a % of the offer price) and the materialized material
+cost delivered by **FOR-05-06-packages-margins**.
 
 ### 4.8 Signable documents (generalized document + signature domain)
 
@@ -549,10 +518,11 @@ Client-call decision: the contract-signing surface generalizes into a reusable
 **signable-document** domain. `Contract`/`ContractSignature` (§4.2, §6.5, §11) become a
 **specialization/participant** of this generalized model — a `SignableDocument` whose type is
 `Contract` (Umowa), signed through the same signature methods and legal grounding (§11). The
-generalized domain is built as its own child spec **`FOR-05-17-signable-documents`** (§13);
-the contract-specific behaviour (FOR-05-09) sits on top of it as the contract specialization.
-This domain also covers other project documents a renovation project must sign: amendments,
-room-acceptance protocols, key-handover records, and works-acceptance protocols.
+generalized engine, including the contract, is delivered by the child spec
+**`FOR-05-08-document-signing`** (§13). This domain also covers other project documents a
+renovation project must sign: amendments, room-acceptance protocols, key-handover records,
+and works-acceptance protocols (the execution-stage documents are signed through the same
+engine from FOR-06).
 
 **Entities:**
 
@@ -646,12 +616,12 @@ New resources introduced by FOR-05 (existing `PROJECTS`, `ROOMS`, `MATERIALS`, `
 | `OFFERS` | Offer + OfferDiscount | yes |
 | `CONTRACTS` | Contract + ContractSignature | yes |
 | `SIGNABLE_DOCUMENTS` | SignableDocument + DocumentSignature + DocumentMedia (SignableDocumentType is a seeded global reference) | yes (`project.id`) |
-| `PROJECT_TEAM` | ProjectMember | yes |
-| `WORK_REPORTS` | WorkReport + WorkReportRoom | yes |
+| `PROJECT_MEMBERS` | ProjectMember (existing resource, changeset `015`, reused by FOR-05-09 — no new row) | yes |
+| `WORKER_TYPES` | WorkerType (FOR-05-06) | no (global) |
+| `WORK_SCHEDULE` | ProjectSchedule + ProjectScheduleBar (FOR-05-10) | yes (`project.id`) |
+| `WORK_REPORTS` | WorkReport + WorkReportRoom (execution stage, FOR-06) | yes |
 | `ROOM_MEDIA` | RoomMedia | yes (`room.project.id`) |
 | `PROJECT_MEDIA` | ProjectMedia | yes (`project.id`) |
-| `PROJECT_PRICING` | ProjectServicePrice + OfferPriceSnapshot | yes |
-| `PRICE_HISTORY` | read-only price-history projection (audit + temporal price tables) | no (cross-scope read) |
 
 Base matrix (C=CREATE R=READ U=UPDATE D=DELETE; "(own)" = auto-filter by `project_members`;
 ADMIN bypasses but is still seeded for completeness):
@@ -664,43 +634,27 @@ ADMIN bypasses but is still seeded for completeness):
 | OFFERS | CRUD | CRUD(own) | R(own) | — | R(own) | R(own)+approve |
 | CONTRACTS | CRUD | CRU(own) | R(own) | — | R(own) | R(own)+sign |
 | SIGNABLE_DOCUMENTS | CRUD | CRUD(own) | CRU(own) | R(own) | R(own) | R(own)+sign |
-| PROJECT_TEAM | CRUD | CRUD(own) | R(own) | R(own) | — | — |
+| PROJECT_MEMBERS | CRUD | CRUD(own) | R(own) | — | R(own) | — |
+| WORK_SCHEDULE | CRUD | CRUD(own) | RU(own) | R(own) | R(own) | R(own) |
 | WORK_REPORTS | CRUD | CRU(own) | CRU(own)+approve | CU(own) | R(own) | R(own) |
 | ROOM_MEDIA | CRUD | CRUD(own) | CRU(own) | R(own) | — | R(own) |
 | PROJECT_MEDIA | CRUD | CRUD(own) | CRU(own) | R(own) | R(own) | R(own) |
-| PROJECT_PRICING | CRUD | CRU(own) | R(own) | — | R(own) | R(own) |
-| PRICE_HISTORY | R | — | — | — | R | — |
 
 Notes: CLIENT gets read + a scoped "approve offer" / "sign contract" action (the write
 surface CLIENT touches, delivered together with FOR-09). `SIGNABLE_DOCUMENTS` generalizes
 `CONTRACTS`: the same CLIENT "sign" action applies (the four signing methods of §4.8,
 including tablet parafka), FOREMAN/MANAGER create and manage documents (protocols, handovers,
 acceptances), and WORKER/FINANCIER read within their project scope; the `SignableDocumentType`
-rows and the `SIGNABLE_DOCUMENTS` resource + ADMIN grant are seeded per `entity-creation-rules`. WORKER reports own completed work
-(`WORK_REPORTS` CU own); FOREMAN approves work reports (sets `approvedBy`/`status`, §4.4).
-Discounts/prices remain MANAGER-controlled; `PROJECT_PRICING` writes (temporal client-price
-intervals) are MANAGER-driven and normally arise from approved amendments (§4.5). Client
-`OfferPriceSnapshot` rows are immutable once frozen (§4.6) — no UPDATE surface.
-`PRICE_HISTORY` is a **read-only** cross-scope projection gated to **ADMIN + FINANCIER**
-only (§5a); it exposes catalog/project/worker price changes but grants no write path. The
-worker-rate table (`WorkerServiceRate`, §4.7) is not gated by a FOR-05 resource here — its
-ABAC lives with its owning finance/payroll spec (FOR-10/FOR-11); FOR-05 only reads it.
-
-### 5a. Price-history read model (ADMIN + FINANCIER)
-
-`PRICE_HISTORY` backs a dedicated **read-only** "price history" view for **ADMIN** and
-**FINANCIER**. It is a **specialized query/projection over the existing audit log + the
-temporal price tables** (§4.5–§4.7), **not a new write path** — we already write to audit.
-It surfaces price changes across three scopes:
-
-- **CATALOG** — `WorkPrice` history (catalog price changes).
-- **PROJECT** — project client prices (`ProjectServicePrice` intervals + the amendments that
-  introduced them).
-- **WORKER** — worker cost rates (`WorkerServiceRate` history).
-
-Reads are gated to ADMIN + FINANCIER via the `PRICE_HISTORY` read resource (recommended over
-reusing `AUDIT` because the scope is a curated price-only projection). See §6.8 and the
-endpoint in §7.1.
+rows and the `SIGNABLE_DOCUMENTS` resource + ADMIN grant are seeded per `entity-creation-rules`.
+Discounts/prices remain MANAGER-controlled; the client price of a line is the frozen
+`EstimateLine.unitPrice` (§4.3a) and is changed after signing only through a signed amendment
+(FOR-06). Team management reuses the already-seeded `PROJECT_MEMBERS` resource (FOR-05-09
+seeds no new resource row). `WORK_SCHEDULE` (FOR-05-10) additionally grants ESTIMATOR
+READ + UPDATE, mirroring FOREMAN; every schedule write resolves to UPDATE. `WORKER_TYPES`
+(FOR-05-06) is ADMIN-managed with READ for the roles that can view margins; its exact grants
+live in FOR-05-06. `WORK_REPORTS` belongs to the execution stage (FOR-06): WORKER reports own
+completed work (CU own) and FOREMAN approves work reports (sets `approvedBy`/`status`, §4.4).
+Worker cost rates (§4.7) are gated by their owning finance/payroll specs (FOR-10/FOR-11).
 
 ---
 
@@ -786,21 +740,47 @@ above. All three converge on `newEstimateLine` + `recomputeEstimate`.
 
 ### 6.3 Readiness computation (design mode)
 
+Each design-stage child spec owns the definition of its own gate(s); the aggregated endpoint
+that combines them into one response, the real checklist in the `readiness` tab (each gate
+links to its tab), and the switch of the header `ReadinessWidget` to that endpoint are
+delivered by **FOR-05-11-project-readiness**, the last FOR-05 child spec. Gates the caller
+has no READ permission for are omitted and excluded from the headline percentage.
+
+> **As built (FOR-05-11).** The implementation chose a **contributor-based** architecture
+> rather than one central `computeReadiness` that re-derives every gate from raw entities.
+> Each design-stage area owns its own readiness through a backend superinterface
+> (`ProjectReadinessContributor`): the area's service decides its own completion and its own
+> percentage formula and returns a uniform contribution `{key, nameKey, percentage, state,
+> items[]}`. A thin aggregator discovers the contributors, calls each one the caller may READ,
+> and composes them — the headline is the **equal-weight average** of the included areas'
+> percentages, and the overall state is a **BLOCKED > PARTIAL > DONE** roll-up. The surface is
+> a single `PROJECTS`-READ aggregate endpoint `GET /api/projects/{projectId}/readiness`; no new
+> ABAC resource is minted (per-area READ checks do the filtering). The algorithm sketch below
+> survives as each contributor's gate definition; rooms+dimensions collapse into one `rooms`
+> area and works+priced+bom into one `estimate` area, each mapping 1:1 to a workspace tab. See
+> `FOR-05-11-project-readiness/design.md`.
+
 ```pascal
 ALGORITHM computeReadiness(project)
-OUTPUT: list of gates {key, state ∈ {DONE, PARTIAL, BLOCKED}, detail}, headlinePct
+OUTPUT: {gates[{key, state ∈ {DONE, PARTIAL, BLOCKED}, detail}], headlinePct}
 
 BEGIN
   gates <- []
-  gates += gate("rooms",     DONE IF project.rooms nonEmpty ELSE BLOCKED)
-  gates += gate("dimensions",DONE IF all rooms have area>0 ELSE PARTIAL/BLOCKED)
-  gates += gate("works",     DONE IF estimate.lines nonEmpty ELSE BLOCKED)
-  gates += gate("priced",    DONE IF all lines have unitPrice>0 ELSE PARTIAL)
-  gates += gate("bom",       DONE IF all material lines have consumption ELSE PARTIAL)
+  gates += gate("rooms",     DONE IF project.rooms nonEmpty ELSE BLOCKED)                 // 02
+  gates += gate("dimensions",DONE IF all rooms have area>0 ELSE PARTIAL/BLOCKED)          // 02
+  gates += gate("works",     DONE IF estimate.lines nonEmpty ELSE BLOCKED)                // 03
+  gates += gate("priced",    DONE IF all lines have unitPrice>0 ELSE PARTIAL)             // 03
+  gates += gate("bom",       DONE IF all material lines have consumption ELSE PARTIAL)    // 05
   gates += gate("offer",     DONE IF offer.status = APPROVED ELSE
-                             PARTIAL IF offer.status = SENT ELSE BLOCKED)
-  gates += gate("team",      DONE IF project has FOREMAN member ELSE BLOCKED)
-  headlinePct <- round(100 * count(gates WHERE state=DONE) / count(gates))
+                             PARTIAL IF offer is sent / on approval ELSE BLOCKED)         // 07
+  gates += gate("documents", DONE IF the contract SignableDocument is SIGNED ELSE
+                             PARTIAL IF it is PENDING_SIGNATURES ELSE BLOCKED)            // 08
+  gates += gate("team",      DONE IF project has an ACTIVE FOREMAN member ELSE BLOCKED)   // 09
+  gates += gate("schedule",  DONE IF rows > 0 AND every row is scheduled ELSE
+                             BLOCKED IF no row is scheduled ELSE PARTIAL)                 // 10
+  gates <- [ g IN gates WHERE caller may READ the gate's resource ]
+  headlinePct <- IF gates empty THEN 0
+                 ELSE round(100 * count(gates WHERE state=DONE) / count(gates))
   RETURN {gates, headlinePct}
 END
 ```
@@ -855,118 +835,6 @@ END
 POSTCONDITION: contract SIGNED ⟺ every ContractSignature SIGNED and integrity verified
 ```
 
-### 6.6 Resolve effective client price (temporal project pricing)
-
-```pascal
-ALGORITHM resolveClientPrice(project, workItem, date)
-INPUT: project, workItem, date (the work interval's date, NOT the entry date)
-OUTPUT: the effective ProjectServicePrice for (project, workItem) at date
-
-PRECONDITION:
-  - a ProjectServicePrice with source=OFFER_BASE exists for (project, workItem),
-    with effectiveFrom = contract signing date  (the base is seeded at signing, §4.6)
-  - intervals for (project, workItem) are non-overlapping and contiguous from OFFER_BASE
-    start (each interval [effectiveFrom, effectiveTo); effectiveTo NULL = open)
-  - date >= OFFER_BASE.effectiveFrom
-
-BEGIN
-  candidates <- { p IN ProjectServicePrice
-                    WHERE p.project = project AND p.workItem = workItem
-                      AND p.effectiveFrom <= date
-                      AND (p.effectiveTo IS NULL OR date < p.effectiveTo) }
-  ASSERT count(candidates) = 1                 // exactly one active interval per (workItem,date)
-  RETURN the single element of candidates      // == max effectiveFrom among candidates
-END
-
-POSTCONDITION:
-  - result.effectiveFrom <= date < coalesce(result.effectiveTo, +infinity)
-  - result is the row with the latest effectiveFrom whose interval contains date
-INVARIANT: for a (project, workItem), no gaps after OFFER_BASE start and no overlaps
-```
-
-Example (§4.5): plastering base 100 PLN/m² `effectiveFrom = 2025-05-01`; an approved
-amendment adds a row 120 PLN/m² `effectiveFrom = 2025-06-01` and closes the base interval
-(`effectiveTo = 2025-06-01`). `resolveClientPrice(p, plastering, 2025-05-20) = 100`;
-`resolveClientPrice(p, plastering, 2025-06-05) = 120` — independent of when the report is
-entered.
-
-### 6.7 Resolve effective worker rate (temporal, per-worker cost side)
-
-```pascal
-ALGORITHM resolveWorkerRate(worker, workItem, date)
-INPUT: worker, workItem, date (the work interval's date)
-OUTPUT: the effective WorkerServiceRate for (worker, workItem) at date
-
-PRECONDITION: WorkerServiceRate intervals for (worker, workItem) are non-overlapping
-BEGIN
-  candidates <- { r IN WorkerServiceRate
-                    WHERE r.worker = worker AND r.workItem = workItem
-                      AND r.effectiveFrom <= date
-                      AND (r.effectiveTo IS NULL OR date < r.effectiveTo) }
-  ASSERT count(candidates) <= 1
-  IF candidates empty THEN RETURN null   // no rate configured -> costValue treated as 0/unknown
-  RETURN the single element of candidates
-END
-
-POSTCONDITION: result = null OR (result.effectiveFrom <= date < coalesce(result.effectiveTo, +inf))
-```
-
-> `WorkerServiceRate` write/ownership is FOR-10/FOR-11 (§4.7); FOR-05 only invokes this
-> resolver read-only when computing `WorkReport.costValue`/`margin`.
-
-### 6.8 Compute WorkReport values (revenue vs. cost, multi-room, temporal)
-
-```pascal
-ALGORITHM computeWorkReport(report)
-INPUT: report with worker, project, workItem, [performedFrom, performedTo], rooms[]
-OUTPUT: report with clientUnitPrice, workerUnitPrice, totals, revenue, cost, margin
-
-PRECONDITION: report.rooms nonEmpty; every room belongs to report.project;
-              every WorkReportRoom.quantity >= 0
-BEGIN
-  d <- report.performedFrom                       // the interval date used for resolution
-  report.clientUnitPrice <- resolveClientPrice(report.project, report.workItem, d).clientUnitPrice   // §6.6
-  wr <- resolveWorkerRate(report.worker, report.workItem, d)                                          // §6.7
-  report.workerUnitPrice <- (wr = null) ? 0 : wr.unitRate
-  report.totalQuantity <- SUM(rr.quantity FOR rr IN report.rooms)
-  report.revenueValue  <- round2(report.clientUnitPrice * report.totalQuantity)
-  report.costValue     <- round2(report.workerUnitPrice * report.totalQuantity)
-  report.margin        <- round2(report.revenueValue - report.costValue)
-  RETURN report
-END
-
-POSTCONDITION:
-  - report.totalQuantity = Σ WorkReportRoom.quantity
-  - report.revenueValue = clientUnitPrice × totalQuantity
-  - report.costValue    = workerUnitPrice × totalQuantity
-  - report.margin       = revenueValue − costValue
-  - clientUnitPrice/workerUnitPrice equal the temporally-resolved values at the interval date
-```
-
-### 6.9 Price-history projection (read-only, ADMIN + FINANCIER)
-
-```pascal
-ALGORITHM queryPriceHistory(scope, filters)
-INPUT: scope ∈ {CATALOG, PROJECT, WORKER}, filters {workItem?, project?, worker?, dateRange?}
-OUTPUT: ordered list of {scope, entity, actor, at, field, oldValue, newValue}
-
-PRECONDITION: caller has PRICE_HISTORY:READ (ADMIN or FINANCIER)   // §5a
-BEGIN
-  SWITCH scope
-    CASE CATALOG:  rows <- auditEntries(entity=WorkPrice, priceFields, filters)
-    CASE PROJECT:  rows <- projectServicePriceIntervals(filters)      // §4.5 temporal tables
-                          ⊕ auditEntries(entity=ProjectServicePrice, filters)
-                          ⊕ linkedAmendments(rows)
-    CASE WORKER:   rows <- workerServiceRateIntervals(filters)        // §4.7
-                          ⊕ auditEntries(entity=WorkerServiceRate, filters)
-  END SWITCH
-  RETURN sortByTimeAsc(rows)     // read-only projection; no writes
-END
-
-POSTCONDITION: result is a pure projection over the audit log + temporal price tables;
-               no side effects / no new write path
-```
-
 ### 6.10 Resolve workspace tab set (stage-dependent, ABAC-filtered)
 
 The visible tab set is driven by the **project stage** (derived from `Project.status`, split
@@ -974,17 +842,16 @@ by the contract-signing boundary into **design mode** vs **execution mode**, §4
 filtered by the **existing ABAC per-tab permission predicate**. The concrete stage tab sets
 are (§8 `WORKSPACE_TABS`):
 
-- **Design stage** (statuses `DRAFT` / `READY_TO_OFFER` / `OFFERED` / `APPROVED`): Readiness
-  tracker, Pricing/rates (Cennik / Расценки), Rooms (Pomieszczenia / Комнаты), Estimate
-  (Kosztorys / Смета), Project-estimation Gantt (Harmonogram / Эстимация — planning-only,
-  embeds FOR-06), Contract-signing form (Podpisanie umowy / Подписание договора).
-- **Execution stage** (statuses `ACTIVE` / `COMPLETED`): Procurement (Zakupy / Закупки —
-  embeds FOR-07), Source/primary documents (Dokumenty źródłowe / Первичные документы — embeds
-  FOR-10), Plan/actual Gantt with overlay + % completion (Plan/wykonanie / План-факт),
-  Worker-payroll-for-this-project (Rozliczenie wynagrodzeń / Расчёт ЗП — embeds FOR-11),
-  Amendment-signing form (Aneksy / Подписание амендментов), Price history (Historia cen /
-  История цен — the §5a ADMIN/FINANCIER view surfaced in-project).
-- **Common / always:** Overview.
+- **Design stage** (statuses `DRAFT` / `READY_TO_OFFER` / `OFFERED` / `APPROVED`), owned by
+  FOR-05: `readiness` (Gotowość / Готовность, 11), `pricing` (the Offer tab — Oferta /
+  uzgodnienie, 07), `rooms` (Pomieszczenia / Комнаты, 02), `estimate` (Kosztorys / Смета,
+  03/04/05), `materials` (Materiały / Материалы, 05b), `margins` (Marża / Маржа, 06),
+  `scheduleDesign` (Harmonogram / График — planning Gantt, 10), `documentSigning`
+  (Podpisanie dokumentów / Подписание документов, 08), `team` (Zespół / Команда, 09).
+- **Execution stage** (statuses `ACTIVE` / `COMPLETED`): the execution tab set (procurement,
+  source/primary documents, plan/actual Gantt, payroll, amendment signing) is **owned by
+  FOR-06**; this resolver only partitions and filters it.
+- **Common / always:** `overview` (Przegląd / Обзор, 01).
 
 ```pascal
 ALGORITHM resolveWorkspaceTabs(project, user)
@@ -1015,7 +882,7 @@ POSTCONDITION:
   - a tab is returned  ⟺  (it is in the current stage OR common) AND the user is permitted
     (i.e. result == inStage ∩ permittedTabs(user, project))
   - ordering is the stable WORKSPACE_TABS declaration order
-INVARIANT: stageOf(status) is total and single-valued over the status space (Property 14),
+INVARIANT: stageOf(status) is total and single-valued over the status space (Property 10),
            so `stage` is always exactly one of {design, execution}
 ```
 
@@ -1059,50 +926,23 @@ integrity is verified (§6.5).
 `line.quantity == Σ EstimateLineRoomQty.quantity` for that line (§6.1); quantity is derived,
 never hand-entered.
 
-### Property 7: Frozen offer line price is immutable
-
-Once an offer line is frozen (`OfferPriceSnapshot`, §4.6), its client unit price is
-**immutable except via an amendment**: for any signed offer, `OfferPriceSnapshot.unitPrice`
-does not change when the source `WorkPrice` is later edited, and can only be superseded by a
-new `ProjectServicePrice` interval created from an approved `EstimateAmendment` (§4.5).
-
-### Property 8: Project price intervals are contiguous and non-overlapping
-
-For every `(project, workItem)`, the `ProjectServicePrice` intervals
-`[effectiveFrom, effectiveTo)` are **non-overlapping** and **contiguous from the OFFER_BASE
-start** (no gaps after `OFFER_BASE.effectiveFrom`) (§4.5, §6.6 invariant).
-
-### Property 9: `resolveClientPrice` picks the interval containing the date
-
-For any `date >= OFFER_BASE.effectiveFrom`, `resolveClientPrice(project, workItem, date)`
-returns exactly one `ProjectServicePrice` row and it is the one whose interval contains the
-date — `result.effectiveFrom <= date < coalesce(result.effectiveTo, +∞)`, latest
-`effectiveFrom` on any overlap (§6.6). The worker-rate resolver satisfies the analogous
-containment property (§6.7).
-
-### Property 10: WorkReport revenue derivation
+### Property 7: WorkReport revenue derivation (execution stage, FOR-06)
 
 `WorkReport.revenueValue == clientUnitPrice × Σ WorkReportRoom.quantity`, where
-`clientUnitPrice` equals `resolveClientPrice(project, workItem, intervalDate)` at the report's
-interval date (§4.4, §6.8).
+`clientUnitPrice` equals the frozen `EstimateLine.unitPrice` of the reported work plus the
+signed amendment deltas that apply to it (§4.3a, §4.4). Enforced by FOR-06.
 
-### Property 11: WorkReport cost derivation
+### Property 8: WorkReport cost derivation (execution stage, FOR-06)
 
-`WorkReport.costValue == workerUnitPrice × Σ WorkReportRoom.quantity`, where `workerUnitPrice`
-equals `resolveWorkerRate(worker, workItem, intervalDate)` at the report's interval date
-(§4.4, §6.8).
+`WorkReport.costValue == workerUnitPrice × Σ WorkReportRoom.quantity`, where
+`workerUnitPrice` is the worker cost rate supplied by FOR-10/FOR-11 (§4.4, §4.7). Enforced by
+FOR-06.
 
-### Property 12: WorkReport margin identity
+### Property 9: WorkReport margin identity (execution stage, FOR-06)
 
-`WorkReport.margin == revenueValue − costValue` (§4.4, §6.8).
+`WorkReport.margin == revenueValue − costValue` (§4.4).
 
-### Property 13: Price-history is a pure read projection
-
-`queryPriceHistory` (§6.9) produces a projection over the audit log and the temporal price
-tables only; it introduces no write path and is reachable only with `PRICE_HISTORY:READ`
-(ADMIN or FINANCIER) (§5a).
-
-### Property 14: Stage partition is total and disjoint
+### Property 10: Stage partition is total and disjoint
 
 The design-stage status set `{DRAFT, READY_TO_OFFER, OFFERED, APPROVED}` and the
 execution-stage status set `{ACTIVE, COMPLETED}` **partition** the project status space
@@ -1110,7 +950,7 @@ execution-stage status set `{ACTIVE, COMPLETED}` **partition** the project statu
 (the two sets share no status). Hence `stageOf(status)` (§6.10) is a total, single-valued
 function returning exactly one of `{design, execution}` for every project status.
 
-### Property 15: Visible tab set equals stage tabs intersected with permitted tabs
+### Property 11: Visible tab set equals stage tabs intersected with permitted tabs
 
 For any `(project, user)`, `resolveWorkspaceTabs(project, user)` (§6.10) returns exactly the
 tabs of the current stage (plus `common`) that the user is permitted to see:
@@ -1118,7 +958,7 @@ tabs of the current stage (plus `common`) that the user is permitted to see:
 outside the current stage is ever shown, and no tab that is both in the current stage and
 permitted is ever hidden.
 
-### Property 16: SignableDocument signed-iff-all-signatures-signed (generalizes Property 5)
+### Property 12: SignableDocument signed-iff-all-signatures-signed (generalizes Property 5)
 
 A `SignableDocument` is `SIGNED` **⟺** all of its `DocumentSignature`s are `SIGNED`
 (generalizing Property 5 for contracts, §4.8). Document integrity is preserved via
@@ -1127,7 +967,7 @@ the stored hash before a signature is marked `SIGNED`, as in §6.5), and the `PR
 `TABLET_INITIALS` methods **require an attached `DocumentMedia` evidence** (the uploaded scan
 or the captured tablet initial) before the document may reach `SIGNED`.
 
-### Property 17: A project may have multiple CLIENT members, added at any lifecycle stage
+### Property 13: A project may have multiple CLIENT members, added at any lifecycle stage
 
 For any project, the number of `ProjectMember` rows with `projectRole = CLIENT` may be
 `>= 1` (multi-client, §4.2/§4.3 note), and a CLIENT membership may be created at **any** point
@@ -1184,7 +1024,7 @@ POST   /api/contracts/{id}/amend                       -> child contract from am
 GET    /api/contracts/{id}/document                    -> signed/unsigned PDF (range download)
 POST   /api/signatures/callback                        -> provider webhook     (§6.5)
 
-# Signable documents (resource SIGNABLE_DOCUMENTS) — generalizes contracts (§4.8)
+# Signable documents (resource SIGNABLE_DOCUMENTS) — FOR-05-08, includes the contract (§4.8)
 GET    /api/signable-documents?projectId={id}          -> list SignableDocuments for a project
 POST   /api/signable-documents                          -> create {projectId, documentTypeId, ...} (DRAFT)
 POST   /api/signable-documents/{id}/request-signatures  -> {method, signers[]} (method ∈ SignatureMethod: PRINT|ONLINE|PODPIS_GOV_PL|TABLET_INITIALS) -> PENDING_SIGNATURES
@@ -1192,14 +1032,20 @@ POST   /api/signable-documents/{id}/sign-tablet         -> multipart: captured i
 POST   /api/signable-documents/{id}/media               -> multipart: upload scan of wet-ink signed doc -> DocumentMedia (PRINT)
 GET    /api/signable-documents/{id}/document            -> the document (range download)
 
-# Team (resource PROJECT_TEAM)
+# Team (resource PROJECT_MEMBERS) — FOR-05-09
 GET/POST/PUT/DELETE /api/project-members?projectId={id}
 
-# Work reporting (resource WORK_REPORTS) — enriched (§4.4, §6.8)
+# Planning Gantt (resource WORK_SCHEDULE) — FOR-05-10
+GET    /api/project-schedules?projectId={id}            -> ScheduleView
+PUT    /api/project-schedules/bars?projectId={id}       -> save bars (startDay, durationDays) -> ScheduleView
+POST   /api/project-schedules/auto-create?projectId={id} -> auto-create bars from the estimate -> ScheduleView
+GET    /api/project-schedules/readiness?projectId={id}  -> gate `schedule`
+
+# Work reporting (resource WORK_REPORTS) — execution stage, owned by FOR-06 (§4.4)
 POST   /api/work-reports                               -> {worker, workItem, performedFrom,
                                                             performedTo, rooms:[{roomId,quantity}]}
-                                                          server resolves client+worker prices,
-                                                          computes totals/revenue/cost/margin
+                                                          revenue from the frozen estimate line
+                                                          price + signed amendment deltas
 PUT    /api/work-reports/{id}                          -> edit interval / rooms[] (recompute)
 POST   /api/work-reports/{id}/approve                  -> FOREMAN: sets approvedBy + status=APPROVED
 GET    /api/estimates/{id}/progress                    -> per-line + weekly rollup
@@ -1216,17 +1062,8 @@ POST   /api/projects/{id}/media                        -> multipart upload -> ob
 GET    /api/project-media/{id}/download                -> streamed range download
 DELETE /api/project-media/{id}
 
-# Temporal project pricing (resource PROJECT_PRICING) — §4.5/§4.6
-GET    /api/projects/{id}/service-prices?workItemId=&date=  -> resolved/effective client price (§6.6)
-GET    /api/projects/{id}/service-prices/history?workItemId= -> all intervals for a work item
-POST   /api/projects/{id}/service-prices               -> add temporal interval (from amendment) (§4.5)
-
-# Price history read model (resource PRICE_HISTORY, ADMIN + FINANCIER only) — §5a/§6.9
-GET    /api/price-history?scope=CATALOG|PROJECT|WORKER&workItemId=&projectId=&workerId=&from=&to=
-                                                       -> who/when/old→new for price fields
-
-# Readiness
-GET    /api/projects/{id}/readiness                    -> ReadinessDto         (§6.3)
+# Readiness (aggregated) — FOR-05-11
+GET    /api/projects/{id}/readiness                    -> ReadinessDto {gates[{key, state DONE|PARTIAL|BLOCKED}], headlinePct} (§6.3)
 
 # Projects-list computed metrics (foreman multi-project overview) — §8.6
 GET    /api/projects?...&withMetrics=true              -> projects list, each row carrying a
@@ -1273,23 +1110,25 @@ existing ones. The tab host contract keeps sibling specs pluggable:
 // event (project.status -> ACTIVE).
 export type WorkspaceStage = 'design' | 'execution' | 'common'
 
+// Execution-stage tab keys (procurement, primary documents, plan/actual Gantt, payroll,
+// amendment signing, ...) are declared and owned by FOR-06 (project in progress).
+export type ExecutionTabKey = string /* narrowed by FOR-06 */
+
 export type WorkspaceTabKey =
   // common / always
-  | 'overview'
-  // design stage (DRAFT | READY_TO_OFFER | OFFERED | APPROVED)
-  | 'readiness'          // Readiness tracker (готовность к подписанию)
-  | 'pricing'            // Pricing/rates — Cennik / Расценки (ProjectServicePrice OFFER_BASE + in-scope catalog prices)
-  | 'rooms'              // Rooms — Pomieszczenia / Комнаты
-  | 'estimate'           // Estimate — Kosztorys / Смета (per-room work volumes + work types)
-  | 'estimationGantt'    // Project estimation Gantt — Harmonogram / Эстимация (planning-only; embeds FOR-06)
-  | 'contractSigning'    // Contract signing form — Podpisanie umowy / Подписание договора
-  // execution stage (ACTIVE | COMPLETED)
-  | 'procurement'        // Procurement — Zakupy / Закупки (embeds FOR-07)
-  | 'sourceDocuments'    // Source/primary documents — Dokumenty źródłowe / Первичные документы (embeds FOR-10)
-  | 'planActualGantt'    // Plan/actual Gantt + overlay + % completion — Plan/wykonanie / План-факт
-  | 'payroll'            // Worker payroll (this project) — Rozliczenie wynagrodzeń / Расчёт ЗП (embeds FOR-11)
-  | 'amendmentSigning'   // Amendment signing form — Aneksy / Подписание амендментов
-  | 'priceHistory'       // Price history — Historia cen / История цен (§5a view surfaced in-project)
+  | 'overview'           // Overview — Przegląd / Обзор (FOR-05-01)
+  // design stage (DRAFT | READY_TO_OFFER | OFFERED | APPROVED), owned by FOR-05
+  | 'readiness'          // Readiness checklist — Gotowość / Готовность (FOR-05-11)
+  | 'pricing'            // Offer tab — Oferta / uzgodnienie (packages, discounts/rebates, send + approval; FOR-05-07)
+  | 'rooms'              // Rooms — Pomieszczenia / Комнаты (FOR-05-02)
+  | 'estimate'           // Estimate — Kosztorys / Смета (works × rooms + BoM; FOR-05-03/04/05)
+  | 'materials'          // Materials — Materiały / Материалы (materials × rooms, reserves; FOR-05-05b)
+  | 'margins'            // Margins — Marża / Маржа (cost by WorkerType tiers + margins; FOR-05-06)
+  | 'scheduleDesign'     // Planning Gantt — Harmonogram / График (FOR-05-10)
+  | 'documentSigning'    // Document signing — Podpisanie dokumentów / Подписание документов (incl. contract; FOR-05-08)
+  | 'team'               // Team — Zespół / Команда (FOR-05-09)
+  // execution stage (ACTIVE | COMPLETED): keys owned and defined by FOR-06
+  | ExecutionTabKey
 
 export interface WorkspaceTab {
   key: WorkspaceTabKey
@@ -1297,7 +1136,7 @@ export interface WorkspaceTab {
   labelKey: string                       // i18n key (pl/ru)
   icon: string                           // lucide icon name
   requiredPermission?: { resource: string; operation: string }
-  owner: 'FOR-05' | 'FOR-06' | 'FOR-07' | 'FOR-10' | 'FOR-11'
+  owner: 'FOR-05' | 'FOR-06'             // execution tabs (and their integrations) are owned by FOR-06
   Component: React.LazyExoticComponent<React.FC<ProjectTabProps>>
 }
 
@@ -1398,19 +1237,17 @@ ACTIVE`). The design/execution tab sets and their owners are:
 
 | Tab (key) | Stage | Label PL / RU | Owner |
 |-----------|-------|---------------|-------|
-| Overview (`overview`) | common | Przegląd / Обзор | FOR-05 |
-| Readiness (`readiness`) | design | Gotowość / Готовность | FOR-05 |
-| Pricing/rates (`pricing`) | design | Cennik / Расценки | FOR-05 |
-| Rooms (`rooms`) | design | Pomieszczenia / Комнаты | FOR-05 |
-| Estimate (`estimate`) | design | Kosztorys / Смета | FOR-05 |
-| Estimation Gantt (`estimationGantt`) | design | Harmonogram / Эстимация | FOR-06 (planning-only, embedded) |
-| Contract signing (`contractSigning`) | design | Podpisanie umowy / Подписание договора | FOR-05 |
-| Procurement (`procurement`) | execution | Zakupy / Закупки | FOR-07 (embedded) |
-| Source documents (`sourceDocuments`) | execution | Dokumenty źródłowe / Первичные документы | FOR-10 (embedded) |
-| Plan/actual Gantt (`planActualGantt`) | execution | Plan/wykonanie / План-факт | FOR-06 schedule + FOR-05 progress |
-| Payroll (`payroll`) | execution | Rozliczenie wynagrodzeń / Расчёт ЗП | FOR-11 (embedded) |
-| Amendment signing (`amendmentSigning`) | execution | Aneksy / Подписание амендментов | FOR-05 |
-| Price history (`priceHistory`) | execution | Historia cen / История цен | FOR-05 (§5a view in-project) |
+| Overview (`overview`) | common | Przegląd / Обзор | FOR-05-01 |
+| Readiness (`readiness`) | design | Gotowość / Готовность | FOR-05-11 (shell in FOR-05-01) |
+| Offer (`pricing`) | design | Oferta / uzgodnienie / Оффер / согласование | FOR-05-07 |
+| Rooms (`rooms`) | design | Pomieszczenia / Комнаты | FOR-05-02 |
+| Estimate (`estimate`) | design | Kosztorys / Смета | FOR-05-03, 04, 05 |
+| Materials (`materials`) | design | Materiały / Материалы | FOR-05-05b |
+| Margins (`margins`) | design | Marża / Маржа | FOR-05-06 |
+| Planning Gantt (`scheduleDesign`) | design | Harmonogram / График | FOR-05-10 |
+| Document signing (`documentSigning`) | design | Podpisanie dokumentów / Подписание документов | FOR-05-08 |
+| Team (`team`) | design | Zespół / Команда | FOR-05-09 |
+| Execution-stage tabs (procurement, primary documents, plan/actual Gantt, payroll, amendment signing) | execution | defined by FOR-06 | FOR-06 |
 
 ### 8. UI Component Breakdown (Low-Level, Frontend)
 
@@ -1426,26 +1263,24 @@ src/features/project-workspace/
     ProjectWorkspacePage.tsx        // route /projects/:projectId; sets working project on open (#4); renders header + tab host
   components/
     WorkspaceHeader.tsx             // project name, status pill, mode (design/execution); Overview hosts explicit "Edit" affordance for project fields (#4)
-    ReadinessWidget.tsx             // donut + gate checklist (§1.4, §6.3); sticky header (Readiness tab in design stage)
+    ReadinessWidget.tsx             // donut + gate checklist (§1.4, §6.3); sticky header; shell in FOR-05-01, switched to the aggregated endpoint by FOR-05-11
     WorkspaceTabs.tsx               // responsive stage-filtered tab strip; desktop=strip, mobile=segmented+overflow (§1.2); tabs from resolveWorkspaceTabs (§6.10)
     tabs/
-      OverviewTab.tsx               // common tab: KPIs + charts; project-level media area (ProjectMedia); explicit project-fields "Edit" affordance (#4)
-      PricingTab.tsx                // design: Cennik/Расценки — ProjectServicePrice OFFER_BASE editing + in-scope catalog prices
-      RoomsTab.tsx                  // design: reuses features/rooms; plan editor + room-level media area (RoomMedia)
-      EstimateTab.tsx               // design: per-room work volumes + work types; hybrid (pivot) rooms×work-types matrix (Excel-like) + switchable groupBy view (WORK_TYPE|ROOM|CATEGORY); DataTable; BoM behind expander (§8.3)
-      EstimationGanttTab.tsx        // design: planning-only Gantt of estimated works (embeds FOR-06 engine)
-      ContractSigningTab.tsx        // design: contract doc, signer list, signature status (§11)
-      ProcurementTab.tsx            // execution: embeds FOR-07 (placeholder if absent)
-      SourceDocumentsTab.tsx        // execution: embeds FOR-10 primary documents (FOR-05 hosts, FOR-10 owns data)
-      PlanActualGanttTab.tsx        // execution: plan vs actual overlay + per-work % complete (FOR-06 schedule + FOR-05 WorkReport progress)
-      PayrollTab.tsx                // execution: embeds FOR-11 payroll (FOR-05 hosts, FOR-11 owns computation; reads WorkReport cost side §4.4/§4.7)
-      AmendmentSigningTab.tsx       // execution: amendment (aneks) signing form (§11)
-      PriceHistoryView.tsx          // execution: ADMIN/FINANCIER price-history timeline/diff (CATALOG·PROJECT·WORKER); reuses FOR-02-06a audit comparison pattern (§5a)
+      OverviewTab.tsx               // common (01): KPIs + charts; project-level media area (ProjectMedia); explicit project-fields "Edit" affordance (#4)
+      ReadinessTab.tsx              // design (11): gate checklist, each gate links to its tab
+      PricingTab.tsx                // design (07): Offer tab "Oferta / uzgodnienie" — packages, discounts/rebates, send + approval
+      RoomsTab.tsx                  // design (02): reuses features/rooms; dimensions matrix, geometry editors + room-level media area (RoomMedia)
+      EstimateTab.tsx               // design (03/04/05): per-room work volumes + work types; hybrid (pivot) rooms×work-types matrix (Excel-like) + switchable groupBy view (WORK_TYPE|ROOM|CATEGORY); DataTable; BoM behind expander (§8.3)
+      MaterialsTab.tsx              // design (05b): materials × rooms projection, reserves
+      MarginsTab.tsx                // design (06): offer price → cost by WorkerType tiers → margin per work type
+      ScheduleDesignTab.tsx         // design (10): planning Gantt by estimate work category (read-only once ACTIVE)
+      DocumentSigningTab.tsx        // design (08): signable documents incl. the contract, signer list, signature status (§4.8, §11)
+      TeamTab.tsx                   // design (09): ProjectMember assignment
+      # execution-stage tab components are owned by FOR-06
     MediaArea.tsx                   // shared upload/list/download/delete used by Overview (ProjectMedia) + Rooms (RoomMedia)
     WorkPickerDialog.tsx            // reuses work-catalog data; single + multi select (bulk)
     TemplatePickerDialog.tsx        // pick template + toggle exclusions
     EstimateLineDrawer.tsx          // progressive-disclosure detail: rooms, BoM, margins (§1.3)
-    WorkReportDrawer.tsx            // per-room volume split, interval dates, resolved revenue/cost/margin, approve action
   api/  schemas/  types/  __tests__/
 
 # app shell (not under project-workspace): always-visible working-project button (§8.1, product decision #2)
@@ -1510,12 +1345,6 @@ global views; the workspace tabs are the *in-project* views of the same data. `N
 stays as-is for global entries; the tab set is defined by `WORKSPACE_TABS` (filtered by the
 same `usePermission` predicate already used for nav).
 
-The **PriceHistoryView** (§5a) is not a per-project workspace tab; it is an
-admin/financier surface reached from a global nav entry (guarded by `PRICE_HISTORY:READ`).
-It renders a timeline/diff of price changes per scope (CATALOG · PROJECT · WORKER) and
-**reuses the existing audit comparison view pattern from FOR-02-06a** (old→new diff rows),
-fed by `GET /api/price-history`.
-
 ### 8.3 Estimate hybrid table + switchable groupings (design stage) — client-call decision
 
 In the **design stage**, the Estimate/works view must support a **hybrid (pivot-like) table**
@@ -1536,30 +1365,18 @@ the same data can be scanned differently. This is a **pure view concern over exi
   segmented toggle in the Estimate tab header; the selection is UI-only (no persistence
   contract required).
 
-### 8.4 Plan/actual tab — full work-report list (execution stage) — client-call decision
+### 8.4 Plan/actual tab — full work-report list (execution stage, owned by FOR-06) — client-call decision
 
-The **execution-stage Plan/Actual tab** (`planActualGantt`, §6.10/§7.3) must, **alongside the
-plan/actual Gantt overlay**, surface a **filterable list of ALL work reports** for the project.
-It renders `WorkReport` + `WorkReportRoom` rows (§4.4) as a DataTable with columns:
-
-| Column | Source | PL / RU |
-|--------|--------|---------|
-| Worker | `WorkReport.worker` | Pracownik / Работник |
-| Work type | `WorkReport.workItem` | Rodzaj prac / Вид работ |
-| Rooms | `WorkReportRoom.room[]` | Pomieszczenia / Помещения |
-| Volume (quantity) | `WorkReport.totalQuantity` (= Σ `WorkReportRoom.quantity`) | Ilość / Объём |
-| Date | `WorkReport.performedFrom`/`performedTo` | Data / Дата |
-
-The list is filterable (by worker, work type, room, date range via the existing DataTable +
-FOR-04-01 reference filters) and sits next to the Gantt so a foreman/manager can move between
-the schedule view and the raw report rows without leaving the tab.
+Owned by **FOR-06**. The client-call decision is recorded here for continuity: the
+execution-stage plan/actual tab shows, alongside the plan/actual Gantt overlay (built on the
+FOR-05-10 planning Gantt), a filterable list of all `WorkReport` rows (worker, work type,
+rooms, volume, date — §4.4). Its columns, filters, and labels are specified in FOR-06.
 
 ### 8.5 Role-specific views (worker earnings; foreman metrics) — client-call decision
 
-- **Worker view.** A worker sees their **full assigned work scope** and **how much they can
-  earn**: the reporting/payroll UI surfaces, for the signed-in worker, the sum of their
-  `WorkReport` **cost side** — `costValue` resolved from their `WorkerServiceRate` payout
-  (§4.4/§4.7, "how much I can earn" = Σ `costValue`/payout over their assigned/completed work).
+- **Worker view (execution stage, FOR-06 with FOR-11).** A worker sees their **full assigned
+  work scope** and **how much they can earn** = Σ `WorkReport.costValue` over their
+  assigned/completed work, using the worker cost rates owned by FOR-10/FOR-11 (§4.4/§4.7).
   Label: **Twój zakres i zarobek / Твой объём и заработок**. (The revenue side and margin stay
   manager/finance-facing; the worker sees their own payout.)
 - **Foreman view.** There is **no separate foreman dashboard**; a foreman's cross-project
@@ -1602,70 +1419,19 @@ rating backlog item (§14) is delivered. The columns render on the existing proj
 | Signature integrity mismatch on callback | reject signature, keep contract PENDING | notify manager; regenerate document |
 | Media upload exceeds size / bad type (room or project media) | 413 / 415 | client validates before upload |
 | Sibling tab (FOR-06/07) not yet deployed | tab renders "not configured" placeholder | no error; graceful degrade |
-| Work reported for a date with no effective client price | 422 `NO_EFFECTIVE_PRICE` (resolveClientPrice found 0/‑ intervals, §6.6) | ensure OFFER_BASE seeded at signing; UI blocks report until priced |
-| Work reported for a date with no worker rate | report accepted; `workerUnitPrice=0`, `costValue=0` (rate owned downstream, §4.7) | FOR-10/FOR-11 backfill rate; margin recomputes |
-| Attempt to edit a frozen `OfferPriceSnapshot` unit price | 409 `SNAPSHOT_IMMUTABLE` (Property 7) | change must go through an amendment (new interval) |
-| New `ProjectServicePrice` interval overlaps an existing one | 409 `PRICE_INTERVAL_OVERLAP` (Property 8) | server closes prior open interval automatically on amendment approval |
-| Non-ADMIN/FINANCIER requests `/api/price-history` | 403 (PRICE_HISTORY:READ required, §5a) | hide the view for other roles |
+| Planning-Gantt write on a project in a locked status (from `ACTIVE`) | 409 `error.schedule.locked` (FOR-05-10) | UI renders the Gantt read-only |
+| Readiness gate whose resource the caller cannot READ | gate omitted from the aggregated response and the headline % (FOR-05-11) | no error; the widget shows only permitted gates |
 
 ---
 
-## 10. Clickable Prototype Plan (hardcoded, on the existing React frontend)
+## 10. Static demo prototype
 
-Goal: a **fully clickable demo** of the finished project page to show the client, built on
-the *existing* frontend, reusing existing menu items and reference pages, with **hardcoded
-fixtures** (no backend required). Actual code is written during task execution; this section
-is the plan.
-
-### 10.1 Route & entry
-
-- New route `**/projects/:projectId/preview**` (or a feature flag `?preview=1` on
-  `/projects/:projectId`) mounting `ProjectWorkspacePage` in **prototype mode**.
-- Reachable from the existing **Projects** menu item → open a seeded demo project row
-  (e.g. "Mieszkanie ul. Przykładowa 12"). No new top-level menu entry needed.
-
-### 10.2 Tab layout (as shipped, but fixture-fed)
-
-Grouped into the 4 phases from §1.2:
-
-- **Setup:** Overview · Rooms · Works · Estimate
-- **Offer:** Offer (packages START/COMFORT/PRESTIGE + discount demo)
-- **Contract:** Contract (mock signer list, "sign with QES/Trusted Profile" mock flow)
-- **Execution:** Team · Schedule · Procurement · Reporting
-
-Header shows the **ReadinessWidget** with a hardcoded 60% and a gate checklist.
-
-### 10.3 Hardcoded fixtures
-
-A `src/features/project-workspace/fixtures/` module derived directly from the Excel CSV:
-
-- One demo project + ~10 rooms (przedpokój, hol, kuchnia, salon, biuro, master, 2 pokoje,
-  2 łazienki) with areas.
-- ~20 estimate lines drawn from real categories 1–4 (PRACE WSTĘPNE, KONSTRUKCJE I GK,
-  HYDRAULIKA…), each with per-room quantities, real unit prices from the CSV, a BoM (e.g.
-  "Folia ochronna", "Tynk", consumption `NA JM`), and package values for START/COMFORT/
-  PRESTIGE.
-- Precomputed totals, margins (plan/fact), and a weekly progress series for the charts.
-- Mock offer (SENT), mock contract (PENDING_SIGNATURES) with two signers.
-
-Fixtures are plain TS objects typed with the real DTO types, so the same components render
-them and later swap to live API calls with no structural change.
-
-### 10.4 Reuse for the prototype
-
-- **Tables/cards/charts:** DataTable (desktop) + card fallback (mobile) + a lightweight
-  chart (readiness donut, cost bars, progress line).
-- **Existing pages as tabs:** Rooms tab embeds the real `features/rooms` list against
-  fixtures; Works picker reuses `features/work-catalog`; Offer reuses `features/offer-packages`;
-  Procurement embeds the existing `/deliveries` view.
-- **Layout/nav:** AppShell, TopBar, BottomNav unchanged.
-
-### 10.5 Prototype scope guardrails
-
-Read-only-ish: interactions that change data are simulated in local component state
-(add/exclude a work, pick a package, apply a discount, advance a signature) so the demo
-*feels* live without a backend. No new resources, no migrations. Clearly flagged "PREVIEW"
-in the header to avoid confusion with real data.
+The client demo is a static HTML page next to this document,
+**`prototype/project-workspace.html`**, which opens in a browser without a build. It shows the
+UX principles of §1 (single workspace with tabs, readiness widget in the header, dense tables
+on desktop / cards on mobile, progressive disclosure of estimate line details, START /
+COMFORT / PRESTIGE packages, mock signing flow) on data hardcoded from the Excel offer. It is
+a demo artifact only: no child spec, no fixtures module in the React app, no backend.
 
 ---
 
@@ -1722,7 +1488,7 @@ cited sources for authoritative text.*
   podpis zaufany**, §11.1), `PRINT` (print → wet-ink → upload scan), and `TABLET_INITIALS`
   (on-the-spot handwritten initial / **parafka** captured on a tablet). `PRINT` and
   `TABLET_INITIALS` produce a stored `DocumentMedia` evidence artifact rather than a
-  provider-sealed PDF (§4.8, Property 16).
+  provider-sealed PDF (§4.8, Property 12).
 - **Integrity:** store `contentHash` of the exact document sent for signing; the callback
   (§6.5) verifies the returned evidence matches the hash before marking `SIGNED`. Store the
   sealed document + evidence in object storage; keep only metadata + hash in the DB.
@@ -1761,16 +1527,11 @@ sequenceDiagram
   values, readiness gate states — including rounding and empty/edge cases.
 - **Property-based tests** (jqwik, per repo convention) for the invariants: e.g.
   `totalNet == Σ line.valueNet + Σ approved deltas` for any generated set of lines/quantities;
-  `bom.quantity == consumption × lineQty`; readiness headline ∈ [0,100]. Also cover the new
-  properties: frozen offer-line price immutability (Property 7); `ProjectServicePrice`
-  intervals non-overlapping and contiguous from OFFER_BASE (Property 8) and
-  `resolveClientPrice`/`resolveWorkerRate` containment (Property 9); WorkReport
-  revenue/cost/margin derivations at the temporally-resolved interval prices (Properties
-  10–12) — including the May/June plastering example (§4.5); and price-history being a pure
-  read projection reachable only by ADMIN/FINANCIER (Property 13). Also cover the
-  signable-document signed-iff-all-signatures-signed rule with method-specific evidence
-  requirements (Property 16, §4.8) and multi-client membership at any lifecycle stage
-  (Property 17, §4.2/§4.3).
+  `bom.quantity == consumption × lineQty`; readiness headline ∈ [0,100]. Also cover the stage
+  partition and the stage/ABAC tab resolver (Properties 10–11, §6.10), the signable-document
+  signed-iff-all-signatures-signed rule with method-specific evidence requirements
+  (Property 12, §4.8), and multi-client membership at any lifecycle stage (Property 13,
+  §4.2/§4.3). The WorkReport derivations (Properties 7–9) are tested in FOR-06.
 - **Integration tests** for the signing state machine (§6.5), scoped to affected classes only
   per the workspace test-execution standard (`--tests` filters, results read from the JUnit
   XML), never the full ~20-min suite.
@@ -1782,12 +1543,30 @@ sequenceDiagram
 
 ---
 
-## 13. Proposed Child-Spec Breakdown (for later splitting)
+## 13. Child-Spec Breakdown
 
-This parent spec should be split into the following child sub-specs. Each child gets its own
-`requirements.md` / `design.md` / `tasks.md` / `test-cases.md`, seeds its ABAC resource, and
-(if project-scoped) implements `getProjectIdPath()`.
+FOR-05 is split into the following child specs (design stage only; everything after the
+contract is signed is FOR-06). Each child has its own `requirements.md` / `design.md` /
+`tasks.md` / `test-cases.md`, seeds its ABAC resource, and (if project-scoped) implements
+`getProjectIdPath()`.
 
+| # | Child spec | Type | Scope | Depends on |
+|---|-----------|------|-------|-----------|
+| 01 | `FOR-05-01-workspace-shell` | frontend | `/projects/:projectId` route, tab host, phases, `ReadinessWidget` shell, responsive tab strip; working-project `localStorage` state + `useWorkingProject()` (§4.3b); always-visible `WorkingProjectButton` (§8.1); projects-list row-click → workspace override (§8.2); stage-dependent tab resolver `resolveWorkspaceTabs` (§6.10) | FOR-04-13 (Project) |
+| 02 | `FOR-05-02-rooms-dimensions` | full-stack | Rooms tab: interactive "dimensions × rooms" matrix, inline editing, bulk save, geometry editors; editable only in `DRAFT`; readiness gates `rooms` / `dimensions` | FOR-04-13/14 (Project/Room) |
+| 03 | `FOR-05-03-estimate-core` | backend | `Estimate`, `EstimateLine`, `EstimateLineRoomQty`, recompute (§6.1), frozen `EstimateLine.unitPrice` (§4.3a), ABAC `ESTIMATE` | FOR-04-11/12, 01 |
+| 04 | `FOR-05-04-estimate-packages-changes` | backend (migration) | Single work price (no per-package prices), formula engine for quantities, package zł/m² | 03 |
+| 04-UI | `FOR-05-04-UI-estimate-packages-changes` | frontend | Estimate UI support for the single work price and package zł/m² | 04 |
+| 05 | `FOR-05-05-bill-of-materials` | full-stack | Estimate tab (Kosztorys): "works × rooms" matrix, work assignment, `MaterialRequirement` from consumption norms, BoM aggregation (§6.4), ABAC `MATERIALS` | 03, 04 |
+| 05b | `FOR-05-05b-list-of-materials` | full-stack | Materials tab: "materials × rooms" projection over the estimate, material reserves | 05 |
+| 06 | `FOR-05-06-packages-margins` | full-stack | Cost + Margins tab: `WorkerType` tiers (CRUD + ABAC `WORKER_TYPES`, rate as % of the offer price), materialized material cost, margin matrix per work type (labour and each material branch separately) | 03, 04 |
+| 07 | `FOR-05-07-offer-approval` | full-stack | Offer tab (`pricing`): `Offer`, `OfferDiscount` (discounts/rebates), send/approve, ABAC `OFFERS` (client side shared with FOR-09) | 06 |
+| 08 | `FOR-05-08-document-signing` | full-stack | Document signing engine incl. the contract (§4.8, §6.5, §11): `SignableDocument` + types, `DocumentSignature` (four `SignatureMethod`s), `DocumentMedia`, state machine, ABAC `SIGNABLE_DOCUMENTS`; templates in `docs/templates` | 07 |
+| 09 | `FOR-05-09-team-selection` | full-stack | Team tab: `ProjectMember` assignment, reuses ABAC `PROJECT_MEMBERS`; readiness gate `team` | 01 |
+| 10 | `FOR-05-10-project-gantt` | full-stack | Planning Gantt in tab `scheduleDesign`: one bar per estimate work category (`startDay`, `durationDays` from `Project.startDate` or day 1), auto-create, free drag, tables `project_schedules` / `project_schedule_bars`, ABAC `WORK_SCHEDULE`, readiness gate `schedule`; read-only from `ACTIVE`, baseline for FOR-06 | 03, 09 |
+| 11 | `FOR-05-11-project-readiness` | full-stack | Last FOR-05 spec: aggregated readiness endpoint combining the gates of 02, 03/05, 07, 08, 09, 10 into `{gates[{key, state DONE\|PARTIAL\|BLOCKED}], headlinePct}` (§6.3); the `readiness` tab becomes a real checklist linking to each tab; `ReadinessWidget` switches to the aggregated endpoint | 02, 05, 07, 08, 09, 10 |
+
+<!-- superseded rows below are removed -->
 | # | Child spec | Type | Scope | Depends on |
 |---|-----------|------|-------|-----------|
 | 01 | `FOR-05-01-workspace-shell` | frontend | `/projects/:projectId` route, tab host, ReadinessWidget, responsive tab strip; **working-project `localStorage` state + `useWorkingProject()`** (§4.3b); **always-visible `WorkingProjectButton`** (desktop under Dashboard, mobile top-bar/bottom-nav, §8.1); **projects-list row-click → workspace override** (§8.2); **stage-dependent tab resolver `resolveWorkspaceTabs`** (§6.10) | FOR-04-13 (Project) |

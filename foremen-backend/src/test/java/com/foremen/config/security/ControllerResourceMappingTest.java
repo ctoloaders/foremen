@@ -4,7 +4,9 @@ import com.foremen.controller.AuditController;
 import com.foremen.controller.AuthController;
 import com.foremen.controller.DisplayPreferencesController;
 import com.foremen.controller.OperationController;
+import com.foremen.controller.ProjectController;
 import com.foremen.controller.ProjectMemberController;
+import com.foremen.controller.ProjectReadinessController;
 import com.foremen.controller.ProjectScheduleController;
 import com.foremen.controller.ResourceController;
 import com.foremen.controller.RoleController;
@@ -43,6 +45,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>{@code ResourceController} → RESOURCES (Requirement 9.4)</li>
  *   <li>{@code OperationController} → OPERATIONS (Requirement 9.5)</li>
  *   <li>{@code ProjectScheduleController} → WORK_SCHEDULE (FOR-05-10 Requirement 18.3)</li>
+ *   <li>{@code ProjectReadinessController} → PROJECTS (FOR-05-11 Requirement 12.4) — reuses the
+ *       existing {@code PROJECTS} resource shared with {@code ProjectController}; no new resource
+ *       row is seeded (Requirement 2.2, Decision D7)</li>
  * </ul>
  *
  * <p>{@code DisplayPreferencesController} (FOR-03-08 Requirement 9.7) and {@code AuthController}
@@ -130,6 +135,43 @@ class ControllerResourceMappingTest {
         @DisplayName("ProjectScheduleController → WORK_SCHEDULE")
         void projectScheduleControllerIsWorkSchedule() {
             assertResource(ProjectScheduleController.class, "WORK_SCHEDULE");
+        }
+
+        // --- FOR-05-11 Requirement 12.4: the aggregated readiness controller joins the guarded set ---
+        @Test
+        @DisplayName("ProjectReadinessController → PROJECTS")
+        void projectReadinessControllerIsProjects() {
+            assertResource(ProjectReadinessController.class, "PROJECTS");
+        }
+
+        /**
+         * FOR-05-11 Requirement 12.4 / 2.2 (Decision D7): the aggregated readiness endpoint reuses the
+         * <em>existing</em> {@code PROJECTS} resource rather than minting a new ABAC resource. Asserting
+         * that {@link ProjectReadinessController} resolves to the exact same resource code as the
+         * pre-existing {@link ProjectController} proves — at the annotation/resolution level the
+         * interceptor enforces — that no new resource row is introduced for the readiness surface; the
+         * {@code PROJECTS} resource is seeded once by changeset {@code 041-seed-projects-resource.xml}
+         * and shared by both controllers.
+         */
+        @Test
+        @DisplayName("ProjectReadinessController reuses the PROJECTS resource shared with ProjectController — no new resource row")
+        void projectReadinessReusesProjectsResourceWithoutSeedingANewOne() {
+            PermissionResource readiness =
+                    ProjectReadinessController.class.getAnnotation(PermissionResource.class);
+            PermissionResource project =
+                    ProjectController.class.getAnnotation(PermissionResource.class);
+
+            assertThat(readiness)
+                    .as("ProjectReadinessController must carry a class-level @PermissionResource")
+                    .isNotNull();
+            assertThat(project)
+                    .as("ProjectController must carry a class-level @PermissionResource")
+                    .isNotNull();
+            assertThat(readiness.value())
+                    .as("the readiness aggregate must reuse the existing PROJECTS resource shared with "
+                            + "ProjectController, not seed a new one (Requirement 2.2, Decision D7)")
+                    .isEqualTo("PROJECTS")
+                    .isEqualTo(project.value());
         }
     }
 

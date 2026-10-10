@@ -37,3 +37,10 @@ foremen:
     ttl-hours: 72
   mail:
     invite-base-url: http://localhost:3000/auth/set-password
+  schedule:
+    # FOR-05-10 ScheduleProperties is @Validated (@NotNull, strictly-positive). The booted
+    # integration context wires ProjectScheduleService (and, via FOR-05-11, the
+    # ScheduleReadinessContributor), so this value must be present or context load fails fast.
+    # The test-classpath application.yml shadows the main one, so the main yml's default never
+    # applies here; mirror it explicitly.
+    daily-output-per-worker: 2000
