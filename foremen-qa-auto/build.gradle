@@ -209,6 +209,26 @@ tasks.register('featureTestForQaAuto08', Test) {
         showStandardStreams = true
     }
 }
+// Sub-sliced alias for the FOR-QA-AUTO-09 team-selection API slice (FOR-05-09). Pins the
+// '@detailed and @FOR-QA-AUTO-09' tag so the slice runs alone; -DQA_TAGS is only an override.
+tasks.register('featureTestForQaAuto09', Test) {
+    group = 'verification'
+    description = 'Runs the @detailed @FOR-QA-AUTO-09 team-selection API slice.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+
+    def tags = System.getProperty('QA_TAGS', System.getenv('QA_TAGS') ?: '@detailed and @FOR-QA-AUTO-09')
+    systemProperty 'cucumber.filter.tags', tags
+    systemProperty 'cucumber.execution.enabled', 'true'
+    systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
+
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
 // Downloads the Playwright browser binaries so a clean checkout can run the suite
 // after the documented setup step (Requirement 1.5). Uses Playwright's own CLI
 // entry point off the test classpath, so no extra tooling is required.
