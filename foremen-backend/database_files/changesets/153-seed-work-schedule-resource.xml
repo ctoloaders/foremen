@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-10 (R1.1, R1.2, R1.3, R1.4, R1.5; entity-creation-rules steps 1-2): seed the
+        project-scoped WORK_SCHEDULE ABAC resource (the planning Gantt / Harmonogram) and its
+        full role matrix per decision D13:
+          ADMIN     CRUD
+          MANAGER   CRUD
+          FOREMAN   READ + UPDATE
+          ESTIMATOR READ + UPDATE   (mirrors FOREMAN per changeset 136)
+          WORKER    READ
+          FINANCIER READ
+          CLIENT    READ
+
+        Idempotency (R1.5): the resource insert is guarded by onFail="MARK_RAN" on
+        resources.code = 'WORK_SCHEDULE'; every grant block is an INSERT ... SELECT ...
+        WHERE NOT EXISTS (the changeset 136 pattern), so a re-run against an already-seeded
+        database inserts nothing and changes nothing. Registered LAST in changelog.xml, after 152.
+    -->
+
+    <!-- changeSet 1: insert the WORK_SCHEDULE resource row (idempotent). -->
+    <changeSet id="153-seed-work-schedule-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'WORK_SCHEDULE'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="WORK_SCHEDULE"/>
+            <column name="name_ru" value="График работ"/>
+            <column name="name_pl" value="Harmonogram prac"/>
+            <column name="description_ru" value="Планировочный график работ проекта на стадии проектирования"/>
+            <column name="description_pl" value="Planistyczny harmonogram prac projektu na etapie projektowania"/>
+        </insert>
+    </changeSet>
+
+    <!-- changeSet 2: ADMIN + MANAGER -> CREATE, READ, UPDATE, DELETE.
+         Each role_resources + role_resource_operations insert is self-guarded by NOT EXISTS. -->
+    <changeSet id="153-seed-work-schedule-grants-admin-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'WORK_SCHEDULE'</sqlCheck>
+        </preConditions>
+
+        <!-- ADMIN x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ADMIN' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- ADMIN x WORK_SCHEDULE operations: CREATE + READ + UPDATE + DELETE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'MANAGER' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- MANAGER x WORK_SCHEDULE operations: CREATE + READ + UPDATE + DELETE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+    <!-- changeSet 3: FOREMAN + ESTIMATOR -> READ, UPDATE only.
+         Each role_resources + role_resource_operations insert is self-guarded by NOT EXISTS. -->
+    <changeSet id="153-seed-work-schedule-grants-foreman-estimator" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'WORK_SCHEDULE'</sqlCheck>
+        </preConditions>
+
+        <!-- FOREMAN x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FOREMAN' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- FOREMAN x WORK_SCHEDULE operations: READ + UPDATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE')
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- ESTIMATOR x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ESTIMATOR' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- ESTIMATOR x WORK_SCHEDULE operations: READ + UPDATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE')
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+    <!-- changeSet 4: WORKER + FINANCIER + CLIENT -> READ only.
+         Each role_resources + role_resource_operations insert is self-guarded by NOT EXISTS. -->
+    <changeSet id="153-seed-work-schedule-grants-read-only" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'WORK_SCHEDULE'</sqlCheck>
+        </preConditions>
+
+        <!-- WORKER x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'WORKER' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- WORKER x WORK_SCHEDULE operations: READ. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FINANCIER x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FINANCIER' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- FINANCIER x WORK_SCHEDULE operations: READ. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- CLIENT x WORK_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'CLIENT' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'CLIENT' AND res2.code = 'WORK_SCHEDULE'
+              );
+        </sql>
+
+        <!-- CLIENT x WORK_SCHEDULE operations: READ. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'CLIENT' AND res.code = 'WORK_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

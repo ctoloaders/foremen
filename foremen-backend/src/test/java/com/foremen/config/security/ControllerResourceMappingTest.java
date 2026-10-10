@@ -5,6 +5,7 @@ import com.foremen.controller.AuthController;
 import com.foremen.controller.DisplayPreferencesController;
 import com.foremen.controller.OperationController;
 import com.foremen.controller.ProjectMemberController;
+import com.foremen.controller.ProjectScheduleController;
 import com.foremen.controller.ResourceController;
 import com.foremen.controller.RoleController;
 import com.foremen.controller.UserController;
@@ -41,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>{@code AuditController} → AUDIT (Requirement 9.3)</li>
  *   <li>{@code ResourceController} → RESOURCES (Requirement 9.4)</li>
  *   <li>{@code OperationController} → OPERATIONS (Requirement 9.5)</li>
+ *   <li>{@code ProjectScheduleController} → WORK_SCHEDULE (FOR-05-10 Requirement 18.3)</li>
  * </ul>
  *
  * <p>{@code DisplayPreferencesController} (FOR-03-08 Requirement 9.7) and {@code AuthController}
@@ -121,6 +123,13 @@ class ControllerResourceMappingTest {
         @DisplayName("OperationController → OPERATIONS")
         void operationControllerIsOperations() {
             assertResource(OperationController.class, "OPERATIONS");
+        }
+
+        // --- FOR-05-10 Requirement 18.3: the planning-Gantt controller joins the guarded set ---
+        @Test
+        @DisplayName("ProjectScheduleController → WORK_SCHEDULE")
+        void projectScheduleControllerIsWorkSchedule() {
+            assertResource(ProjectScheduleController.class, "WORK_SCHEDULE");
         }
     }
 

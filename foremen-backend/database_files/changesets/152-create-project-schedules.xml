@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-10 (Requirements 6.1, 6.2): the Planning Gantt (Harmonogram) persistence —
+        two tables, one aggregate (design §Data Models).
+
+        project_schedules — the per-project schedule root (R6.1). One row per project:
+          - project_id : owner FK to projects, NOT NULL and UNIQUE — at most one schedule
+                         per project. ON DELETE CASCADE so deleting a project removes its
+                         schedule (and, transitively, its bars). The UNIQUE constraint makes
+                         a concurrent first write of two schedules for one project fail; the
+                         loser is mapped to a 409 conflict at the service layer (R6.4, R11.3).
+          - version    : BIGINT NOT NULL DEFAULT 0; the JPA @Version optimistic-lock counter,
+                         bumped exactly once per committed write (R11). No rate column — the
+                         Daily_Output_Rate is internal config only and is never persisted,
+                         returned, or shown (R9.3).
+        Plus the four BaseEntity audit columns.
+
+        project_schedule_bars — at most one planned bar per (schedule, work category) (R6.2):
+          - schedule_id      : owner FK to project_schedules, NOT NULL; ON DELETE CASCADE so a
+                               schedule's bars are discarded with it.
+          - work_category_id : FK to work_categories, NOT NULL. A category referenced by a bar
+                               cannot be hard-deleted while the bar exists; categories are
+                               normally deactivated, not deleted (design §Data Models).
+          - start_day        : INT NOT NULL, CHECK start_day >= 1 — 1-based calendar day from
+                               the anchor (R6.2).
+          - duration_days    : INT NOT NULL, CHECK duration_days >= 1 (R6.2, R7.2).
+          - UNIQUE (schedule_id, work_category_id) — one bar per row/category (R6.2).
+          - index on schedule_id — the view/readiness load of a schedule's bars.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: each createTable is guarded by NOT tableExists + MARK_RAN, so a re-run
+        against an already-migrated database makes no schema change (R6). Registered LAST in
+        changelog.xml, after 151.
+    -->
+
+    <changeSet id="152-create-project-schedules" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_schedules"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="project_schedules">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: one schedule per project; UNIQUE enforces the per-project aggregate. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ux_project_schedules_project"/>
+            </column>
+            <!-- JPA @Version optimistic-lock counter (R11); bumped once per committed write. -->
+            <column name="version" type="BIGINT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its schedule (and cascades to its bars). -->
+        <addForeignKeyConstraint
+            constraintName="fk_project_schedules_project"
+            baseTableName="project_schedules"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="152-create-project-schedule-bars" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_schedule_bars"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="project_schedule_bars">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: a schedule's bars are discarded with the schedule. -->
+            <column name="schedule_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The estimate work category this bar plans (R6.2). -->
+            <column name="work_category_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- 1-based calendar day from the anchor; CHECK start_day >= 1 added below (R6.2). -->
+            <column name="start_day" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Duration in calendar days; CHECK duration_days >= 1 added below (R6.2, R7.2). -->
+            <column name="duration_days" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a schedule removes its bars. -->
+        <addForeignKeyConstraint
+            constraintName="fk_project_schedule_bars_schedule"
+            baseTableName="project_schedule_bars"
+            baseColumnNames="schedule_id"
+            referencedTableName="project_schedules"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Category FK: a category in use by a bar cannot be hard-deleted while the bar exists. -->
+        <addForeignKeyConstraint
+            constraintName="fk_project_schedule_bars_work_category"
+            baseTableName="project_schedule_bars"
+            baseColumnNames="work_category_id"
+            referencedTableName="work_categories"
+            referencedColumnNames="id"/>
+
+        <!-- R6.2: at most one bar per (schedule, work category). -->
+        <addUniqueConstraint
+            tableName="project_schedule_bars"
+            columnNames="schedule_id, work_category_id"
+            constraintName="ux_project_schedule_bars_schedule_category"/>
+
+        <!-- The view/readiness load of a schedule's bars. -->
+        <createIndex tableName="project_schedule_bars" indexName="ix_project_schedule_bars_schedule">
+            <column name="schedule_id"/>
+        </createIndex>
+
+        <!-- R6.2 / R7.2: start_day and duration_days are both >= 1 at the DB level as well
+             as the service layer. -->
+        <sql>
+            ALTER TABLE project_schedule_bars
+                ADD CONSTRAINT ck_project_schedule_bars_start_day_min CHECK (start_day >= 1);
+            ALTER TABLE project_schedule_bars
+                ADD CONSTRAINT ck_project_schedule_bars_duration_days_min CHECK (duration_days >= 1);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE project_schedule_bars
+                    DROP CONSTRAINT IF EXISTS ck_project_schedule_bars_start_day_min;
+                ALTER TABLE project_schedule_bars
+                    DROP CONSTRAINT IF EXISTS ck_project_schedule_bars_duration_days_min;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

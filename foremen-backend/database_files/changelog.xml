@@ -517,4 +517,25 @@
          position preserving tag order). Guarded by NOT tableExists + MARK_RAN. Registered LAST,
          after 150. -->
     <include file="database_files/changesets/151-create-project-member-tags.xml"/>
+
+    <!-- FOR-05-10 (R6.1, R6.2): the Planning Gantt (Harmonogram) persistence — project_schedules
+         (per-project schedule root: project_id FK -> projects ON DELETE CASCADE + UNIQUE, version
+         BIGINT NOT NULL DEFAULT 0 as the JPA @Version counter, no rate column, BaseEntity audit
+         cols) and project_schedule_bars (at most one planned bar per (schedule, work_category):
+         schedule_id FK -> project_schedules ON DELETE CASCADE, work_category_id FK ->
+         work_categories, start_day/duration_days INT NOT NULL with CHECK >= 1, UNIQUE
+         (schedule_id, work_category_id), index on schedule_id, BaseEntity audit cols). Each table
+         guarded by NOT tableExists + MARK_RAN. Registered LAST, after 151. -->
+    <include file="database_files/changesets/152-create-project-schedules.xml"/>
+
+    <!-- FOR-05-10 (R1.1, R1.2, R1.3, R1.4, R1.5; entity-creation-rules steps 1-2): seed the
+         project-scoped WORK_SCHEDULE ABAC resource (the planning Gantt / Harmonogram, name_ru
+         "График работ", name_pl "Harmonogram prac") and its full role matrix per decision D13 —
+         ADMIN CRUD, MANAGER CRUD, FOREMAN READ+UPDATE, ESTIMATOR READ+UPDATE (mirrors FOREMAN),
+         WORKER READ, FINANCIER READ, CLIENT READ. The resource insert is guarded by
+         onFail="MARK_RAN" on resources.code = 'WORK_SCHEDULE'; every grant block is an
+         INSERT ... SELECT ... WHERE NOT EXISTS (the changeset 136 pattern), so a re-run against
+         an already-seeded database inserts nothing and changes nothing (R1.5). Registered LAST,
+         after 152. -->
+    <include file="database_files/changesets/153-seed-work-schedule-resource.xml"/>
 </databaseChangeLog>

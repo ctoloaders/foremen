@@ -70,6 +70,12 @@ foremen:
       # blank to disable escalation for that kind (no cap => never escalate).
       percent-cap: ${FOREMEN_OFFER_ESCALATION_PERCENT_CAP:15}
       absolute-cap: ${FOREMEN_OFFER_ESCALATION_ABSOLUTE_CAP:5000}
+  schedule:
+    # FOR-05-10 (R9.1): net estimate value one worker produces per calendar day. Used ONLY inside
+    # the planning-Gantt Auto_Create and Suggested_Duration logic; never returned by the API or
+    # shown in the UI (R9.3). No per-project override (R9.2). Must be strictly positive or startup
+    # fails fast.
+    daily-output-per-worker: ${FOREMEN_SCHEDULE_DAILY_OUTPUT_PER_WORKER:2000}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
     reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/set-password}

@@ -31,11 +31,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  * verifies the seed's <b>completeness</b> and <b>idempotency</b> at the raw-SQL level:
  *
  * <ol>
- *   <li><b>Completeness</b> — after the first migration, the six matrix resource codes
+ *   <li><b>Completeness</b> — after the first migration, the matrix resource codes
  *       ({@code USERS}, {@code ROLES}, {@code AUDIT}, {@code RESOURCES}, {@code OPERATIONS},
- *       {@code PROJECT_MEMBERS}) all exist, and the {@code ADMIN} role holds the full
- *       {@code CREATE}/{@code READ}/{@code UPDATE}/{@code DELETE} grant on {@code USERS}
- *       (Requirements 11.1, 11.2, 11.3, 11.4).</li>
+ *       {@code PROJECT_MEMBERS}, and the FOR-05-10 {@code WORK_SCHEDULE}) all exist, and the
+ *       {@code ADMIN} role holds the full {@code CREATE}/{@code READ}/{@code UPDATE}/{@code DELETE}
+ *       grant on {@code USERS} (Requirements 11.1, 11.2, 11.3, 11.4).</li>
+ *   <li><b>FOR-05-10 REG-03 (Requirement 18.3) — the {@code WORK_SCHEDULE} matrix row is exactly the
+ *       design-D13 grants.</b> After the full changelog (changeset 153 seeds ADMIN / MANAGER CRUD,
+ *       FOREMAN / ESTIMATOR READ + UPDATE, and WORKER / FINANCIER / CLIENT READ) the
+ *       {@code WORK_SCHEDULE} resource exists once and holds <em>exactly</em> those grants and no
+ *       others.</li>
  *   <li><b>Idempotency</b> — running {@code liquibase.update} a second time against the
  *       already-seeded database does not insert a duplicate {@code USERS} resource row and does
  *       not add extra {@code ADMIN}/{@code USERS} grants; the counts are identical before and
@@ -61,7 +66,9 @@ class SeedCompletenessIdempotencyIntegrationTest {
     private static final String CHANGELOG = "database_files/changelog.xml";
 
     private static final List<String> EXPECTED_RESOURCE_CODES = List.of(
-            "USERS", "ROLES", "AUDIT", "RESOURCES", "OPERATIONS", "PROJECT_MEMBERS");
+            "USERS", "ROLES", "AUDIT", "RESOURCES", "OPERATIONS", "PROJECT_MEMBERS",
+            // FOR-05-10 Requirement 18.3: the planning-Gantt WORK_SCHEDULE resource (changeset 153).
+            "WORK_SCHEDULE");
 
     private static final List<String> ADMIN_USERS_OPERATIONS = List.of(
             "CREATE", "READ", "UPDATE", "DELETE");
@@ -71,6 +78,9 @@ class SeedCompletenessIdempotencyIntegrationTest {
 
     /** READ only (FOREMAN / ESTIMATOR / FINANCIER grant on PROJECT_MEMBERS). */
     private static final List<String> READ_ONLY = List.of("READ");
+
+    /** READ + UPDATE (FOREMAN / ESTIMATOR grant on WORK_SCHEDULE — changeset 153). */
+    private static final List<String> READ_UPDATE = List.of("READ", "UPDATE");
 
     /** The exact Requirement 1 grant map for PROJECT_MEMBERS: role code -> granted operations. */
     private static final java.util.Map<String, List<String>> EXPECTED_PROJECT_MEMBERS_GRANTS =
@@ -83,6 +93,22 @@ class SeedCompletenessIdempotencyIntegrationTest {
 
     /** Roles that must hold NO PROJECT_MEMBERS grant at all (Requirement 1 criterion 5). */
     private static final List<String> PROJECT_MEMBERS_UNGRANTED_ROLES = List.of("WORKER", "CLIENT");
+
+    /**
+     * The exact FOR-05-10 Requirement 1 (design D13) grant map for WORK_SCHEDULE: role code ->
+     * granted operations, as seeded by changeset 153. ADMIN / MANAGER hold full CRUD; FOREMAN /
+     * ESTIMATOR hold READ + UPDATE; WORKER / FINANCIER / CLIENT hold READ only. Every system role is
+     * granted something, so WORK_SCHEDULE has no ungranted-role list (unlike PROJECT_MEMBERS).
+     */
+    private static final java.util.Map<String, List<String>> EXPECTED_WORK_SCHEDULE_GRANTS =
+            java.util.Map.of(
+                    "ADMIN", CRUD,
+                    "MANAGER", CRUD,
+                    "FOREMAN", READ_UPDATE,
+                    "ESTIMATOR", READ_UPDATE,
+                    "WORKER", READ_ONLY,
+                    "FINANCIER", READ_ONLY,
+                    "CLIENT", READ_ONLY);
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -115,7 +141,7 @@ class SeedCompletenessIdempotencyIntegrationTest {
     // --- Completeness (Req 11.1, 11.2, 11.3) ---
 
     @Test
-    @DisplayName("All six matrix resource codes exist after migration")
+    @DisplayName("All matrix resource codes (incl. WORK_SCHEDULE) exist after migration")
     void sixResourceCodesExist() throws Exception {
         try (Connection connection = newConnection()) {
             for (String code : EXPECTED_RESOURCE_CODES) {
@@ -197,6 +223,38 @@ class SeedCompletenessIdempotencyIntegrationTest {
                     .as("exactly the five Requirement 1 roles may hold a PROJECT_MEMBERS grant; "
                             + "no other (system or custom) role may (FOR-05-09 Req 1 criterion 5)")
                     .containsExactlyInAnyOrderElementsOf(EXPECTED_PROJECT_MEMBERS_GRANTS.keySet());
+        }
+    }
+
+    // --- FOR-05-10 Req 18.3: WORK_SCHEDULE grants are exactly Requirement 1 (changeset 153) ---
+
+    @Test
+    @DisplayName("WORK_SCHEDULE holds exactly ADMIN/MANAGER CRUD + FOREMAN/ESTIMATOR READ+UPDATE + WORKER/FINANCIER/CLIENT READ")
+    void workScheduleGrantsAreExactlyRequirementOne() throws Exception {
+        try (Connection connection = newConnection()) {
+            // Each granted role holds a single role_resources link whose operation set is EXACTLY
+            // the expected one — no missing and no extra operation (FOR-05-10 Req 1, design D13).
+            for (var entry : EXPECTED_WORK_SCHEDULE_GRANTS.entrySet()) {
+                String roleCode = entry.getKey();
+                List<String> expectedOperations = entry.getValue();
+
+                assertThat(roleResourceCount(connection, roleCode, "WORK_SCHEDULE"))
+                        .as("role %s must hold exactly one WORK_SCHEDULE role_resources link", roleCode)
+                        .isEqualTo(1);
+
+                assertThat(grantedOperations(connection, roleCode, "WORK_SCHEDULE"))
+                        .as("role %s must hold exactly the operations %s on WORK_SCHEDULE "
+                                + "(no missing, no extra) — FOR-05-10 Req 1 / design D13",
+                                roleCode, expectedOperations)
+                        .containsExactlyInAnyOrderElementsOf(expectedOperations);
+            }
+
+            // No role OTHER than the seven expected ones holds any WORK_SCHEDULE grant — this
+            // catches an accidental grant to a custom/system role beyond Requirement 1.
+            assertThat(rolesWithGrantOn(connection, "WORK_SCHEDULE"))
+                    .as("exactly the seven Requirement 1 roles may hold a WORK_SCHEDULE grant; "
+                            + "no other (system or custom) role may (FOR-05-10 Req 1 / design D13)")
+                    .containsExactlyInAnyOrderElementsOf(EXPECTED_WORK_SCHEDULE_GRANTS.keySet());
         }
     }
 
@@ -333,18 +391,26 @@ class SeedCompletenessIdempotencyIntegrationTest {
 
     /** The codes of every role that holds any PROJECT_MEMBERS role_resources link. */
     private static List<String> rolesWithProjectMembersGrant(Connection connection) throws Exception {
+        return rolesWithGrantOn(connection, "PROJECT_MEMBERS");
+    }
+
+    /** The codes of every role that holds any role_resources link on the given resource. */
+    private static List<String> rolesWithGrantOn(Connection connection, String resourceCode)
+            throws Exception {
         String sql = """
                 SELECT DISTINCT r.code
                 FROM role_resources rr
                 JOIN roles r ON rr.role_id = r.id
                 JOIN resources res ON rr.resource_id = res.id
-                WHERE res.code = 'PROJECT_MEMBERS'
+                WHERE res.code = ?
                 """;
         List<String> roles = new java.util.ArrayList<>();
-        try (PreparedStatement ps = connection.prepareStatement(sql);
-                ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                roles.add(rs.getString(1));
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, resourceCode);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    roles.add(rs.getString(1));
+                }
             }
         }
         return roles;
