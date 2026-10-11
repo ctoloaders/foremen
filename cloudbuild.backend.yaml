@@ -62,9 +62,10 @@ steps:
       - -c
       - |
         set -euo pipefail
-        # NOTE: $$ escapes the Cloud Build substitution layer so bash (not Cloud Build) resolves
-        # the shell variable $STAGE. Real Cloud Build substitutions (${SHORT_SHA}, ${_VM_NAME},
-        # ${_ZONE}) use a single $ and are expanded before the step runs.
+        # NOTE: a doubled dollar escapes the Cloud Build substitution layer so bash (not Cloud
+        # Build) resolves the shell variable. Real Cloud Build substitutions (SHORT_SHA, _VM_NAME,
+        # _ZONE) use a single dollar and are expanded before the step runs. (Comments are scanned
+        # for substitution refs too, so avoid writing a bare dollar-name here.)
         STAGE="/tmp/foremen-db-sync-${SHORT_SHA}"
         gcloud compute ssh "${_VM_NAME}" \
           --zone="${_ZONE}" --tunnel-through-iap --quiet \
@@ -81,8 +82,8 @@ steps:
       - -c
       - |
         set -euo pipefail
-        # $$STAGE is escaped so bash resolves it; ${SHORT_SHA}/${_VM_NAME}/${_ZONE}/${_SERVICE} are
-        # genuine Cloud Build substitutions (single $) expanded before the step runs.
+        # The STAGE shell variable is escaped (doubled dollar) so bash resolves it; SHORT_SHA /
+        # _VM_NAME / _ZONE / _SERVICE are genuine Cloud Build substitutions expanded before the step.
         STAGE="/tmp/foremen-db-sync-${SHORT_SHA}/database_files"
         gcloud compute ssh "${_VM_NAME}" \
           --zone="${_ZONE}" --tunnel-through-iap --quiet \
