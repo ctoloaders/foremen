@@ -62,14 +62,17 @@ steps:
       - -c
       - |
         set -euo pipefail
+        # NOTE: $$ escapes the Cloud Build substitution layer so bash (not Cloud Build) resolves
+        # the shell variable $STAGE. Real Cloud Build substitutions (${SHORT_SHA}, ${_VM_NAME},
+        # ${_ZONE}) use a single $ and are expanded before the step runs.
         STAGE="/tmp/foremen-db-sync-${SHORT_SHA}"
         gcloud compute ssh "${_VM_NAME}" \
           --zone="${_ZONE}" --tunnel-through-iap --quiet \
-          --command="rm -rf '${STAGE}' && mkdir -p '${STAGE}'"
+          --command="rm -rf '$${STAGE}' && mkdir -p '$${STAGE}'"
         gcloud compute scp --recurse \
           --zone="${_ZONE}" --tunnel-through-iap --quiet \
           foremen-backend/database_files \
-          "${_VM_NAME}:${STAGE}/"
+          "${_VM_NAME}:$${STAGE}/"
 
   - id: deploy
     name: gcr.io/google.com/cloudsdktool/cloud-sdk
@@ -78,10 +81,12 @@ steps:
       - -c
       - |
         set -euo pipefail
+        # $$STAGE is escaped so bash resolves it; ${SHORT_SHA}/${_VM_NAME}/${_ZONE}/${_SERVICE} are
+        # genuine Cloud Build substitutions (single $) expanded before the step runs.
         STAGE="/tmp/foremen-db-sync-${SHORT_SHA}/database_files"
         gcloud compute ssh "${_VM_NAME}" \
           --zone="${_ZONE}" --tunnel-through-iap --quiet \
-          --command="/opt/foremen/deploy-service.sh ${_SERVICE} '${STAGE}'"
+          --command="/opt/foremen/deploy-service.sh ${_SERVICE} '$${STAGE}'"
 
 images:
   - "${_AR_IMAGE}:dev"
