@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Entity
@@ -65,4 +67,19 @@ public class UserEntity extends BaseEntity {
      */
     @Column(name = "nip", length = 10)
     private String nip;
+
+    /**
+     * FOR-05-10b (R1.1, D-model) — the ordered DEFAULT list of Work_Categories a WORKER user can
+     * perform (User_Work_Categories). Mapped from the {@code user_work_categories} FK join table
+     * (changeset 154); {@code @OrderColumn} preserves the submitted order, {@code ON DELETE CASCADE}
+     * discards the links with the user. Applies to WORKER users only (D-worker-only); non-WORKER
+     * users keep it empty. The referenced category FK is {@code ON DELETE RESTRICT} at the DB level.
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_work_categories",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "work_category_id"))
+    @OrderColumn(name = "order_no")
+    private List<WorkCategoryEntity> workCategories = new ArrayList<>();
 }

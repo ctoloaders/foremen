@@ -538,4 +538,33 @@
          an already-seeded database inserts nothing and changes nothing (R1.5). Registered LAST,
          after 152. -->
     <include file="database_files/changesets/153-seed-work-schedule-resource.xml"/>
+
+    <!-- FOR-05-10b (R1.1, D-model): user_work_categories — the ordered DEFAULT list of
+         Work_Categories a WORKER user can perform. FK join table joining users to
+         work_categories: user_id (BIGINT NOT NULL, FK -> users(id) ON DELETE CASCADE),
+         work_category_id (BIGINT NOT NULL, FK -> work_categories(id) ON DELETE RESTRICT),
+         order_no (INT NOT NULL, @OrderColumn position). PK (user_id, order_no); UNIQUE
+         (user_id, work_category_id) (a category once per user, R1.2); index on
+         work_category_id. Guarded by NOT tableExists + MARK_RAN. Registered LAST, after 153. -->
+    <include file="database_files/changesets/154-create-user-work-categories.xml"/>
+
+    <!-- FOR-05-10b (R2.1, D-model): project_member_work_categories — the ordered PER-PROJECT
+         list of Work_Categories a WORKER project member can perform. Analogous to 154 but owned
+         by a project membership: project_member_id (BIGINT NOT NULL, FK -> project_members(id)
+         ON DELETE CASCADE, R2.5), work_category_id (BIGINT NOT NULL, FK -> work_categories(id)
+         ON DELETE RESTRICT), order_no (INT NOT NULL, @OrderColumn position). PK
+         (project_member_id, order_no); UNIQUE (project_member_id, work_category_id) (a category
+         once per member, R2.2); index on work_category_id. Guarded by NOT tableExists +
+         MARK_RAN. Registered LAST, after 154. -->
+    <include file="database_files/changesets/155-create-project-member-work-categories.xml"/>
+    <!-- FOR-05-10b (R3.1, R3.2, R3.4, D-bar-key, D-storage, D-uncovered): rework
+         project_schedule_bars into a per-WORKER plan at half-day granularity. Adds nullable
+         project_member_id (BIGINT, FK -> project_members(id) ON DELETE CASCADE; NULL = the
+         Uncovered_Category virtual bar); converts start_day/duration_days into half-day counts
+         start_half_days/duration_half_days (x2, CHECK >= 1); swaps the uniqueness from
+         (schedule_id, work_category_id) to (schedule_id, project_member_id, work_category_id)
+         and adds a partial unique index (schedule_id, work_category_id) WHERE project_member_id
+         IS NULL (at most one virtual bar per category). Three idempotent changeSets guarded by
+         columnExists / uniqueConstraintExists + MARK_RAN. Registered LAST, after 155. -->
+    <include file="database_files/changesets/156-alter-schedule-bars-per-worker.xml"/>
 </databaseChangeLog>

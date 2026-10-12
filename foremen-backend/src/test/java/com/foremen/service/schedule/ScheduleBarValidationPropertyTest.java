@@ -11,9 +11,11 @@ import net.jqwik.api.constraints.IntRange;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Property-based tests for {@link ScheduleCalculator#validateBar(Integer, Integer)} — the pure
- * bounds check a bar save entry must pass (FOR-05-10, Requirement 7; design §"ScheduleCalculator",
- * Property 5).
+ * Property-based tests for {@link ScheduleCalculator#validateBarDays(Integer, Integer)} — the pure
+ * whole-day bounds check a FOR-05-10 bar save entry must pass (Requirement 7; design
+ * §"ScheduleCalculator", Property 5). FOR-05-10b supersedes this day-based path with the half-day
+ * {@link ScheduleCalculator#validateBar(Integer, Integer)}; the half-day grid is covered by
+ * {@link ScheduleHalfDayPropertyTest} and {@link ScheduleCalculatorHalfDayTest}.
  *
  * <p>The check is a pure function — no persistence, no Spring context, no clock — so Property 5 is
  * cheap to run over 100+ iterations.
@@ -45,11 +47,11 @@ class ScheduleBarValidationPropertyTest {
             @ForAll("maybeDays") Integer startDay,
             @ForAll("maybeDays") Integer durationDays) {
 
-        boolean actual = ScheduleCalculator.validateBar(startDay, durationDays);
+        boolean actual = ScheduleCalculator.validateBarDays(startDay, durationDays);
         boolean expected = specAccepts(startDay, durationDays);
 
         assertThat(actual)
-                .as("validateBar(%s, %s)", startDay, durationDays)
+                .as("validateBarDays(%s, %s)", startDay, durationDays)
                 .isEqualTo(expected);
     }
 
@@ -81,7 +83,7 @@ class ScheduleBarValidationPropertyTest {
     @Property(tries = 1)
     @Tag("Feature: FOR-05-10-project-gantt, Property 5: Bar validation bounds")
     void bothNullIsAccepted() {
-        assertThat(ScheduleCalculator.validateBar(null, null)).isTrue();
+        assertThat(ScheduleCalculator.validateBarDays(null, null)).isTrue();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -91,8 +93,8 @@ class ScheduleBarValidationPropertyTest {
     @Property(tries = 200)
     @Tag("Feature: FOR-05-10-project-gantt, Property 5: Bar validation bounds")
     void halfNullIsAlwaysRejected(@ForAll @IntRange(min = Integer.MIN_VALUE, max = Integer.MAX_VALUE) int value) {
-        assertThat(ScheduleCalculator.validateBar(value, null)).isFalse();
-        assertThat(ScheduleCalculator.validateBar(null, value)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(value, null)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(null, value)).isFalse();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -110,7 +112,7 @@ class ScheduleBarValidationPropertyTest {
         assertThat(durationDays).isBetween(1, MAX_DAY);
         assertThat(startDay + durationDays - 1).isLessThanOrEqualTo(MAX_DAY);
 
-        assertThat(ScheduleCalculator.validateBar(startDay, durationDays)).isTrue();
+        assertThat(ScheduleCalculator.validateBarDays(startDay, durationDays)).isTrue();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -128,7 +130,7 @@ class ScheduleBarValidationPropertyTest {
         if (finish <= MAX_DAY) {
             return; // not the case under test
         }
-        assertThat(ScheduleCalculator.validateBar(startDay, durationDays)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(startDay, durationDays)).isFalse();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -142,9 +144,9 @@ class ScheduleBarValidationPropertyTest {
             @ForAll @IntRange(min = 1, max = MAX_DAY) int inRange) {
 
         // Out of range as the start day, with an in-range duration.
-        assertThat(ScheduleCalculator.validateBar(outOfRange, inRange)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(outOfRange, inRange)).isFalse();
         // Out of range as the duration, with an in-range start day.
-        assertThat(ScheduleCalculator.validateBar(inRange, outOfRange)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(inRange, outOfRange)).isFalse();
     }
 
     // ------------------------------------------------------------------------------------------
@@ -155,25 +157,25 @@ class ScheduleBarValidationPropertyTest {
     @Tag("Feature: FOR-05-10-project-gantt, Property 5: Bar validation bounds")
     void boundaryCornersBehaveAsSpecified() {
         // Smallest valid bar.
-        assertThat(ScheduleCalculator.validateBar(1, 1)).isTrue();
+        assertThat(ScheduleCalculator.validateBarDays(1, 1)).isTrue();
         // A bar that finishes exactly on the last day.
-        assertThat(ScheduleCalculator.validateBar(1, MAX_DAY)).isTrue();
-        assertThat(ScheduleCalculator.validateBar(MAX_DAY, 1)).isTrue();
-        assertThat(ScheduleCalculator.validateBar(MAX_DAY / 2 + 1, MAX_DAY / 2)).isTrue();
+        assertThat(ScheduleCalculator.validateBarDays(1, MAX_DAY)).isTrue();
+        assertThat(ScheduleCalculator.validateBarDays(MAX_DAY, 1)).isTrue();
+        assertThat(ScheduleCalculator.validateBarDays(MAX_DAY / 2 + 1, MAX_DAY / 2)).isTrue();
 
         // Finish one day beyond the limit.
-        assertThat(ScheduleCalculator.validateBar(2, MAX_DAY)).isFalse();
-        assertThat(ScheduleCalculator.validateBar(MAX_DAY, 2)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(2, MAX_DAY)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(MAX_DAY, 2)).isFalse();
 
         // Below the lower bound.
-        assertThat(ScheduleCalculator.validateBar(0, 1)).isFalse();
-        assertThat(ScheduleCalculator.validateBar(1, 0)).isFalse();
-        assertThat(ScheduleCalculator.validateBar(-1, 1)).isFalse();
-        assertThat(ScheduleCalculator.validateBar(1, -1)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(0, 1)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(1, 0)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(-1, 1)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(1, -1)).isFalse();
 
         // Above the upper bound.
-        assertThat(ScheduleCalculator.validateBar(MAX_DAY + 1, 1)).isFalse();
-        assertThat(ScheduleCalculator.validateBar(1, MAX_DAY + 1)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(MAX_DAY + 1, 1)).isFalse();
+        assertThat(ScheduleCalculator.validateBarDays(1, MAX_DAY + 1)).isFalse();
     }
 
     // ------------------------------------------------------------------------------------------

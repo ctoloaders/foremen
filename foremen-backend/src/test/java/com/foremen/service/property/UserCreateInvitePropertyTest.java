@@ -107,7 +107,7 @@ class UserCreateInvitePropertyTest {
         when(f.roleDao.findById(anyLong())).thenReturn(Optional.of(role(roleId, roleCode)));
 
         UserServiceExtendedModel model = new UserServiceExtendedModel(
-                null, name, email, null, roleId, null, active, locale, null);
+                null, name, email, null, roleId, null, active, locale, null, null, null);
 
         f.service.create(model);
 
@@ -144,7 +144,7 @@ class UserCreateInvitePropertyTest {
             when(userDao.save(any(UserEntity.class)))
                     .thenAnswer(invocation -> invocation.getArgument(0));
             service = new UserService(
-                    userDao, roleDao, mapper, auditLogDao, entityManager, inviteService, null);
+                    userDao, roleDao, mapper, auditLogDao, entityManager, inviteService, null, null);
         }
     }
 

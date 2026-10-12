@@ -23,10 +23,12 @@ public interface UserControllerMapper extends ControllerToServiceMapper<
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "active", constant = "true")
     @Mapping(target = "roleName", ignore = true)
+    @Mapping(target = "workCategories", ignore = true)
     UserServiceExtendedModel toServiceExtendedModel(UserCreateRequest source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "roleName", ignore = true)
+    @Mapping(target = "workCategories", ignore = true)
     UserServiceExtendedModel toUpdateServiceExtendedModel(UserUpdateRequest source);
 }

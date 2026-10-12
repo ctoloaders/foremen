@@ -89,6 +89,8 @@ class AttributeUpdateNoOpTest {
     @Mock
     private WorkerTypeDao workerTypeDao;
     @Mock
+    private com.foremen.dao.WorkCategoryDao workCategoryDao;
+    @Mock
     private ProjectAccessCache projectAccessCache;
     @Mock
     private ProjectMemberServiceMapper projectMemberServiceMapper;

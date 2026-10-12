@@ -144,7 +144,9 @@ class InviteCreateAtomicityIntegrationTest {
                 null,
                 true,
                 "ru",
-                Map.of());
+                Map.of(),
+                null,
+                null);
     }
 
     @Test

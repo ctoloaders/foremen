@@ -40,11 +40,16 @@ import java.util.List;
  *                         {@code "ACTIVE"} / {@code "INACTIVE"} string (Requirement 27)
  * @param workerTypeId     the target worker type for a worker-type change (Requirement 14; task 9.1)
  * @param tags             the replacement tag list for a tag change (Requirement 15; task 9.5)
+ * @param workCategoryIds  FOR-05-10b (R2.2) — the replacement ordered, distinct Member_Work_Categories
+ *                         id list for a WORKER member; {@code null} = unchanged, an explicit (possibly
+ *                         empty) list = replace. Dispatched after the status / worker-type branches
+ *                         and before the tag branch.
  */
 public record UpdateProjectMemberRequest(
         @NotNull Long userId,
         @NotNull Long projectId,
         String assignmentStatus,
         Long workerTypeId,
-        List<String> tags
+        List<String> tags,
+        List<Long> workCategoryIds
 ) {}

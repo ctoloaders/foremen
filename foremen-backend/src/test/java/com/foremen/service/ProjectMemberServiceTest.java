@@ -66,6 +66,8 @@ class ProjectMemberServiceTest {
     @Mock
     private WorkerTypeDao workerTypeDao;
     @Mock
+    private com.foremen.dao.WorkCategoryDao workCategoryDao;
+    @Mock
     private ProjectAccessCache projectAccessCache;
     @Mock
     private com.foremen.service.model.mapper.ProjectMemberServiceMapper projectMemberServiceMapper;

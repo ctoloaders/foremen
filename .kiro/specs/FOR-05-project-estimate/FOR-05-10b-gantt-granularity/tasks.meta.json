@@ -1,0 +1,486 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Changeset `154-create-user-work-categories.xml`: create `user_work_categories`": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069025
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827077704
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827152632
+      }
+    ],
+    "1.2 Changeset `155-create-project-member-work-categories.xml`: analogous table for": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069173
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827156928
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827227777
+      }
+    ],
+    "1.3 Changeset `156-alter-schedule-bars-per-worker.xml`: add nullable `project_member_id`": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069209
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827231674
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827397787
+      }
+    ],
+    "1.4 JPA: add ordered `@ManyToMany` `workCategories` to `UserEntity` and": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069259
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827402507
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827562726
+      }
+    ],
+    "2.1 Extend `ScheduleCalculator` with half-day conversions (`startDay`/`durationDays`/": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069307
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827567189
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791828060738
+      }
+    ],
+    "2.2 `CoverageResolver` (pure): covering workers per category + uncovered set from active": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069346
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791828064900
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791828427277
+      }
+    ],
+    "2.3 `WorkerScheduleLayout.autoLayout` (pure): equal parallel split (D-split), per-worker": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069396
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791828431484
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791829290534
+      }
+    ],
+    "3.1 User worker-create/edit: accept ordered distinct `workCategoryIds` for WORKER users;": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069423
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791829294758
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791830041580
+      }
+    ],
+    "3.2 `ProjectMemberService`: copy user categories into Member_Work_Categories on WORKER": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069446
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791830045713
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791830679693
+      }
+    ],
+    "4.1 `getView`: map rows with a `bars` array (per `(member, category)` incl. virtual": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069468
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791830684353
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791831529860
+      }
+    ],
+    "4.2 `saveBars`: new `BarEntry` with `projectMemberId`; validate current-row category, valid": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069491
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791831534644
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832183393
+      }
+    ],
+    "4.3 `autoCreate`: use `CoverageResolver` + `WorkerScheduleLayout`; return": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069514
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832187580
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832690071
+      }
+    ],
+    "5.1 `TeamReadinessContributor`: BLOCKED + `readiness.team.noWorkers` when no ACTIVE WORKER;": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069536
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832695121
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832967610
+      }
+    ],
+    "5.2 `ScheduleReadinessContributor` + `ScheduleReadiness.uncoveredCategoryIds`: one": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069559
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832972663
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791833575699
+      }
+    ],
+    "6.1 `WorkCategoryMultiSelect` (ordered, worker-only) + catalog query hook; component test.": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069580
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791833582112
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834012674
+      }
+    ],
+    "6.2 Embed in the Team member editor (`PATCH` workCategoryIds) and the worker invite dialog": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069610
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834017271
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834375484
+      }
+    ],
+    "7.1 `lib/halfDay.ts` + `lib/workerColor.ts` + types (`ScheduleRowView.bars`, `workers`,": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069635
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834380817
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834731024
+      }
+    ],
+    "7.2 `GanttRow`/`GanttBar`/`WorkerLegend`: N bars per category, per-worker color, unassigned": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069678
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834736851
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791835587260
+      }
+    ],
+    "7.3 `lib/dragCascade.ts` + wire drag/resize to cascade a worker's later bars; snap 0.5,": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069719
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791835592077
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791835986266
+      }
+    ],
+    "7.4 `ManualBarDialog` on empty-cell click: worker picker (covering workers), pre-filled": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069746
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791835993383
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791836440764
+      }
+    ],
+    "7.5 Auto-create alert UI (crew empty / uncovered categories) from `AutoCreateResult.alert`.": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069777
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791836446289
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791836776768
+      }
+    ],
+    "8.1 Add all new keys to `pl.json` + `ru.json` (identical sets) and the backend message": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069811
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791836781935
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791836999932
+      }
+    ],
+    "8.2 Regression: run the affected FOR-05-10 / FOR-05-09 / FOR-05-11 test classes": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069845
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791837005561
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791840626714
+      }
+    ],
+    "9. Author test-cases.md": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069878
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791840632144
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791840833641
+      }
+    ],
+    "10. Final checkpoint": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827069912
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791840840061
+      },
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791841321332
+      }
+    ],
+    "1. Data model — join tables and bar-table change": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791827562790
+      }
+    ],
+    "2. Pure helpers (half-day math, coverage, layout)": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791829290598
+      }
+    ],
+    "3. User & member work-categories (backend)": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791830679828
+      }
+    ],
+    "4. Schedule service rewrite (per-worker)": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791832690237
+      }
+    ],
+    "5. Readiness": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791833575787
+      }
+    ],
+    "6. Frontend — work-category multiselect & team/invite": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791834375632
+      }
+    ],
+    "7. Frontend — per-worker Gantt": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791836776890
+      }
+    ],
+    "8. Localization & regression": [
+      {
+        "executionId": "c8e509dc-ebf5-4471-9247-9c0072800a01",
+        "chatSessionId": "sess_c208c000-28db-408a-8be9-6cef488634fe",
+        "timestamp": 1791840626925
+      }
+    ]
+  }
+}

@@ -231,7 +231,10 @@ class ProjectReadinessLifecycleIntegrationTest {
         assertArea(s0, "estimate", "BLOCKED", 0, List.of("readiness.estimate.noWorks"));
         assertArea(s0, "offer", "BLOCKED", 0, List.of("readiness.offer.notReady"));
         assertArea(s0, "documents", "BLOCKED", 0, List.of("readiness.documents.notReady"));
-        assertArea(s0, "team", "BLOCKED", 0, List.of("readiness.team.noForeman"));
+        // FOR-05-10b: with neither an ACTIVE FOREMAN nor an ACTIVE WORKER, the team area reports
+        // both blockers together (R8.3, R8.4).
+        assertArea(s0, "team", "BLOCKED", 0,
+                List.of("readiness.team.noForeman", "readiness.team.noWorkers"));
         assertArea(s0, "schedule", "BLOCKED", 0, List.of("readiness.schedule.unscheduledRows"));
         assertThat(s0.path("overallPercentage").asInt())
                 .as("no area ready -> overall 0%")
@@ -254,12 +257,18 @@ class ProjectReadinessLifecycleIntegrationTest {
         assertArea(s1, "rooms", "DONE", 100, List.of());
         assertArea(s1, "estimate", "DONE", 100, List.of());
         // One estimate line -> one work-category row -> rowCount 1, scheduledCount 0 (no bar yet).
-        assertArea(s1, "schedule", "BLOCKED", 0, List.of("readiness.schedule.unscheduledRows"));
+        // FOR-05-10b (R8.2): with no ACTIVE WORKER covering it, that category is also an
+        // Uncovered_Category, so the schedule area lists both the unscheduled-row and the
+        // no-worker-for-category blockers together (R8.3, R8.4).
+        assertArea(s1, "schedule", "BLOCKED", 0,
+                List.of("readiness.schedule.unscheduledRows", "readiness.schedule.noWorkerForCategory"));
         assertThat(scheduleUnscheduledCount(s1))
                 .as("one derived, unscheduled schedule row")
                 .isEqualTo(1);
         assertArea(s1, "offer", "BLOCKED", 0, List.of("readiness.offer.notReady"));
-        assertArea(s1, "team", "BLOCKED", 0, List.of("readiness.team.noForeman"));
+        // FOR-05-10b: still no foreman and no worker -> both blockers present (R8.3, R8.4).
+        assertArea(s1, "team", "BLOCKED", 0,
+                List.of("readiness.team.noForeman", "readiness.team.noWorkers"));
         assertThat(s1.path("overallPercentage").asInt())
                 .as("mean(100,100,0,0,0,0) = round(33.3) = 33")
                 .isEqualTo(33);
@@ -294,13 +303,21 @@ class ProjectReadinessLifecycleIntegrationTest {
         assertThat(s3.path("overallState").asText()).isEqualTo("BLOCKED");
 
         // ----------------------------------------------------------------
-        // State 4 — assign an ACTIVE FOREMAN member. team -> DONE/100.
+        // State 4 — assign an ACTIVE FOREMAN and an ACTIVE WORKER member. The FOR-05-10b team gate
+        // is DONE only when both an ACTIVE FOREMAN and an ACTIVE WORKER are present (R8.1), so both
+        // are assigned here for team -> DONE/100.
         // overall = mean(100,100,100,0,100,0) = round(400/6) = 67, state BLOCKED.
         // ----------------------------------------------------------------
-        addActiveForeman(projectId);
+        addActiveMember(projectId, "FOREMAN", null);
+        // FOR-05-10b (R8.2): the WORKER covers the estimate's single work category, so the schedule
+        // area's Uncovered_Category disappears and only the unscheduled-row blocker remains.
+        addActiveMember(projectId, "WORKER", workCategory);
 
         JsonNode s4 = readReadiness(projectId, adminAuth);
         assertArea(s4, "team", "DONE", 100, List.of());
+        // The category is now covered, so the schedule area no longer lists noWorkerForCategory —
+        // only the unscheduled-row blocker remains (no bar yet).
+        assertArea(s4, "schedule", "BLOCKED", 0, List.of("readiness.schedule.unscheduledRows"));
         assertThat(s4.path("overallPercentage").asInt())
                 .as("mean(100,100,100,0,100,0) = round(66.7) = 67")
                 .isEqualTo(67);
@@ -522,22 +539,29 @@ class ProjectReadinessLifecycleIntegrationTest {
     }
 
     /**
-     * Assigns an ACTIVE member whose project role {@code code} is exactly {@code FOREMAN} — the
+     * Assigns an ACTIVE member whose project role {@code code} is exactly {@code roleCode} — the
      * literal code the FOR-05-09 team gate counts
      * ({@code ProjectMemberDao.countByProjectIdAndProjectRoleCodeAndAssignmentStatus}). The role is a
      * get-or-create shared fixture (like the PLN currency): its code is a fixed global constant, so it
      * is reused across runs and never carries the per-run suffix (and the per-run teardown's
-     * {@code code like %runId%} filter never touches it).
+     * {@code code like %runId%} filter never touches it). The FOR-05-10b team gate is DONE only when
+     * both an ACTIVE {@code FOREMAN} and an ACTIVE {@code WORKER} are present (R8.1), so the lifecycle
+     * walk assigns one of each.
+     *
+     * <p>FOR-05-10b (R8.2): when {@code coveredCategory} is non-null the created member is given that
+     * work category in its Member_Work_Categories, so the estimate's category becomes covered. The
+     * lifecycle walk uses this for the WORKER so the schedule's single category is no longer an
+     * {@code Uncovered_Category} once the worker joins.
      */
-    private void addActiveForeman(long projectId) {
+    private void addActiveMember(long projectId, String roleCode, WorkCategoryEntity coveredCategory) {
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            RoleEntity foremanRole = getOrCreateForemanRole();
+            RoleEntity role = getOrCreateRole(roleCode);
 
             UserEntity user = new UserEntity();
             long seq = COUNTER.incrementAndGet();
-            user.setName("Foreman " + runId + "-" + seq);
-            user.setEmail("foreman" + seq + "+" + runId + "@example.com");
-            user.setRole(foremanRole);
+            user.setName(roleCode + " " + runId + "-" + seq);
+            user.setEmail(roleCode.toLowerCase() + seq + "+" + runId + "@example.com");
+            user.setRole(role);
             user.setActive(true);
             user.setStatus(UserStatus.ACTIVE);
             user.setLocale("ru");
@@ -546,8 +570,13 @@ class ProjectReadinessLifecycleIntegrationTest {
             ProjectMemberEntity member = new ProjectMemberEntity();
             member.setUser(user);
             member.setProjectId(projectId);
-            member.setProjectRole(foremanRole);
+            member.setProjectRole(role);
             member.setAssignmentStatus(AssignmentStatus.ACTIVE);
+            if (coveredCategory != null) {
+                WorkCategoryEntity managedCategory =
+                        entityManager.getReference(WorkCategoryEntity.class, coveredCategory.getId());
+                member.getWorkCategories().add(managedCategory);
+            }
             entityManager.persist(member);
             entityManager.flush();
         });
@@ -571,27 +600,33 @@ class ProjectReadinessLifecycleIntegrationTest {
             ProjectScheduleBarEntity bar = new ProjectScheduleBarEntity();
             bar.setSchedule(schedule);
             bar.setWorkCategory(managedCategory);
-            bar.setStartDay(1);
-            bar.setDurationDays(5);
+            // FOR-05-10b (D-storage): bars are stored in half-days. Day 1 / duration 5 days
+            // → start half-day 2 / duration 10 half-days.
+            bar.setStartHalfDays(2);
+            bar.setDurationHalfDays(10);
             schedule.getBars().add(bar);
             entityManager.persist(bar);
             entityManager.flush();
         });
     }
 
-    /** Returns the shared {@code FOREMAN} role (exact code the team gate counts), creating it once. */
-    private RoleEntity getOrCreateForemanRole() {
+    /**
+     * Returns the shared role with the exact {@code code} the team gate counts (e.g. {@code FOREMAN}
+     * / {@code WORKER}), creating it once. The code is a fixed global constant, so the role is reused
+     * across runs and never carries the per-run suffix.
+     */
+    private RoleEntity getOrCreateRole(String code) {
         List<RoleEntity> existing = entityManager
                 .createQuery("select r from RoleEntity r where r.code = :c", RoleEntity.class)
-                .setParameter("c", "FOREMAN")
+                .setParameter("c", code)
                 .getResultList();
         if (!existing.isEmpty()) {
             return existing.get(0);
         }
         RoleEntity role = new RoleEntity();
-        role.setCode("FOREMAN");
-        role.setNameRU("Прораб");
-        role.setNamePL("Brygadzista");
+        role.setCode(code);
+        role.setNameRU(code);
+        role.setNamePL(code);
         role.setSystem(false);
         entityManager.persist(role);
         entityManager.flush();

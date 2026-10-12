@@ -35,11 +35,13 @@ import java.util.List;
  * @param version           the optimistic-locking version to echo back on the next write
  * @param crewSize          the number of ACTIVE WORKER members of the project team
  * @param currency          the money currency code; present only for a Money_Viewer
- * @param finishDay         the schedule finish day (max row {@code finishDay}); {@code null} when
- *                          nothing is scheduled
+ * @param finishDay         the schedule finish day as a 0.5-multiple (the max bar {@code finishDay}
+ *                          across all rows, FOR-05-10b R3.3); {@code null} when nothing is scheduled
  * @param finishDate        the schedule finish date; {@code null} when nothing is scheduled or the
  *                          project has no anchor date
  * @param exceedsProjectEnd whether the finish date falls after the project end date (R5.5)
+ * @param workers           one entry per ACTIVE WORKER project member (FOR-05-10b R7.1), backing
+ *                          the per-worker color legend; the color is computed client-side (D-color)
  * @param rows              one row per work category, ordered {@code (orderNo ASC NULLS LAST, id ASC)}
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -51,8 +53,9 @@ public record ScheduleView(
         long version,
         int crewSize,
         String currency,
-        Integer finishDay,
+        Double finishDay,
         LocalDate finishDate,
         boolean exceedsProjectEnd,
+        List<ScheduleWorkerView> workers,
         List<ScheduleRowView> rows
 ) {}

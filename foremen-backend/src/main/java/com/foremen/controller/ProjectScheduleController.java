@@ -3,6 +3,7 @@ package com.foremen.controller;
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.config.security.PermissionResource;
 import com.foremen.controller.model.schedule.AutoCreateRequest;
+import com.foremen.controller.model.schedule.AutoCreateResult;
 import com.foremen.controller.model.schedule.SaveBarsRequest;
 import com.foremen.controller.model.schedule.ScheduleReadiness;
 import com.foremen.controller.model.schedule.ScheduleView;
@@ -82,16 +83,21 @@ public class ProjectScheduleController {
     }
 
     /**
-     * Auto-creates the schedule (Requirement 8): replaces all bars with one consecutive bar per
-     * Schedule_Row, each duration computed from the category value, the configured Daily_Output_Rate,
-     * and the current Crew_Size, laid out from day 1 with every calendar day counting as a working
-     * day. Requires at least one ACTIVE WORKER on the team and at least one Schedule_Row. The request
-     * carries only the Schedule_Version (the rate always comes from configuration, Requirement 9.2).
-     * Returns the refreshed {@link ScheduleView}. {@code WORK_SCHEDULE} UPDATE.
+     * Auto-creates the schedule into a per-worker plan (FOR-05-10b Requirement 4): replaces all bars
+     * with the per-worker {@code Worker_Bar}s laid out by {@code CoverageResolver} +
+     * {@code WorkerScheduleLayout} — each covered category split equally among its covering workers,
+     * each worker's bars sequenced along their own timeline, and each uncovered category laid out as a
+     * single virtual (null-member) bar. It no longer requires or hard-fails on a crew: an empty crew
+     * is a valid outcome (every category uncovered) reported via the result's alert (R4.6). It still
+     * requires at least one {@code Schedule_Row} ({@code error.schedule.rows.empty}, R4.7) and rejects
+     * a horizon overrun ({@code error.schedule.too.long}, R4.4). The request carries only the
+     * Schedule_Version (the rate always comes from configuration, Requirement 9.2). Returns an
+     * {@link AutoCreateResult} wrapping the refreshed {@link ScheduleView} and the uncovered /
+     * empty-crew alert. {@code WORK_SCHEDULE} UPDATE.
      */
     @PostMapping("/auto-create")
     @PermissionOperation(UPDATE)
-    public ResponseEntity<ScheduleView> autoCreate(
+    public ResponseEntity<AutoCreateResult> autoCreate(
             @RequestParam Long projectId, @Valid @RequestBody AutoCreateRequest request) {
         return ResponseEntity.ok(projectScheduleService.autoCreate(projectId, request));
     }

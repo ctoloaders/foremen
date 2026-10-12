@@ -1,16 +1,20 @@
 package com.foremen.controller.integration;
 
 import com.foremen.config.security.JwtTokenProvider;
+import com.foremen.dao.ProjectDao;
 import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.model.OperationEntity;
+import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
+import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.ResourceEntity;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.RoleResourceEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
+import com.foremen.service.ProjectAccessCache;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.BeforeEach;
@@ -137,11 +141,25 @@ class ProjectMemberControllerIntegrationTest {
     @Autowired
     private ProjectMemberDao projectMemberDao;
 
+    @Autowired
+    private ProjectDao projectDao;
+
+    @Autowired
+    private ProjectAccessCache projectAccessCache;
+
     @PersistenceContext
     private EntityManager entityManager;
 
     /** A role usable as the assigned project role (any existing role satisfies the FK). */
     private RoleEntity projectRole;
+
+    /**
+     * The authenticated caller. The {@code bearer(...)} tokens are minted with this user's real
+     * numeric id, and {@link #seedProject()} enrolls this caller as a member of each seeded project
+     * so the FOR-03-04 project-scope gate (added after this test was first written) passes for the
+     * non-ADMIN roles and the test isolates the ABAC {@code (resource, operation)} decision.
+     */
+    private UserEntity caller;
 
     @BeforeEach
     void seedRolesAndPermissionMatrix() {
@@ -163,6 +181,9 @@ class ProjectMemberControllerIntegrationTest {
         // WORKER: no role_resources grant at all (deny-by-default); also the project-role reference.
         projectRole = ensureRole(WORKER);
 
+        // The authenticated caller: a real user whose numeric id backs every bearer token below.
+        caller = createUser();
+
         entityManager.flush();
     }
 
@@ -172,7 +193,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("POST /api/project-members with CREATE permission -> 201 and ProjectMemberResponse")
     void assign_returns201WithResponse() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         entityManager.flush();
 
         mockMvc.perform(post(BASE_PATH)
@@ -181,9 +202,9 @@ class ProjectMemberControllerIntegrationTest {
                         .content(assignBody(user.getId(), projectId, projectRole.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
-                .andExpect(jsonPath("$.userId").value(user.getId()))
-                .andExpect(jsonPath("$.projectId").value(projectId))
-                .andExpect(jsonPath("$.projectRoleId").value(projectRole.getId()))
+                .andExpect(jsonPath("$.userId").value(user.getId().intValue()))
+                .andExpect(jsonPath("$.projectId").value((int) projectId))
+                .andExpect(jsonPath("$.projectRoleId").value(projectRole.getId().intValue()))
                 .andExpect(jsonPath("$.projectRoleCode").value(projectRole.getCode()));
     }
 
@@ -193,7 +214,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("POST /api/project-members for an existing (userId, projectId) -> 409 error.project.member.duplicate")
     void assign_duplicate_returns409() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         persistMembership(user, projectId);
         entityManager.flush();
 
@@ -208,10 +229,15 @@ class ProjectMemberControllerIntegrationTest {
     // === 10.8 : unknown projectRoleId returns 404 error.project.role.not.found ===
 
     @Test
-    @DisplayName("POST /api/project-members with an unknown projectRoleId -> 404 error.project.role.not.found")
-    void assign_unknownRole_returns404() throws Exception {
+    @DisplayName("POST /api/project-members with a projectRoleId that does not match the user's "
+            + "Company_Role -> 400 error.project.member.role.mismatch")
+    void assign_mismatchedRole_returns400() throws Exception {
+        // FOR-05-09 D2 / R5.11 superseded the old FOR-03-04 404 error.project.role.not.found: a
+        // supplied projectRoleId is validated against the user's Company_Role, and a value that does
+        // not match it (an unknown id resolves to a null role code, so it never matches) is rejected
+        // with 400 error.project.member.role.mismatch before any role lookup can 404.
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         long unknownRoleId = 9_000_000_000L + nextId();
         entityManager.flush();
 
@@ -219,8 +245,8 @@ class ProjectMemberControllerIntegrationTest {
                         .header("Authorization", bearer(MANAGER))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(assignBody(user.getId(), projectId, unknownRoleId)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     // === 10.9 : remove returns 204 ===
@@ -229,7 +255,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("DELETE /api/project-members for an existing membership -> 204 no content")
     void remove_returns204() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         persistMembership(user, projectId);
         entityManager.flush();
 
@@ -246,7 +272,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("DELETE /api/project-members for a missing membership -> 404 error.project.member.not.found")
     void remove_missing_returns404() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         entityManager.flush();
 
         mockMvc.perform(delete(BASE_PATH)
@@ -265,8 +291,8 @@ class ProjectMemberControllerIntegrationTest {
         UserEntity userA = createUser();
         UserEntity userB = createUser();
         UserEntity other = createUser();
-        long projectId = nextId();
-        long otherProjectId = nextId();
+        long projectId = seedProject();
+        long otherProjectId = seedProject();
         persistMembership(userA, projectId);
         persistMembership(userB, projectId);
         persistMembership(other, otherProjectId);
@@ -276,14 +302,16 @@ class ProjectMemberControllerIntegrationTest {
                         .header("Authorization", bearer(MANAGER))
                         .param("projectId", String.valueOf(projectId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(2)))
-                // user ids are a fresh small sequence (fit int) so Jackson deserializes them as
-                // Integer; project ids are per-run values that overflow int so Jackson uses Long.
-                // Match each against its produced boxed type.
+                // The caller is also enrolled in projectId by seedProject (scope-gate access), so the
+                // project has three members: the caller plus userA and userB.
+                .andExpect(jsonPath("$", hasSize(3)))
+                // user ids and (now real, DB-sequence) project ids are small and fit int, so
+                // Jackson deserializes both as Integer; compare each against its int value.
                 .andExpect(jsonPath("$[*].userId",
-                        containsInAnyOrder(userA.getId().intValue(), userB.getId().intValue())))
+                        containsInAnyOrder(caller.getId().intValue(),
+                                userA.getId().intValue(), userB.getId().intValue())))
                 .andExpect(jsonPath("$[*].projectId",
-                        containsInAnyOrder(projectId, projectId)));
+                        containsInAnyOrder((int) projectId, (int) projectId, (int) projectId)));
     }
 
     // === 10.12 : listProjects returns the distinct project-id set ===
@@ -292,8 +320,8 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("GET /api/project-members/projects?userId= -> the distinct project-id set for the user")
     void listProjects_returnsDistinctProjectIds() throws Exception {
         UserEntity user = createUser();
-        long projectA = nextId();
-        long projectB = nextId();
+        long projectA = seedProject();
+        long projectB = seedProject();
         persistMembership(user, projectA);
         persistMembership(user, projectB);
         entityManager.flush();
@@ -303,9 +331,10 @@ class ProjectMemberControllerIntegrationTest {
                         .param("userId", String.valueOf(user.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)))
-                // Project ids overflow int so Jackson deserializes them as Long; compare as Long.
+                // Project ids are now real DB-sequence values that fit int, so Jackson
+                // deserializes them as Integer; compare as int.
                 .andExpect(jsonPath("$",
-                        containsInAnyOrder(projectA, projectB)));
+                        containsInAnyOrder((int) projectA, (int) projectB)));
     }
 
     // === 10.3 : a caller lacking (PROJECT_MEMBERS, op) gets 403 error.access.denied ===
@@ -314,7 +343,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("POST /api/project-members as WORKER (no PROJECT_MEMBERS grant) -> 403 error.access.denied")
     void assign_withoutPermission_returns403() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         entityManager.flush();
 
         mockMvc.perform(post(BASE_PATH)
@@ -330,7 +359,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("DELETE /api/project-members as FOREMAN (READ only, no DELETE) -> 403 error.access.denied")
     void remove_withoutDeletePermission_returns403() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         persistMembership(user, projectId);
         entityManager.flush();
 
@@ -355,7 +384,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("POST /api/project-members without a token -> 401")
     void assign_unauthenticated_returns401() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         entityManager.flush();
 
         mockMvc.perform(post(BASE_PATH)
@@ -370,7 +399,7 @@ class ProjectMemberControllerIntegrationTest {
     @DisplayName("ADMIN reaches every /api/project-members endpoint through the bypass")
     void admin_reachesEveryEndpoint() throws Exception {
         UserEntity user = createUser();
-        long projectId = nextId();
+        long projectId = seedProject();
         entityManager.flush();
 
         // assign -> 201 (CREATE reached via bypass)
@@ -380,12 +409,13 @@ class ProjectMemberControllerIntegrationTest {
                         .content(assignBody(user.getId(), projectId, projectRole.getId())))
                 .andExpect(status().isCreated());
 
-        // listMembers -> 200 (READ reached via bypass)
+        // listMembers -> 200 (READ reached via bypass). Two members: the caller (enrolled by
+        // seedProject) and the just-assigned user.
         mockMvc.perform(get(BASE_PATH)
                         .header("Authorization", bearer(ADMIN))
                         .param("projectId", String.valueOf(projectId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)));
+                .andExpect(jsonPath("$", hasSize(2)));
 
         // listProjects -> 200 (READ reached via bypass)
         mockMvc.perform(get(PROJECTS_PATH)
@@ -408,10 +438,39 @@ class ProjectMemberControllerIntegrationTest {
         return RUN_ID.incrementAndGet();
     }
 
-    /** Mints a JWT whose principal name is a userId (1L) and whose authority is ROLE_<code>. */
+    /**
+     * Seeds a real {@code projects} row and returns its id. Under {@code ddl-auto=create-drop} the
+     * {@code ProjectEntity.members} unidirectional {@code @OneToMany @JoinColumn(project_id)}
+     * mapping (added in FOR-04-13) generates a {@code project_members.project_id -> projects(id)}
+     * foreign key, so a membership can only be inserted against a project row that exists. Mirrors
+     * {@code ProjectMemberControllerAbacIntegrationTest#seedProject}.
+     */
+    private long seedProject() {
+        ProjectEntity project = new ProjectEntity();
+        project.setName("Project " + nextId());
+        project.setStatus(ProjectStatus.DRAFT);
+        long projectId = projectDao.save(project).getId();
+        // Enroll the caller as a member so the project is Accessible to them (FOR-03-04 scope gate),
+        // then invalidate the self-loading access cache so it reflects the just-seeded membership.
+        ProjectMemberEntity callerMember = new ProjectMemberEntity();
+        callerMember.setUser(caller);
+        callerMember.setProjectId(projectId);
+        callerMember.setProjectRole(projectRole);
+        projectMemberDao.save(callerMember);
+        entityManager.flush();
+        projectAccessCache.invalidate(caller.getId());
+        return projectId;
+    }
+
+    /**
+     * Mints a JWT whose principal name is the caller's real numeric id and whose authority is
+     * {@code ROLE_<code>}. Using the caller's genuine id lets {@link ProjectAccessCache} self-load
+     * their memberships, so the project-scope gate sees the caller as a member of every project
+     * seeded by {@link #seedProject()}.
+     */
     private String bearer(String roleCode) {
         return "Bearer " + jwtTokenProvider.generateAccessToken(
-                1L, roleCode, roleCode.toLowerCase() + "+" + nextId() + "@example.com");
+                caller.getId(), roleCode, roleCode.toLowerCase() + "+" + nextId() + "@example.com");
     }
 
     /** Persists a user with a unique email (repeatable across runs). */

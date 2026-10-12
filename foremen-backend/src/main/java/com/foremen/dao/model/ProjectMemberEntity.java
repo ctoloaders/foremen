@@ -59,4 +59,21 @@ public class ProjectMemberEntity extends BaseEntity {
     @OrderColumn(name = "order_no")
     @Column(name = "tag", length = 50, nullable = false)
     private List<String> tags = new ArrayList<>();
+
+    /**
+     * FOR-05-10b (R2.1, D-model) — the ordered PER-PROJECT list of Work_Categories this WORKER
+     * member can perform (Member_Work_Categories). Mapped from the
+     * {@code project_member_work_categories} FK join table (changeset 155); {@code @OrderColumn}
+     * preserves the submitted order and {@code ON DELETE CASCADE} discards the links when the
+     * membership is removed (R2.5). On membership creation this list is copied from the user's
+     * default (R2.1), then edited independently per project. The referenced category FK is
+     * {@code ON DELETE RESTRICT} at the DB level.
+     */
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "project_member_work_categories",
+            joinColumns = @JoinColumn(name = "project_member_id"),
+            inverseJoinColumns = @JoinColumn(name = "work_category_id"))
+    @OrderColumn(name = "order_no")
+    private List<WorkCategoryEntity> workCategories = new ArrayList<>();
 }

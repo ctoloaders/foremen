@@ -92,7 +92,7 @@ class TeamMemberViewFieldsTest {
                 "userName", "userEmail", "userStatus", "userActive",
                 "workerKind", "contactPerson",
                 "workerTypeId", "workerTypeCode", "workerTypeName", "workerTypeActive",
-                "nip", "workerTypeMissing", "tags");
+                "nip", "workerTypeMissing", "tags", "workCategories");
     }
 
     @Test
@@ -139,7 +139,8 @@ class TeamMemberViewFieldsTest {
                 null, null, null, null,   // workerTypeId / Code / Name / Active — masked
                 null,                      // nip — masked
                 null,                      // workerTypeMissing — masked
-                null);                     // tags — masked
+                null,                      // tags — masked
+                null);                     // workCategories — masked (FOR-05-10b)
 
         JsonNode json = MAPPER.readTree(MAPPER.writeValueAsString(maskedForWorkerReader));
 
@@ -151,6 +152,7 @@ class TeamMemberViewFieldsTest {
         assertThat(json.has("nip")).isFalse();
         assertThat(json.has("workerTypeMissing")).isFalse();
         assertThat(json.has("tags")).isFalse();
+        assertThat(json.has("workCategories")).isFalse();
 
         // assignmentStatus is never masked and is always serialized.
         assertThat(json.has("assignmentStatus")).isTrue();
@@ -178,7 +180,8 @@ class TeamMemberViewFieldsTest {
                 11L, "FIRM", "Firma", true,
                 "1234567890",
                 false,
-                List.of("spec", "lead"));
+                List.of("spec", "lead"),
+                List.of(new com.foremen.controller.model.RefDto(5L, "Malowanie")));
 
         JsonNode json = MAPPER.readTree(MAPPER.writeValueAsString(adminStaffView));
 

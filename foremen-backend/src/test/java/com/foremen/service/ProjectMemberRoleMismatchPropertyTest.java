@@ -211,6 +211,7 @@ class ProjectMemberRoleMismatchPropertyTest {
         final RoleDao roleDao = mock(RoleDao.class);
         final ProjectDao projectDao = mock(ProjectDao.class);
         final WorkerTypeDao workerTypeDao = mock(WorkerTypeDao.class);
+        final com.foremen.dao.WorkCategoryDao workCategoryDao = mock(com.foremen.dao.WorkCategoryDao.class);
         final ProjectAccessCache projectAccessCache = mock(ProjectAccessCache.class);
         final com.foremen.service.model.mapper.ProjectMemberServiceMapper projectMemberServiceMapper =
                 mock(com.foremen.service.model.mapper.ProjectMemberServiceMapper.class);
@@ -221,7 +222,7 @@ class ProjectMemberRoleMismatchPropertyTest {
                 mock(com.foremen.service.offer.NotificationService.class);
 
         final ProjectMemberService service = new ProjectMemberService(
-                projectMemberDao, userDao, roleDao, projectDao, workerTypeDao,
+                projectMemberDao, userDao, roleDao, projectDao, workerTypeDao, workCategoryDao,
                 projectAccessCache, projectMemberServiceMapper, auditLogDao, entityManager,
                 notificationService);
 

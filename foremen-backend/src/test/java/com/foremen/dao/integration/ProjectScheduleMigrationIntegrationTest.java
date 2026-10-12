@@ -134,16 +134,18 @@ class ProjectScheduleMigrationIntegrationTest {
 
     // --- Requirement 6.2 : project_schedule_bars table, columns and constraints ---
     @Test
-    @DisplayName("Changeset 152 creates project_schedule_bars with its columns, FKs, UNIQUE, index, "
-            + "and the two >= 1 CHECK constraints")
+    @DisplayName("Changesets 152 + 156 leave project_schedule_bars per-worker and half-day: columns, "
+            + "FKs, per-worker UNIQUE, virtual partial index, and the two half-day >= 1 CHECKs")
     void migrationCreatesProjectScheduleBarsTable() throws Exception {
         assertThat(tableExists("project_schedule_bars")).as("project_schedule_bars table").isTrue();
 
         assertColumnType("project_schedule_bars", "id", "bigint", null, false);
         assertColumnType("project_schedule_bars", "schedule_id", "bigint", null, false);
         assertColumnType("project_schedule_bars", "work_category_id", "bigint", null, false);
-        assertColumnType("project_schedule_bars", "start_day", "integer", null, false);
-        assertColumnType("project_schedule_bars", "duration_days", "integer", null, false);
+        // FOR-05-10b (changeset 156): per-worker, half-day granularity.
+        assertColumnType("project_schedule_bars", "project_member_id", "bigint", null, true);
+        assertColumnType("project_schedule_bars", "start_half_days", "integer", null, false);
+        assertColumnType("project_schedule_bars", "duration_half_days", "integer", null, false);
         assertColumnType("project_schedule_bars", "created_date", "timestamp without time zone", null, false);
         assertColumnType("project_schedule_bars", "created_by", "character varying", 255, true);
         assertColumnType("project_schedule_bars", "updated_date", "timestamp without time zone", null, true);
@@ -166,15 +168,35 @@ class ProjectScheduleMigrationIntegrationTest {
                 .as("fk_project_schedule_bars_work_category delete rule")
                 .isEqualTo("NO ACTION");
 
-        // UNIQUE (schedule_id, work_category_id), the schedule_id index, and the two CHECK rules.
+        // FOR-05-10b (changeset 156-a): project_member_id FK -> project_members, ON DELETE CASCADE
+        // (a member's bars are discarded when the membership is removed). Nullable: NULL marks the
+        // Uncovered_Category virtual bar (D-uncovered, R3.2).
+        assertThat(hasForeignKey("project_schedule_bars", "project_member_id", "project_members"))
+                .as("project_schedule_bars.project_member_id FK -> project_members").isTrue();
+        assertThat(foreignKeyDeleteRule("fk_project_schedule_bars_project_member"))
+                .as("fk_project_schedule_bars_project_member delete rule")
+                .isEqualTo("CASCADE");
+
+        // FOR-05-10b (changeset 156-c): uniqueness is now per worker
+        // (schedule_id, project_member_id, work_category_id); the old per-category unique is gone.
+        assertThat(constraintExists("ux_project_schedule_bars_schedule_member_category"))
+                .as("named unique constraint ux_project_schedule_bars_schedule_member_category").isTrue();
         assertThat(constraintExists("ux_project_schedule_bars_schedule_category"))
-                .as("named unique constraint ux_project_schedule_bars_schedule_category").isTrue();
+                .as("old per-category unique constraint has been dropped").isFalse();
+        // R3.2 / D-uncovered: a partial unique index caps the virtual (null-member) bar at one per category.
+        assertThat(indexExists("ux_project_schedule_bars_virtual_category"))
+                .as("partial unique index on the virtual (uncovered) bar").isTrue();
         assertThat(indexExists("ix_project_schedule_bars_schedule"))
                 .as("ix_project_schedule_bars_schedule index").isTrue();
+        // FOR-05-10b (changeset 156-b): half-day CHECKs replace the old whole-day CHECKs.
+        assertThat(checkConstraintExists("ck_project_schedule_bars_start_half_days_min"))
+                .as("start_half_days >= 1 CHECK constraint").isTrue();
+        assertThat(checkConstraintExists("ck_project_schedule_bars_duration_half_days_min"))
+                .as("duration_half_days >= 1 CHECK constraint").isTrue();
         assertThat(checkConstraintExists("ck_project_schedule_bars_start_day_min"))
-                .as("start_day >= 1 CHECK constraint").isTrue();
+                .as("old start_day CHECK has been dropped").isFalse();
         assertThat(checkConstraintExists("ck_project_schedule_bars_duration_days_min"))
-                .as("duration_days >= 1 CHECK constraint").isTrue();
+                .as("old duration_days CHECK has been dropped").isFalse();
     }
 
     // --- Requirements 1.1-1.4 : the WORK_SCHEDULE resource and full role matrix are seeded ---
@@ -227,12 +249,15 @@ class ProjectScheduleMigrationIntegrationTest {
         assertThat(tableExists("project_schedule_bars")).as("project_schedule_bars still present").isTrue();
         assertThat(constraintExists("ux_project_schedules_project"))
                 .as("ux_project_schedules_project still present").isTrue();
-        assertThat(constraintExists("ux_project_schedule_bars_schedule_category"))
-                .as("ux_project_schedule_bars_schedule_category still present").isTrue();
-        assertThat(checkConstraintExists("ck_project_schedule_bars_start_day_min"))
-                .as("start_day CHECK still present").isTrue();
-        assertThat(checkConstraintExists("ck_project_schedule_bars_duration_days_min"))
-                .as("duration_days CHECK still present").isTrue();
+        // FOR-05-10b: the per-worker unique + half-day CHECKs survive a re-run (156 is idempotent).
+        assertThat(constraintExists("ux_project_schedule_bars_schedule_member_category"))
+                .as("ux_project_schedule_bars_schedule_member_category still present").isTrue();
+        assertThat(indexExists("ux_project_schedule_bars_virtual_category"))
+                .as("virtual-bar partial unique index still present").isTrue();
+        assertThat(checkConstraintExists("ck_project_schedule_bars_start_half_days_min"))
+                .as("start_half_days CHECK still present").isTrue();
+        assertThat(checkConstraintExists("ck_project_schedule_bars_duration_half_days_min"))
+                .as("duration_half_days CHECK still present").isTrue();
 
         // Seed unchanged: one resource row, same grants.
         assertThat(countResource(RESOURCE_CODE))
@@ -252,7 +277,7 @@ class ProjectScheduleMigrationIntegrationTest {
 
     // --- Requirement 6.2 : CHECK and UNIQUE constraints reject bad rows ---
     @Test
-    @DisplayName("start_day = 0 is rejected by the start_day >= 1 CHECK constraint")
+    @DisplayName("start_half_days = 0 is rejected by the start_half_days >= 1 CHECK constraint")
     void startDayBelowOneIsRejected() throws Exception {
         long projectId = insertProject();
         long scheduleId = insertSchedule(projectId);
@@ -260,13 +285,13 @@ class ProjectScheduleMigrationIntegrationTest {
 
         assertThatThrownBy(() -> insertBar(scheduleId, categoryId, 0, 5))
                 .isInstanceOf(SQLException.class)
-                .as("start_day < 1 violates ck_project_schedule_bars_start_day_min");
+                .as("start_half_days < 1 violates ck_project_schedule_bars_start_half_days_min");
 
         deleteProject(projectId);
     }
 
     @Test
-    @DisplayName("duration_days = 0 is rejected by the duration_days >= 1 CHECK constraint")
+    @DisplayName("duration_half_days = 0 is rejected by the duration_half_days >= 1 CHECK constraint")
     void durationDaysBelowOneIsRejected() throws Exception {
         long projectId = insertProject();
         long scheduleId = insertSchedule(projectId);
@@ -274,23 +299,28 @@ class ProjectScheduleMigrationIntegrationTest {
 
         assertThatThrownBy(() -> insertBar(scheduleId, categoryId, 1, 0))
                 .isInstanceOf(SQLException.class)
-                .as("duration_days < 1 violates ck_project_schedule_bars_duration_days_min");
+                .as("duration_half_days < 1 violates ck_project_schedule_bars_duration_half_days_min");
 
         deleteProject(projectId);
     }
 
     @Test
-    @DisplayName("A second bar for the same (schedule_id, work_category_id) is rejected by the UNIQUE constraint")
+    @DisplayName("A second virtual (null-member) bar for the same (schedule_id, work_category_id) "
+            + "is rejected by the partial unique index")
     void duplicateScheduleCategoryBarIsRejected() throws Exception {
         long projectId = insertProject();
         long scheduleId = insertSchedule(projectId);
         long categoryId = anyWorkCategoryId();
 
+        // Both bars have a NULL project_member_id (the Uncovered_Category virtual bar). The new
+        // per-worker UNIQUE (schedule, project_member_id, work_category_id) treats NULLs as
+        // distinct, so the cap is enforced by the partial index ux_project_schedule_bars_virtual_category
+        // (FOR-05-10b changeset 156-c, R3.2 / D-uncovered: at most one virtual bar per category).
         insertBar(scheduleId, categoryId, 1, 3);
 
         assertThatThrownBy(() -> insertBar(scheduleId, categoryId, 10, 2))
                 .isInstanceOf(SQLException.class)
-                .as("a second bar for the same (schedule, category) violates the UNIQUE constraint");
+                .as("a second virtual bar for the same (schedule, category) violates the partial unique index");
 
         assertThat(countBars(scheduleId)).as("exactly one bar survives").isEqualTo(1);
 
@@ -360,16 +390,20 @@ class ProjectScheduleMigrationIntegrationTest {
         }
     }
 
-    private void insertBar(long scheduleId, long workCategoryId, int startDay, int durationDays)
+    /**
+     * Inserts a virtual (null project_member_id) bar on the half-day grid (FOR-05-10b columns
+     * {@code start_half_days} / {@code duration_half_days}). The arguments are half-day counts.
+     */
+    private void insertBar(long scheduleId, long workCategoryId, int startHalfDays, int durationHalfDays)
             throws Exception {
         String sql = "INSERT INTO project_schedule_bars "
-                + "(schedule_id, work_category_id, start_day, duration_days, created_date) "
+                + "(schedule_id, work_category_id, start_half_days, duration_half_days, created_date) "
                 + "VALUES (?, ?, ?, ?, NOW())";
         try (Connection c = newConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setLong(1, scheduleId);
             ps.setLong(2, workCategoryId);
-            ps.setInt(3, startDay);
-            ps.setInt(4, durationDays);
+            ps.setInt(3, startHalfDays);
+            ps.setInt(4, durationHalfDays);
             ps.executeUpdate();
         }
     }

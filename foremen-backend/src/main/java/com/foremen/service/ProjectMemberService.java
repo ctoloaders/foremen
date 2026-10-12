@@ -5,6 +5,7 @@ import com.foremen.dao.ProjectDao;
 import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
+import com.foremen.dao.WorkCategoryDao;
 import com.foremen.dao.WorkerTypeDao;
 import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.ProjectEntity;
@@ -12,9 +13,11 @@ import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkerKind;
 import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.controller.model.Candidate;
+import com.foremen.controller.model.RefDto;
 import com.foremen.controller.model.TeamMemberView;
 import com.foremen.controller.model.TeamReadiness;
 import com.foremen.controller.model.WorkerTypeAssignment;
@@ -53,6 +56,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -101,6 +105,7 @@ public class ProjectMemberService
     private final RoleDao roleDao;
     private final ProjectDao projectDao;
     private final WorkerTypeDao workerTypeDao;
+    private final WorkCategoryDao workCategoryDao;
     private final ProjectAccessCache projectAccessCache;
     private final ProjectMemberServiceMapper projectMemberServiceMapper;
     private final AuditLogDao auditLogDao;
@@ -112,6 +117,7 @@ public class ProjectMemberService
                                 RoleDao roleDao,
                                 ProjectDao projectDao,
                                 WorkerTypeDao workerTypeDao,
+                                WorkCategoryDao workCategoryDao,
                                 ProjectAccessCache projectAccessCache,
                                 ProjectMemberServiceMapper projectMemberServiceMapper,
                                 AuditLogDao auditLogDao,
@@ -122,6 +128,7 @@ public class ProjectMemberService
         this.roleDao = roleDao;
         this.projectDao = projectDao;
         this.workerTypeDao = workerTypeDao;
+        this.workCategoryDao = workCategoryDao;
         this.projectAccessCache = projectAccessCache;
         this.projectMemberServiceMapper = projectMemberServiceMapper;
         this.auditLogDao = auditLogDao;
@@ -193,7 +200,7 @@ public class ProjectMemberService
     public Set<String> getAdminOnlyFields() {
         return Set.of(
                 "workerTypeId", "workerTypeCode", "workerTypeName", "workerTypeActive",
-                "nip", "workerTypeMissing", "tags");
+                "nip", "workerTypeMissing", "tags", "workCategories");
     }
 
     // --- Canonical rejection order (FOR-05-09 task 6.1, Requirements 3.7, 10.4) ---
@@ -636,6 +643,9 @@ public class ProjectMemberService
         if (userHolder.workerType != null) {                             // Req 5.3, Property 3 (WORKER only, validated at step 8)
             member.setWorkerType(userHolder.workerType);
         }
+        // FOR-05-10b (R2.1, D-copy) — on WORKER membership creation initialize Member_Work_Categories
+        // as an ordered COPY of the user's current User_Work_Categories. Independent thereafter (R2.4).
+        copyUserWorkCategoriesOnCreate(member, companyRole, user);
 
         ProjectMemberEntity saved = persistUnique(member, userId, projectId); // Req 5.1, 5.9
 
@@ -744,6 +754,9 @@ public class ProjectMemberService
         member.setTags(new ArrayList<>());                   // no tags at creation
         // No Worker_Type is ever persisted at creation (Req 26.1); a non-null workerTypeId was already
         // rejected by the team-composition step above.
+        // FOR-05-10b (R2.1) — a WORKER entry is rejected at creation (R26.2), so this is a no-op for
+        // every accepted (non-WORKER) member; kept for symmetry with the Team-tab assign path.
+        copyUserWorkCategoriesOnCreate(member, companyRole, user);
 
         ProjectMemberEntity saved = persistUnique(member, userId, projectId);
 
@@ -898,12 +911,14 @@ public class ProjectMemberService
      *       ({@link #changeAssignmentStatus}, Requirement 27 — owned by this task);</li>
      *   <li>{@code workerTypeId} present (and no {@code assignmentStatus}) &rarr; worker-type
      *       set / replace (Requirement 14 — <em>added by task 9.1</em>);</li>
-     *   <li>{@code tags} present (and neither of the above) &rarr; tag replace (Requirement 15 —
+     *   <li>{@code workCategoryIds} present (and none of the above) &rarr; Member_Work_Categories
+     *       replace (FOR-05-10b Requirement 2 — {@link #changeWorkCategories});</li>
+     *   <li>{@code tags} present (and none of the above) &rarr; tag replace (Requirement 15 —
      *       {@link #changeTags}).</li>
      * </ul>
      *
      * <p><b>Dispatch order.</b> The dispatch order follows the design: {@code assignmentStatus} wins,
-     * then {@code workerTypeId}, then the tag branch. A tag change requires an explicit list, so a
+     * then {@code workerTypeId}, then {@code workCategoryIds}, then the tag branch. A tag change requires an explicit list, so a
      * PATCH that carries no {@code assignmentStatus} and no {@code workerTypeId} always dispatches to
      * {@link #changeTags} — a {@code null} tag list there is rejected as an invalid tag change
      * (Requirement 15 criterion 3), never silently ignored. A request that carries
@@ -924,6 +939,16 @@ public class ProjectMemberService
                                            String assignmentStatus,
                                            Long workerTypeId,
                                            List<String> tags) {
+        // Backward-compatible overload (pre-FOR-05-10b): no work-category change.
+        return updateAttributes(userId, projectId, assignmentStatus, workerTypeId, tags, null);
+    }
+
+    public TeamMemberView updateAttributes(Long userId,
+                                           Long projectId,
+                                           String assignmentStatus,
+                                           Long workerTypeId,
+                                           List<String> tags,
+                                           List<Long> workCategoryIds) {
         // Dispatch order (design §"Attribute_Update dispatch"): status first (Requirement 27).
         if (assignmentStatus != null) {
             return changeAssignmentStatus(userId, projectId, assignmentStatus);
@@ -932,6 +957,14 @@ public class ProjectMemberService
         // (Requirement 14, design §"Attribute_Update dispatch").
         if (workerTypeId != null) {
             return changeWorkerType(userId, projectId, workerTypeId);
+        }
+        // FOR-05-10b (R2.2) — workCategoryIds present (and none of the above) -> replace the member's
+        // Member_Work_Categories. An omitted list ({@code null}) means "no work-category change", so
+        // this branch is reached only when the caller explicitly submitted a (possibly empty) list;
+        // it is dispatched BEFORE the tag branch so a work-category PATCH is never misread as a tag
+        // change (design §"Attribute_Update dispatch").
+        if (workCategoryIds != null) {
+            return changeWorkCategories(userId, projectId, workCategoryIds);
         }
         // Task 9.5 — tags present (and neither assignmentStatus nor workerTypeId) -> tag replace
         // (Requirement 15, design §"Attribute_Update dispatch"). A tag change REQUIRES an explicit
@@ -1051,6 +1084,236 @@ public class ProjectMemberService
      */
     private static boolean sameTagsCaseSensitive(List<String> a, List<String> b) {
         return a.equals(b);
+    }
+
+    // --- FOR-05-10b (R2) — Member_Work_Categories: copy-on-create + PATCH replace ---
+
+    /** The role code that carries Work_Categories (D-worker-only); mirrors {@code UserService}. */
+    private static final String WORKER_WORK_CATEGORY_ROLE_CODE = "WORKER";
+
+    /**
+     * FOR-05-10b (R2.1, D-copy) — initializes a freshly-built membership's Member_Work_Categories as
+     * an ordered COPY of the assigned user's current User_Work_Categories, for a WORKER member only.
+     * For a non-WORKER member (or a WORKER user with an empty default) nothing is copied and the
+     * member's list stays empty (D-worker-only). The copy is by value — a new list of the same
+     * managed {@link WorkCategoryEntity} rows in the user's stored {@code @OrderColumn} order — so the
+     * member list is thereafter edited independently of the user default and vice versa (R2.4): a
+     * later edit to one side never mutates the other, because the two {@code @ManyToMany} join tables
+     * are distinct and only the category rows (never the links) are shared.
+     *
+     * @param member      the new membership (its {@code projectRole} is the user's Company_Role, D2)
+     * @param companyRole the member's resolved Project_Role (= Company_Role) — the WORKER gate
+     * @param user        the assigned user whose default categories are copied
+     */
+    private void copyUserWorkCategoriesOnCreate(ProjectMemberEntity member, RoleEntity companyRole, UserEntity user) {
+        if (!isWorkCategoryRole(companyRole) || user == null) {
+            return; // D-worker-only: no categories for a non-WORKER member.
+        }
+        List<WorkCategoryEntity> userCategories = user.getWorkCategories();
+        if (userCategories == null || userCategories.isEmpty()) {
+            return;
+        }
+        // Copy by value: a NEW list over the same category rows, preserving the user's order (R2.1).
+        // The member's own join table is distinct from the user's, so the two lists are independent
+        // after the copy (R2.4).
+        member.getWorkCategories().clear();
+        member.getWorkCategories().addAll(new ArrayList<>(userCategories));
+    }
+
+    /**
+     * FOR-05-10b (R2.2, R2.3) — replace the whole Member_Work_Categories list of a WORKER member via
+     * the PATCH Attribute_Update. Like {@link #changeTags} / {@link #changeWorkerType}, the whole
+     * validation funnels through the canonical {@link TeamRejectionChecklist} so the first tripped
+     * check wins and no row changes on any failure (Requirement 3 criterion 7):
+     *
+     * <ol>
+     *   <li><b>Step 3 — mandatory fields.</b> The submitted id list is resolved and validated by
+     *       {@link #resolveMemberWorkCategories} exactly as the user list in {@code UserService} task
+     *       3.1 — a duplicate id ⇒ 400 {@code error.member.workCategories.duplicate} naming the id; an
+     *       id that does not reference an existing <em>active</em> work category ⇒ 400
+     *       {@code error.member.workCategories.invalid} naming the id — before any persistence,
+     *       changing nothing. The resolved managed rows are stashed for the mutation.</li>
+     *   <li><b>Step 4 — project existence / access.</b> The {@link ProjectScopedService} gate (ADMIN
+     *       bypass; a non-accessible project reported as 404 {@code error.entity.not.found}
+     *       byte-identical to a non-existent one).</li>
+     *   <li><b>Step 5 — lifecycle lock.</b> A Locked_Status project is rejected with 409
+     *       {@code error.project.team.locked} and the categories are left unchanged.</li>
+     *   <li><b>Step 6 — member existence.</b> A missing {@code (userId, projectId)} pair is rejected
+     *       with 404 {@code error.project.member.not.found}.</li>
+     * </ol>
+     *
+     * <p><b>WORKER-only (D-worker-only).</b> Work categories apply only to a WORKER member; a PATCH
+     * targeting a non-WORKER member resolves to an empty list (the validator ignores the submission
+     * for a non-WORKER role, exactly like {@code UserService.resolveWorkCategories}), so a non-WORKER
+     * member's category list stays empty rather than erroring.
+     *
+     * <p><b>Replace, not merge (R2.2).</b> On a real change the member's whole category list is
+     * replaced with the submitted ordered list. The membership id, user, project, Project_Role,
+     * Worker_Type, Assignment_Status, and tags are untouched, and every other member of the project
+     * is left unchanged. Editing the member list never writes back to the user default (R2.3).
+     *
+     * <p><b>Idempotent no-op.</b> When the resolved list equals the member's current stored list
+     * (same ids in the same positions) the service changes no row, writes no audit, and returns 200
+     * with the current {@link TeamMemberView}. A work-category change does not change project access,
+     * so the {@link ProjectAccessCache} is not invalidated (mirrors the tag / worker-type branches).
+     * A work-category change emits no notification (D-notify / Requirement 18).
+     *
+     * @throws ForemenApiException the first tripped canonical check: 400
+     *         {@code error.member.workCategories.duplicate} / {@code error.member.workCategories.invalid};
+     *         404 {@code error.entity.not.found} (project out of scope); 409
+     *         {@code error.project.team.locked}; 404 {@code error.project.member.not.found}.
+     */
+    private TeamMemberView changeWorkCategories(Long userId, Long projectId, List<Long> workCategoryIds) {
+        MemberHolder holder = new MemberHolder();
+        WorkCategoryHolder catHolder = new WorkCategoryHolder();
+
+        TeamRejectionContext checklist = TeamRejectionContext.builder()
+                // Step 3 — mandatory fields: resolve + validate the submitted ids (duplicate / invalid)
+                // against the member role; the resolved rows are stashed for the persist path.
+                .mandatoryFields(() ->
+                        catHolder.categories = resolveMemberWorkCategories(holder, userId, projectId, workCategoryIds))
+                // Step 4 — project existence / access (ADMIN bypass; 404 indistinguishable).
+                .projectAccess(projectAccessCheck(projectId))
+                // Step 5 — lifecycle lock -> 409 error.project.team.locked.
+                .lifecycleLock(lifecycleLockCheck(projectId))
+                // Step 6 — member existence -> 404 error.project.member.not.found.
+                .memberExistence(() -> assertMemberExists(userId, projectId, holder))
+                .build();
+
+        TeamRejectionChecklist.run(checklist);
+
+        ProjectMemberEntity member = holder.member;              // resolved by step 6
+        List<WorkCategoryEntity> resolved = catHolder.categories; // validated by step 3 (never null)
+
+        // Idempotent no-op: the resolved ids equal the stored ids in the same positions -> no change,
+        // no audit, 200 with the current view.
+        if (sameCategoryIds(member.getWorkCategories(), resolved)) {
+            return toView(member);
+        }
+
+        String beforeSnapshot = memberSnapshot(member);
+
+        // Real change (R2.2): replace the WHOLE member list, keeping id/user/project/role/workerType/
+        // status/tags unchanged. The user default is untouched (R2.3) — a different join table.
+        member.getWorkCategories().clear();
+        member.getWorkCategories().addAll(resolved);
+        ProjectMemberEntity saved = projectMemberDao.save(member);
+
+        // Exactly one UPDATE Audit_Log row in THIS transaction (reusing the FOR-05-09 audit shape).
+        writeAudit(saved, "UPDATE", beforeSnapshot, memberSnapshot(saved));
+
+        // A work-category change does not change project access (ProjectAccessCache not invalidated)
+        // and emits no notification (D-notify).
+        return toView(saved);
+    }
+
+    /**
+     * FOR-05-10b (R2.2, R2.3, D-worker-only) — resolves and validates the submitted
+     * {@code workCategoryIds} into an ordered list of managed {@link WorkCategoryEntity} rows for a
+     * project member, mirroring {@code UserService.resolveWorkCategories} but with the member-scoped
+     * error codes {@code error.member.workCategories.duplicate} / {@code error.member.workCategories.invalid}:
+     *
+     * <ul>
+     *   <li>a non-WORKER member (resolved from the member's Project_Role) ⇒ the submission is ignored
+     *       and an empty list is returned, so the member's categories stay empty (D-worker-only);</li>
+     *   <li>a {@code null} / empty id list ⇒ an empty list (an explicit clear, R2.2 "replace");</li>
+     *   <li>a duplicate id ⇒ 400 {@code error.member.workCategories.duplicate} naming the id, changing
+     *       nothing (R2.2 → R1.2);</li>
+     *   <li>an id not referencing an existing <em>active</em> work category ⇒ 400
+     *       {@code error.member.workCategories.invalid} naming the id, changing nothing (R2.2 → R1.3).</li>
+     * </ul>
+     *
+     * <p>The member is resolved here (into {@code holder}) and reused by the later member-existence
+     * step so the WORKER gate reads the member's Project_Role without a second lookup; a missing pair
+     * is <em>not</em> reported here (step 6 owns the 404), so an invalid category id never masks a
+     * missing member. The returned list preserves the submitted order (R2.2).
+     */
+    private List<WorkCategoryEntity> resolveMemberWorkCategories(MemberHolder holder,
+                                                                 Long userId,
+                                                                 Long projectId,
+                                                                 List<Long> workCategoryIds) {
+        // Resolve the member (without throwing) so the WORKER gate can read its role; step 6 owns the
+        // 404 for a genuinely missing pair.
+        if (holder.member == null) {
+            holder.member = projectMemberDao.findByUserIdAndProjectId(userId, projectId).orElse(null);
+        }
+        ProjectMemberEntity member = holder.member;
+        boolean worker = member != null && isWorkCategoryRole(member.getProjectRole());
+        if (!worker || workCategoryIds == null || workCategoryIds.isEmpty()) {
+            return List.of();
+        }
+
+        // R2.2 (→ R1.2) — reject the first duplicate id (preserving submission order), changing nothing.
+        Set<Long> seen = new LinkedHashSet<>();
+        for (Long id : workCategoryIds) {
+            if (id != null && !seen.add(id)) {
+                throw new ForemenApiException(
+                        HttpStatus.BAD_REQUEST, "error.member.workCategories.duplicate", id);
+            }
+        }
+
+        // R2.2 (→ R1.1/R1.3) — resolve each id to an existing, active category, preserving order.
+        List<WorkCategoryEntity> resolved = new ArrayList<>(workCategoryIds.size());
+        for (Long id : workCategoryIds) {
+            WorkCategoryEntity category = (id == null) ? null : workCategoryDao.findById(id).orElse(null);
+            if (category == null || !category.isActive()) {
+                throw new ForemenApiException(
+                        HttpStatus.BAD_REQUEST, "error.member.workCategories.invalid", id);
+            }
+            resolved.add(category);
+        }
+        return resolved;
+    }
+
+    /** True iff the two category lists hold the same ids in the same positions (idempotent no-op screen). */
+    private static boolean sameCategoryIds(List<WorkCategoryEntity> current, List<WorkCategoryEntity> submitted) {
+        List<WorkCategoryEntity> a = current == null ? List.of() : current;
+        if (a.size() != submitted.size()) {
+            return false;
+        }
+        for (int i = 0; i < a.size(); i++) {
+            Long x = a.get(i) == null ? null : a.get(i).getId();
+            Long y = submitted.get(i) == null ? null : submitted.get(i).getId();
+            if (x == null ? y != null : !x.equals(y)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** True iff the role's code is {@code WORKER} (the only role carrying Work_Categories, D-worker-only). */
+    private static boolean isWorkCategoryRole(RoleEntity role) {
+        return role != null && WORKER_WORK_CATEGORY_ROLE_CODE.equals(role.getCode());
+    }
+
+    /** The localized name of a work category: {@code nameRU} for a ru request else {@code namePL}, with the code as fallback. */
+    private static String localizedWorkCategoryName(WorkCategoryEntity category, boolean russian) {
+        String name = russian ? category.getNameRU() : category.getNamePL();
+        if (name == null || name.isBlank()) {
+            name = russian ? category.getNamePL() : category.getNameRU();
+        }
+        return (name == null || name.isBlank()) ? category.getCode() : name;
+    }
+
+    /**
+     * The ordered Member_Work_Categories refs (id + localized name) for a WORKER member (R2.4). A
+     * non-WORKER member (or a WORKER with no categories) yields an empty list (D-worker-only).
+     */
+    private static List<RefDto> workCategoryRefs(ProjectMemberEntity member, boolean russian) {
+        List<WorkCategoryEntity> categories = member.getWorkCategories();
+        if (!isWorkCategoryRole(member.getProjectRole()) || categories == null || categories.isEmpty()) {
+            return List.of();
+        }
+        List<RefDto> refs = new ArrayList<>(categories.size());
+        for (WorkCategoryEntity category : categories) {
+            refs.add(new RefDto(category.getId(), localizedWorkCategoryName(category, russian)));
+        }
+        return refs;
+    }
+
+    /** Mutable one-slot holder so the step-3 category resolution hands the managed rows to the persist path. */
+    private static final class WorkCategoryHolder {
+        private List<WorkCategoryEntity> categories;
     }
 
     /**
@@ -1833,9 +2096,14 @@ public class ProjectMemberService
 
         List<String> tags = member.getTags() == null ? List.of() : List.copyOf(member.getTags());
 
+        // FOR-05-10b (R2.4) — the ordered Member_Work_Categories refs (id + localized name) for a
+        // WORKER member; empty for a non-WORKER member (D-worker-only). Treated as an Internal_
+        // Attribute and masked (nulled) for a non-admin-staff reader below.
+        List<RefDto> workCategories = workCategoryRefs(member, russian);
+
         // D12 masking (task 7.6, Requirement 4.10/4.11). The Internal_Attributes — worker type
-        // (id/code/name/active), nip, workerTypeMissing, and tags — are visible only to an
-        // admin-staff reader; for a WORKER/CLIENT reader they are omitted (nulled, so the view's
+        // (id/code/name/active), nip, workerTypeMissing, tags, and the FOR-05-10b work categories —
+        // are visible only to an admin-staff reader; for a WORKER/CLIENT reader they are omitted (nulled, so the view's
         // @JsonInclude(NON_NULL) drops them from the payload). assignmentStatus, workerKind, and
         // contactPerson are NOT internal and are never masked. This record is immutable, so the mask
         // is applied by building the view with the internal fields nulled rather than by reflection.
@@ -1847,6 +2115,7 @@ public class ProjectMemberService
             nip = null;
             workerTypeMissing = null; // Boolean -> omitted (not false) for a non-admin-staff reader
             tags = null;              // List -> omitted (not []) for a non-admin-staff reader
+            workCategories = null;    // List -> omitted for a non-admin-staff reader (FOR-05-10b R2.4)
         }
 
         return new TeamMemberView(
@@ -1871,7 +2140,8 @@ public class ProjectMemberService
                 workerTypeActive,
                 nip,
                 workerTypeMissing,
-                tags);
+                tags,
+                workCategories);
     }
 
     /**

@@ -81,7 +81,7 @@ public class ProjectMemberController {
             @Valid @RequestBody UpdateProjectMemberRequest request) {
         TeamMemberView view = projectMemberService.updateAttributes(
                 request.userId(), request.projectId(), request.assignmentStatus(),
-                request.workerTypeId(), request.tags());
+                request.workerTypeId(), request.tags(), request.workCategoryIds());
         return ResponseEntity.ok(view);
     }
 

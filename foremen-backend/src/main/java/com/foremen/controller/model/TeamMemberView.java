@@ -53,6 +53,8 @@ import java.util.List;
  * @param nip               <em>internal</em>; WORKERS/COMPANY only; {@code null}/empty when none
  * @param workerTypeMissing <em>internal</em>; {@code true} iff block is WORKERS and no worker type (Requirement 14.16)
  * @param tags              <em>internal</em>; the ordered, normalized tag list (empty when none)
+ * @param workCategories    <em>internal</em>; FOR-05-10b (R2.4); the ordered Member_Work_Categories
+ *                          refs (id + localized name) for a WORKER member, empty otherwise
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record TeamMemberView(
@@ -77,6 +79,7 @@ public record TeamMemberView(
         Boolean workerTypeActive,
         String nip,
         Boolean workerTypeMissing,
-        List<String> tags
+        List<String> tags,
+        List<RefDto> workCategories
 ) implements TeamMemberOrdering.Orderable {
 }

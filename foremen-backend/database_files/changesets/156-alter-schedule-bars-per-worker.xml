@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-10b (R3.1, R3.2, R3.4, D-bar-key, D-storage, D-uncovered): rework
+        project_schedule_bars from a per-work-category plan into a per-WORKER plan at
+        half-day granularity (design §Data model "Alter project_schedule_bars (changeset
+        156)" and §Migration).
+
+        Three changes, each in its own idempotent changeSet so a re-run against an
+        already-migrated database makes no change:
+
+          156-a  Add nullable project_member_id BIGINT, FK -> project_members(id) ON DELETE
+                 CASCADE. NULL marks the Uncovered_Category virtual bar (D-uncovered, R3.2).
+                 Guarded by NOT columnExists + MARK_RAN.
+
+          156-b  Convert the whole-day columns start_day / duration_days into half-day
+                 integer counts start_half_days / duration_half_days (D-storage). Because
+                 FOR-05-10 bars are whole days, a day n maps to a half-day start 2n-1 and a
+                 duration d days maps to 2d half-days (design §Migration). Both new columns
+                 carry a CHECK >= 1. The old day columns and their CHECKs are dropped.
+                 Guarded by NOT columnExists (start_half_days) + MARK_RAN so the migration
+                 runs exactly once.
+
+          156-c  Swap the uniqueness from (schedule_id, work_category_id) to
+                 (schedule_id, project_member_id, work_category_id) (D-bar-key, R3.1), and —
+                 because SQL treats NULLs as distinct — add a partial unique index
+                 (schedule_id, work_category_id) WHERE project_member_id IS NULL so at most
+                 one virtual (uncovered) bar may exist per category (R3.2). Guarded by the
+                 presence of the old unique constraint + MARK_RAN.
+
+        Registered LAST in changelog.xml, after 155 (154 -> 155 -> 156).
+    -->
+
+    <!-- 156-a: nullable project_member_id FK (ON DELETE CASCADE); NULL = virtual uncovered bar. -->
+    <changeSet id="156-add-schedule-bars-project-member" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="project_schedule_bars" columnName="project_member_id"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="project_schedule_bars">
+            <!-- Nullable: NULL marks the Uncovered_Category virtual bar (D-uncovered, R3.2). -->
+            <column name="project_member_id" type="BIGINT"/>
+        </addColumn>
+
+        <!-- Member FK: a member's bars are discarded when the membership is removed. -->
+        <addForeignKeyConstraint
+            constraintName="fk_project_schedule_bars_project_member"
+            baseTableName="project_schedule_bars"
+            baseColumnNames="project_member_id"
+            referencedTableName="project_members"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <rollback>
+            <dropForeignKeyConstraint
+                baseTableName="project_schedule_bars"
+                constraintName="fk_project_schedule_bars_project_member"/>
+            <dropColumn tableName="project_schedule_bars" columnName="project_member_id"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 156-b: convert start_day/duration_days -> start_half_days/duration_half_days (x2), CHECK >= 1. -->
+    <changeSet id="156-convert-schedule-bars-half-days" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <columnExists tableName="project_schedule_bars" columnName="start_day"/>
+                <columnExists tableName="project_schedule_bars" columnName="duration_days"/>
+                <not>
+                    <columnExists tableName="project_schedule_bars" columnName="start_half_days"/>
+                </not>
+            </and>
+        </preConditions>
+
+        <!-- Add the half-day columns as nullable first, backfill, then enforce NOT NULL + CHECK. -->
+        <addColumn tableName="project_schedule_bars">
+            <column name="start_half_days" type="INT"/>
+            <column name="duration_half_days" type="INT"/>
+        </addColumn>
+
+        <!-- Data migration (design §Migration): whole-day n -> half-day start 2n-1; duration d -> 2d. -->
+        <sql>
+            UPDATE project_schedule_bars
+               SET start_half_days    = (start_day * 2) - 1,
+                   duration_half_days = duration_days * 2;
+        </sql>
+
+        <addNotNullConstraint
+            tableName="project_schedule_bars"
+            columnName="start_half_days"
+            columnDataType="INT"/>
+        <addNotNullConstraint
+            tableName="project_schedule_bars"
+            columnName="duration_half_days"
+            columnDataType="INT"/>
+
+        <!-- Drop the old whole-day CHECKs (from 152) before dropping their columns. -->
+        <sql>
+            ALTER TABLE project_schedule_bars
+                DROP CONSTRAINT IF EXISTS ck_project_schedule_bars_start_day_min;
+            ALTER TABLE project_schedule_bars
+                DROP CONSTRAINT IF EXISTS ck_project_schedule_bars_duration_days_min;
+        </sql>
+
+        <dropColumn tableName="project_schedule_bars" columnName="start_day"/>
+        <dropColumn tableName="project_schedule_bars" columnName="duration_days"/>
+
+        <!-- R3.1 / D-storage: half-day counts are both >= 1 at the DB level as well. -->
+        <sql>
+            ALTER TABLE project_schedule_bars
+                ADD CONSTRAINT ck_project_schedule_bars_start_half_days_min CHECK (start_half_days >= 1);
+            ALTER TABLE project_schedule_bars
+                ADD CONSTRAINT ck_project_schedule_bars_duration_half_days_min CHECK (duration_half_days >= 1);
+        </sql>
+
+        <rollback>
+            <sql>
+                ALTER TABLE project_schedule_bars
+                    DROP CONSTRAINT IF EXISTS ck_project_schedule_bars_start_half_days_min;
+                ALTER TABLE project_schedule_bars
+                    DROP CONSTRAINT IF EXISTS ck_project_schedule_bars_duration_half_days_min;
+            </sql>
+            <addColumn tableName="project_schedule_bars">
+                <column name="start_day" type="INT"/>
+                <column name="duration_days" type="INT"/>
+            </addColumn>
+            <sql>
+                UPDATE project_schedule_bars
+                   SET start_day     = (start_half_days + 1) / 2,
+                       duration_days = duration_half_days / 2;
+            </sql>
+            <addNotNullConstraint tableName="project_schedule_bars" columnName="start_day" columnDataType="INT"/>
+            <addNotNullConstraint tableName="project_schedule_bars" columnName="duration_days" columnDataType="INT"/>
+            <sql>
+                ALTER TABLE project_schedule_bars
+                    ADD CONSTRAINT ck_project_schedule_bars_start_day_min CHECK (start_day >= 1);
+                ALTER TABLE project_schedule_bars
+                    ADD CONSTRAINT ck_project_schedule_bars_duration_days_min CHECK (duration_days >= 1);
+            </sql>
+            <dropColumn tableName="project_schedule_bars" columnName="start_half_days"/>
+            <dropColumn tableName="project_schedule_bars" columnName="duration_half_days"/>
+        </rollback>
+    </changeSet>
+
+    <!-- 156-c: swap unique (schedule, category) -> (schedule, member, category) + partial unique on virtual bar. -->
+    <changeSet id="156-reunique-schedule-bars-per-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <and>
+                <columnExists tableName="project_schedule_bars" columnName="project_member_id"/>
+                <uniqueConstraintExists
+                    tableName="project_schedule_bars"
+                    constraintName="ux_project_schedule_bars_schedule_category"/>
+            </and>
+        </preConditions>
+
+        <!-- Drop the FOR-05-10 per-category uniqueness. -->
+        <dropUniqueConstraint
+            tableName="project_schedule_bars"
+            constraintName="ux_project_schedule_bars_schedule_category"/>
+
+        <!-- D-bar-key / R3.1: one bar per (schedule, member, category). NULL member rows are
+             treated as distinct by SQL uniqueness, so the virtual-bar cap is enforced by the
+             partial index below. -->
+        <addUniqueConstraint
+            tableName="project_schedule_bars"
+            columnNames="schedule_id, project_member_id, work_category_id"
+            constraintName="ux_project_schedule_bars_schedule_member_category"/>
+
+        <!-- R3.2 / D-uncovered: at most one virtual (uncovered) bar per category. -->
+        <sql>
+            CREATE UNIQUE INDEX ux_project_schedule_bars_virtual_category
+                ON project_schedule_bars (schedule_id, work_category_id)
+             WHERE project_member_id IS NULL;
+        </sql>
+
+        <rollback>
+            <sql>
+                DROP INDEX IF EXISTS ux_project_schedule_bars_virtual_category;
+            </sql>
+            <dropUniqueConstraint
+                tableName="project_schedule_bars"
+                constraintName="ux_project_schedule_bars_schedule_member_category"/>
+            <addUniqueConstraint
+                tableName="project_schedule_bars"
+                columnNames="schedule_id, work_category_id"
+                constraintName="ux_project_schedule_bars_schedule_category"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

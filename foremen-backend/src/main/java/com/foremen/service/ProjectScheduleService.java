@@ -23,13 +23,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.config.ScheduleProperties;
+import com.foremen.controller.model.schedule.AutoCreateAlert;
 import com.foremen.controller.model.schedule.AutoCreateRequest;
+import com.foremen.controller.model.schedule.AutoCreateResult;
 import com.foremen.controller.model.schedule.BarEntry;
 import com.foremen.controller.model.schedule.SaveBarsRequest;
+import com.foremen.controller.model.schedule.ScheduleBarView;
 import com.foremen.controller.model.schedule.ScheduleLineView;
 import com.foremen.controller.model.schedule.ScheduleReadiness;
 import com.foremen.controller.model.schedule.ScheduleRowView;
 import com.foremen.controller.model.schedule.ScheduleView;
+import com.foremen.controller.model.schedule.ScheduleWorkerView;
+import com.foremen.controller.model.schedule.UncoveredCategoryRef;
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.EstimateLineDao;
 import com.foremen.dao.ProjectDao;
@@ -39,6 +44,7 @@ import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.EstimateLineEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.ProjectEntity;
+import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectScheduleBarEntity;
 import com.foremen.dao.model.ProjectScheduleEntity;
 import com.foremen.dao.model.ProjectStatus;
@@ -52,9 +58,11 @@ import com.foremen.service.model.ProjectScheduleServiceExtendedModel;
 import com.foremen.service.model.ProjectScheduleServiceModel;
 import com.foremen.service.model.mapper.ProjectScheduleServiceMapper;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
+import com.foremen.service.schedule.CoverageResolver;
 import com.foremen.service.schedule.ScheduleCalculator;
 import com.foremen.service.schedule.ScheduleReadinessState;
 import com.foremen.service.schedule.ScheduleRowDerivation;
+import com.foremen.service.schedule.WorkerScheduleLayout;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -132,8 +140,20 @@ public class ProjectScheduleService
     static final String CATEGORY_INVALID_MESSAGE = "error.schedule.category.invalid";
 
     /**
-     * 409 raised when {@link #autoCreate(Long, AutoCreateRequest)} is called for a project whose team
-     * has no ACTIVE WORKER member, so no {@code Crew_Size} is available to lay the schedule out (R8.1).
+     * 400 raised when a save entry's {@code (projectMemberId, workCategoryId)} pairing is invalid: the
+     * member is not an ACTIVE WORKER of the project that covers the category (and is not {@code null},
+     * the allowed virtual {@code Uncovered_Category} bar). The offending category id is the single
+     * message parameter (FOR-05-10b R3.5).
+     */
+    static final String ASSIGNMENT_INVALID_MESSAGE = "error.schedule.assignment.invalid";
+
+    /**
+     * The FOR-05-10 empty-crew error code, <b>retained for backward compatibility only</b>. In the
+     * FOR-05-10b per-worker model {@link #autoCreate(Long, AutoCreateRequest)} no longer hard-fails
+     * on an empty crew (R4.6): an empty crew lays every category out as an {@code Uncovered_Category}
+     * virtual bar and is reported through the {@link AutoCreateAlert#crewEmpty()} flag instead. The
+     * code and its message-bundle entry are kept so any other reference / historical audit still
+     * resolves, but no code path raises it any longer.
      */
     static final String CREW_EMPTY_MESSAGE = "error.schedule.crew.empty";
 
@@ -431,35 +451,65 @@ public class ProjectScheduleService
                 estimateLineDao.findByProjectIdWithWorkItemCategoryAndUnit(projectId);
         List<ScheduleRowDerivation.RowSource> rowSources = ScheduleRowDerivation.deriveRows(lines);
 
-        // 3 — stored bars indexed by work category id; orphan bars (category no longer a row) skipped.
+        // 3 — the ACTIVE WORKER members (id + display name + their Member_Work_Categories). These back
+        //     the per-worker bar labels (R7.1), the color legend (workers list), the covered flag, and
+        //     the crewSize. Ordered by member id so the legend and covering-worker lists are stable.
+        List<ProjectMemberEntity> workerMembers = activeWorkerMembers(projectId);
+        int crewSize = workerMembers.size();
+        Map<Long, String> workerNameById = new LinkedHashMap<>();
+        for (ProjectMemberEntity member : workerMembers) {
+            workerNameById.put(member.getId(), memberDisplayName(member));
+        }
+
+        // 4 — coverage of the estimate categories by those members (CoverageResolver, R4.1/4.2); the
+        //     covered flag per row and the Uncovered_Category set come from here.
+        List<CoverageResolver.WorkerMember> coverageInput = new ArrayList<>(workerMembers.size());
+        for (ProjectMemberEntity member : workerMembers) {
+            coverageInput.add(new CoverageResolver.WorkerMember(
+                    member.getId(), memberCategoryIds(member)));
+        }
+        List<Long> rowCategoryIds = new ArrayList<>(rowSources.size());
+        for (ScheduleRowDerivation.RowSource source : rowSources) {
+            rowCategoryIds.add(source.category().getId());
+        }
+        CoverageResolver.Coverage coverage = CoverageResolver.resolve(rowCategoryIds, coverageInput);
+
+        // 5 — stored bars indexed by (member id, category id); orphan bars (category no longer a row)
+        //     are skipped by only reading a row's own category key. A null member id keys the
+        //     Uncovered_Category virtual bar (D-uncovered).
         ProjectScheduleEntity schedule = projectScheduleDao.findByProjectId(projectId).orElse(null);
         long version = schedule == null || schedule.getVersion() == null ? 0L : schedule.getVersion();
-        Map<Long, ProjectScheduleBarEntity> barsByCategory = indexBarsByCategory(schedule);
+        Map<Long, List<ProjectScheduleBarEntity>> barsByCategory = indexBarsByCategoryPerWorker(schedule);
 
-        // 4 — crew, rate, money/edit flags.
-        int crewSize = (int) projectMemberDao.countByProjectIdAndProjectRoleCodeAndAssignmentStatus(
-                projectId, WORKER_ROLE_CODE, AssignmentStatus.ACTIVE);
         BigDecimal rate = scheduleProperties.dailyOutputPerWorker();
         boolean moneyViewer = isMoneyViewer();
         boolean russian = isRussianLocale();
         boolean editable = EDITABLE_STATUSES.contains(project.getStatus()) && callerCanUpdateSchedule();
 
-        // 5 — map each row (and collect the laid-out bars for the schedule-wide finish computation).
+        // 6 — map each row to its per-worker bars (incl. the virtual uncovered bar) and the covered
+        //     flag; collect every laid-out bar's half-day finish for the schedule-wide finish.
         List<ScheduleRowView> rows = new ArrayList<>(rowSources.size());
-        List<ScheduleCalculator.BarLayout> scheduledBars = new ArrayList<>();
+        List<Integer> finishHalfDays = new ArrayList<>();
         for (ScheduleRowDerivation.RowSource source : rowSources) {
             WorkCategoryEntity category = source.category();
             Long categoryId = category.getId();
-            ProjectScheduleBarEntity bar = barsByCategory.get(categoryId);
+            boolean covered = coverage.covered(categoryId);
 
-            Integer startDay = bar == null ? null : bar.getStartDay();
-            Integer durationDays = bar == null ? null : bar.getDurationDays();
-            Integer finishDay = bar == null
-                    ? null
-                    : ScheduleCalculator.finishDay(bar.getStartDay(), bar.getDurationDays());
-            if (bar != null) {
-                scheduledBars.add(new ScheduleCalculator.BarLayout(
-                        categoryId, bar.getStartDay(), bar.getDurationDays()));
+            List<ScheduleBarView> barViews = new ArrayList<>();
+            for (ProjectScheduleBarEntity bar : barsByCategory.getOrDefault(categoryId, List.of())) {
+                Integer startHalfDays = bar.getStartHalfDays();
+                Integer durationHalfDays = bar.getDurationHalfDays();
+                if (startHalfDays == null || durationHalfDays == null) {
+                    continue; // defensive: a persisted bar always has both (CHECK >= 1)
+                }
+                Long memberId = bar.getProjectMember() == null ? null : bar.getProjectMember().getId();
+                barViews.add(new ScheduleBarView(
+                        memberId,
+                        memberId == null ? null : workerNameById.get(memberId),
+                        ScheduleCalculator.startDayFromHalfDays(startHalfDays),
+                        ScheduleCalculator.durationDaysFromHalfDays(durationHalfDays),
+                        ScheduleCalculator.finishDayFromHalfDays(startHalfDays, durationHalfDays)));
+                finishHalfDays.add(ScheduleCalculator.finishHalfDay(startHalfDays, durationHalfDays));
             }
 
             rows.add(new ScheduleRowView(
@@ -470,18 +520,24 @@ public class ProjectScheduleService
                     source.lineCount(),
                     ScheduleCalculator.suggested(source.categoryValue(), rate, crewSize),
                     moneyViewer ? source.categoryValue() : null,
-                    startDay,
-                    durationDays,
-                    finishDay,
+                    covered,
+                    barViews,
                     toLineViews(source.lines(), russian)));
         }
 
-        // 6 — schedule-wide finish, finishDate, exceedsProjectEnd, and the money currency.
+        // 7 — the worker legend (one entry per ACTIVE WORKER member; color computed client-side).
+        List<ScheduleWorkerView> workers = new ArrayList<>(workerMembers.size());
+        for (ProjectMemberEntity member : workerMembers) {
+            workers.add(new ScheduleWorkerView(member.getId(), memberDisplayName(member), null));
+        }
+
+        // 8 — schedule-wide finish (half-day grid), finishDate, exceedsProjectEnd, and the currency.
         LocalDate anchor = project.getStartDate();
         LocalDate endDate = project.getEndDate();
-        Integer scheduleFinish = ScheduleCalculator.scheduleFinish(scheduledBars);
-        LocalDate finishDate = ScheduleCalculator.finishDate(anchor, scheduleFinish);
-        boolean exceedsProjectEnd = ScheduleCalculator.exceedsProjectEnd(anchor, endDate, scheduleFinish);
+        Double scheduleFinish = ScheduleCalculator.scheduleFinishDayFromHalfDays(finishHalfDays);
+        LocalDate finishDate = ScheduleCalculator.finishDateFromHalfDays(anchor, finishHalfDays);
+        boolean exceedsProjectEnd =
+                ScheduleCalculator.exceedsProjectEndHalfDays(anchor, endDate, finishHalfDays);
         String currency = moneyViewer ? estimateCurrencyCode(lines) : null;
 
         return new ScheduleView(
@@ -495,7 +551,74 @@ public class ProjectScheduleService
                 scheduleFinish,
                 finishDate,
                 exceedsProjectEnd,
+                workers,
                 rows);
+    }
+
+    /**
+     * The ACTIVE WORKER members of a project, in ascending member-id order, with their
+     * Member_Work_Categories reachable (FOR-05-10b R7.1, R4.1). These feed the crew size, the worker
+     * legend, the per-worker bar labels, and the {@link CoverageResolver} coverage. The lazy
+     * {@code workCategories} / {@code user} associations are touched inside the read transaction, so
+     * no detached-access occurs.
+     */
+    private List<ProjectMemberEntity> activeWorkerMembers(Long projectId) {
+        List<ProjectMemberEntity> members = new ArrayList<>();
+        for (ProjectMemberEntity member : projectMemberDao.findByProjectId(projectId)) {
+            if (member.getAssignmentStatus() != AssignmentStatus.ACTIVE) {
+                continue;
+            }
+            if (member.getProjectRole() == null
+                    || !WORKER_ROLE_CODE.equals(member.getProjectRole().getCode())) {
+                continue;
+            }
+            members.add(member);
+        }
+        members.sort(java.util.Comparator.comparing(
+                ProjectMemberEntity::getId,
+                java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+        return members;
+    }
+
+    /** The display name of a member — its user's name, or {@code null} when the user is unresolved. */
+    private static String memberDisplayName(ProjectMemberEntity member) {
+        return member.getUser() == null ? null : member.getUser().getName();
+    }
+
+    /** The non-null work-category ids of a member's Member_Work_Categories (R4.1 coverage input). */
+    private static Set<Long> memberCategoryIds(ProjectMemberEntity member) {
+        Set<Long> ids = new HashSet<>();
+        if (member.getWorkCategories() != null) {
+            for (WorkCategoryEntity category : member.getWorkCategories()) {
+                if (category != null && category.getId() != null) {
+                    ids.add(category.getId());
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * Indexes a schedule's stored bars by work category id into the ordered list of that category's
+     * per-worker bars (FOR-05-10b, D-bar-key). A bar whose category id cannot be resolved is skipped
+     * defensively; the <em>orphan</em> decision (reading only a current row's category key) is left
+     * to the caller, exactly as the FOR-05-10 {@link #indexBarsByCategory(ProjectScheduleEntity)}
+     * did. Within a category the bars keep the entity-collection order; the covered bars are then
+     * presented in that order and the virtual uncovered bar (null member) sits among them.
+     */
+    private static Map<Long, List<ProjectScheduleBarEntity>> indexBarsByCategoryPerWorker(
+            ProjectScheduleEntity schedule) {
+        if (schedule == null || schedule.getBars() == null || schedule.getBars().isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, List<ProjectScheduleBarEntity>> byCategory = new HashMap<>();
+        for (ProjectScheduleBarEntity bar : schedule.getBars()) {
+            WorkCategoryEntity category = bar.getWorkCategory();
+            if (category != null && category.getId() != null) {
+                byCategory.computeIfAbsent(category.getId(), c -> new ArrayList<>()).add(bar);
+            }
+        }
+        return byCategory;
     }
 
     // --- Save bars (task 6.1, Requirements 4.6, 6.3, 6.4, 7.1-7.6) ---
@@ -566,25 +689,38 @@ public class ProjectScheduleService
                 estimateLineDao.findByProjectIdWithWorkItemCategoryAndUnit(projectId);
         Map<Long, WorkCategoryEntity> currentRows = currentRowCategories(lines);
 
-        // 4 — business validation of every entry; nothing is mutated until all entries pass.
-        validateEntries(request.bars(), currentRows.keySet());
+        // The ACTIVE WORKER members of the project, indexed by id, with the categories each covers.
+        // These back the (member, category) pairing validation (R3.5, error.schedule.assignment.invalid)
+        // and provide the attached member entity for a brand-new bar's FK.
+        List<ProjectMemberEntity> workerMembers = activeWorkerMembers(projectId);
+        Map<Long, ProjectMemberEntity> memberById = new LinkedHashMap<>();
+        Map<Long, Set<Long>> coveredCategoriesByMember = new HashMap<>();
+        for (ProjectMemberEntity member : workerMembers) {
+            memberById.put(member.getId(), member);
+            coveredCategoriesByMember.put(member.getId(), memberCategoryIds(member));
+        }
 
-        // Desired final bar state = stored bars of current rows (orphans dropped) with the listed
-        // entries applied. A null-pair entry clears the category; a value entry sets/replaces it.
-        Map<Long, ProjectScheduleBarEntity> storedByCategory = indexBarsByCategory(schedule);
-        Map<Long, int[]> desired = computeDesiredBars(storedByCategory, currentRows.keySet(), request.bars());
+        // 4 — business validation of every entry; nothing is mutated until all entries pass. The
+        //     category / pairing checks (R3.5) run first, then the grid/horizon bounds (R3.4).
+        validateEntries(request.bars(), currentRows.keySet(), coveredCategoriesByMember);
+
+        // Desired final bar state = stored bars of current rows (orphans dropped) keyed by
+        // (member, category), with the listed entries applied. A null-pair entry clears that bar;
+        // a value entry sets/replaces it.
+        Map<BarKey, ProjectScheduleBarEntity> storedByKey = indexBarsByKey(schedule, currentRows.keySet());
+        Map<BarKey, int[]> desired = computeDesiredBars(storedByKey, request.bars());
 
         // No-op (R7.5): the schedule exists, the desired set equals the stored current-row set, and
         // there is no Orphan_Bar to purge. Nothing is written; the version and audit are untouched.
         if (schedule != null
-                && !hasOrphan(storedByCategory, currentRows.keySet())
-                && isNoChange(storedByCategory, currentRows.keySet(), desired)) {
+                && !hasOrphan(schedule, currentRows.keySet())
+                && isNoChange(storedByKey, desired)) {
             return getView(projectId);
         }
 
         // Capture the BEFORE snapshot of the stored bars (current rows, in row order) BEFORE applyBars
         // mutates the owned collection; empty on the first write (no prior schedule / bars), R13.3.
-        String before = barsSnapshot(currentRows.keySet(), storedByCategory);
+        String before = barsSnapshot(currentRows, storedByKey);
 
         // Mutation branch — create the schedule on the first write (R6.4).
         boolean firstWrite = schedule == null;
@@ -593,9 +729,9 @@ public class ProjectScheduleService
             schedule.setProject(project);
         }
 
-        applyBars(schedule, currentRows, desired);                    // upsert / clear + purge orphans
+        applyBars(schedule, currentRows, memberById, desired);        // upsert / clear + purge orphans
 
-        // Force exactly one @Version increment even when only child bar rows changed (R7.1, R11).
+        // Force exactly one @Version increment even when only child bar rows changed (R3.5, R9.2).
         entityManager.persist(schedule);
         entityManager.lock(schedule, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
         try {
@@ -604,9 +740,9 @@ public class ProjectScheduleService
             throw mapWriteConflict(e);
         }
 
-        // One SAVE_BARS audit row per committed changing write (R13.1): the after-snapshot is the
-        // persisted bar set, in row order; rejected / no-op saves never reach this point (R13.4).
-        String after = barsSnapshot(currentRows.keySet(), indexBarsByCategory(schedule));
+        // One SAVE_BARS audit row per committed changing write (R9.2): the after-snapshot is the
+        // persisted bar set, in row order; rejected / no-op saves never reach this point.
+        String after = barsSnapshot(currentRows, indexBarsByKey(schedule, currentRows.keySet()));
         writeScheduleAudit(schedule, SAVE_BARS_AUDIT_KIND, before, after);
 
         return getView(projectId);
@@ -641,18 +777,44 @@ public class ProjectScheduleService
      *                             duplicated category (R7.4), or 400 {@code error.schedule.bar.invalid}
      *                             for a bad period (R7.3), each naming the offending category id
      */
-    private static void validateEntries(List<BarEntry> entries, Set<Long> currentCategoryIds) {
-        Set<Long> seen = new HashSet<>();
+    private static void validateEntries(
+            List<BarEntry> entries,
+            Set<Long> currentCategoryIds,
+            Map<Long, Set<Long>> coveredCategoriesByMember) {
+        Set<BarKey> seen = new HashSet<>();
         for (BarEntry entry : entries) {
             Long categoryId = entry.workCategoryId();
+            // The category must be a current Schedule_Row, and each (member, category) pair at most
+            // once in the request (R3.5, error.schedule.category.invalid).
             if (categoryId == null
                     || !currentCategoryIds.contains(categoryId)
-                    || !seen.add(categoryId)) {
+                    || !seen.add(new BarKey(entry.projectMemberId(), categoryId))) {
                 throw new ForemenApiException(HttpStatus.BAD_REQUEST, CATEGORY_INVALID_MESSAGE, categoryId);
             }
+            // The (member, category) pairing must be valid: a null member is the allowed virtual
+            // uncovered bar; a non-null member must be an ACTIVE WORKER of the project that covers the
+            // category (R3.5, error.schedule.assignment.invalid).
+            Long memberId = entry.projectMemberId();
+            if (memberId != null) {
+                Set<Long> covered = coveredCategoriesByMember.get(memberId);
+                if (covered == null || !covered.contains(categoryId)) {
+                    throw new ForemenApiException(
+                            HttpStatus.BAD_REQUEST, ASSIGNMENT_INVALID_MESSAGE, categoryId);
+                }
+            }
         }
+        // Grid / horizon bounds for every value entry (R3.4): the day values must be on the 0.5 grid
+        // and the half-day finish must stay within the horizon, else error.schedule.bar.invalid.
         for (BarEntry entry : entries) {
-            if (!ScheduleCalculator.validateBar(entry.startDay(), entry.durationDays())) {
+            Integer startHalfDays = ScheduleCalculator.halfDaysFromDay(entry.startDay());
+            Integer durationHalfDays = ScheduleCalculator.halfDaysFromDay(entry.durationDays());
+            boolean bothDaysNull = entry.startDay() == null && entry.durationDays() == null;
+            // A half-null day pair or an off-grid value is already an invalid bar; otherwise defer to
+            // the half-day validateBar for the >= 1 / horizon rule.
+            boolean offGrid = !bothDaysNull
+                    && ((entry.startDay() != null && startHalfDays == null)
+                        || (entry.durationDays() != null && durationHalfDays == null));
+            if (offGrid || !ScheduleCalculator.validateBar(startHalfDays, durationHalfDays)) {
                 throw new ForemenApiException(
                         HttpStatus.BAD_REQUEST, BAR_INVALID_MESSAGE, entry.workCategoryId());
             }
@@ -660,38 +822,45 @@ public class ProjectScheduleService
     }
 
     /**
-     * Computes the desired final bar set as a map of category id &rarr; {@code [startDay, durationDays]}
-     * for scheduled bars only. It starts from the stored bars of <em>current rows</em> (orphans
-     * dropped, R4.5), then applies the listed entries: a value entry sets / replaces the pair, a
-     * null-pair entry removes the category. Unlisted current-row categories keep their stored bar.
+     * Computes the desired final bar set as a map of {@link BarKey} &rarr;
+     * {@code [startHalfDays, durationHalfDays]} for scheduled bars only. It starts from the stored
+     * bars of <em>current rows</em> (orphans already dropped by {@link #indexBarsByKey}), then applies
+     * the listed entries: a value entry sets / replaces the pair (converting the 0.5-grid day values
+     * to half-days), a both-null entry removes that {@code (member, category)} bar. Unlisted
+     * {@code (member, category)} bars keep their stored period.
      */
-    private static Map<Long, int[]> computeDesiredBars(
-            Map<Long, ProjectScheduleBarEntity> storedByCategory,
-            Set<Long> currentCategoryIds,
+    private static Map<BarKey, int[]> computeDesiredBars(
+            Map<BarKey, ProjectScheduleBarEntity> storedByKey,
             List<BarEntry> entries) {
-        Map<Long, int[]> desired = new HashMap<>();
-        for (Long categoryId : currentCategoryIds) {
-            ProjectScheduleBarEntity bar = storedByCategory.get(categoryId);
-            if (bar != null && bar.getStartDay() != null && bar.getDurationDays() != null) {
-                desired.put(categoryId, new int[] {bar.getStartDay(), bar.getDurationDays()});
+        Map<BarKey, int[]> desired = new HashMap<>();
+        for (Map.Entry<BarKey, ProjectScheduleBarEntity> e : storedByKey.entrySet()) {
+            ProjectScheduleBarEntity bar = e.getValue();
+            if (bar.getStartHalfDays() != null && bar.getDurationHalfDays() != null) {
+                desired.put(e.getKey(), new int[] {bar.getStartHalfDays(), bar.getDurationHalfDays()});
             }
         }
         for (BarEntry entry : entries) {
+            BarKey key = new BarKey(entry.projectMemberId(), entry.workCategoryId());
             if (entry.startDay() == null && entry.durationDays() == null) {
-                desired.remove(entry.workCategoryId());
+                desired.remove(key);
             } else {
-                desired.put(entry.workCategoryId(),
-                        new int[] {entry.startDay(), entry.durationDays()});
+                desired.put(key, new int[] {
+                        ScheduleCalculator.halfDaysFromDay(entry.startDay()),
+                        ScheduleCalculator.halfDaysFromDay(entry.durationDays())});
             }
         }
         return desired;
     }
 
-    /** Whether any stored bar is an {@code Orphan_Bar} (its category is no longer a current row, R4.5). */
-    private static boolean hasOrphan(
-            Map<Long, ProjectScheduleBarEntity> storedByCategory, Set<Long> currentCategoryIds) {
-        for (Long categoryId : storedByCategory.keySet()) {
-            if (!currentCategoryIds.contains(categoryId)) {
+    /** Whether any stored bar is an {@code Orphan_Bar} (its category is no longer a current row). */
+    private static boolean hasOrphan(ProjectScheduleEntity schedule, Set<Long> currentCategoryIds) {
+        if (schedule == null || schedule.getBars() == null) {
+            return false;
+        }
+        for (ProjectScheduleBarEntity bar : schedule.getBars()) {
+            WorkCategoryEntity category = bar.getWorkCategory();
+            Long categoryId = category == null ? null : category.getId();
+            if (categoryId == null || !currentCategoryIds.contains(categoryId)) {
                 return true;
             }
         }
@@ -699,25 +868,25 @@ public class ProjectScheduleService
     }
 
     /**
-     * Whether the desired bar set equals the stored current-row bar set — the no-op test (R7.5). Equal
-     * means the same scheduled categories with identical {@code startDay} / {@code durationDays}. Only
-     * current-row stored bars are compared (orphans are handled separately by {@link #hasOrphan}).
+     * Whether the desired bar set equals the stored current-row bar set — the no-op test (R7.5
+     * carried over). Equal means the same {@code (member, category)} bars with identical
+     * {@code startHalfDays} / {@code durationHalfDays}. Only current-row stored bars are compared
+     * (orphans are handled separately by {@link #hasOrphan}).
      */
     private static boolean isNoChange(
-            Map<Long, ProjectScheduleBarEntity> storedByCategory,
-            Set<Long> currentCategoryIds,
-            Map<Long, int[]> desired) {
-        Map<Long, int[]> storedCurrent = new HashMap<>();
-        for (Long categoryId : currentCategoryIds) {
-            ProjectScheduleBarEntity bar = storedByCategory.get(categoryId);
-            if (bar != null && bar.getStartDay() != null && bar.getDurationDays() != null) {
-                storedCurrent.put(categoryId, new int[] {bar.getStartDay(), bar.getDurationDays()});
+            Map<BarKey, ProjectScheduleBarEntity> storedByKey,
+            Map<BarKey, int[]> desired) {
+        Map<BarKey, int[]> storedCurrent = new HashMap<>();
+        for (Map.Entry<BarKey, ProjectScheduleBarEntity> e : storedByKey.entrySet()) {
+            ProjectScheduleBarEntity bar = e.getValue();
+            if (bar.getStartHalfDays() != null && bar.getDurationHalfDays() != null) {
+                storedCurrent.put(e.getKey(), new int[] {bar.getStartHalfDays(), bar.getDurationHalfDays()});
             }
         }
         if (storedCurrent.size() != desired.size()) {
             return false;
         }
-        for (Map.Entry<Long, int[]> e : desired.entrySet()) {
+        for (Map.Entry<BarKey, int[]> e : desired.entrySet()) {
             int[] stored = storedCurrent.get(e.getKey());
             if (stored == null || stored[0] != e.getValue()[0] || stored[1] != e.getValue()[1]) {
                 return false;
@@ -727,65 +896,106 @@ public class ProjectScheduleService
     }
 
     /**
-     * Mutates the schedule's owned bar collection to match {@code desired} and purges every
-     * {@code Orphan_Bar} (R4.6), relying on {@code cascade = ALL} + {@code orphanRemoval = true}:
+     * Mutates the schedule's owned bar collection to match {@code desired} (keyed per
+     * {@code (member, category)}) and purges every {@code Orphan_Bar}, relying on
+     * {@code cascade = ALL} + {@code orphanRemoval = true}:
      * <ul>
-     *   <li>a bar whose category is not in {@code desired} (cleared, or an orphan) is removed from the
-     *       collection, which deletes its row;</li>
-     *   <li>a bar whose category is in {@code desired} has its period updated in place;</li>
-     *   <li>a desired category with no existing bar gets a new {@link ProjectScheduleBarEntity} whose
-     *       {@code workCategory} is the attached current-row entity.</li>
+     *   <li>a bar whose {@code (member, category)} key is not in {@code desired} (cleared, or an
+     *       orphan) is removed from the collection, which deletes its row;</li>
+     *   <li>a bar whose key is in {@code desired} has its half-day period updated in place;</li>
+     *   <li>a desired key with no existing bar gets a new {@link ProjectScheduleBarEntity} whose
+     *       {@code workCategory} is the attached current-row entity and whose {@code projectMember} is
+     *       the attached ACTIVE WORKER member (or {@code null} for the virtual uncovered bar).</li>
      * </ul>
      */
     private static void applyBars(
             ProjectScheduleEntity schedule,
             Map<Long, WorkCategoryEntity> currentRows,
-            Map<Long, int[]> desired) {
+            Map<Long, ProjectMemberEntity> memberById,
+            Map<BarKey, int[]> desired) {
         List<ProjectScheduleBarEntity> bars = schedule.getBars();
 
-        // Update or remove existing bars; track which desired categories already have a bar.
-        Set<Long> existing = new HashSet<>();
+        // Update or remove existing bars; track which desired keys already have a bar.
+        Set<BarKey> existing = new HashSet<>();
         Iterator<ProjectScheduleBarEntity> it = bars.iterator();
         while (it.hasNext()) {
             ProjectScheduleBarEntity bar = it.next();
             WorkCategoryEntity category = bar.getWorkCategory();
             Long categoryId = category == null ? null : category.getId();
-            int[] target = categoryId == null ? null : desired.get(categoryId);
+            Long memberId = bar.getProjectMember() == null ? null : bar.getProjectMember().getId();
+            BarKey key = categoryId == null ? null : new BarKey(memberId, categoryId);
+            int[] target = key == null ? null : desired.get(key);
             if (target == null) {
                 it.remove();                                          // cleared bar or Orphan_Bar
             } else {
-                bar.setStartDay(target[0]);
-                bar.setDurationDays(target[1]);
-                existing.add(categoryId);
+                bar.setStartHalfDays(target[0]);
+                bar.setDurationHalfDays(target[1]);
+                existing.add(key);
             }
         }
 
-        // Add bars for desired categories that have none yet.
-        for (Map.Entry<Long, int[]> e : desired.entrySet()) {
-            if (existing.contains(e.getKey())) {
+        // Add bars for desired keys that have none yet.
+        for (Map.Entry<BarKey, int[]> e : desired.entrySet()) {
+            BarKey key = e.getKey();
+            if (existing.contains(key)) {
                 continue;
             }
             ProjectScheduleBarEntity bar = new ProjectScheduleBarEntity();
             bar.setSchedule(schedule);
-            bar.setWorkCategory(currentRows.get(e.getKey()));
-            bar.setStartDay(e.getValue()[0]);
-            bar.setDurationDays(e.getValue()[1]);
+            bar.setWorkCategory(currentRows.get(key.categoryId()));
+            bar.setProjectMember(key.memberId() == null ? null : memberById.get(key.memberId()));
+            bar.setStartHalfDays(e.getValue()[0]);
+            bar.setDurationHalfDays(e.getValue()[1]);
             bars.add(bar);
         }
     }
 
-
-
-    // --- Auto-create (task 6.2, Requirements 8.1, 8.2, 8.3, 8.5, 8.6, 8.7, 9.2) ---
+    /**
+     * The composite key of a per-worker bar (FOR-05-10b D-bar-key): the covering worker's
+     * project-member id (or {@code null} for the virtual {@code Uncovered_Category} bar) paired with
+     * the work-category id. Equality on both components keys the stored-bar index, the desired set,
+     * and the no-op comparison.
+     */
+    private record BarKey(Long memberId, Long categoryId) {}
 
     /**
-     * Rebuilds a project's bars from scratch by laying every current {@code Schedule_Row} out back to
-     * back from day 1, using the internal {@code Daily_Output_Rate} and the project's active-worker
-     * {@code Crew_Size} (FOR-05-10 Requirement 8; the {@code WORK_SCHEDULE} UPDATE grant is enforced
-     * upstream by the {@code PermissionInterceptor}). It <em>replaces</em> the whole plan: every row
-     * gets a fresh {@code (startDay, durationDays)} and any bar not matching a current row (an
-     * {@code Orphan_Bar}, or a stale bar from a previous layout) is purged (R8.5). The whole operation
-     * runs in one transaction and increments the {@code Schedule_Version} exactly once.
+     * Indexes a schedule's stored bars by their {@code (member, category)} {@link BarKey}, keeping
+     * only bars whose category is a current {@code Schedule_Row} ({@code currentCategoryIds}); an
+     * {@code Orphan_Bar} (category no longer a row) is excluded, exactly as {@code getView} skips it.
+     * A bar whose category id cannot be resolved is skipped defensively.
+     */
+    private static Map<BarKey, ProjectScheduleBarEntity> indexBarsByKey(
+            ProjectScheduleEntity schedule, Set<Long> currentCategoryIds) {
+        if (schedule == null || schedule.getBars() == null || schedule.getBars().isEmpty()) {
+            return Map.of();
+        }
+        Map<BarKey, ProjectScheduleBarEntity> byKey = new LinkedHashMap<>();
+        for (ProjectScheduleBarEntity bar : schedule.getBars()) {
+            WorkCategoryEntity category = bar.getWorkCategory();
+            Long categoryId = category == null ? null : category.getId();
+            if (categoryId == null || !currentCategoryIds.contains(categoryId)) {
+                continue; // Orphan_Bar / unresolved — excluded (R4.5)
+            }
+            Long memberId = bar.getProjectMember() == null ? null : bar.getProjectMember().getId();
+            byKey.put(new BarKey(memberId, categoryId), bar);
+        }
+        return byKey;
+    }
+
+
+
+    // --- Auto-create (task 4.3, Requirements 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 9.2) ---
+
+    /**
+     * Rebuilds a project's bars from scratch into a <em>per-worker</em> plan (FOR-05-10b Requirement
+     * 4; the {@code WORK_SCHEDULE} UPDATE grant is enforced upstream by the
+     * {@code PermissionInterceptor}). For every current {@code Schedule_Row} it finds the row's
+     * {@code Covering_Worker}s (via {@link CoverageResolver}), splits the category's workload equally
+     * and in parallel among them, and lays each worker's bars sequentially along the worker's own
+     * timeline (via {@link WorkerScheduleLayout}). A category with no covering worker is laid out as a
+     * single virtual {@code Uncovered_Category} bar (null member) and reported in the returned alert
+     * (R4.2, D-uncovered). The whole operation <em>replaces</em> the plan and runs in one transaction,
+     * incrementing the {@code Schedule_Version} exactly once (R4.7).
      *
      * <p><b>Check order (R3.5).</b> The same order as {@link #saveBars(Long, SaveBarsRequest)}:
      * <ol>
@@ -795,55 +1005,50 @@ public class ProjectScheduleService
      *       {@code Schedule_Locked_Status} (R10.2).</li>
      *   <li>{@link #assertVersion(ProjectScheduleEntity, Long)} — 409 {@code error.schedule.conflict}
      *       on a stale version (R11.2).</li>
-     *   <li>Business validation (below): 409 {@code error.schedule.crew.empty} when there is no ACTIVE
-     *       WORKER (R8.1), 409 {@code error.schedule.rows.empty} when the estimate yields no rows
-     *       (R8.6), and 409 {@code error.schedule.too.long} when the laid-out plan would run past day
-     *       3650 (R8.7) — all raised before any bar is changed.</li>
+     *   <li>Business validation (below): 409 {@code error.schedule.rows.empty} when the estimate
+     *       yields no {@code Schedule_Rows} (R4.7), and 409 {@code error.schedule.too.long} when the
+     *       laid-out plan would run past the 3650-day horizon (R4.4) — both raised before any bar is
+     *       changed. There is <b>no</b> empty-crew 409: an empty crew is a valid outcome reported via
+     *       the alert (R4.6, superseding the FOR-05-10 {@code error.schedule.crew.empty}).</li>
      * </ol>
      *
-     * <p><b>Layout and mutation.</b> With crew and rows in hand, {@link ScheduleCalculator#autoLayout}
-     * computes each row's {@code durationDays = max(1, ceil(categoryValue / (rate × crew)))} and
-     * places the rows contiguously from day 1 (every calendar day is a working day, R8.2, R8.3),
-     * throwing {@code error.schedule.too.long} on overrun. The resulting bars <em>replace</em> all
-     * stored bars: the schedule is loaded (or created on the first auto-create, R6.4), its bar
-     * collection is rewritten to exactly the laid-out set via {@link #applyBars} (which also purges
-     * orphans and stale bars), the parent is forced to bump its {@code @Version} once
+     * <p><b>Layout and mutation.</b> Each row's workload is {@code categoryHalfDays =
+     * max(1, 2 × ScheduleCalculator.duration(categoryValue, rate, 1))} — the per-worker-day FOR-05-10
+     * formula at half-day resolution, computed against the global internal {@code Daily_Output_Rate}
+     * and a single-worker denominator (the per-category worker split is applied by the layout, not by
+     * the duration). {@link WorkerScheduleLayout#autoLayout} then produces the per-worker
+     * {@code Worker_Bar}s (equal parallel split, per-worker sequencing, 1-day disjoint-neighbor
+     * overlap), throwing {@code error.schedule.too.long} on an overrun (R4.4). The resulting bars
+     * <em>replace</em> all stored bars via {@link #applyBars} (which also purges orphans and stale
+     * bars), the parent is forced to bump its {@code @Version} once
      * ({@link LockModeType#OPTIMISTIC_FORCE_INCREMENT}) even though only child bars change, and the
      * write is flushed with database-race mapping ({@link #mapWriteConflict(RuntimeException)},
-     * R6.4/R11.3). A single {@code AUTO_CREATE} audit row is written on the committed write (task 6.3,
-     * see {@link #writeAutoCreateAudit}).
+     * R6.4/R11.3). A single {@code AUTO_CREATE} audit row is written on the committed write (R4.7).
      *
      * <p>Unlike {@code saveBars}, auto-create has no no-op short-circuit: a successful call always
-     * replaces the plan and therefore always increments the version once, even if the computed layout
-     * happens to equal the stored bars (R8.5 — "replace all bars"). The rate is read only from
+     * replaces the plan and therefore always increments the version once. The rate is read only from
      * {@link ScheduleProperties}; it is never accepted from the request and never returned (R9.2).
      *
      * @param projectId the project whose schedule is auto-created
      * @param request   the version the client last read (the request carries no rate — R9.2)
-     * @return the fresh {@code Schedule_View} after the layout (HTTP 200 payload); never {@code null}
+     * @return the fresh {@link AutoCreateResult} — the {@code Schedule_View} plus the uncovered /
+     *         empty-crew alert (HTTP 200 payload); never {@code null}
      * @throws ForemenApiException 404 {@code error.entity.not.found} (R3.2/3.3), 409
      *                             {@code error.schedule.locked} (R10.2), 409
      *                             {@code error.schedule.conflict} (R11.2/3), 409
-     *                             {@code error.schedule.crew.empty} (R8.1), 409
-     *                             {@code error.schedule.rows.empty} (R8.6), or 409
-     *                             {@code error.schedule.too.long} (R8.7)
+     *                             {@code error.schedule.rows.empty} (R4.7), or 409
+     *                             {@code error.schedule.too.long} (R4.4)
      */
     @Transactional
-    public ScheduleView autoCreate(Long projectId, AutoCreateRequest request) {
+    public AutoCreateResult autoCreate(Long projectId, AutoCreateRequest request) {
         ProjectEntity project = loadAccessibleProject(projectId);     // 1 — 404
         assertEditable(project);                                      // 2 — 409 locked
 
         ProjectScheduleEntity schedule = projectScheduleDao.findByProjectId(projectId).orElse(null);
         assertVersion(schedule, request.version());                   // 3 — 409 conflict
 
-        // 4a — crew must have at least one ACTIVE WORKER (R8.1); nothing is mutated on rejection.
-        int crewSize = (int) projectMemberDao.countByProjectIdAndProjectRoleCodeAndAssignmentStatus(
-                projectId, WORKER_ROLE_CODE, AssignmentStatus.ACTIVE);
-        if (crewSize < 1) {
-            throw new ForemenApiException(HttpStatus.CONFLICT, CREW_EMPTY_MESSAGE);
-        }
-
-        // 4b — the estimate must yield at least one Schedule_Row (R8.6).
+        // 4a — the estimate must yield at least one Schedule_Row (R4.7). An empty crew is NOT a
+        //      rejection here: it is laid out as all-uncovered and reported in the alert (R4.6).
         List<EstimateLineEntity> lines =
                 estimateLineDao.findByProjectIdWithWorkItemCategoryAndUnit(projectId);
         List<ScheduleRowDerivation.RowSource> rowSources = ScheduleRowDerivation.deriveRows(lines);
@@ -851,22 +1056,48 @@ public class ProjectScheduleService
             throw new ForemenApiException(HttpStatus.CONFLICT, ROWS_EMPTY_MESSAGE);
         }
 
-        // 4c — lay the rows out back to back from day 1 with the internal rate (R8.2, R8.3); throws
-        //      409 error.schedule.too.long on an overrun past day 3650 (R8.7). Still nothing mutated.
-        BigDecimal rate = scheduleProperties.dailyOutputPerWorker();
-        List<ScheduleCalculator.BarLayout> layout =
-                ScheduleCalculator.autoLayout(rowSources, rate, crewSize);
-
-        // Replace-all desired set (R8.5): exactly the laid-out bars, keyed by category id.
+        // 4b — resolve the coverage of the rows by the project's ACTIVE WORKER members, in row order
+        //      (CoverageResolver, R4.1/R4.2). An empty crew yields every category uncovered (R4.6).
+        List<ProjectMemberEntity> workerMembers = activeWorkerMembers(projectId);
+        Map<Long, ProjectMemberEntity> memberById = new LinkedHashMap<>();
+        List<CoverageResolver.WorkerMember> coverageInput = new ArrayList<>(workerMembers.size());
+        for (ProjectMemberEntity member : workerMembers) {
+            memberById.put(member.getId(), member);
+            coverageInput.add(new CoverageResolver.WorkerMember(
+                    member.getId(), memberCategoryIds(member)));
+        }
         Map<Long, WorkCategoryEntity> currentRows = currentRowCategories(lines);
-        Map<Long, int[]> desired = new HashMap<>();
-        for (ScheduleCalculator.BarLayout bar : layout) {
-            desired.put(bar.workCategoryId(), new int[] {bar.startDay(), bar.durationDays()});
+        CoverageResolver.Coverage coverage =
+                CoverageResolver.resolve(currentRows.keySet(), coverageInput);
+
+        // 4c — the per-category half-day workload (R4.1): categoryHalfDays = max(1, 2 × duration) with
+        //      duration computed per worker-day against the internal rate (crew denominator 1; the
+        //      per-category split is the layout's job). Categories in Schedule_Row order (R4.3).
+        BigDecimal rate = scheduleProperties.dailyOutputPerWorker();
+        List<WorkerScheduleLayout.CategoryWork> categoryWork = new ArrayList<>(rowSources.size());
+        for (ScheduleRowDerivation.RowSource source : rowSources) {
+            int categoryHalfDays = Math.max(1, 2 * ScheduleCalculator.duration(
+                    source.categoryValue(), rate, 1));
+            categoryWork.add(new WorkerScheduleLayout.CategoryWork(
+                    source.category().getId(), categoryHalfDays));
+        }
+
+        // 4d — lay the per-worker bars out (R4.1-R4.4); throws 409 error.schedule.too.long on an
+        //      overrun past the 3650-day (7300 half-day) horizon (R4.4). Still nothing mutated.
+        WorkerScheduleLayout.LayoutResult layout =
+                WorkerScheduleLayout.autoLayout(categoryWork, coverage);
+
+        // Replace-all desired set (R4.1): exactly the laid-out per-worker bars, keyed by
+        // (member, category). A null member is the virtual Uncovered_Category bar (D-uncovered).
+        Map<BarKey, int[]> desired = new HashMap<>();
+        for (WorkerScheduleLayout.WorkerBarLayout bar : layout.bars()) {
+            desired.put(new BarKey(bar.projectMemberId(), bar.workCategoryId()),
+                    new int[] {bar.startHalfDays(), bar.durationHalfDays()});
         }
 
         // Capture the BEFORE snapshot of the stored bars (current rows, in row order) BEFORE applyBars
         // rewrites the owned collection; empty on the first auto-create (no prior schedule), R13.3.
-        String before = barsSnapshot(currentRows.keySet(), indexBarsByCategory(schedule));
+        String before = barsSnapshot(currentRows, indexBarsByKey(schedule, currentRows.keySet()));
 
         // Mutation branch — create the schedule on the first write (R6.4). Auto-create always writes
         // (no no-op short-circuit): a successful layout replaces the plan and bumps the version once.
@@ -875,9 +1106,9 @@ public class ProjectScheduleService
             schedule.setProject(project);
         }
 
-        applyBars(schedule, currentRows, desired);                    // replace all bars + purge orphans
+        applyBars(schedule, currentRows, memberById, desired);        // replace all bars + purge orphans
 
-        // Force exactly one @Version increment even when only child bar rows changed (R8.5, R11).
+        // Force exactly one @Version increment even when only child bar rows changed (R4.7, R11).
         entityManager.persist(schedule);
         entityManager.lock(schedule, LockModeType.OPTIMISTIC_FORCE_INCREMENT);
         try {
@@ -886,12 +1117,35 @@ public class ProjectScheduleService
             throw mapWriteConflict(e);
         }
 
-        // One AUTO_CREATE audit row per committed auto-create (R13.1): the after-snapshot is the
+        // One AUTO_CREATE audit row per committed auto-create (R4.7): the after-snapshot is the
         // laid-out bar set, in row order; a rejected auto-create never reaches this point (R13.4).
-        String after = barsSnapshot(currentRows.keySet(), indexBarsByCategory(schedule));
+        String after = barsSnapshot(currentRows, indexBarsByKey(schedule, currentRows.keySet()));
         writeScheduleAudit(schedule, AUTO_CREATE_AUDIT_KIND, before, after);
 
-        return getView(projectId);
+        // Build the alert (R4.5): the empty-crew flag + one UncoveredCategoryRef per
+        // Uncovered_Category (id + localized name, ru → pl → code), in Schedule_Row order.
+        AutoCreateAlert alert = buildAutoCreateAlert(layout, currentRows);
+        return new AutoCreateResult(getView(projectId), alert);
+    }
+
+    /**
+     * Builds the {@link AutoCreateAlert} from a {@link WorkerScheduleLayout.LayoutResult} (R4.5): the
+     * {@code crewEmpty} flag straight from the layout, and one {@link UncoveredCategoryRef} per
+     * {@code Uncovered_Category} carrying the category's localized name (ru &rarr; pl &rarr; code
+     * fallback, R4.5) resolved from the current-row category entities. The refs keep the layout's
+     * {@code Schedule_Row} order.
+     */
+    private AutoCreateAlert buildAutoCreateAlert(
+            WorkerScheduleLayout.LayoutResult layout,
+            Map<Long, WorkCategoryEntity> currentRows) {
+        boolean russian = isRussianLocale();
+        List<UncoveredCategoryRef> uncovered = new ArrayList<>(layout.uncoveredCategoryIds().size());
+        for (Long categoryId : layout.uncoveredCategoryIds()) {
+            WorkCategoryEntity category = currentRows.get(categoryId);
+            String name = category == null ? null : localizedCategoryName(category, russian);
+            uncovered.add(new UncoveredCategoryRef(categoryId, name));
+        }
+        return new AutoCreateAlert(layout.crewEmpty(), uncovered);
     }
 
     // --- Readiness (task 6.4, Requirements 12.1, 12.2) ---
@@ -945,9 +1199,44 @@ public class ProjectScheduleService
             }
         }
 
-        // 4 — derive the state and return the schedule gate.
+        // 4 — resolve coverage of the current Schedule_Row categories by the project's ACTIVE WORKER
+        //     members (CoverageResolver, R8.2). A category no ACTIVE WORKER covers is an
+        //     Uncovered_Category; these drive the aggregated-readiness noWorkerForCategory items.
+        List<ProjectMemberEntity> workerMembers = activeWorkerMembers(projectId);
+        List<CoverageResolver.WorkerMember> coverageInput = new ArrayList<>(workerMembers.size());
+        for (ProjectMemberEntity member : workerMembers) {
+            coverageInput.add(new CoverageResolver.WorkerMember(
+                    member.getId(), memberCategoryIds(member)));
+        }
+        List<Long> rowCategoryIds = new ArrayList<>(rowSources.size());
+        Map<Long, WorkCategoryEntity> categoryById = new LinkedHashMap<>();
+        for (ScheduleRowDerivation.RowSource source : rowSources) {
+            WorkCategoryEntity category = source.category();
+            if (category != null && category.getId() != null) {
+                rowCategoryIds.add(category.getId());
+                categoryById.putIfAbsent(category.getId(), category);
+            }
+        }
+        CoverageResolver.Coverage coverage = CoverageResolver.resolve(rowCategoryIds, coverageInput);
+
+        // 5 — the Uncovered_Category ids (in Schedule_Row order) plus their localized names, so the
+        //     contributor can emit localized items without a second read (R8.2).
+        boolean russian = isRussianLocale();
+        List<Long> uncoveredCategoryIds = new ArrayList<>(coverage.uncovered());
+        List<UncoveredCategoryRef> uncoveredCategories = new ArrayList<>(uncoveredCategoryIds.size());
+        for (Long categoryId : uncoveredCategoryIds) {
+            WorkCategoryEntity category = categoryById.get(categoryId);
+            String name = category == null ? null : localizedCategoryName(category, russian);
+            uncoveredCategories.add(new UncoveredCategoryRef(categoryId, name));
+        }
+
+        // 6 — derive the state and return the schedule gate. The gate state stays the FOR-05-10
+        //     (rowCount, scheduledCount) derivation; the "BLOCKED when any uncovered" rule is applied
+        //     by the aggregated-readiness ScheduleReadinessContributor's area state (design §Readiness).
         ScheduleReadiness.State state = ScheduleReadinessState.deriveState(rowCount, scheduledCount);
-        return new ScheduleReadiness(ScheduleReadiness.KEY, state, rowCount, scheduledCount);
+        return new ScheduleReadiness(
+                ScheduleReadiness.KEY, state, rowCount, scheduledCount,
+                uncoveredCategoryIds, uncoveredCategories);
     }
 
     // --- Audit (task 6.3, Requirement 13) ---
@@ -1017,20 +1306,40 @@ public class ProjectScheduleService
      * @return the {@code Bars_Snapshot} JSON string
      */
     private static String barsSnapshot(
-            java.util.Collection<Long> orderedCategoryIds,
-            Map<Long, ProjectScheduleBarEntity> barsByCategory) {
+            Map<Long, WorkCategoryEntity> currentRows,
+            Map<BarKey, ProjectScheduleBarEntity> barsByKey) {
         ObjectNode root = AUDIT_SNAPSHOT_MAPPER.createObjectNode();
         ArrayNode bars = root.putArray("bars");
-        for (Long categoryId : orderedCategoryIds) {
-            ProjectScheduleBarEntity bar = barsByCategory.get(categoryId);
-            if (bar == null || bar.getStartDay() == null || bar.getDurationDays() == null) {
-                continue;
+        // One entry per scheduled per-worker bar, grouped by current Schedule_Row order
+        // (orderNo ASC NULLS LAST, id ASC from currentRows) then by covering member id ascending with
+        // the virtual (null-member) bar last. The category is identified by its code, the worker by
+        // its member id (null = the Uncovered_Category virtual bar), never by category id (D-audit).
+        for (Long categoryId : currentRows.keySet()) {
+            WorkCategoryEntity category = currentRows.get(categoryId);
+            List<Map.Entry<BarKey, ProjectScheduleBarEntity>> categoryBars = new ArrayList<>();
+            for (Map.Entry<BarKey, ProjectScheduleBarEntity> e : barsByKey.entrySet()) {
+                if (categoryId.equals(e.getKey().categoryId())) {
+                    categoryBars.add(e);
+                }
             }
-            WorkCategoryEntity category = bar.getWorkCategory();
-            ObjectNode node = bars.addObject();
-            node.put("workCategoryCode", category == null ? null : category.getCode());
-            node.put("startDay", bar.getStartDay());
-            node.put("durationDays", bar.getDurationDays());
+            categoryBars.sort(java.util.Comparator.comparing(
+                    e -> e.getKey().memberId(),
+                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
+            for (Map.Entry<BarKey, ProjectScheduleBarEntity> e : categoryBars) {
+                ProjectScheduleBarEntity bar = e.getValue();
+                if (bar.getStartHalfDays() == null || bar.getDurationHalfDays() == null) {
+                    continue;
+                }
+                ObjectNode node = bars.addObject();
+                node.put("workCategoryCode", category == null ? null : category.getCode());
+                if (e.getKey().memberId() == null) {
+                    node.putNull("projectMemberId");
+                } else {
+                    node.put("projectMemberId", e.getKey().memberId());
+                }
+                node.put("startHalfDays", bar.getStartHalfDays());
+                node.put("durationHalfDays", bar.getDurationHalfDays());
+            }
         }
         try {
             return AUDIT_SNAPSHOT_MAPPER.writeValueAsString(root);

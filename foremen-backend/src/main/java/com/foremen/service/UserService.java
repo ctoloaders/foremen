@@ -2,9 +2,11 @@ package com.foremen.service;
 
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
+import com.foremen.dao.WorkCategoryDao;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
+import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkerKind;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
@@ -18,6 +20,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 @Service
@@ -30,6 +35,7 @@ public class UserService implements AdminService<
     private static final Set<String> SUPPORTED_LOCALES = Set.of("ru", "pl");
     private static final String ADMIN_ROLE_CODE = "ADMIN";
     private static final String CLIENT_ROLE_CODE = "CLIENT";
+    private static final String WORKER_ROLE_CODE = "WORKER";
 
     /**
      * Per-thread flag that signals the current {@code create(...)} call originated from the
@@ -46,6 +52,7 @@ public class UserService implements AdminService<
     private final EntityManager entityManager;
     private final InviteService inviteService;
     private final ProjectAccessCache projectAccessCache;
+    private final WorkCategoryDao workCategoryDao;
     private final Class<UserEntity> daoModelClass = UserEntity.class;
 
     // --- Validation hooks (framework reuses default create()/update() for audit/snapshot) ---
@@ -73,6 +80,10 @@ public class UserService implements AdminService<
         }
         validateEmailUniqueness(model.email(), null);
         validateLocale(model.locale());
+        // FOR-05-10b (R1.1–R1.4) — validate the submitted ids up front so a duplicate/invalid id
+        // rejects before anything is persisted (changing nothing). The resolved list is applied
+        // onto the entity in create(...) once the role is known.
+        resolveWorkCategories(role, model.workCategoryIds());
     }
 
     /**
@@ -91,6 +102,37 @@ public class UserService implements AdminService<
         }
         validateEmailUniqueness(update.email(), existing.getId());
         validateLocale(update.locale());
+        // FOR-05-10b (R1.1–R1.4) — validate the submitted ids up front so a duplicate/invalid id
+        // rejects before any field is changed (changing nothing). The resolved list is applied onto
+        // the entity in update(...) with the role resolved on this update.
+        resolveWorkCategories(targetRole, update.workCategoryIds());
+    }
+
+    /**
+     * Overrides the framework create to apply the WORKER user's ordered default work categories
+     * (FOR-05-10b R1.1). The CRUD mapper deliberately ignores the inbound {@code workCategoryIds}
+     * (the service owns resolving ids into managed {@link WorkCategoryEntity} rows and ordering);
+     * {@link #validateCreate} has already rejected a duplicate / unknown / inactive id, so here the
+     * resolved list is simply attached to the freshly created user and persisted. For a non-WORKER
+     * user the resolved list is empty (D-worker-only), so the user's list stays empty (R1.4).
+     */
+    @Override
+    public UserServiceExtendedModel create(UserServiceExtendedModel model) {
+        RoleEntity role = findRoleById(model.roleId());
+        List<WorkCategoryEntity> categories = resolveWorkCategories(role, model.workCategoryIds());
+        UserServiceExtendedModel created = AdminService.super.create(model);
+        if (!categories.isEmpty()) {
+            UserEntity entity = dao.findById(created.id())
+                    .orElseThrow(() -> new ForemenApiException(
+                            HttpStatus.INTERNAL_SERVER_ERROR, "error.entity.not.found", created.id()));
+            entity.getWorkCategories().clear();
+            entity.getWorkCategories().addAll(categories);
+            dao.save(entity);
+            entityManager.flush();
+            // Re-read so the returned model carries the persisted, ordered categories (R1.5).
+            return mapper.toServiceExtendedModel(entity);
+        }
+        return created;
     }
 
     /**
@@ -102,7 +144,18 @@ public class UserService implements AdminService<
      */
     @Override
     public UserServiceExtendedModel update(Long id, UserServiceExtendedModel model) {
-        UserServiceExtendedModel result = AdminService.super.update(id, model);
+        AdminService.super.update(id, model);
+        // FOR-05-10b (R1.1–R1.4) — replace the user's ordered default work categories after the
+        // field update. validateUpdate already rejected a duplicate / unknown / inactive id. The
+        // resolved list is empty for a non-WORKER user, which clears / keeps the list empty (R1.4).
+        UserEntity entity = dao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
+        List<WorkCategoryEntity> categories = resolveWorkCategories(entity.getRole(), model.workCategoryIds());
+        entity.getWorkCategories().clear();
+        entity.getWorkCategories().addAll(categories);
+        dao.save(entity);
+        entityManager.flush();
+        UserServiceExtendedModel result = mapper.toServiceExtendedModel(entity);
         projectAccessCache.invalidate(id);
         return result;
     }
@@ -160,6 +213,8 @@ public class UserService implements AdminService<
                 clientRole.getNameRU(),
                 true,
                 resolvedLocale,
+                null,
+                null,
                 null
         );
         UserServiceExtendedModel created;
@@ -288,6 +343,58 @@ public class UserService implements AdminService<
         if (locale != null && !SUPPORTED_LOCALES.contains(locale)) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.user.locale.invalid", locale);
         }
+    }
+
+    /**
+     * FOR-05-10b (R1.1–R1.4) — resolves the submitted {@code workCategoryIds} into an ordered list of
+     * managed {@link WorkCategoryEntity} rows, applying the worker-only, distinct, active-only rules:
+     *
+     * <ul>
+     *   <li>A non-WORKER {@code role} (or a {@code null} role) ⇒ the list is ignored and an empty
+     *       list is returned, so the user's categories stay empty (D-worker-only, R1.4).</li>
+     *   <li>A {@code null} / empty id list ⇒ an empty list (R1.1 allows 0..N).</li>
+     *   <li>A duplicate id ⇒ rejected with {@code error.user.workCategories.duplicate} naming the id,
+     *       changing nothing (R1.2).</li>
+     *   <li>An id not referencing an existing <em>active</em> work category ⇒ rejected with
+     *       {@code error.user.workCategories.invalid} naming the id, changing nothing (R1.3).</li>
+     * </ul>
+     *
+     * The returned list preserves the submitted order (R1.1); the caller attaches it to the user's
+     * {@code @OrderColumn}-ordered collection.
+     *
+     * @param role            the user's resolved role (WORKER gate)
+     * @param workCategoryIds the submitted, possibly null / empty, id list
+     * @return the ordered managed categories (empty for a non-WORKER user or an empty submission)
+     * @throws ForemenApiException 400 {@code error.user.workCategories.duplicate} / {@code .invalid}
+     */
+    private List<WorkCategoryEntity> resolveWorkCategories(RoleEntity role, List<Long> workCategoryIds) {
+        boolean worker = role != null && WORKER_ROLE_CODE.equals(role.getCode());
+        if (!worker || workCategoryIds == null || workCategoryIds.isEmpty()) {
+            return List.of();
+        }
+
+        // R1.2 — reject the first duplicate id (preserving submission order), changing nothing.
+        Set<Long> seen = new LinkedHashSet<>();
+        for (Long id : workCategoryIds) {
+            if (id != null && !seen.add(id)) {
+                throw new ForemenApiException(
+                        HttpStatus.BAD_REQUEST, "error.user.workCategories.duplicate", id);
+            }
+        }
+
+        // R1.1/R1.3 — resolve each id to an existing, active category, preserving order.
+        List<WorkCategoryEntity> resolved = new ArrayList<>(workCategoryIds.size());
+        for (Long id : workCategoryIds) {
+            WorkCategoryEntity category = (id == null)
+                    ? null
+                    : workCategoryDao.findById(id).orElse(null);
+            if (category == null || !category.isActive()) {
+                throw new ForemenApiException(
+                        HttpStatus.BAD_REQUEST, "error.user.workCategories.invalid", id);
+            }
+            resolved.add(category);
+        }
+        return resolved;
     }
 
     /**

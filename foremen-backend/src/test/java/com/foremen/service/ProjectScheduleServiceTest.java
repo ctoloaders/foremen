@@ -44,9 +44,12 @@ import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.ProjectEntity;
+import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectScheduleBarEntity;
 import com.foremen.dao.model.ProjectScheduleEntity;
 import com.foremen.dao.model.ProjectStatus;
+import com.foremen.dao.model.RoleEntity;
+import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.exception.ForemenApiException;
@@ -183,7 +186,14 @@ class ProjectScheduleServiceTest {
         return p;
     }
 
-    private static ProjectScheduleEntity scheduleWithBar(long version, WorkCategoryEntity cat, int startDay, int durationDays) {
+    /**
+     * FOR-05-10b: a schedule carrying a single per-worker bar (half-day grid) for {@code cat},
+     * optionally assigned to {@code member} (null = the Uncovered_Category virtual bar). The
+     * {@code startHalfDays} / {@code durationHalfDays} are supplied directly on the half-day grid.
+     */
+    private static ProjectScheduleEntity scheduleWithBar(long version, WorkCategoryEntity cat,
+                                                         ProjectMemberEntity member,
+                                                         int startHalfDays, int durationHalfDays) {
         ProjectScheduleEntity schedule = new ProjectScheduleEntity();
         schedule.setId(900L);
         schedule.setVersion(version);
@@ -191,10 +201,31 @@ class ProjectScheduleServiceTest {
         bar.setId(901L);
         bar.setSchedule(schedule);
         bar.setWorkCategory(cat);
-        bar.setStartDay(startDay);
-        bar.setDurationDays(durationDays);
+        bar.setProjectMember(member);
+        bar.setStartHalfDays(startHalfDays);
+        bar.setDurationHalfDays(durationHalfDays);
         schedule.getBars().add(bar);
         return schedule;
+    }
+
+    /** An ACTIVE WORKER project member with the given id, display name, and covered categories. */
+    private static ProjectMemberEntity workerMember(Long id, String name, WorkCategoryEntity... categories) {
+        RoleEntity role = new RoleEntity();
+        role.setId(900L);
+        role.setCode("WORKER");
+
+        UserEntity user = new UserEntity();
+        user.setId(id + 10_000);
+        user.setName(name);
+
+        ProjectMemberEntity member = new ProjectMemberEntity();
+        member.setId(id);
+        member.setUser(user);
+        member.setProjectRole(role);
+        member.setProjectId(PROJECT_ID);
+        member.setAssignmentStatus(AssignmentStatus.ACTIVE);
+        member.getWorkCategories().addAll(List.of(categories));
+        return member;
     }
 
     private static void authenticate(String principal, String authority) {
@@ -203,14 +234,33 @@ class ProjectScheduleServiceTest {
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
-    /** Stubs an editable DRAFT project with the given estimate lines and crew size for a getView run. */
+    /**
+     * Stubs an editable project with the given estimate lines and a crew of {@code crewSize} ACTIVE
+     * WORKER members (each covering every current category, so coverage is non-empty) for a getView
+     * run. The members are what FOR-05-10b's getView now reads to build the crew, legend, and
+     * coverage.
+     */
     private void stubGetView(ProjectStatus status, List<EstimateLineEntity> lines, int crewSize,
                              ProjectScheduleEntity schedule) {
+        List<WorkCategoryEntity> cats = new java.util.ArrayList<>();
+        for (EstimateLineEntity ln : lines) {
+            cats.add(ln.getWorkItem().getWorkCategory());
+        }
+        List<ProjectMemberEntity> members = new java.util.ArrayList<>();
+        for (int i = 0; i < crewSize; i++) {
+            members.add(workerMember((long) (i + 1), "Worker " + (i + 1),
+                    cats.toArray(new WorkCategoryEntity[0])));
+        }
+        stubGetView(status, lines, members, schedule);
+    }
+
+    /** Stubs an editable project with explicit ACTIVE WORKER members for a getView run. */
+    private void stubGetView(ProjectStatus status, List<EstimateLineEntity> lines,
+                             List<ProjectMemberEntity> members, ProjectScheduleEntity schedule) {
         when(projectDao.findById(PROJECT_ID)).thenReturn(Optional.of(project(status)));
         when(estimateLineDao.findByProjectIdWithWorkItemCategoryAndUnit(PROJECT_ID)).thenReturn(lines);
         when(projectScheduleDao.findByProjectId(PROJECT_ID)).thenReturn(Optional.ofNullable(schedule));
-        lenient().when(projectMemberDao.countByProjectIdAndProjectRoleCodeAndAssignmentStatus(
-                eq(PROJECT_ID), anyString(), eq(AssignmentStatus.ACTIVE))).thenReturn((long) crewSize);
+        lenient().when(projectMemberDao.findByProjectId(PROJECT_ID)).thenReturn(members);
         lenient().when(scheduleProperties.dailyOutputPerWorker()).thenReturn(RATE);
     }
 
@@ -279,11 +329,9 @@ class ProjectScheduleServiceTest {
         assertThat(view.version()).isZero();
         assertThat(view.finishDay()).isNull();
         assertThat(view.finishDate()).isNull();
-        assertThat(view.rows()).singleElement().satisfies(row -> {
-            assertThat(row.startDay()).isNull();
-            assertThat(row.durationDays()).isNull();
-            assertThat(row.finishDay()).isNull();
-        });
+        assertThat(view.rows()).singleElement().satisfies(row ->
+                // No schedule yet -> the row carries no bars (FOR-05-10b).
+                assertThat(row.bars()).isEmpty());
         // The read never creates a project_schedules row.
         verify(projectScheduleDao, never()).save(org.mockito.ArgumentMatchers.any());
     }
@@ -301,7 +349,7 @@ class ProjectScheduleServiceTest {
         EstimateLineEntity ln = line(10L, currentCat, new BigDecimal("100"), estimate);
 
         // Stored schedule has a bar for a category (orphanCat) that is NOT a current row.
-        ProjectScheduleEntity schedule = scheduleWithBar(3L, orphanCat, 1, 5);
+        ProjectScheduleEntity schedule = scheduleWithBar(3L, orphanCat, null, 2, 10);
         stubGetView(ProjectStatus.DRAFT, List.of(ln), 1, schedule);
         when(permissionEvaluator.isAllowed("ADMIN", "ESTIMATE", "READ")).thenReturn(true);
 
@@ -310,8 +358,7 @@ class ProjectScheduleServiceTest {
         // Only the current row is present and it is unscheduled; the orphan bar surfaces nowhere.
         assertThat(view.rows()).singleElement().satisfies(row -> {
             assertThat(row.workCategoryId()).isEqualTo(1L);
-            assertThat(row.startDay()).isNull();
-            assertThat(row.durationDays()).isNull();
+            assertThat(row.bars()).isEmpty();
         });
         // The schedule-wide finish ignores the orphan bar entirely.
         assertThat(view.finishDay()).isNull();
@@ -403,18 +450,31 @@ class ProjectScheduleServiceTest {
             EstimateEntity estimate = estimateWithCurrency("PLN");
             WorkCategoryEntity cat = category(1L, "01", 1, "Демонтаж", "Rozbiórka");
             EstimateLineEntity ln = line(10L, cat, new BigDecimal("100"), estimate);
-            ProjectScheduleEntity schedule = scheduleWithBar(4L, cat, 1, 3);
+            // One ACTIVE WORKER (member 1) covering the category, with a half-day bar (start half-day
+            // 2 = day 1.0, duration 6 half-days = 3.0 days, finish day (2+6-1)/2 = 3.5).
+            ProjectMemberEntity worker = workerMember(1L, "Jan K.", cat);
+            ProjectScheduleEntity schedule = scheduleWithBar(4L, cat, worker, 2, 6);
             // Project is ACTIVE — a Schedule_Locked_Status — yet the read must still succeed.
-            stubGetView(ProjectStatus.ACTIVE, List.of(ln), 1, schedule);
+            stubGetView(ProjectStatus.ACTIVE, List.of(ln), List.of(worker), schedule);
             when(permissionEvaluator.isAllowed("ADMIN", "ESTIMATE", "READ")).thenReturn(true);
 
             ScheduleView view = service.getView(PROJECT_ID);
 
             assertThat(view.version()).isEqualTo(4L);
             assertThat(view.rows()).singleElement().satisfies(row -> {
-                assertThat(row.startDay()).isEqualTo(1);
-                assertThat(row.durationDays()).isEqualTo(3);
-                assertThat(row.finishDay()).isEqualTo(ScheduleCalculator.finishDay(1, 3));
+                assertThat(row.covered()).isTrue();
+                assertThat(row.bars()).singleElement().satisfies(bar -> {
+                    assertThat(bar.projectMemberId()).isEqualTo(1L);
+                    assertThat(bar.workerName()).isEqualTo("Jan K.");
+                    assertThat(bar.startDay()).isEqualTo(1.0);
+                    assertThat(bar.durationDays()).isEqualTo(3.0);
+                    assertThat(bar.finishDay()).isEqualTo(3.5);
+                });
+            });
+            // The worker legend carries the one ACTIVE WORKER.
+            assertThat(view.workers()).singleElement().satisfies(w -> {
+                assertThat(w.projectMemberId()).isEqualTo(1L);
+                assertThat(w.name()).isEqualTo("Jan K.");
             });
             // editable is false in a locked status even for an ADMIN with UPDATE.
             assertThat(view.editable()).isFalse();
@@ -467,7 +527,7 @@ class ProjectScheduleServiceTest {
             // Simulate the write flow's ordering: assertEditable runs before assertVersion. On a
             // locked project both would fail, but the lock must be reported, never the version.
             ProjectEntity locked = project(ProjectStatus.ACTIVE);
-            ProjectScheduleEntity schedule = scheduleWithBar(5L, category(1L, "01", 1, "a", "b"), 1, 2);
+            ProjectScheduleEntity schedule = scheduleWithBar(5L, category(1L, "01", 1, "a", "b"), null, 2, 4);
 
             assertThatThrownBy(() -> {
                 service.assertEditable(locked);          // throws here (locked)
@@ -482,7 +542,7 @@ class ProjectScheduleServiceTest {
         @DisplayName("on an editable project, a stale version is a 409 conflict")
         void staleVersionIsConflictOnEditableProject() {
             ProjectEntity editable = project(ProjectStatus.DRAFT);
-            ProjectScheduleEntity schedule = scheduleWithBar(5L, category(1L, "01", 1, "a", "b"), 1, 2);
+            ProjectScheduleEntity schedule = scheduleWithBar(5L, category(1L, "01", 1, "a", "b"), null, 2, 4);
 
             assertThatThrownBy(() -> {
                 service.assertEditable(editable);        // passes (editable)
@@ -500,7 +560,7 @@ class ProjectScheduleServiceTest {
         @DisplayName("a matching version on an editable project passes both gates")
         void matchingVersionPasses() {
             ProjectEntity editable = project(ProjectStatus.DRAFT);
-            ProjectScheduleEntity schedule = scheduleWithBar(5L, category(1L, "01", 1, "a", "b"), 1, 2);
+            ProjectScheduleEntity schedule = scheduleWithBar(5L, category(1L, "01", 1, "a", "b"), null, 2, 4);
 
             service.assertEditable(editable);
             service.assertVersion(schedule, 5L);

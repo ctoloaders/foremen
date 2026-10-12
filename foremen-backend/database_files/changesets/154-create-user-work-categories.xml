@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-10b (R1.1, D-model): user_work_categories — the ordered DEFAULT list of
+        Work_Categories a WORKER user can perform (design §Data model "New table
+        user_work_categories"). An FK join table (not a surrogate-key child table) that
+        mirrors the project_member_tags @OrderColumn pattern but joins to work_categories:
+
+          user_id          BIGINT NOT NULL — FK to users(id), ON DELETE CASCADE so a user's
+                                             default categories are discarded with the user.
+          work_category_id BIGINT NOT NULL — FK to work_categories(id), ON DELETE RESTRICT so
+                                             a referenced category cannot be hard-deleted
+                                             (categories are deactivated, not deleted).
+          order_no         INT NOT NULL    — the @OrderColumn position preserving the
+                                             submitted order.
+
+        PK (user_id, order_no) — the @OrderColumn-mapped List position within a user.
+        UNIQUE (user_id, work_category_id) — a category appears at most once per user (R1.2).
+        INDEX on work_category_id — the reverse lookup / RESTRICT FK support.
+
+        Idempotent via NOT tableExists + MARK_RAN, so a re-run against an already-migrated
+        database makes no change. Registered LAST in changelog.xml (154).
+    -->
+
+    <changeSet id="154-create-user-work-categories" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="user_work_categories"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="user_work_categories">
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_category_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- PK (user_id, order_no): the @OrderColumn-mapped List position within a user. -->
+        <addPrimaryKey
+            tableName="user_work_categories"
+            columnNames="user_id, order_no"
+            constraintName="pk_user_work_categories"/>
+
+        <!-- Owner FK: NOT NULL, ON DELETE CASCADE — removing a user discards its categories. -->
+        <addForeignKeyConstraint
+            constraintName="fk_user_work_categories_user"
+            baseTableName="user_work_categories"
+            baseColumnNames="user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Category FK: ON DELETE RESTRICT — a referenced category cannot be hard-deleted. -->
+        <addForeignKeyConstraint
+            constraintName="fk_user_work_categories_work_category"
+            baseTableName="user_work_categories"
+            baseColumnNames="work_category_id"
+            referencedTableName="work_categories"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- R1.2: a category appears at most once per user. -->
+        <addUniqueConstraint
+            tableName="user_work_categories"
+            columnNames="user_id, work_category_id"
+            constraintName="ux_user_work_categories_user_category"/>
+
+        <!-- Reverse lookup / RESTRICT FK support on the referenced category. -->
+        <createIndex tableName="user_work_categories" indexName="ix_user_work_categories_work_category">
+            <column name="work_category_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

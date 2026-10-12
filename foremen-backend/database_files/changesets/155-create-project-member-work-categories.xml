@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-10b (R2.1, D-model): project_member_work_categories — the ordered PER-PROJECT
+        list of Work_Categories a WORKER project member can perform (design §Data model "New
+        table project_member_work_categories"). Analogous to user_work_categories (154) but the
+        owner is a project membership, not the user: on membership creation this list is COPIED
+        from the user's default (R2.1), then edited independently per project. An FK join table
+        that mirrors the project_member_tags @OrderColumn pattern but joins to work_categories:
+
+          project_member_id BIGINT NOT NULL — FK to project_members(id), ON DELETE CASCADE so a
+                                              member's categories are discarded when the member
+                                              is removed (R2.5).
+          work_category_id  BIGINT NOT NULL — FK to work_categories(id), ON DELETE RESTRICT so a
+                                              referenced category cannot be hard-deleted
+                                              (categories are deactivated, not deleted).
+          order_no          INT NOT NULL    — the @OrderColumn position preserving the
+                                              submitted order.
+
+        PK (project_member_id, order_no) — the @OrderColumn-mapped List position within a member.
+        UNIQUE (project_member_id, work_category_id) — a category appears at most once per member
+                                                       (R2.2).
+        INDEX on work_category_id — the reverse lookup / RESTRICT FK support.
+
+        Idempotent via NOT tableExists + MARK_RAN, so a re-run against an already-migrated
+        database makes no change. Registered after 154 in changelog.xml (155).
+    -->
+
+    <changeSet id="155-create-project-member-work-categories" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="project_member_work_categories"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="project_member_work_categories">
+            <column name="project_member_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_category_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <!-- PK (project_member_id, order_no): the @OrderColumn-mapped List position within a member. -->
+        <addPrimaryKey
+            tableName="project_member_work_categories"
+            columnNames="project_member_id, order_no"
+            constraintName="pk_project_member_work_categories"/>
+
+        <!-- Owner FK: NOT NULL, ON DELETE CASCADE — removing a member discards its categories (R2.5). -->
+        <addForeignKeyConstraint
+            constraintName="fk_pm_work_categories_member"
+            baseTableName="project_member_work_categories"
+            baseColumnNames="project_member_id"
+            referencedTableName="project_members"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Category FK: ON DELETE RESTRICT — a referenced category cannot be hard-deleted. -->
+        <addForeignKeyConstraint
+            constraintName="fk_pm_work_categories_work_category"
+            baseTableName="project_member_work_categories"
+            baseColumnNames="work_category_id"
+            referencedTableName="work_categories"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- R2.2: a category appears at most once per member. -->
+        <addUniqueConstraint
+            tableName="project_member_work_categories"
+            columnNames="project_member_id, work_category_id"
+            constraintName="ux_pm_work_categories_member_category"/>
+
+        <!-- Reverse lookup / RESTRICT FK support on the referenced category. -->
+        <createIndex tableName="project_member_work_categories" indexName="ix_pm_work_categories_work_category">
+            <column name="work_category_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

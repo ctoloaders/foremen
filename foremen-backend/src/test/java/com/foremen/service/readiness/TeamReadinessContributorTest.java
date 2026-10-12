@@ -5,23 +5,22 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Unit tests for {@link TeamReadinessContributor}'s team-state → aggregate state/percentage mapping
- * (FOR-05-11 Requirement 5.5, 5.7).
+ * Unit tests for {@link TeamReadinessContributor}'s member-count → aggregate state/percentage/items
+ * mapping (FOR-05-11 Requirement 5.5, 5.7; FOR-05-10b Requirement 8.1, 8.3, 8.4).
  *
  * <p>The derivation is exercised directly through its pure, Spring-free entry point
- * ({@link TeamReadinessContributor#deriveContribution}), so no persistence or Spring context is
- * needed.
+ * ({@link TeamReadinessContributor#deriveContribution(boolean, int)}), so no persistence or Spring
+ * context is needed.
  *
- * <p>Feature: FOR-05-11-project-readiness
+ * <p>Feature: FOR-05-10b-gantt-granularity
  *
- * <p><b>Validates: Requirements 5.5, 5.7</b>
+ * <p><b>Validates: Requirements 8.1, 8.3, 8.4</b>
  */
 class TeamReadinessContributorTest {
 
     @Test
-    void doneTeamIsDoneAtHundredWithNoItems() {
-        AreaContribution contribution =
-                TeamReadinessContributor.deriveContribution(com.foremen.service.team.ReadinessState.DONE);
+    void foremanAndWorkerPresentIsDoneAtHundredWithNoItems() {
+        AreaContribution contribution = TeamReadinessContributor.deriveContribution(true, 1);
 
         assertCommonShape(contribution);
         assertThat(contribution.state()).isEqualTo(ReadinessState.DONE);
@@ -30,9 +29,8 @@ class TeamReadinessContributorTest {
     }
 
     @Test
-    void blockedTeamIsBlockedAtZeroWithNoForemanItem() {
-        AreaContribution contribution =
-                TeamReadinessContributor.deriveContribution(com.foremen.service.team.ReadinessState.BLOCKED);
+    void noForemanIsBlockedAtZeroWithNoForemanItem() {
+        AreaContribution contribution = TeamReadinessContributor.deriveContribution(false, 1);
 
         assertCommonShape(contribution);
         assertThat(contribution.state()).isEqualTo(ReadinessState.BLOCKED);
@@ -45,14 +43,53 @@ class TeamReadinessContributorTest {
     }
 
     @Test
-    void itemsAreEmptyIffDone() {
-        for (com.foremen.service.team.ReadinessState teamState : com.foremen.service.team.ReadinessState.values()) {
-            AreaContribution contribution = TeamReadinessContributor.deriveContribution(teamState);
-            boolean fullyReady =
-                    contribution.state() == ReadinessState.DONE && contribution.percentage() == 100;
-            assertThat(contribution.items().isEmpty())
-                    .as("items empty iff done for team state %s", teamState)
-                    .isEqualTo(fullyReady);
+    void noWorkerIsBlockedAtZeroWithNoWorkersItem() {
+        AreaContribution contribution = TeamReadinessContributor.deriveContribution(true, 0);
+
+        assertCommonShape(contribution);
+        assertThat(contribution.state()).isEqualTo(ReadinessState.BLOCKED);
+        assertThat(contribution.percentage()).isZero();
+        assertThat(contribution.items()).singleElement().satisfies(item -> {
+            assertThat(item.descriptionKey()).isEqualTo("readiness.team.noWorkers");
+            assertThat(item.params()).isEmpty();
+            assertThat(item.targetTab()).isEqualTo("team");
+        });
+    }
+
+    @Test
+    void noForemanAndNoWorkerShowsBothBlockersTogether() {
+        AreaContribution contribution = TeamReadinessContributor.deriveContribution(false, 0);
+
+        assertCommonShape(contribution);
+        assertThat(contribution.state()).isEqualTo(ReadinessState.BLOCKED);
+        assertThat(contribution.percentage()).isZero();
+        assertThat(contribution.items())
+                .extracting(OutstandingItem::descriptionKey)
+                .containsExactly("readiness.team.noForeman", "readiness.team.noWorkers");
+        assertThat(contribution.items())
+                .allSatisfy(item -> {
+                    assertThat(item.params()).isEmpty();
+                    assertThat(item.targetTab()).isEqualTo("team");
+                });
+    }
+
+    @Test
+    void itemsAreEmptyIffForemanAndWorkerPresent() {
+        boolean[] bools = {true, false};
+        int[] workerCounts = {0, 1, 3};
+        for (boolean hasForeman : bools) {
+            for (int workers : workerCounts) {
+                AreaContribution contribution =
+                        TeamReadinessContributor.deriveContribution(hasForeman, workers);
+                boolean fullyReady = hasForeman && workers >= 1;
+                assertThat(contribution.items().isEmpty())
+                        .as("items empty iff foreman=%s workers=%d", hasForeman, workers)
+                        .isEqualTo(fullyReady);
+                assertThat(contribution.state() == ReadinessState.DONE)
+                        .as("DONE iff foreman=%s workers=%d", hasForeman, workers)
+                        .isEqualTo(fullyReady);
+                assertThat(contribution.percentage()).isEqualTo(fullyReady ? 100 : 0);
+            }
         }
     }
 

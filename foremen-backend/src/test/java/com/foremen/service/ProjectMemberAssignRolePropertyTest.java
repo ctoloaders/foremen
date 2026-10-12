@@ -89,6 +89,7 @@ class ProjectMemberAssignRolePropertyTest {
         RoleDao roleDao = mock(RoleDao.class);
         ProjectDao projectDao = mock(ProjectDao.class);
         WorkerTypeDao workerTypeDao = mock(WorkerTypeDao.class);
+        com.foremen.dao.WorkCategoryDao workCategoryDao = mock(com.foremen.dao.WorkCategoryDao.class);
         ProjectAccessCache projectAccessCache = mock(ProjectAccessCache.class);
         ProjectMemberServiceMapper mapper = mock(ProjectMemberServiceMapper.class);
         AuditLogDao auditLogDao = mock(AuditLogDao.class);
@@ -97,7 +98,7 @@ class ProjectMemberAssignRolePropertyTest {
                 mock(com.foremen.service.offer.NotificationService.class);
 
         ProjectMemberService service = new ProjectMemberService(
-                projectMemberDao, userDao, roleDao, projectDao, workerTypeDao,
+                projectMemberDao, userDao, roleDao, projectDao, workerTypeDao, workCategoryDao,
                 projectAccessCache, mapper, auditLogDao, entityManager, notificationService);
 
         authenticateAdmin();

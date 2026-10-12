@@ -39,7 +39,7 @@ class UserServicePreservationTest {
         // Only roleDao is needed for resolveRole; other collaborators are unused by the
         // helper methods under test.
         this.roleDao = mock(RoleDao.class);
-        this.userService = new UserService(null, roleDao, null, null, null, null, null);
+        this.userService = new UserService(null, roleDao, null, null, null, null, null, null);
     }
 
     // --- Preservation: validateLocale accepts supported locales "ru" and "pl" ---
