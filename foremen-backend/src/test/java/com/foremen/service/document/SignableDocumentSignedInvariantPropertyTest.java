@@ -59,7 +59,8 @@ class SignableDocumentSignedInvariantPropertyTest {
             null, null, null, null, null, null, null, null, null, null, null, null,
             null, new SigningProgressCalculator(), null, null, null,
             Mockito.mock(ProjectActivationSignal.class),
-            Mockito.mock(org.springframework.context.ApplicationEventPublisher.class));
+            Mockito.mock(org.springframework.context.ApplicationEventPublisher.class),
+            null, null);
 
     // ------------------------------------------------------------------------------------------
     // Property 1a (parent 16): for a PENDING_SIGNATURES document, recomputeSignedState sets status

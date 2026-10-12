@@ -4,9 +4,11 @@ import com.foremen.config.image.ImageStorageConfiguredCondition;
 import com.foremen.config.image.ImageStorageProperties;
 import com.foremen.exception.ForemenValidationException;
 import com.google.auth.oauth2.GoogleCredentials;
+import com.google.auth.oauth2.ImpersonatedCredentials;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
+import com.google.cloud.storage.HttpMethod;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
 import jakarta.annotation.PostConstruct;
@@ -20,10 +22,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Google Cloud Storage backed {@link ImageStorage} (FOR-04-17, Requirement 7). Active only when
@@ -56,6 +61,17 @@ public class GcsImageStorage implements ImageStorage {
             "image/png", "png",
             "image/jpeg", "jpg",
             "image/webp", "webp");
+
+    /**
+     * Broader content type → extension map for {@link #storeObject}: the image types plus
+     * {@code application/pdf} (frozen signing artifacts, scans). An unrecognized type falls back to
+     * {@code bin}; the caller is responsible for its own content-type validation.
+     */
+    private static final Map<String, String> OBJECT_EXTENSIONS = Map.of(
+            "image/png", "png",
+            "image/jpeg", "jpg",
+            "image/webp", "webp",
+            "application/pdf", "pdf");
 
     /** Fallback maximum upload size when {@code foremen.image-storage.max-upload-size} is unset. */
     private static final DataSize DEFAULT_MAX_UPLOAD_SIZE = DataSize.ofMegabytes(5);
@@ -96,6 +112,29 @@ public class GcsImageStorage implements ImageStorage {
                     "error.image.too.large", file.getSize(), maxUploadSize.toBytes());
         }
 
+        return upload(file, keyNamespace, extension, contentType);
+    }
+
+    @Override
+    public String storeObject(MultipartFile file, String keyNamespace) {
+        if (file == null || file.isEmpty()) {
+            throw new ForemenValidationException("error.image.empty");
+        }
+        if (file.getSize() > maxUploadSize.toBytes()) {
+            throw new ForemenValidationException(
+                    "error.image.too.large", file.getSize(), maxUploadSize.toBytes());
+        }
+        String contentType = file.getContentType();
+        // No image-only allow-list here — the caller validates its own permitted types. Resolve a
+        // sensible extension, defaulting to "bin" for an unrecognized content type.
+        String extension = contentType == null
+                ? "bin"
+                : OBJECT_EXTENSIONS.getOrDefault(contentType.toLowerCase(), "bin");
+        return upload(file, keyNamespace, extension, contentType);
+    }
+
+    /** Shared upload: build the namespaced key, create the blob, map an I/O failure to a 400. */
+    private String upload(MultipartFile file, String keyNamespace, String extension, String contentType) {
         String objectKey = buildObjectKey(keyNamespace, extension);
         BlobId blobId = BlobId.of(properties.bucket(), objectKey);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(contentType).build();
@@ -113,6 +152,57 @@ public class GcsImageStorage implements ImageStorage {
             return null;
         }
         return properties.cdnBase() + "/" + objectKey;
+    }
+
+    /**
+     * Build a short-lived V4 signed GET URL for a private object (FOR-05-08). Signing is keyless:
+     * when a signer service account is configured, we sign through {@link ImpersonatedCredentials}
+     * (which calls the IAM {@code signBlob} service), so no private key is ever held by the backend.
+     * When no signer SA is configured, we sign with the storage client's own credentials — which on
+     * a GCE/Cloud Run runtime is the attached service account (also keyless, via metadata).
+     */
+    @Override
+    public String signedDownloadUrl(String objectKey, long ttlSeconds) {
+        if (objectKey == null || objectKey.isBlank()) {
+            return null;
+        }
+        BlobInfo blobInfo = BlobInfo.newBuilder(BlobId.of(properties.bucket(), objectKey)).build();
+        long ttl = ttlSeconds > 0 ? ttlSeconds : 600L;
+
+        Storage.SignUrlOption[] options = buildSignOptions();
+        URL url = storage.signUrl(blobInfo, ttl, TimeUnit.SECONDS, options);
+        return url == null ? null : url.toString();
+    }
+
+    /**
+     * The V4 signing options: always V4; when a signer SA is configured, sign through the IAM
+     * {@code signBlob} service via {@link ImpersonatedCredentials} (keyless). Returned as a fresh
+     * array per call so the impersonated token can refresh.
+     */
+    private Storage.SignUrlOption[] buildSignOptions() {
+        String signer = properties.signerServiceAccount();
+        if (signer == null || signer.isBlank()) {
+            // Sign with the client's own credentials (attached SA on GCE/Cloud Run — keyless).
+            return new Storage.SignUrlOption[] {
+                    Storage.SignUrlOption.withV4Signature(),
+                    Storage.SignUrlOption.httpMethod(HttpMethod.GET),
+            };
+        }
+        try {
+            ImpersonatedCredentials signerCredentials = ImpersonatedCredentials.create(
+                    GoogleCredentials.getApplicationDefault(),
+                    signer.strip(),
+                    null,
+                    List.of("https://www.googleapis.com/auth/devstorage.read_only"),
+                    300);
+            return new Storage.SignUrlOption[] {
+                    Storage.SignUrlOption.withV4Signature(),
+                    Storage.SignUrlOption.httpMethod(HttpMethod.GET),
+                    Storage.SignUrlOption.signWith(signerCredentials),
+            };
+        } catch (IOException e) {
+            throw new ForemenValidationException("error.image.upload.failed");
+        }
     }
 
     @Override

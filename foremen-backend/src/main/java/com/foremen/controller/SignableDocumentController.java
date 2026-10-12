@@ -132,11 +132,29 @@ public class SignableDocumentController {
      * @param id the document id
      * @return the document's artifact reference
      */
+    /**
+     * The current DRAFT body token-text for the pre-send preview (the same content the template
+     * editor renders). Returns {@code { body: null }} once the document leaves {@code DRAFT} — a
+     * frozen document is previewed/downloaded via the signed artifact URL, not as text. READ.
+     *
+     * @param id the document id
+     * @return the DRAFT body token-text, or {@code null}
+     */
+    @GetMapping("/{id}/body")
+    @RequiresPermission(resource = RESOURCE, operation = READ)
+    public ResponseEntity<DocumentBodyRef> body(@PathVariable Long id) {
+        return ResponseEntity.ok(new DocumentBodyRef(documentService.bodyText(id)));
+    }
+
     @GetMapping("/{id}/document")
     @RequiresPermission(resource = RESOURCE, operation = READ)
     public ResponseEntity<DocumentArtifactRef> document(@PathVariable Long id) {
         SignableDocumentDto doc = documentService.read(id);
-        return ResponseEntity.ok(new DocumentArtifactRef(doc.documentUri(), doc.contentHash()));
+        // The stored `documentUri` is a PRIVATE object key; resolve it to a short-lived, one-time
+        // signed download URL (keyless, via the IAM signBlob service). When storage is unconfigured
+        // or there is no artifact yet, the signed URL is null and the client shows "no artifact".
+        String signedUrl = documentService.downloadUrl(id);
+        return ResponseEntity.ok(new DocumentArtifactRef(signedUrl, doc.contentHash()));
     }
 
     /**
@@ -244,19 +262,29 @@ public class SignableDocumentController {
     }
 
     /**
-     * Completes the caller's {@code TABLET_INITIALS} signature by uploading the captured on-tablet
+     * Completes a {@code TABLET_INITIALS} signature by uploading the captured on-tablet
      * {@code parafka} image as evidence (R6.3, R13.1). The image is stored first; only then is the
      * signature marked {@code SIGNED} (Property 16).
      *
-     * @param id   the {@code PENDING_SIGNATURES} document id
-     * @param file the captured initial image evidence
+     * <p>When {@code signatureId} is omitted the caller completes their <b>own</b> pending
+     * {@code TABLET_INITIALS} signature. When {@code signatureId} is supplied this is the on-site
+     * manager-assisted flow — a MANAGER/ADMIN lets a designated signer (e.g. the CLIENT) paraph on
+     * the manager's device, completing <b>that</b> signer's signature; the service authorizes the
+     * caller as MANAGER/ADMIN (SIGN_ON_BEHALF) and validates the target is a PENDING
+     * TABLET_INITIALS row of this document.
+     *
+     * @param id          the {@code PENDING_SIGNATURES} document id
+     * @param file        the captured initial image evidence
+     * @param signatureId the designated signer's signature to complete, or {@code null} for own
      * @return the (possibly now-{@code SIGNED}) document DTO
      */
     @PostMapping("/{id}/sign-tablet")
     @RequiresPermission(resource = RESOURCE, operation = UPDATE)
     public ResponseEntity<SignableDocumentDto> signTablet(
-            @PathVariable Long id, @RequestPart("file") MultipartFile file) {
-        return ResponseEntity.ok(signatureService.completeViaTablet(id, file));
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(name = "signatureId", required = false) Long signatureId) {
+        return ResponseEntity.ok(signatureService.completeViaTablet(id, file, signatureId));
     }
 
     /**
@@ -347,5 +375,14 @@ public class SignableDocumentController {
      * @param contentHash the sha-256 of the body / frozen PDF, or {@code null}
      */
     public record DocumentArtifactRef(String documentUri, String contentHash) {
+    }
+
+    /**
+     * The DRAFT body token-text for the pre-send preview (R9.2). {@code null} once the document is
+     * no longer {@code DRAFT}. Carries no cost/estimate/margin data (R9.6, R13.3).
+     *
+     * @param body the DRAFT body token-text, or {@code null}
+     */
+    public record DocumentBodyRef(String body) {
     }
 }

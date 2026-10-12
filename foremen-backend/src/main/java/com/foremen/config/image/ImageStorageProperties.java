@@ -40,7 +40,12 @@ public record ImageStorageProperties(
         String cdnBase,
         Credentials credentials,
         String maxUploadSize,
-        Reconciliation reconciliation) {
+        Reconciliation reconciliation,
+        String signerServiceAccount,
+        Long signedUrlTtlSeconds) {
+
+    /** Default signed-download-URL TTL (seconds) when {@code signed-url-ttl-seconds} is unset. */
+    private static final long DEFAULT_SIGNED_URL_TTL_SECONDS = 600L;
 
     /**
      * Designated binding constructor. Ensures the nested records are never {@code null} so callers
@@ -55,6 +60,21 @@ public record ImageStorageProperties(
         if (reconciliation == null) {
             reconciliation = new Reconciliation(null, null);
         }
+        if (signedUrlTtlSeconds == null || signedUrlTtlSeconds <= 0) {
+            signedUrlTtlSeconds = DEFAULT_SIGNED_URL_TTL_SECONDS;
+        }
+    }
+
+    /**
+     * The service account the backend impersonates to sign V4 download URLs via the IAM
+     * {@code signBlob} service (keyless signing). When blank, signing uses whatever ADC principal is
+     * resolved (which must itself be a service account for signing to work); on a GCE/Cloud Run
+     * runtime that is the attached service account.
+     *
+     * @return the signer service-account email, or {@code null}/blank to sign with the ADC principal
+     */
+    public String signerServiceAccount() {
+        return signerServiceAccount;
     }
 
     /**

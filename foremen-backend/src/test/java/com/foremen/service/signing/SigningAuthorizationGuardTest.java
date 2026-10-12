@@ -46,6 +46,12 @@ class SigningAuthorizationGuardTest {
             DocumentAction.VOID,
             DocumentAction.DELETE);
 
+    /**
+     * The manager-assisted on-site parafka action — its own category: reserved for MANAGER/ADMIN,
+     * neither a signer's own-record action nor a FOREMAN-owned write action.
+     */
+    private static final Set<DocumentAction> ON_BEHALF_ACTIONS = EnumSet.of(DocumentAction.SIGN_ON_BEHALF);
+
     private static final String CONTRACT_TYPE = "CONTRACT_MAIN";
     private static final String OWNED_TYPE = "WORKS_ACCEPTANCE";
 
@@ -256,12 +262,43 @@ class SigningAuthorizationGuardTest {
     // --- cross-cutting coverage sanity: every action is categorized ---
 
     @Test
-    @DisplayName("every DocumentAction is either a signer action or a write action")
+    @DisplayName("every DocumentAction is exactly one of signer / write / on-behalf")
     void everyActionCategorized() {
         for (DocumentAction action : DocumentAction.values()) {
-            assertThat(SIGNER_ACTIONS.contains(action) ^ WRITE_ACTIONS.contains(action))
-                    .as("action %s must be exactly one of signer/write", action)
-                    .isTrue();
+            int categories = (SIGNER_ACTIONS.contains(action) ? 1 : 0)
+                    + (WRITE_ACTIONS.contains(action) ? 1 : 0)
+                    + (ON_BEHALF_ACTIONS.contains(action) ? 1 : 0);
+            assertThat(categories)
+                    .as("action %s must be in exactly one category", action)
+                    .isEqualTo(1);
+        }
+    }
+
+    // --- SIGN_ON_BEHALF: MANAGER/ADMIN only (manager-assisted on-site parafka) ---
+
+    @Nested
+    @DisplayName("SIGN_ON_BEHALF action (manager-assisted on-site parafka)")
+    class SignOnBehalfAction {
+
+        @Test
+        @DisplayName("MANAGER and ADMIN may sign on behalf, regardless of type")
+        void privilegedRolesAllowed() {
+            assertThat(guard.isAllowed("MANAGER", DocumentAction.SIGN_ON_BEHALF, CONTRACT_TYPE, false)).isTrue();
+            assertThat(guard.isAllowed("ADMIN", DocumentAction.SIGN_ON_BEHALF, null, false)).isTrue();
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {"FOREMAN", "CLIENT", "WORKER", "FINANCIER"})
+        @DisplayName("no other role may sign on behalf, even on an owned type")
+        void otherRolesDenied(String role) {
+            assertThat(guard.isAllowed(role, DocumentAction.SIGN_ON_BEHALF, OWNED_TYPE, false)).isFalse();
+            assertThat(guard.isAllowed(role, DocumentAction.SIGN_ON_BEHALF, OWNED_TYPE, true)).isFalse();
+        }
+
+        @Test
+        @DisplayName("a null role is denied signing on behalf")
+        void nullRoleDenied() {
+            assertThat(guard.isAllowed(null, DocumentAction.SIGN_ON_BEHALF, OWNED_TYPE, false)).isFalse();
         }
     }
 }

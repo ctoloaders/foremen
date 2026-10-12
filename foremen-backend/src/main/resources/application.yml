@@ -37,6 +37,12 @@ foremen:
     bucket: ${FOREMEN_IMAGE_STORAGE_BUCKET:}
     cdn-base: ${FOREMEN_IMAGE_STORAGE_CDN_BASE:}
     max-upload-size: ${FOREMEN_IMAGE_STORAGE_MAX_UPLOAD_SIZE:5MB}
+    # FOR-05-08: the service account the backend impersonates to sign short-lived V4 download URLs
+    # via the IAM signBlob service (keyless — no private key held). Blank = sign with the ADC
+    # principal (e.g. the attached SA on a GCE/Cloud Run runtime).
+    signer-service-account: ${FOREMEN_IMAGE_STORAGE_SIGNER_SERVICE_ACCOUNT:}
+    # TTL (seconds) of a signed download URL; defaults to 600s when unset/non-positive.
+    signed-url-ttl-seconds: ${FOREMEN_IMAGE_STORAGE_SIGNED_URL_TTL_SECONDS:}
     credentials:
       path: ${FOREMEN_IMAGE_STORAGE_CREDENTIALS_PATH:}
       location: ${FOREMEN_IMAGE_STORAGE_CREDENTIALS_LOCATION:}

@@ -46,6 +46,24 @@ public interface ImageStorage {
     String store(MultipartFile file, String keyNamespace);
 
     /**
+     * Store an arbitrary (already-validated) binary object under the given key namespace, returning
+     * the bucket-relative OBJECT KEY. Unlike {@link #store}, this does NOT enforce the image-only
+     * content-type allow-list — it is used by callers that validate their own allowed types
+     * (e.g. the document-signing media service, which permits {@code application/pdf} alongside the
+     * raster image types). The object key extension is derived from the content type, falling back
+     * to {@code bin} for an unrecognized type.
+     *
+     * <p>Still rejects an empty upload and an oversized file (same size guard as {@link #store}),
+     * storing nothing. When storage is not configured the disabled implementation rejects the call
+     * gracefully, exactly like {@link #store}.
+     *
+     * @param file         the already-validated binary upload; must be non-empty within the size limit
+     * @param keyNamespace the per-entity-kind prefix under which the object key is created
+     * @return the stored bucket-relative object key
+     */
+    String storeObject(MultipartFile file, String keyNamespace);
+
+    /**
      * Build the public CDN URL from a stored object key as {@code cdnBase + "/" + objectKey}.
      *
      * <p>Pure, null-safe read-time resolution with no I/O: a {@code null} object key yields a
@@ -73,4 +91,20 @@ public interface ImageStorage {
      * @return {@code true} when image storage is configured and uploads are accepted
      */
     boolean isConfigured();
+
+    /**
+     * Build a short-lived, one-time V4 signed download URL for a PRIVATE object (FOR-05-08: the
+     * signing artifacts live in a private bucket and are served only via time-boxed signed URLs,
+     * never a public CDN link).
+     *
+     * <p>Signing is performed through Google's IAM {@code signBlob} service (keyless) — the backend
+     * never holds a service-account private key. Implementations without a configured bucket return
+     * {@code null}.
+     *
+     * @param objectKey   the stored bucket-relative object key, or {@code null}
+     * @param ttlSeconds  the URL time-to-live in seconds
+     * @return a time-boxed signed GET URL, or {@code null} when storage is not configured or
+     *         {@code objectKey} is {@code null}
+     */
+    String signedDownloadUrl(String objectKey, long ttlSeconds);
 }

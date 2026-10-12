@@ -25,6 +25,9 @@ dist/
 # Temp
 /tmp/
 
+# Playwright MCP runtime artifacts (console logs + page snapshots from browser sessions)
+.playwright-mcp/
+
 # Excel
 *.xlsx
 
@@ -32,10 +35,15 @@ dist/
 foremen-backend/build/
 foremen-backend/.gradle/
 
+# Foremen QA Auto (Gradle build output)
+foremen-qa-auto/build/
+foremen-qa-auto/.gradle/
+
 # Java artifacts
 *.class
 *.jar
 !foremen-backend/gradle/wrapper/gradle-wrapper.jar
+!foremen-qa-auto/gradle/wrapper/gradle-wrapper.jar
 
 # IDE (Java)
 .idea/
@@ -53,4 +61,5 @@ foremen-frontend/
 
 # Local env / compose secrets (contain local secrets like GOOGLE_PLACES_API_KEY) - NEVER commit
 docker-compose.*.local.yml
+docker-compose.override.yml
 .env.local

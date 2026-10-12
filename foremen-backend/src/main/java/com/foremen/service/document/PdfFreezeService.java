@@ -72,7 +72,9 @@ public class PdfFreezeService {
         // the seam is defined in terms of MultipartFile and there is no HTTP upload to forward.
         InMemoryMultipartFile upload = new InMemoryMultipartFile(
                 "file", frozenFileName(doc), PDF_CONTENT_TYPE, pdfBytes);
-        String storageUri = objectStorage.store(upload, STORAGE_NAMESPACE);
+        // storeObject (not store): the frozen artifact is a PDF, which the image-only `store`
+        // allow-list would reject. The content is server-generated and trusted here.
+        String storageUri = objectStorage.storeObject(upload, STORAGE_NAMESPACE);
 
         return new FrozenArtifact(storageUri, contentHash);
     }

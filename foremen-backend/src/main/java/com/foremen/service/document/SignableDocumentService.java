@@ -154,6 +154,8 @@ public class SignableDocumentService
     private final PdfFreezeService pdfFreezeService;
     private final ProjectActivationSignal projectActivationSignal;
     private final ApplicationEventPublisher eventPublisher;
+    private final com.foremen.service.image.ImageStorage objectStorage;
+    private final com.foremen.config.image.ImageStorageProperties imageStorageProperties;
 
     public SignableDocumentService(SignableDocumentDao documentDao,
                                    DocumentTemplateDao templateDao,
@@ -173,7 +175,9 @@ public class SignableDocumentService
                                    TemplateMergeEngine mergeEngine,
                                    PdfFreezeService pdfFreezeService,
                                    ProjectActivationSignal projectActivationSignal,
-                                   ApplicationEventPublisher eventPublisher) {
+                                   ApplicationEventPublisher eventPublisher,
+                                   com.foremen.service.image.ImageStorage objectStorage,
+                                   com.foremen.config.image.ImageStorageProperties imageStorageProperties) {
         this.documentDao = documentDao;
         this.templateDao = templateDao;
         this.companyProfileDao = companyProfileDao;
@@ -193,6 +197,53 @@ public class SignableDocumentService
         this.pdfFreezeService = pdfFreezeService;
         this.projectActivationSignal = projectActivationSignal;
         this.eventPublisher = eventPublisher;
+        this.objectStorage = objectStorage;
+        this.imageStorageProperties = imageStorageProperties;
+    }
+
+    /**
+     * Build a short-lived, one-time signed download URL for the document's frozen artifact
+     * ({@code documentUri}), or {@code null} when the document has no artifact yet or object storage
+     * is not configured (FOR-05-08: private bucket, time-boxed signed download). Runs the inherited
+     * project-access gate via {@link #read(Long)}.
+     *
+     * @param id the document id
+     * @return a signed GET URL for the frozen artifact, or {@code null} when none is available
+     */
+    /**
+     * The current DRAFT body text (token-text with {@code {Token}} / {@code [[field:key]]} markers)
+     * for the pre-send preview — the same source the template editor renders. Returns {@code null}
+     * once the document leaves {@code DRAFT}: at that point the body is frozen into an immutable PDF
+     * (object key in {@code documentUri}), which is served via the signed download URL, not as text.
+     * Runs the inherited project-access gate via {@link #requireDocument(Long)}.
+     *
+     * @param id the document id
+     * @return the DRAFT body token-text, or {@code null} when not DRAFT / empty
+     */
+    @Transactional(readOnly = true)
+    public String bodyText(Long id) {
+        SignableDocumentEntity doc = requireDocument(id);
+        if (doc.getStatus() != DocumentStatus.DRAFT) {
+            return null;
+        }
+        String body = doc.getDocumentUri();
+        return body == null || body.isBlank() ? null : body;
+    }
+
+    @Transactional(readOnly = true)
+    public String downloadUrl(Long id) {
+        SignableDocumentEntity doc = requireDocument(id);
+        // Only a frozen artifact is an object-storage KEY that can be signed. While DRAFT, the
+        // `documentUri` holds the raw token-text body inline (never an object key — see applyBody),
+        // so there is nothing to sign; the DRAFT body is previewed on the client, not downloaded.
+        if (doc.getStatus() == DocumentStatus.DRAFT) {
+            return null;
+        }
+        String objectKey = doc.getDocumentUri();
+        if (objectKey == null || objectKey.isBlank()) {
+            return null;
+        }
+        return objectStorage.signedDownloadUrl(objectKey, imageStorageProperties.signedUrlTtlSeconds());
     }
 
     // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---

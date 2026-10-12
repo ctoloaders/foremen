@@ -133,7 +133,7 @@ class FinishingMaterialPhotoUrlResolutionPropertyTest {
 
     private GcsImageStorage storageWith(String cdnBase, Storage gcs) {
         ImageStorageProperties properties = new ImageStorageProperties(
-                "test-bucket", cdnBase, null, "5MB", null);
+                "test-bucket", cdnBase, null, "5MB", null, null, null);
         // referenceLookup is unused by toCdnUrl/store; a mock keeps construction total.
         ImageReferenceLookup referenceLookup = Mockito.mock(ImageReferenceLookup.class);
         GcsImageStorage storage = new GcsImageStorage(properties, referenceLookup);

@@ -37,6 +37,12 @@ public class DisabledImageStorage implements ImageStorage {
     }
 
     @Override
+    public String storeObject(MultipartFile file, String keyNamespace) {
+        // No storage configured: reject gracefully, exactly like store().
+        throw new ForemenValidationException("error.image.storage.not.configured");
+    }
+
+    @Override
     public String toCdnUrl(String objectKey) {
         // No storage configured: no key resolves to a CDN URL, so entities with a null (or any)
         // image key keep reading/listing normally.
@@ -51,5 +57,11 @@ public class DisabledImageStorage implements ImageStorage {
     @Override
     public boolean isConfigured() {
         return false;
+    }
+
+    @Override
+    public String signedDownloadUrl(String objectKey, long ttlSeconds) {
+        // No storage configured: no signed download URL can be built.
+        return null;
     }
 }

@@ -185,8 +185,77 @@ public class SignatureService {
      */
     @Transactional
     public SignableDocumentDto completeViaTablet(Long documentId, MultipartFile image) {
-        return completeWithEvidence(
-                documentId, image, SignatureMethod.TABLET_INITIALS, DocumentMediaKind.TABLET_INITIAL);
+        return completeViaTablet(documentId, image, null);
+    }
+
+    /**
+     * Completes a {@code TABLET_INITIALS} signature on a tablet. When {@code signatureId} is
+     * {@code null} this behaves exactly like {@link #completeViaTablet(Long, MultipartFile)} — the
+     * caller completes their <b>own</b> pending {@code TABLET_INITIALS} signature.
+     *
+     * <p>When {@code signatureId} is non-{@code null} this is the on-site "manager-assisted parafka"
+     * flow (R6.3): a {@code MANAGER}/{@code ADMIN} lets a designated signer (typically the CLIENT)
+     * paraph the document on the manager's own device, so the manager completes <b>that signer's</b>
+     * pending {@code TABLET_INITIALS} signature. The target signature must belong to this document,
+     * be {@code PENDING}, and use the {@code TABLET_INITIALS} method; the acting caller must be
+     * {@code MANAGER}/{@code ADMIN} (gated by {@code SigningAuthorizationGuard.SIGN_ON_BEHALF}). The
+     * captured image is still stored as the signer's {@code TABLET_INITIAL} evidence first, then the
+     * signature is marked {@code SIGNED} (Property 16).
+     *
+     * @param documentId  the owning document id (must be {@code PENDING_SIGNATURES})
+     * @param image       the captured initial image to store as evidence; must be non-empty
+     * @param signatureId the designated signer's signature to complete, or {@code null} for the
+     *                    caller's own
+     * @return the client-reachable DTO of the (possibly now-{@code SIGNED}) document
+     */
+    @Transactional
+    public SignableDocumentDto completeViaTablet(Long documentId, MultipartFile image, Long signatureId) {
+        if (signatureId == null) {
+            return completeWithEvidence(
+                    documentId, image, SignatureMethod.TABLET_INITIALS, DocumentMediaKind.TABLET_INITIAL);
+        }
+        return completeOnBehalfViaTablet(documentId, image, signatureId);
+    }
+
+    /**
+     * The manager-assisted on-site parafka completion: a MANAGER/ADMIN completes a designated
+     * signer's own pending {@code TABLET_INITIALS} signature on the manager's device. Stores the
+     * captured image as the target signer's {@code TABLET_INITIAL} evidence, then marks it SIGNED.
+     */
+    private SignableDocumentDto completeOnBehalfViaTablet(
+            Long documentId, MultipartFile image, Long signatureId) {
+        SignableDocumentEntity doc = requireDocument(documentId);
+        assertPending(doc);
+
+        // Authorize the acting caller as a MANAGER/ADMIN performing an on-behalf parafka (R8.5 /
+        // decision: on-site client parafka on the manager's device). Not a signer action, so the
+        // own-ness flag is irrelevant.
+        Long callerId = requireCurrentUserId();
+        String callerRole = actingProjectRole(projectIdOf(doc), callerId);
+        String typeCode = doc.getDocumentType() != null ? doc.getDocumentType().getCode() : null;
+        authorizationGuard.assertAllowed(
+                callerRole, SigningAuthorizationGuard.DocumentAction.SIGN_ON_BEHALF, typeCode, false);
+
+        // Resolve the target signature on THIS document; it must be a PENDING TABLET_INITIALS row.
+        DocumentSignatureEntity signature = doc.getSignatures().stream()
+                .filter(s -> s != null && signatureId.equals(s.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ForemenApiException(
+                        HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, "signature", signatureId));
+        if (signature.getStatus() != SignatureStatus.PENDING) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, DOCUMENT_NOT_PENDING_MESSAGE);
+        }
+        if (signature.getMethod() != SignatureMethod.TABLET_INITIALS) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, METHOD_MISMATCH_MESSAGE);
+        }
+
+        if (image == null || image.isEmpty()) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, EVIDENCE_REQUIRED_MESSAGE);
+        }
+        DocumentMediaSummaryDto media =
+                mediaService.upload(documentId, image, DocumentMediaKind.TABLET_INITIAL);
+        markSigned(signature, media.storageUri());
+        return finishSignature(doc);
     }
 
     /**

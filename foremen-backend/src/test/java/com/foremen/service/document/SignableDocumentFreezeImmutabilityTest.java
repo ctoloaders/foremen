@@ -145,7 +145,9 @@ class SignableDocumentFreezeImmutabilityTest {
                 mergeEngine,           // TemplateMergeEngine
                 null,                  // PdfFreezeService
                 null,                  // ProjectActivationSignal
-                null);                 // ApplicationEventPublisher
+                null,                  // ApplicationEventPublisher
+                null,                  // ImageStorage
+                null);                 // ImageStorageProperties
 
         // The guard allows every write — the ABAC/own-ness matrix is tested elsewhere; here we isolate
         // the lifecycle freeze gate.

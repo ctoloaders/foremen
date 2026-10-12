@@ -202,7 +202,7 @@ class DocumentMediaServiceTest {
             authenticateUploader();
             SignableDocumentEntity document = document();
             when(documentDao.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
-            when(objectStorage.store(any(MultipartFile.class), anyString())).thenReturn(STORED_KEY);
+            when(objectStorage.storeObject(any(MultipartFile.class), anyString())).thenReturn(STORED_KEY);
             when(mediaDao.save(any(DocumentMediaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
             DocumentMediaSummaryDto dto = new DocumentMediaSummaryDto(
                     MEDIA_ID, "scan", contentType, 3L, STORED_KEY, DocumentMediaKind.SCAN);
@@ -213,7 +213,7 @@ class DocumentMediaServiceTest {
             DocumentMediaSummaryDto result = service.upload(DOCUMENT_ID, file, DocumentMediaKind.SCAN);
 
             assertThat(result).isSameAs(dto);
-            verify(objectStorage).store(file, "document-media");
+            verify(objectStorage).storeObject(file, "document-media");
 
             org.mockito.ArgumentCaptor<DocumentMediaEntity> captor =
                     org.mockito.ArgumentCaptor.forClass(DocumentMediaEntity.class);
@@ -237,7 +237,7 @@ class DocumentMediaServiceTest {
         authenticateUploader();
         SignableDocumentEntity document = document();
         when(documentDao.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
-        when(objectStorage.store(any(MultipartFile.class), anyString())).thenReturn(STORED_KEY);
+        when(objectStorage.storeObject(any(MultipartFile.class), anyString())).thenReturn(STORED_KEY);
         when(mediaDao.save(any(DocumentMediaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toDto(any(DocumentMediaEntity.class))).thenReturn(
                 new DocumentMediaSummaryDto(MEDIA_ID, "scan", "APPLICATION/PDF", 3L, STORED_KEY, DocumentMediaKind.SCAN));
@@ -246,7 +246,7 @@ class DocumentMediaServiceTest {
 
         service.upload(DOCUMENT_ID, file, DocumentMediaKind.SCAN);
 
-        verify(objectStorage).store(file, "document-media");
+        verify(objectStorage).storeObject(file, "document-media");
         verify(mediaDao).save(any(DocumentMediaEntity.class));
     }
 
@@ -256,7 +256,7 @@ class DocumentMediaServiceTest {
         authenticateUploader();
         SignableDocumentEntity document = document();
         when(documentDao.findById(DOCUMENT_ID)).thenReturn(Optional.of(document));
-        when(objectStorage.store(any(MultipartFile.class), anyString())).thenReturn(STORED_KEY);
+        when(objectStorage.storeObject(any(MultipartFile.class), anyString())).thenReturn(STORED_KEY);
         when(mediaDao.save(any(DocumentMediaEntity.class))).thenAnswer(inv -> inv.getArgument(0));
         when(mapper.toDto(any(DocumentMediaEntity.class))).thenReturn(
                 new DocumentMediaSummaryDto(MEDIA_ID, "huge", "application/pdf", MAX_SIZE_BYTES, STORED_KEY,
@@ -267,7 +267,7 @@ class DocumentMediaServiceTest {
 
         service.upload(DOCUMENT_ID, file, DocumentMediaKind.ATTACHMENT);
 
-        verify(objectStorage).store(file, "document-media");
+        verify(objectStorage).storeObject(file, "document-media");
         verify(mediaDao).save(any(DocumentMediaEntity.class));
     }
 
@@ -386,7 +386,7 @@ class DocumentMediaServiceTest {
 
     /** No bytes stored and no media row persisted — the rejection side-effect assertion (R7.3). */
     private void assertNothingStored() {
-        verify(objectStorage, never()).store(any(MultipartFile.class), anyString());
+        verify(objectStorage, never()).storeObject(any(MultipartFile.class), anyString());
         verify(mediaDao, never()).save(any(DocumentMediaEntity.class));
     }
 

@@ -76,6 +76,13 @@ public class SigningAuthorizationGuard {
     public enum DocumentAction {
         /** Complete the caller's own signature (an {@code UPDATE}). CLIENT-allowed on own. */
         SIGN,
+        /**
+         * Complete ANOTHER designated signer's {@code TABLET_INITIALS} parafka on the acting
+         * manager's own device — the on-site "client parafs on the manager's tablet" flow
+         * (an {@code UPDATE}). Reserved for {@code MANAGER}/{@code ADMIN}; never a signer action
+         * (so never CLIENT), and {@code targetsOwn} is irrelevant.
+         */
+        SIGN_ON_BEHALF,
         /** Decline the caller's own signature (an {@code UPDATE}). CLIENT-allowed on own. */
         DECLINE,
         /** Fill the caller's own form-field values (an {@code UPDATE}). CLIENT-allowed on own. */
@@ -145,6 +152,12 @@ public class SigningAuthorizationGuard {
         }
         if (ADMIN_ROLE.equals(actingRoleCode) || MANAGER_ROLE.equals(actingRoleCode)) {
             return true;
+        }
+        // SIGN_ON_BEHALF (manager-assisted on-site parafka on the manager's device) is reserved for
+        // MANAGER/ADMIN only — never FOREMAN or any other role, regardless of document type (it is
+        // not a FOREMAN-owned write action and not a signer's own-record action).
+        if (action == DocumentAction.SIGN_ON_BEHALF) {
+            return false;
         }
         if (FOREMAN_ROLE.equals(actingRoleCode)) {
             if (isSignerAction(action)) {

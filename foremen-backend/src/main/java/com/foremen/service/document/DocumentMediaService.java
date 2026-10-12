@@ -100,7 +100,10 @@ public class DocumentMediaService {
 
         // FOR-12 object storage (R7.2): the shared ImageStorage seam stores the bytes under a
         // document-media namespace and returns the storage key; only metadata + kind stays in the DB.
-        String storageUri = objectStorage.store(file, STORAGE_NAMESPACE);
+        // Use storeObject (not store): document media allows application/pdf too — this service has
+        // already validated the content type, so the lower layer must not re-impose the image-only
+        // allow-list.
+        String storageUri = objectStorage.storeObject(file, STORAGE_NAMESPACE);
 
         DocumentMediaEntity media = new DocumentMediaEntity();
         media.setDocument(document);
