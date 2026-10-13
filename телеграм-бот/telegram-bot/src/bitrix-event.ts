@@ -52,6 +52,74 @@ export function computeDesiredAccess(
   return desired;
 }
 
+/**
+ * Extracts the Bitrix deal id from an incoming outgoing-webhook payload, regardless of shape.
+ *
+ * Cloud Functions parses the request into `req.body`, so for a standard Bitrix outgoing webhook
+ * the id arrives nested as `data.FIELDS.ID` (object), or flattened as the key
+ * `data[FIELDS][ID]`, or inside `document_id` (e.g. "DEAL_6045" / ["crm","...","DEAL_6045"]).
+ * It may also be a JSON string or a form-encoded string. This handles all of them and returns
+ * the numeric id as a string, or null. Pure function — unit tested.
+ */
+export function extractDealId(body: unknown): string | null {
+  const strip = (v: unknown): string | null => {
+    if (v === undefined || v === null) return null;
+    const m = String(v).match(/(\d+)/);
+    return m ? m[1] : null;
+  };
+
+  // 1. Object body (the common Cloud Functions case).
+  if (body && typeof body === "object" && !Array.isArray(body)) {
+    const o = body as Record<string, any>;
+
+    // Nested: data.FIELDS.ID
+    const nested = o.data?.FIELDS?.ID ?? o.data?.fields?.id;
+    if (nested !== undefined && nested !== null) return strip(nested);
+
+    // Flattened keys produced by some parsers.
+    for (const key of ["data[FIELDS][ID]", "data[FIELDS][id]", "deal_id", "ID", "id"]) {
+      if (o[key] !== undefined && o[key] !== null && String(o[key]).trim() !== "") {
+        return strip(o[key]);
+      }
+    }
+
+    // document_id can be a string ("DEAL_36" / "crm,CCrmDocumentDeal,DEAL_36") or an array.
+    const doc = o.document_id ?? o["document_id[2]"];
+    if (doc !== undefined && doc !== null) {
+      const docStr = Array.isArray(doc) ? doc.join(",") : String(doc);
+      const dm = docStr.match(/DEAL_(\d+)/i);
+      if (dm) return dm[1];
+      return strip(docStr);
+    }
+    return null;
+  }
+
+  // 2. String body: try JSON, then form-encoded, then loose regex.
+  if (typeof body === "string") {
+    const raw = body;
+    try {
+      const json = JSON.parse(raw);
+      const fromJson = extractDealId(json);
+      if (fromJson) return fromJson;
+    } catch {
+      // not JSON
+    }
+    const params = new URLSearchParams(raw);
+    const doc2 = params.get("document_id[2]") || params.get("document_id");
+    if (doc2) {
+      const dm = doc2.match(/DEAL_(\d+)/i);
+      if (dm) return dm[1];
+    }
+    const flat = params.get("data[FIELDS][ID]") || params.get("deal_id") || params.get("ID");
+    if (flat) return strip(flat);
+    const dealMatch = raw.match(/DEAL_(\d+)/i);
+    if (dealMatch) return dealMatch[1];
+    const idMatch = raw.match(/\bID[=%]\s*(\d+)/);
+    if (idMatch) return idMatch[1];
+  }
+  return null;
+}
+
 async function bitrixCall(method: string, params: any = {}): Promise<any> {
   const res = await fetch(`${BITRIX_URL}/${method}`, {
     method: "POST",
@@ -76,46 +144,23 @@ function getSheets() {
   return google.sheets({ version: "v4", auth: getAuth() });
 }
 
-export async function handleBitrixEvent(rawBody: string): Promise<any> {
-  logger.info("Bitrix event raw body", { body: rawBody.slice(0, 1000) });
-
-  // Parse form-encoded or JSON body from Bitrix
-  let dealId: string | null = null;
-
-  // Try JSON first
+export async function handleBitrixEvent(body: unknown): Promise<any> {
+  // Log a faithful snapshot of the body for diagnostics (objects are JSON-stringified so the
+  // nested structure is visible — URLSearchParams was flattening it to "data=[object Object]").
+  let bodyPreview: string;
   try {
-    const json = JSON.parse(rawBody);
-    dealId = json.data?.FIELDS?.ID || json.deal_id || json.ID || null;
+    bodyPreview = typeof body === "string" ? body : JSON.stringify(body);
   } catch {
-    // Form-encoded: document_id[2]=DEAL_36 or data[FIELDS][ID]=36
-    const params = new URLSearchParams(rawBody);
-    
-    // Try all known formats
-    const docId = params.get("document_id[2]");  // "DEAL_36"
-    if (docId) {
-      dealId = docId.replace(/^DEAL_/i, "");
-    }
-    
-    if (!dealId) dealId = params.get("data[FIELDS][ID]");
-    
-    // Fallback: find any number after DEAL_ or ID
-    if (!dealId) {
-      const match = rawBody.match(/DEAL_(\d+)/);
-      if (match) dealId = match[1];
-    }
-    if (!dealId) {
-      const match = rawBody.match(/\bID[=%]\s*(\d+)/);
-      if (match) dealId = match[1];
-    }
+    bodyPreview = String(body);
   }
+  logger.info("Bitrix event body", { body: bodyPreview.slice(0, 1000) });
+
+  const dealId = extractDealId(body);
 
   if (!dealId) {
-    logger.error("Bitrix event: no deal_id found", { rawBody: rawBody.slice(0, 500) });
+    logger.error("Bitrix event: no deal_id found", { body: bodyPreview.slice(0, 500) });
     return { status: "error", message: "no deal_id found in request" };
   }
-
-  // Strip "DEAL_" prefix if present
-  dealId = dealId.replace(/^DEAL_/i, "");
 
   logger.info("Bitrix event received", { dealId });
 

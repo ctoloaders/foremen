@@ -26,25 +26,12 @@ export async function receiptBot(req: any, res: any): Promise<void> {
 
 export async function bitrixEvent(req: any, res: any): Promise<void> {
   try {
-    // Cloud Functions parses body automatically - reconstruct raw form data
-    let rawBody: string;
-    if (typeof req.body === "string") {
-      rawBody = req.body;
-    } else if (req.body && typeof req.body === "object") {
-      // Form-encoded parsed by Cloud Functions into object
-      rawBody = new URLSearchParams(req.body as any).toString();
-      // Handle nested objects like document_id[2]
-      if (req.body["document_id"] || req.body["document_id[2]"]) {
-        const parts: string[] = [];
-        for (const [k, v] of Object.entries(req.body)) {
-          parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
-        }
-        rawBody = parts.join("&");
-      }
-    } else {
-      rawBody = "";
-    }
-    const result = await handleBitrixEvent(rawBody);
+    // Pass the parsed body straight through. Cloud Functions already parses JSON / form bodies
+    // into an object (with the deal id nested at data.FIELDS.ID), and handleBitrixEvent/
+    // extractDealId handle objects, JSON strings and form-encoded strings. We deliberately do
+    // NOT reconstruct the body via URLSearchParams, which flattened the nested object to
+    // "data=[object Object]" and lost the id.
+    const result = await handleBitrixEvent(req.body);
     res.status(200).json(result);
   } catch (err: any) {
     logger.error("Bitrix event error", { error: err.message });
