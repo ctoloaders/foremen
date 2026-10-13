@@ -127,7 +127,7 @@ export async function setState(state: ConversationState): Promise<void> {
     state.categoryDetail || "",                             // R
   ];
 
-  // Find existing row
+  // Find existing row by telegram_id in column A.
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `${sheetName}!A2:A`,
@@ -146,10 +146,19 @@ export async function setState(state: ConversationState): Promise<void> {
       requestBody: { values: [row] },
     });
   } else {
-    // Append new
-    await sheets.spreadsheets.values.append({
+    // Insert into the first empty row. We compute the target row explicitly and UPDATE an
+    // exact A{n}:R{n} range instead of using values.append — append aligns to the detected
+    // table width and was mis-placing the row (writing telegram_id into a middle column when
+    // the sheet still had the old 14-column header), which broke getState lookups by column A.
+    let insertRow = 2;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i] && rows[i][0]) {
+        insertRow = i + 3;
+      }
+    }
+    await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `${sheetName}!A:R`,
+      range: `${sheetName}!A${insertRow}:R${insertRow}`,
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });

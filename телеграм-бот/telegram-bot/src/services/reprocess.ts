@@ -24,6 +24,10 @@ export interface ReprocessedPage {
   mimeType: string;
   /** True when the background was successfully whited-out, false when it fell back. */
   processed: boolean;
+  /** The ORIGINAL input bytes for this page (always the untouched source). */
+  originalBuffer: Buffer;
+  /** MIME type of the original input bytes. */
+  originalMimeType: string;
 }
 
 /**
@@ -42,7 +46,10 @@ export async function reprocessPage(
     const height = meta.height ?? 0;
     const outMime = meta.format === "png" ? "image/png" : "image/jpeg";
     if (!width || !height) {
-      return { buffer: input, mimeType: inputMimeType, processed: false };
+      return {
+        buffer: input, mimeType: inputMimeType, processed: false,
+        originalBuffer: input, originalMimeType: inputMimeType,
+      };
     }
 
     // 2. Detect the document quad (Gemini). Hand it the oriented image so coordinates align.
@@ -50,7 +57,10 @@ export async function reprocessPage(
 
     if (!detected) {
       // No usable detection → keep the original (oriented) image untouched.
-      return { buffer: oriented, mimeType: outMime, processed: false };
+      return {
+        buffer: oriented, mimeType: outMime, processed: false,
+        originalBuffer: input, originalMimeType: inputMimeType,
+      };
     }
 
     // 3. Build a mask opaque inside the receipt quad and transparent outside. Keep only the
@@ -72,10 +82,16 @@ export async function reprocessPage(
       .jpeg({ quality: 90 })
       .toBuffer();
 
-    return { buffer, mimeType: "image/jpeg", processed: true };
+    return {
+      buffer, mimeType: "image/jpeg", processed: true,
+      originalBuffer: input, originalMimeType: inputMimeType,
+    };
   } catch (err: any) {
     logger.warn("reprocessPage failed, using original page", { error: err?.message });
-    return { buffer: input, mimeType: inputMimeType, processed: false };
+    return {
+      buffer: input, mimeType: inputMimeType, processed: false,
+      originalBuffer: input, originalMimeType: inputMimeType,
+    };
   }
 }
 

@@ -5,7 +5,6 @@
 import { createBot } from "./bot.js";
 import { logger } from "./utils/logger.js";
 import { handleBitrixEvent } from "./bitrix-event.js";
-export { bitrixWebhook } from "./webhook.js";
 
 const bot = createBot();
 let botInitialized = false;

@@ -1,4 +1,4 @@
-import { uploadPhotosToFolder, uploadReceiptPdfToFolder } from "./drive.js";
+import { uploadPhotosToFolder, uploadReceiptPdfToFolder, uploadRawToFolder } from "./drive.js";
 import { reprocessPages } from "./reprocess.js";
 import { buildReceiptPdf } from "./pdf.js";
 import { withRetry } from "../utils/retry.js";
@@ -38,10 +38,36 @@ export async function uploadReceiptArtifact(
       const { link } = await withRetry(() =>
         uploadReceiptPdfToFolder(folderId, storeName, sum, pdfBuffer),
       );
+
+      // For any page where background whiteout FAILED, also save the untouched original with a
+      // `_raw` suffix, so the raw source is preserved alongside the (fallback) PDF page.
+      const failedPages = pages.filter((p) => !p.processed);
+      const multiRaw = failedPages.length > 1;
+      let rawIndex = 0;
+      for (const p of failedPages) {
+        rawIndex += 1;
+        try {
+          await withRetry(() =>
+            uploadRawToFolder(
+              folderId,
+              storeName,
+              sum,
+              p.originalBuffer,
+              p.originalMimeType,
+              multiRaw ? rawIndex : undefined,
+            ),
+          );
+        } catch (rawErr: any) {
+          // A raw-copy failure must not break the main save.
+          logger.warn("Raw original upload failed", { ...logContext, error: rawErr?.message });
+        }
+      }
+
       logger.info("Receipt PDF uploaded", {
         ...logContext,
         pages: pages.length,
         processedPages: pages.filter((p) => p.processed).length,
+        rawCopies: failedPages.length,
       });
       return [link];
     } catch (err: any) {

@@ -124,6 +124,30 @@ export async function uploadReceiptPdfToFolder(
 }
 
 /**
+ * Uploads an ORIGINAL (unprocessed) receipt page to a Drive folder with a `_raw` suffix.
+ * Used as a safety copy when background whiteout failed for a page, so the untouched source
+ * image is always preserved. Filename: YYYY-MM-DD_HH-MM_<store>_<sum>_raw[_page<N>].<ext>
+ */
+export async function uploadRawToFolder(
+  folderId: string,
+  storeName: string,
+  sum: number,
+  fileBuffer: Buffer,
+  mimeType: string,
+  pageNum?: number,
+): Promise<{ link: string }> {
+  const now = new Date();
+  const date = now.toISOString().split("T")[0];
+  const time = `${String(now.getHours()).padStart(2, "0")}-${String(now.getMinutes()).padStart(2, "0")}`;
+  const ext = mimeType === "image/png" ? "png" : "jpg";
+  const store = transliterate(storeName);
+  const pageSuffix = pageNum !== undefined ? `_page${pageNum}` : "";
+  const fileName = `${date}_${time}_${store}_${sum}_raw${pageSuffix}.${ext}`;
+  const result = await uploadFileToDrive(folderId, fileName, fileBuffer, mimeType);
+  return { link: result.webViewLink };
+}
+
+/**
  * Uploads multiple photos (multi-page receipt fallback) to a Drive folder given by its raw
  * folder id. Returns an array of webViewLinks for all uploaded photos.
  */

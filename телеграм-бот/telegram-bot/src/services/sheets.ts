@@ -14,6 +14,8 @@ export interface Project {
   googleDriveUrl: string;
   googleSheetsUrl: string;
   status: string;
+  /** Bitrix deal id (projects column F). Empty for legacy rows not yet backfilled. */
+  dealId: string;
 }
 
 export interface ProjectAccess {
@@ -21,6 +23,8 @@ export interface ProjectAccess {
   workerName: string;
   roleInProject: string;
   workerId: string;
+  /** Bitrix deal id (project_access column E). Empty for legacy rows not yet backfilled. */
+  dealId: string;
 }
 
 export interface ExpenseCategory {
@@ -86,7 +90,7 @@ export async function getAllActiveProjects(): Promise<Project[]> {
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.projectsSpreadsheetId,
-    range: `${config.google.projectsSheetName}!A2:E`,
+    range: `${config.google.projectsSheetName}!A2:F`,
   });
 
   return (res.data.values || [])
@@ -96,6 +100,7 @@ export async function getAllActiveProjects(): Promise<Project[]> {
       googleDriveUrl: r[1] || "",
       googleSheetsUrl: r[2] || "",
       status: r[3] || "",
+      dealId: (r[5] || "").toString().trim(), // column F
     }));
 }
 
@@ -103,7 +108,7 @@ export async function getProjectAccessForWorker(bitrixUserId: string): Promise<P
   const sheets = getSheets();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: config.google.workersSpreadsheetId,
-    range: `${config.google.accessSheetName}!A2:D`,
+    range: `${config.google.accessSheetName}!A2:E`,
   });
 
   return (res.data.values || [])
@@ -113,6 +118,7 @@ export async function getProjectAccessForWorker(bitrixUserId: string): Promise<P
       workerName: r[1] || "",
       roleInProject: r[2] || "",
       workerId: r[3] || "",
+      dealId: (r[4] || "").toString().trim(), // column E
     }));
 }
 
@@ -124,8 +130,15 @@ export async function getProjectsForWorker(worker: Worker): Promise<Project[]> {
   }
 
   const access = await getProjectAccessForWorker(worker.bitrixUserId);
-  const projectNames = new Set(access.map(a => a.projectName));
-  return allActive.filter(p => projectNames.has(p.name));
+
+  // Membership match prefers deal_id (robust to project renames). For legacy rows that have no
+  // deal_id yet (pre-backfill), fall back to matching by project name for backward compatibility.
+  const accessDealIds = new Set(access.map(a => a.dealId).filter(Boolean));
+  const accessNames = new Set(access.filter(a => !a.dealId).map(a => a.projectName));
+
+  return allActive.filter(
+    p => (p.dealId && accessDealIds.has(p.dealId)) || accessNames.has(p.name),
+  );
 }
 
 /**
