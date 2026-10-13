@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- ChangeSet A: Seed UNPLANNED_EXPENSE_CATEGORIES resource into resources table -->
+    <changeSet id="158-seed-unplanned-expense-categories-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'UNPLANNED_EXPENSE_CATEGORIES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="UNPLANNED_EXPENSE_CATEGORIES"/>
+            <column name="name_ru" value="Категории неплановых расходов"/>
+            <column name="name_pl" value="Kategorie wydatków nieplanowanych"/>
+            <column name="description_ru" value="Справочник категорий неплановых расходов"/>
+            <column name="description_pl" value="Katalog kategorii wydatków nieplanowanych"/>
+        </insert>
+    </changeSet>
+
+    <!-- ChangeSet B: Grant ADMIN full CRUD on UNPLANNED_EXPENSE_CATEGORIES resource -->
+    <changeSet id="158-seed-unplanned-expense-categories-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet C: Grant MANAGER READ on UNPLANNED_EXPENSE_CATEGORIES resource -->
+    <changeSet id="158-seed-unplanned-expense-categories-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'MANAGER' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet D: Grant FOREMAN READ on UNPLANNED_EXPENSE_CATEGORIES resource -->
+    <changeSet id="158-seed-unplanned-expense-categories-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet E: Grant FINANCIER READ on UNPLANNED_EXPENSE_CATEGORIES resource -->
+    <changeSet id="158-seed-unplanned-expense-categories-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'UNPLANNED_EXPENSE_CATEGORIES';
+        </sql>
+    </changeSet>
+
+    <!--
+        WORKER and CLIENT are intentionally omitted from the UNPLANNED_EXPENSE_CATEGORIES grants
+        (deny-by-default). Custom (non-system) roles likewise receive no grant.
+    -->
+
+    <!-- ChangeSet F: Seed the five default unplanned expense categories -->
+    <changeSet id="158-seed-unplanned-expense-categories-defaults" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM unplanned_expense_categories</sqlCheck>
+        </preConditions>
+
+        <insert tableName="unplanned_expense_categories">
+            <column name="code" value="reclamation"/>
+            <column name="name_ru" value="Рекламация"/>
+            <column name="name_pl" value="Reklamacja"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="unplanned_expense_categories">
+            <column name="code" value="unforeseen"/>
+            <column name="name_ru" value="Непредвиденный расход"/>
+            <column name="name_pl" value="Wydatek nieprzewidziany"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="unplanned_expense_categories">
+            <column name="code" value="materials"/>
+            <column name="name_ru" value="Материалы"/>
+            <column name="name_pl" value="Materiały"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="unplanned_expense_categories">
+            <column name="code" value="fuel"/>
+            <column name="name_ru" value="Топливо"/>
+            <column name="name_pl" value="Paliwo"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+        <insert tableName="unplanned_expense_categories">
+            <column name="code" value="other"/>
+            <column name="name_ru" value="Иное"/>
+            <column name="name_pl" value="Inne"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

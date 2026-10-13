@@ -567,4 +567,20 @@
          IS NULL (at most one virtual bar per category). Three idempotent changeSets guarded by
          columnExists / uniqueConstraintExists + MARK_RAN. Registered LAST, after 155. -->
     <include file="database_files/changesets/156-alter-schedule-bars-per-worker.xml"/>
+
+    <!-- FOR-06-00 (R2.1, R2.2): the UnplannedExpenseCategory mini-dictionary table —
+         unplanned_expense_categories (id BIGSERIAL PK, code VARCHAR(100) UNIQUE NOT NULL,
+         name_ru/name_pl VARCHAR(255) NOT NULL, active BOOLEAN NOT NULL DEFAULT true, BaseEntity
+         audit cols), mirroring the delivery_categories convention (changeset 028). Global managed
+         dictionary classifying unplanned purchases unlinked from the plan. Table only; the
+         UNPLANNED_EXPENSE_CATEGORIES ABAC resource + role grants + the five default rows are
+         changeset 158 (task 2.1). Idempotent via NOT tableExists + MARK_RAN. Registered LAST,
+         after 156. -->
+    <include file="database_files/changesets/157-create-unplanned-expense-categories.xml"/>
+    <!-- UNPLANNED_EXPENSE_CATEGORIES ABAC resource + role grants + default rows (task 2.1).
+         ChangeSet A: resource row. B: ADMIN CRUD. C-E: MANAGER/FOREMAN/FINANCIER READ.
+         F: five default rows (reclamation, unforeseen, materials, fuel, other). WORKER/CLIENT
+         omitted (deny-by-default). Idempotent via SELECT COUNT(*) + MARK_RAN. Registered LAST,
+         after 157. -->
+    <include file="database_files/changesets/158-seed-unplanned-expense-categories-resource.xml"/>
 </databaseChangeLog>
