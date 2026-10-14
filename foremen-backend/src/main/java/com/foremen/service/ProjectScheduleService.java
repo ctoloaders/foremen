@@ -745,7 +745,37 @@ public class ProjectScheduleService
         String after = barsSnapshot(currentRows, indexBarsByKey(schedule, currentRows.keySet()));
         writeScheduleAudit(schedule, SAVE_BARS_AUDIT_KIND, before, after);
 
-        return getView(projectId);
+        // Return the view carrying the version this write WILL commit. The OPTIMISTIC_FORCE_INCREMENT
+        // above bumps the @Version by exactly one, but that increment is applied at transaction
+        // COMMIT — after this method returns — so the managed entity still holds the pre-increment
+        // value here and getView() would report a version one BEHIND the committed state. The client
+        // would then echo that stale version on its NEXT save and hit a false 409
+        // error.schedule.conflict ("changed by another user") despite being the only editor
+        // (R11.1/R11.2). We reached this point only through a committing (non-no-op) write, so the
+        // committed version is deterministically the just-asserted request version + 1.
+        return withVersion(getView(projectId), request.version() + 1);
+    }
+
+    /**
+     * Returns a copy of {@code view} with its optimistic-lock {@code version} replaced by
+     * {@code committedVersion}. Used by the write paths to echo the version a
+     * {@link LockModeType#OPTIMISTIC_FORCE_INCREMENT} will commit, which the in-transaction
+     * {@link #getView(Long)} read cannot yet observe (the increment lands at commit).
+     */
+    private static ScheduleView withVersion(ScheduleView view, long committedVersion) {
+        return new ScheduleView(
+                view.projectId(),
+                view.anchorDate(),
+                view.projectEndDate(),
+                view.editable(),
+                committedVersion,
+                view.crewSize(),
+                view.currency(),
+                view.finishDay(),
+                view.finishDate(),
+                view.exceedsProjectEnd(),
+                view.workers(),
+                view.rows());
     }
 
     /**
@@ -1125,7 +1155,11 @@ public class ProjectScheduleService
         // Build the alert (R4.5): the empty-crew flag + one UncoveredCategoryRef per
         // Uncovered_Category (id + localized name, ru → pl → code), in Schedule_Row order.
         AutoCreateAlert alert = buildAutoCreateAlert(layout, currentRows);
-        return new AutoCreateResult(getView(projectId), alert);
+        // Echo the version this write WILL commit (request.version() + 1): the FORCE_INCREMENT lands
+        // at commit, so getView() still reads the pre-increment value here — returning it unchanged
+        // would give the client a stale version and a false 409 on its next save. See withVersion /
+        // the note in saveBars (R11.1/R11.2).
+        return new AutoCreateResult(withVersion(getView(projectId), request.version() + 1), alert);
     }
 
     /**
