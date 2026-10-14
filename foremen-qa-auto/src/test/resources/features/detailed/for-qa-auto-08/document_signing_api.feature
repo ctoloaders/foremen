@@ -83,10 +83,10 @@ Feature: Подписание документов — API жизненного 
     # ожидание: Документ в статусе DRAFT.
     When signatures are requested with an empty signer set
     # что: Запрашиваем подписи без подписантов.
-    # ожидание: HTTP 400, документ остаётся DRAFT.
-    Then the last signing call returns HTTP 400
-    # что: Проверяем код отказа.
-    # ожидание: Возвращается 400.
+    # ожидание: HTTP 422 error.document.signers.required, документ остаётся DRAFT.
+    Then the last signing call returns HTTP 422
+    # что: Проверяем код отказа валидации набора подписантов.
+    # ожидание: Возвращается 422 (семантическая валидация «нужен ≥1 подписант»).
     And the document status is "DRAFT"
     # что: Проверяем, что статус не изменился.
     # ожидание: Документ по-прежнему DRAFT.

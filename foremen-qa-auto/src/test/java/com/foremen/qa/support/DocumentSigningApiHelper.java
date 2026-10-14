@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -51,12 +52,21 @@ public final class DocumentSigningApiHelper implements AutoCloseable {
     public long resolveDocumentTypeId(String code) {
         APIResponse response = request.get("/api/signable-document-types",
                 auth().setQueryParam("query", "code==" + code).setQueryParam("size", "200"));
-        JsonObject json = okJson(response, "GET /api/signable-document-types");
-        if (json.has("content") && json.get("content").isJsonArray()) {
-            for (JsonElement el : json.getAsJsonArray("content")) {
-                JsonObject row = el.getAsJsonObject();
-                if (code.equalsIgnoreCase(str(row, "code"))) { return lng(row, "id"); }
-            }
+        expectOk(response, "GET /api/signable-document-types");
+        JsonElement root = JsonParser.parseString(response.text());
+        // The endpoint returns a bare JSON array of types; tolerate a paginated {content:[...]} too.
+        com.google.gson.JsonArray rows;
+        if (root.isJsonArray()) {
+            rows = root.getAsJsonArray();
+        } else if (root.isJsonObject() && root.getAsJsonObject().has("content")
+                && root.getAsJsonObject().get("content").isJsonArray()) {
+            rows = root.getAsJsonObject().getAsJsonArray("content");
+        } else {
+            throw new IllegalStateException("Unexpected signable-document-types payload: " + response.text());
+        }
+        for (JsonElement el : rows) {
+            JsonObject row = el.getAsJsonObject();
+            if (code.equalsIgnoreCase(str(row, "code"))) { return lng(row, "id"); }
         }
         throw new IllegalStateException("No signable_document_type with code " + code);
     }
@@ -101,8 +111,16 @@ public final class DocumentSigningApiHelper implements AutoCloseable {
         return multipart("/api/signable-documents/" + documentId + "/sign-tablet", file);
     }
 
+    /**
+     * Attempts a PRINT completion with an EMPTY evidence file (zero bytes). This exercises the
+     * domain guard {@code error.document.evidence.required} (409) — a PRINT/TABLET signature can
+     * never reach SIGNED without real evidence (Property 16). (A bodyless, non-multipart POST would
+     * instead fail at the framework layer with a MultipartException, so an empty multipart part is
+     * the faithful way to drive the "no evidence" case.)
+     */
     public int signViaScanWithoutEvidence(long documentId) {
-        return request.post("/api/signable-documents/" + documentId + "/sign", auth()).status();
+        FilePayload empty = new FilePayload("empty.png", "image/png", new byte[0]);
+        return multipart("/api/signable-documents/" + documentId + "/sign", empty);
     }
     public int signViaProvider(long documentId, Long signerUserId) {
         Map<String, Object> body = new LinkedHashMap<>();
@@ -135,6 +153,35 @@ public final class DocumentSigningApiHelper implements AutoCloseable {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("body", bodyText);
         return request.put("/api/signable-documents/" + documentId + "/body", auth().setData(body)).status();
+    }
+    /** The current DRAFT body token-text (the merge output after {@code generate}); null once frozen. */
+    public String getBody(long documentId) {
+        APIResponse response = request.get("/api/signable-documents/" + documentId + "/body", auth());
+        JsonObject json = okJson(response, "GET /api/signable-documents/" + documentId + "/body");
+        return str(json, "body");
+    }
+    /** The declared form fields (declared fill-in blanks) of a document, as (key, value) pairs. */
+    public List<FormField> getFormFields(long documentId) {
+        APIResponse response = request.get("/api/signable-documents/" + documentId, auth());
+        JsonObject json = okJson(response, "GET /api/signable-documents/" + documentId);
+        List<FormField> fields = new ArrayList<>();
+        if (json.has("formFields") && json.get("formFields").isJsonArray()) {
+            for (JsonElement el : json.getAsJsonArray("formFields")) {
+                JsonObject f = el.getAsJsonObject();
+                fields.add(new FormField(str(f, "key"), str(f, "value")));
+            }
+        }
+        return fields;
+    }
+    /** Fills a single form field by key (the fill-gaps path), returning the HTTP status. */
+    public int fillFormField(long documentId, String key, String value) {
+        Map<String, Object> fieldValue = new LinkedHashMap<>();
+        fieldValue.put("key", key);
+        fieldValue.put("value", value);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("values", List.of(fieldValue));
+        return request.put("/api/signable-documents/" + documentId + "/form-fields",
+                auth().setData(body)).status();
     }
 
     public Doc getDocument(long documentId) {
@@ -194,6 +241,10 @@ public final class DocumentSigningApiHelper implements AutoCloseable {
         }
         return json.get(field).getAsLong();
     }
+    /** One declared form field (fill-in blank) of a document: its key and current value. */
+    public record FormField(String key, String value) {
+    }
+
     /** One designated signer in a request-signatures call: by user id, by role, or both. */
     public record Signer(Long userId, String role) {
         public static Signer byRole(String role) { return new Signer(null, role); }

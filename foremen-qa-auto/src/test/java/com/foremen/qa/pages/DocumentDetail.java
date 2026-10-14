@@ -13,6 +13,12 @@ public final class DocumentDetail {
     }
     public void waitUntilRendered() {
         container().first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        // The loading branch also renders the `document-detail` container; wait for the loaded state
+        // (the status badge appears only once the document query resolves) so callers never assert
+        // against the transient spinner. This matters since opening a document now navigates to a new
+        // URL (deep link), remounting the detail with a fresh data fetch rather than reusing cache.
+        page.locator("[data-testid=document-detail-status]").first()
+                .waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
     }
     public boolean isRendered() {
         return container().count() > 0 && container().first().isVisible();
@@ -83,6 +89,55 @@ public final class DocumentDetail {
         }
         return a.count() == 0 ? null : a.first().getAttribute("href");
     }
+    /**
+     * Expands the collapsible DRAFT body preview and waits until it is visible. Idempotent: clicks
+     * the toggle only when the preview is not already expanded (keyed off the toggle's
+     * {@code aria-expanded}), then waits for the preview container to render.
+     */
+    public void openBodyPreview() {
+        Locator toggle = page.locator("[data-testid=document-detail-preview-toggle]");
+        toggle.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        if (!"true".equals(toggle.first().getAttribute("aria-expanded"))) {
+            toggle.first().click();
+        }
+        page.locator("[data-testid=document-detail-preview]").first()
+                .waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+    }
+    public boolean isBodyPreviewShown() {
+        Locator preview = page.locator("[data-testid=document-detail-preview]");
+        return preview.count() > 0 && preview.first().isVisible();
+    }
+    public String bodyPreviewText() {
+        Locator preview = page.locator("[data-testid=document-detail-preview]");
+        if (preview.count() == 0) {
+            return "";
+        }
+        String text = preview.first().innerText();
+        return text == null ? "" : text;
+    }
+    public boolean isFormFieldsPanelShown() {
+        Locator panel = page.locator("[data-testid=form-fields-panel]");
+        return panel.count() > 0 && panel.first().isVisible();
+    }
+    public boolean isFormFieldsEmpty() {
+        return page.locator("[data-testid=form-fields-empty]").count() > 0;
+    }
+    public boolean hasFormFieldInput(String key) {
+        return page.locator("[data-testid=form-field-input-" + key + "]").count() > 0;
+    }
+    /** Types a value into a declared form field and clicks save, returning the PUT HTTP status. */
+    public int fillFormFieldAndSave(String key, String value) {
+        Locator input = page.locator("[data-testid=form-field-input-" + key + "]");
+        input.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        input.first().fill(value);
+        Locator save = page.locator("[data-testid=form-fields-save]");
+        save.first().waitFor(new Locator.WaitForOptions().setState(WaitForSelectorState.VISIBLE));
+        Response response = page.waitForResponse(
+                r -> r.url().endsWith("/form-fields") && "PUT".equalsIgnoreCase(r.request().method()),
+                () -> save.first().click());
+        return response.status();
+    }
+
     public int requestSignaturesByUserId(long signerUserId) {
         page.locator("[data-testid=action-request-signatures]").first().click();
         Locator uid = page.locator("[data-testid^='request-signatures-user-']");
