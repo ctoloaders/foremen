@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-08: fix merge-token PLACEMENT in two seeded templates (changeset 160) whose bodies
+         carried .docx-table extraction artifacts: the executor-requisites block and the
+         "Przedstawiciel wykonawcy" representative line were DUPLICATED, the {AssignedName}
+         {AssignedLastName} pair was doubled on one line, and the client ("Pan(-i) ... Klient /
+         Zamawiający") block was duplicated and prefixed with leftover Bitrix numeric cell ids
+         (-1905234315, 00, 15240-386715). Every token used is already a valid resolver token
+         (ClientResolver / CompanyRequisitesResolver / RepresentativeResolver / PropertyResolver —
+         the same set exposed by ProjectTemplateViewDTO); only their placement/labelling was wrong,
+         so merged output repeated the executor/client and emitted stray digits.
+
+         This changeset collapses those garbled substrings to a single, correctly-labelled block via
+         targeted REPLACE() on the stored body, so each token appears once under the right label
+         (Wykonawca: requisites + representative; Klient/Zamawiający: contact). It is idempotent: a
+         REPLACE whose search string is already absent is a no-op, so re-running changes nothing. It
+         touches ONLY the two affected templates (WORKS_ACCEPTANCE, HANDOVER_TO_RENOVATION); the
+         other ten seeded templates were already clean. Guarded by MARK_RAN preconditions that fire
+         only while the garbled substring is still present. -->
+
+    <!-- WORKS_ACCEPTANCE: collapse the doubled executor/representative header + duplicated client
+         block + survey-intro Bitrix prefixes. -->
+    <changeSet id="162-fix-works-acceptance-token-placement" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'WORKS_ACCEPTANCE' AND t.locale = 'PL'
+                  AND t.storage_uri LIKE '%-1905234315Pan%'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            UPDATE document_templates t
+            SET storage_uri = REPLACE(
+                REPLACE(
+                    REPLACE(
+                        t.storage_uri,
+                        '{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+Wykonawca:
+  -1905234315Pan(-i) {ContactName} {ContactLastName}
+{ContactAddress}
+00Pan(-i) {ContactName} {ContactLastName}
+{ContactAddress}
+Klient:',
+                        'Wykonawca:
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy: {AssignedName} {AssignedLastName}
+
+Klient:
+Pan(-i) {ContactName} {ContactLastName}
+{ContactAddress}'),
+                    '15240-386715Dziękujemy za skorzystanie z naszych usług. Chcielibyśmy poznać Państwa opinię, aby nieustannie podnosić jakość naszych realizacji. Prosimy o poświęcenie kilku minut na wypełnienie ankiety
+00Dziękujemy za skorzystanie z naszych usług. Chcielibyśmy poznać Państwa opinię, aby nieustannie podnosić jakość naszych realizacji. Prosimy o poświęcenie kilku minut na wypełnienie ankiety',
+                    'Dziękujemy za skorzystanie z naszych usług. Chcielibyśmy poznać Państwa opinię, aby nieustannie podnosić jakość naszych realizacji. Prosimy o poświęcenie kilku minut na wypełnienie ankiety'),
+                'Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}',
+                'Przedstawiciel wykonawcy: {AssignedName} {AssignedLastName}')
+            FROM signable_document_types dt
+            WHERE t.document_type_id = dt.id AND dt.code = 'WORKS_ACCEPTANCE' AND t.locale = 'PL';
+        </sql>
+    </changeSet>
+
+    <!-- HANDOVER_TO_RENOVATION: same doubled executor/representative header + duplicated client
+         block collapse. The client address token here is {UfCrm1662541716442} (works address). -->
+    <changeSet id="162-fix-handover-token-placement" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'HANDOVER_TO_RENOVATION' AND t.locale = 'PL'
+                  AND t.storage_uri LIKE '%-1905234315Pan%'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            UPDATE document_templates t
+            SET storage_uri = REPLACE(
+                t.storage_uri,
+                '{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+Wykonawca:
+  -1905234315Pan(-i) {ContactName} {ContactLastName}
+{UfCrm1662541716442}
+00Pan(-i) {ContactName} {ContactLastName}
+{UfCrm1662541716442}
+Zamawiający:',
+                'Wykonawca:
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy: {AssignedName} {AssignedLastName}
+
+Zamawiający:
+Pan(-i) {ContactName} {ContactLastName}
+{UfCrm1662541716442}')
+            FROM signable_document_types dt
+            WHERE t.document_type_id = dt.id AND dt.code = 'HANDOVER_TO_RENOVATION' AND t.locale = 'PL';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

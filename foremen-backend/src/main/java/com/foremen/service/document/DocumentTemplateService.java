@@ -244,6 +244,20 @@ public class DocumentTemplateService {
         return new TestMergeResultDto(null, result.body(), new ArrayList<>(result.unresolvedPlaceholders()));
     }
 
+    /**
+     * The raw {@code {Token}} source body of a template version — the editable text the WYSIWYG
+     * editor loads for editing (R3a.5). The body is stored inline in {@code storageUri} (see class
+     * javadoc); this exposes it explicitly as body text rather than leaking the "storage uri" naming.
+     *
+     * @param id the template version id
+     * @return the template body text (never {@code null}; empty string when unset)
+     * @throws ForemenApiException 404 when the template is missing
+     */
+    @Transactional(readOnly = true)
+    public String bodyText(Long id) {
+        return templateBody(requireTemplate(id));
+    }
+
     // --- internals ---
 
     /**

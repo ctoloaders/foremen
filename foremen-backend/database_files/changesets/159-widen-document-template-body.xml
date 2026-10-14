@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-08: the document_templates.storage_uri column doubles as the inline template BODY
+         text the merge engine renders (see DocumentTemplateService). The original VARCHAR(512) is
+         far too small for a real contract body (thousands of characters), so widen it to TEXT.
+         Idempotent: the modifyDataType is a no-op if already TEXT; guarded by columnExists so it
+         only runs where the table/column is present. -->
+    <changeSet id="159-widen-document-template-body" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="document_templates" columnName="storage_uri"/>
+        </preConditions>
+
+        <modifyDataType tableName="document_templates" columnName="storage_uri" newDataType="TEXT"/>
+
+        <!-- modifyDataType can drop NOT NULL on some databases; re-assert it to preserve the
+             original constraint (a template always has a body). -->
+        <addNotNullConstraint tableName="document_templates" columnName="storage_uri" columnDataType="TEXT"/>
+    </changeSet>
+
+</databaseChangeLog>

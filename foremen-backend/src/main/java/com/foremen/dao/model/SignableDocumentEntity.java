@@ -69,8 +69,12 @@ public class SignableDocumentEntity extends BaseEntity {
     @Column(name = "template_locale", length = 16)
     private String templateLocale;
 
-    /** DRAFT body / frozen PDF uri in object storage (R1.1, R3.5). */
-    @Column(name = "document_uri", length = 512)
+    /**
+     * The DRAFT body text (the merge engine writes the rendered body here on {@code generate}; it is
+     * NOT a short object-storage uri). TEXT-backed (changeset 161) so a full merged contract body
+     * fits — a real body exceeds the former VARCHAR(512) and made {@code generate} fail (R1.1, R3.5).
+     */
+    @Column(name = "document_uri", columnDefinition = "TEXT")
     private String documentUri;
 
     /** sha-256 of the body / frozen PDF (R1.1, R3.5, R6.4). */

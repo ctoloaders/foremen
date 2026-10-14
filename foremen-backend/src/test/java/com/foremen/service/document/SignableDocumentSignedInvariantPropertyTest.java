@@ -56,10 +56,16 @@ class SignableDocumentSignedInvariantPropertyTest {
      * dereferences. The constructor only assigns fields, so {@code null} is safe for the rest.
      */
     private final SignableDocumentService service = new SignableDocumentService(
+            // 1 documentDao .. 12 statusMachine
             null, null, null, null, null, null, null, null, null, null, null, null,
-            null, new SigningProgressCalculator(), null, null, null,
+            // 13 progressCalculator (REAL — the invariant under test)
+            new SigningProgressCalculator(),
+            // 14 authorizationGuard, 15 mergeEngine, 16 pdfFreezeService
+            null, null, null,
+            // 17 projectActivationSignal (no-op mock), 18 eventPublisher (no-op mock)
             Mockito.mock(ProjectActivationSignal.class),
             Mockito.mock(org.springframework.context.ApplicationEventPublisher.class),
+            // 19 objectStorage, 20 imageStorageProperties
             null, null);
 
     // ------------------------------------------------------------------------------------------

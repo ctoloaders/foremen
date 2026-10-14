@@ -1,6 +1,7 @@
 package com.foremen.service.document;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -13,14 +14,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.AdminDao;
-import com.foremen.dao.CompanyProfileDao;
+
 import com.foremen.dao.DocumentTemplateDao;
 import com.foremen.dao.ProjectDao;
 import com.foremen.dao.ProjectMemberDao;
-import com.foremen.dao.RoomDao;
+
 import com.foremen.dao.SignableDocumentDao;
 import com.foremen.dao.UserDao;
-import com.foremen.dao.model.CompanyProfileEntity;
+
 import com.foremen.dao.model.DocumentFormFieldEntity;
 import com.foremen.dao.model.DocumentSignatureEntity;
 import com.foremen.dao.model.DocumentStatus;
@@ -28,7 +29,7 @@ import com.foremen.dao.model.DocumentTemplateEntity;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.RoleEntity;
-import com.foremen.dao.model.RoomEntity;
+
 import com.foremen.dao.model.SignableDocumentEntity;
 import com.foremen.dao.model.SignableDocumentTypeEntity;
 import com.foremen.dao.model.SignatureLevel;
@@ -129,6 +130,9 @@ public class SignableDocumentService
     /** 422 when a request-signatures call supplies no signers — a document needs >= 1 (R4.2). */
     static final String SIGNERS_REQUIRED_MESSAGE = "error.document.signers.required";
 
+    /** 409 when a signer edit targets a signature that is not {@code PENDING} (already signed/declined). */
+    static final String SIGNATURE_NOT_PENDING_MESSAGE = "error.document.signature.not.pending";
+
     /** 404 when no active template exists for the document's (type, locale) at generation (R3.2). */
     static final String TEMPLATE_NOT_FOUND_MESSAGE = "error.document.template.not.found";
 
@@ -137,11 +141,10 @@ public class SignableDocumentService
 
     private final SignableDocumentDao documentDao;
     private final DocumentTemplateDao templateDao;
-    private final CompanyProfileDao companyProfileDao;
     private final ProjectDao projectDao;
     private final ProjectMemberDao projectMemberDao;
-    private final RoomDao roomDao;
     private final UserDao userDao;
+    private final MergeContextFactory mergeContextFactory;
     private final SignableDocumentServiceMapper serviceMapper;
     private final DocumentDtoMapper dtoMapper;
     private final ProjectAccessCache projectAccessCache;
@@ -159,11 +162,10 @@ public class SignableDocumentService
 
     public SignableDocumentService(SignableDocumentDao documentDao,
                                    DocumentTemplateDao templateDao,
-                                   CompanyProfileDao companyProfileDao,
                                    ProjectDao projectDao,
                                    ProjectMemberDao projectMemberDao,
-                                   RoomDao roomDao,
                                    UserDao userDao,
+                                   MergeContextFactory mergeContextFactory,
                                    SignableDocumentServiceMapper serviceMapper,
                                    DocumentDtoMapper dtoMapper,
                                    ProjectAccessCache projectAccessCache,
@@ -180,11 +182,10 @@ public class SignableDocumentService
                                    com.foremen.config.image.ImageStorageProperties imageStorageProperties) {
         this.documentDao = documentDao;
         this.templateDao = templateDao;
-        this.companyProfileDao = companyProfileDao;
         this.projectDao = projectDao;
         this.projectMemberDao = projectMemberDao;
-        this.roomDao = roomDao;
         this.userDao = userDao;
+        this.mergeContextFactory = mergeContextFactory;
         this.serviceMapper = serviceMapper;
         this.dtoMapper = dtoMapper;
         this.projectAccessCache = projectAccessCache;
@@ -493,6 +494,137 @@ public class SignableDocumentService
         return toDto(doc);
     }
 
+    // --- Lifecycle: edit designated signers on a sent document ---
+
+    /**
+     * Edits the designated-signer set of a {@code PENDING_SIGNATURES} document in one call: add new
+     * signers, remove still-{@code PENDING} signers (hard delete), and change the method/level of
+     * existing {@code PENDING} signers. The document is NOT re-frozen and stays
+     * {@code PENDING_SIGNATURES}; the derived {@code SIGNED} state is recomputed at the end (removing
+     * the last outstanding signer of an otherwise-signed set can legitimately promote the document).
+     *
+     * <p>This is a write action reserved for the executor (MANAGER/ADMIN, and FOREMAN for its owned
+     * types) via the {@link SigningAuthorizationGuard}; a CLIENT is rejected (R8.4). Only a
+     * {@code PENDING_SIGNATURES} document may be edited ({@code 409 error.document.not.pending}).
+     *
+     * <p>Rules:
+     * <ul>
+     *   <li><b>Remove</b> targets a {@code PENDING} signature on this document; a {@code SIGNED} /
+     *       {@code DECLINED} signature is never removed (a party that already acted keeps its record)
+     *       — attempting to remove one is rejected with {@code 409 error.document.signature.not.pending}.
+     *       Removal is a hard delete (the row was never acted on).</li>
+     *   <li><b>Add</b> designates a new explicit-user signer; a user already designated on the
+     *       document (any status) is skipped so re-adding is idempotent and never duplicates.</li>
+     *   <li><b>Change</b> updates the method (and optionally level) of an existing {@code PENDING}
+     *       signature (the "sign on your own with method X" flow); a non-{@code PENDING} target is
+     *       rejected.</li>
+     * </ul>
+     *
+     * <p>At least one PENDING signer must remain after the edit (a sent document cannot be left with
+     * no one to sign) — otherwise {@code 422 error.document.signers.required}; use {@code void} to
+     * discard the document instead.
+     *
+     * @param id the {@code PENDING_SIGNATURES} document id
+     * @param in the signer edit (add / remove / change sections, each optional)
+     * @return the client-reachable DTO of the document with the edited signer set
+     * @throws ForemenApiException 403 when the acting role may not edit; 404 when the document or a
+     *                             referenced signature is missing; 409 when the document is not
+     *                             {@code PENDING_SIGNATURES} or a targeted signature is not
+     *                             {@code PENDING}; 422 when the edit would leave no pending signer
+     */
+    @Transactional
+    public SignableDocumentDto editSigners(Long id, EditSignersInput in) {
+        SignableDocumentEntity doc = requireDocument(id);
+        assertAllowed(doc, SigningAuthorizationGuard.DocumentAction.EDIT_SIGNERS);
+        assertPending(doc);
+
+        List<EditSignersInput.AddSigner> toAdd = in == null || in.add() == null ? List.of() : in.add();
+        List<Long> toRemove =
+                in == null || in.removeSignatureIds() == null ? List.of() : in.removeSignatureIds();
+        List<EditSignersInput.SignatureChange> toChange =
+                in == null || in.changes() == null ? List.of() : in.changes();
+
+        // --- removals: hard-delete still-PENDING signatures of THIS document ---
+        for (Long signatureId : toRemove) {
+            if (signatureId == null) {
+                continue;
+            }
+            DocumentSignatureEntity signature = requireSignatureOf(doc, signatureId);
+            if (signature.getStatus() != SignatureStatus.PENDING) {
+                throw new ForemenApiException(HttpStatus.CONFLICT, SIGNATURE_NOT_PENDING_MESSAGE);
+            }
+            // orphanRemoval=true on the signatures collection hard-deletes the row on flush.
+            doc.getSignatures().remove(signature);
+        }
+
+        // --- method/level changes to existing PENDING signatures ---
+        for (EditSignersInput.SignatureChange change : toChange) {
+            if (change == null || change.signatureId() == null) {
+                continue;
+            }
+            DocumentSignatureEntity signature = requireSignatureOf(doc, change.signatureId());
+            if (signature.getStatus() != SignatureStatus.PENDING) {
+                throw new ForemenApiException(HttpStatus.CONFLICT, SIGNATURE_NOT_PENDING_MESSAGE);
+            }
+            if (change.method() != null) {
+                signature.setMethod(change.method());
+            }
+            if (change.level() != null) {
+                signature.setLevel(change.level());
+            }
+            // Managed entity: the dirty method/level flush with the document save below.
+        }
+
+        // --- additions: one PENDING signature per new explicit-user signer, de-duped by user id ---
+        Set<Long> designatedUserIds = new HashSet<>();
+        for (DocumentSignatureEntity existing : doc.getSignatures()) {
+            if (existing != null && existing.getSignerUser() != null) {
+                designatedUserIds.add(existing.getSignerUser().getId());
+            }
+        }
+        for (EditSignersInput.AddSigner add : toAdd) {
+            if (add == null || add.signerUserId() == null) {
+                continue;
+            }
+            if (!designatedUserIds.add(add.signerUserId())) {
+                continue; // already designated — idempotent, no duplicate row
+            }
+            DocumentSignatureEntity signature = new DocumentSignatureEntity();
+            signature.setDocument(doc);
+            signature.setMethod(add.method());
+            signature.setLevel(add.level() != null ? add.level() : resolveLevel(null, doc));
+            signature.setStatus(SignatureStatus.PENDING);
+            signature.setSignerUser(entityManager.getReference(UserEntity.class, add.signerUserId()));
+            doc.getSignatures().add(signature);
+        }
+
+        // A sent document must still have at least one party left to sign (R4.2 analog); otherwise
+        // void it rather than leave an un-signable pending document.
+        boolean anyPending = doc.getSignatures().stream()
+                .anyMatch(s -> s != null && s.getStatus() == SignatureStatus.PENDING);
+        if (!anyPending) {
+            throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, SIGNERS_REQUIRED_MESSAGE);
+        }
+
+        documentDao.save(doc);
+        entityManager.flush();
+
+        // Removing the last outstanding signer of an otherwise fully-signed set can promote the
+        // document to SIGNED; recompute the derived state (never demotes, R6.6 / Property 16).
+        recomputeSignedState(doc);
+        documentDao.save(doc);
+        return toDto(doc);
+    }
+
+    /** Resolves a signature by id that must belong to {@code doc}; 404 otherwise. */
+    private DocumentSignatureEntity requireSignatureOf(SignableDocumentEntity doc, Long signatureId) {
+        return doc.getSignatures().stream()
+                .filter(s -> s != null && signatureId.equals(s.getId()))
+                .findFirst()
+                .orElseThrow(() -> new ForemenApiException(
+                        HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "signatureId", signatureId));
+    }
+
     // --- Lifecycle: void (R1.3, R1.7) ---
 
     /**
@@ -676,54 +808,18 @@ public class SignableDocumentService
     // --- Merge-context assembly (R3.3) ---
 
     /**
-     * Assembles the {@link MergeContext} for a document from its project / CLIENT member(s) / rooms /
-     * executor representative / {@code CompanyProfile} requisites. Every datum is best-effort: a
-     * missing source leaves the corresponding context field null/empty so the merge engine reports an
-     * unresolved placeholder rather than a silent empty substitution (R3.3, R3.4).
-     *
-     * <p>The approved-offer net total ({@code {TotalBeforeTax}}) is intentionally left unset here: it
-     * is resolved by the FOR-05-07 agreed-offer read path and is wired in a follow-up; a null net
-     * total simply yields an unresolved {@code {TotalBeforeTax}} placeholder.
+     * Assembles the {@link MergeContext} for a document via the shared {@link MergeContextFactory}
+     * (project / CLIENT member(s) / rooms / executor representative / {@code CompanyProfile}
+     * requisites / approved-offer net total). Every datum is best-effort: a missing source leaves
+     * the corresponding context field null/empty so the merge engine reports an unresolved
+     * placeholder rather than a silent empty substitution (R3.3, R3.4). The approved-offer net total
+     * ({@code {TotalBeforeTax}}) is now wired in the factory.
      */
     private MergeContext buildMergeContext(SignableDocumentEntity doc) {
-        ProjectEntity project = doc.getProject();
-        Long projectId = project != null ? project.getId() : null;
-
-        List<ProjectMemberEntity> members =
-                projectId == null ? List.of() : projectMemberDao.findByProjectId(projectId);
-
-        List<UserEntity> clientMembers = new ArrayList<>();
-        UserEntity representative = null;
-        for (ProjectMemberEntity member : members) {
-            String roleCode = projectRoleCode(member);
-            if ("CLIENT".equals(roleCode) && member.getUser() != null) {
-                clientMembers.add(member.getUser());
-            } else if (representative == null
-                    && ("MANAGER".equals(roleCode) || "FOREMAN".equals(roleCode))
-                    && member.getUser() != null) {
-                representative = member.getUser();
-            }
-        }
-
-        List<RoomEntity> rooms = projectId == null ? List.of() : roomDao.findByProjectId(projectId);
-        CompanyProfileEntity companyProfile = singleCompanyProfile();
-
-        return MergeContext.builder()
-                .document(doc)
-                .project(project)
-                .clientMembers(clientMembers)
-                .rooms(rooms)
-                .representative(representative)
-                .companyProfile(companyProfile)
-                .build();
-    }
-
-    /** The single admin-managed {@code CompanyProfile} row, or {@code null} when none is configured. */
-    private CompanyProfileEntity singleCompanyProfile() {
-        for (CompanyProfileEntity profile : companyProfileDao.findAll()) {
-            return profile;
-        }
-        return null;
+        // Delegate to the shared factory so document generation and the project template-view preview
+        // assemble the context identically — including the approved-offer net total ({TotalBeforeTax}),
+        // now wired in the factory (previously left unset here).
+        return mergeContextFactory.build(doc.getProject(), doc);
     }
 
     // --- helpers ---

@@ -43,6 +43,7 @@ class SigningAuthorizationGuardTest {
             DocumentAction.GENERATE,
             DocumentAction.SAVE_BODY,
             DocumentAction.REQUEST_SIGNATURES,
+            DocumentAction.EDIT_SIGNERS,
             DocumentAction.VOID,
             DocumentAction.DELETE);
 
@@ -82,7 +83,7 @@ class SigningAuthorizationGuardTest {
         @ParameterizedTest
         @EnumSource(
                 value = DocumentAction.class,
-                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "VOID", "DELETE"})
+                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "EDIT_SIGNERS", "VOID", "DELETE"})
         @DisplayName("may NOT perform any write action, even on its own documents")
         void deniesAllWriteActions(DocumentAction action) {
             assertThat(guard.isAllowed("CLIENT", action, OWNED_TYPE, true)).isFalse();
@@ -109,7 +110,7 @@ class SigningAuthorizationGuardTest {
         @ParameterizedTest
         @EnumSource(
                 value = DocumentAction.class,
-                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "VOID", "DELETE"})
+                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "EDIT_SIGNERS", "VOID", "DELETE"})
         @DisplayName("may perform write actions on every owned document type")
         void allowsWriteActionsOnOwnedTypes(DocumentAction action) {
             for (String ownedType : SigningAuthorizationGuard.FOREMAN_OWNED_TYPE_CODES) {
@@ -122,7 +123,7 @@ class SigningAuthorizationGuardTest {
         @ParameterizedTest
         @EnumSource(
                 value = DocumentAction.class,
-                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "VOID", "DELETE"})
+                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "EDIT_SIGNERS", "VOID", "DELETE"})
         @DisplayName("may NOT perform write actions on CONTRACT_* / non-owned types")
         void deniesWriteActionsOnContractTypes(DocumentAction action) {
             assertThat(guard.isAllowed("FOREMAN", action, CONTRACT_TYPE, false)).isFalse();
@@ -133,7 +134,7 @@ class SigningAuthorizationGuardTest {
         @ParameterizedTest
         @EnumSource(
                 value = DocumentAction.class,
-                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "VOID", "DELETE"})
+                names = {"CREATE", "GENERATE", "SAVE_BODY", "REQUEST_SIGNATURES", "EDIT_SIGNERS", "VOID", "DELETE"})
         @DisplayName("may NOT perform write actions when the type code is null")
         void deniesWriteActionsWhenTypeNull(DocumentAction action) {
             assertThat(guard.isAllowed("FOREMAN", action, null, false)).isFalse();

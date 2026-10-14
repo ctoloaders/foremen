@@ -19,6 +19,7 @@ import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
 import com.foremen.service.document.CreateDocumentRequest;
 import com.foremen.service.document.DeclineRequest;
+import com.foremen.service.document.EditSignersInput;
 import com.foremen.service.document.DocumentBodyInput;
 import com.foremen.service.document.DocumentMediaService;
 import com.foremen.service.document.DocumentMediaSummaryDto;
@@ -229,6 +230,25 @@ public class SignableDocumentController {
     public ResponseEntity<SignableDocumentDto> requestSignatures(
             @PathVariable Long id, @RequestBody RequestSignaturesInput input) {
         return ResponseEntity.ok(documentService.requestSignatures(id, input));
+    }
+
+    /**
+     * Edits the designated-signer set of a {@code PENDING_SIGNATURES} document (signer management):
+     * adds new signers, removes still-{@code PENDING} signers (hard delete), and changes a pending
+     * signer's signing method/level — all without re-freezing the artifact and staying
+     * {@code PENDING_SIGNATURES} (R8.2 → {@code UPDATE}). Reserved for the executor by the
+     * service-layer {@code SigningAuthorizationGuard} (MANAGER/ADMIN, FOREMAN for owned types; never
+     * CLIENT). At least one pending signer must remain after the edit.
+     *
+     * @param id    the {@code PENDING_SIGNATURES} document id
+     * @param input the signer edit (add / remove / change sections)
+     * @return the document DTO with the edited signer set
+     */
+    @PutMapping("/{id}/signers")
+    @RequiresPermission(resource = RESOURCE, operation = UPDATE)
+    public ResponseEntity<SignableDocumentDto> editSigners(
+            @PathVariable Long id, @RequestBody EditSignersInput input) {
+        return ResponseEntity.ok(documentService.editSigners(id, input));
     }
 
     /**

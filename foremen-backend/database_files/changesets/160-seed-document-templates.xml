@@ -1,0 +1,2457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-08: seed the real document templates extracted from docs/templates/*.docx.
+         Bitrix-era tokens are mapped to the supported backend merge tokens (A2); tokens with
+         no resolver are rendered as literal '_____' fill-in blanks. The body text lives inline
+         in storage_uri (widened to TEXT by changeset 159). uploaded_by_id points at the
+         bootstrap ADMIN (resolved by the lowest-id ADMIN-role user). Each insert is guarded so
+         it only runs when no template exists yet for that (document_type, locale). -->
+
+    <changeSet id="160-seed-template-amendment-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'AMENDMENT' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Aneks do umowy',
+                   'PL',
+                   'Aneks nr _____ do Umowy o wykonanie prac wykończeniowych z dnia _____
+
+zawarta w Warszawie w dniu {DocumentCreateTime} pomiędzy:
+
+Wykonawcą:
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Peprezentowana przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},
+
+a
+Zamawiającym:
+Panem/ią {ContactName} {ContactLastName}
+zamieszkałym/ą: {RequisitePrimaryAddressText}
+legitymującym/ą się: _______________________
+PESEL: _______________________
+
+łącznie zwanych „Stronami”.
+
+§ 1
+ZMIANA ZAKRESU PRAC
+
+Strony zgodnie potwierdzają, że w związku z koniecznością rozszerzenia zakresu prac objętych Umową o wykonanie prac wykończeniowych z dnia _____, zakres prac zostaje rozszerzony o następujące prace
+
+Opis dodatkowych prac:
+
+LP
+  Zakres prac
+  Ilość
+  JM
+  Cena
+  Wartość
+
+1
+
+2
+
+3
+
+4
+
+5
+
+6
+
+7
+
+8
+
+9
+
+10
+
+_____, ilość: _____, cena netto: _____, łączna wartość netto: _____,
+Całkowita wartość dodatkowych prac wynosi: _____ PLN netto.
+
+§ 2
+ZMIANA TERMINU ZAKOŃCZENIA PRAC
+
+W związku z rozszerzeniem zakresu prac, Strony ustalają nowy termin zakończenia wszystkich prac objętych Umową.
+Nowy termin zakończenia prac wynosi: _____.
+Poprzedni termin zakończenia prac, ustalony na dzień _____, traci moc.
+§ 3
+WYNAGRODZENIE ZA DODATKOWE PRACE
+
+Strony ustalają, że wynagrodzenie za dodatkowe prace określone w § 1 niniejszego Aneksu zostanie uregulowane w terminie 3 dni od dnia podpisania niniejszego Aneksu.
+
+§ 4
+POSTANOWIENIA KOŃCOWE
+
+Pozostałe warunki Umowy pozostają bez zmian i zachowują swoją ważność.
+Aneks wchodzi w życie z dniem jego podpisania przez obie Strony.
+Aneks został sporządzony w dwóch jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.
+
+ ..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'AMENDMENT';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-defect-form-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'DEFECT_FORM' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Formularz usterkowy wewnętrzny',
+                   'PL',
+                   'FORMULARZ USTERKOWY
+
+{UfCrm1662541716442}
+
+HOL + SALON + ANEKS KUCHENNY
+
+Do sprawdzenia
+  OK
+  Usterka
+  Opis
+
+Drzwi wejściowe
+
+Dzwonek + domofon
+
+Silikony w kuchni
+
+Montaż zlewu, baterii i syfonu (brak przecieków)
+
+Gniazdka 230V – wszystkie
+
+Oświetlenie (wszystkie punkty + LEDy)
+
+Kanał na kable TV
+
+Kraniki na żródła wody
+
+Podłączenie okapu i AGD
+
+Listwy przypodłogowe + akryl
+
+Panele i listwy dylatacyjne
+
+Farba na ścianach (narożniki, jakość pomalowania)
+
+Okna (zarysowania itp.)
+
+Montaż karniszy
+
+Grzejnik (mocowanie, brak przecieków, odpowietrzenie)
+
+Wentylacja
+
+Inne
+
+FORMULARZ USTERKOWY
+
+{UfCrm1662541716442}
+
+ŁAZIENKA
+
+Do sprawdzenia
+  OK
+  Usterka
+  Opis
+
+Bateria umywalkowa (mocowanie, zimna i ciepła woda)
+
+Umywalka + syfon (brak przecieków)
+
+Szuflady i szafy
+
+Gniazdka 230V – wszystkie
+
+Włączniki (czy włączają odpowiednie lampy)
+
+Fugi, silikony
+
+Deszczownica (mocowanie, działanie, brak przecieków)
+
+Wanna/prysznic (odpływ, brak rys)
+
+Bateria wannowa (mocowanie, działanie, brak przecieków)
+
+Grzejnik (mocowanie, brak przecieków, odpowietrzenie)
+
+Drzwi (brak uszkodzeń, domykanie, klamka, zamek)
+
+Farba na ścianach (narożniki, jakość malowania)
+
+Glazura i gres
+
+Lustro (mocowanie, pion i poziom)
+
+Połączenie ściany z płytkami
+
+Kraniki na źródła wody
+
+Miska ustępowa, spuszczanie wody
+
+Wentylacja
+
+Inne
+
+FORMULARZ USTERKOWY
+
+{UfCrm1662541716442}
+
+POKÓJ 1
+
+Do sprawdzenia
+  OK
+  Usterka
+  Opis
+
+Drzwi (brak uszkodzeń, domykanie, klamka, zamek)
+
+Gniazdka 230V – wszystkie
+
+Listwy przypodłogowe + akryl
+
+Panele i listwy dylatacyjne
+
+Farba na ścianach (narożniki, jakość malowania)
+
+Okna (zarysowania itp.)
+
+Oświetlenie + włączniki (czy włączają odpowiednie lampy)
+
+Montaż karniszy
+
+Grzejnik (mocowanie, brak przecieków, odpowietrzenie)
+
+Inne
+
+POKÓJ 2
+
+Do sprawdzenia
+  OK
+  Usterka
+  Opis
+
+Drzwi (brak uszkodzeń, domykanie, klamka, zamek)
+
+Gniazdka 230V – wszystkie
+
+Listwy przypodłogowe + akryl
+
+Panele i listwy dylatacyjne
+
+Farba na ścianach (narożniki, jakość malowania)
+
+Okna (zarysowania itp.)
+
+Oświetlenie + włączniki (czy włączają odpowiednie lampy)
+
+Montaż karniszy
+
+Grzejnik (mocowanie, brak przecieków, odpowietrzenie)
+
+Inne',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'DEFECT_FORM';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-works-manager-statement-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'WORKS_MANAGER_STATEMENT' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Oświadczenie kierownika robót',
+                   'PL',
+                   'OŚWIADCZENIE KIEROWNIKA ROBÓT
+
+O ZAPOZNANIU SIĘ Z UMOWĄ I KOSZTORYSEM ORAZ WERYFIKACJI ZAKRESU I TERMNIÓW PRAC
+
+Sporządzone w dniu _____._____.__________
+
+Dotyczy inwestycji realizowanej na podstawie:
+
+Umowy nr: ____________ z dnia: __________________________
+
+zawartej z Klientem: {ContactName} {ContactLastName}
+
+adres inwestycji: {UfCrm1662541716442}
+
+Ja, niżej podpisany: {AssignedName}
+
+oświadczam, że:
+
+§1. Zapoznanie się z dokumentacją
+
+Zapoznałem się szczegółowo z treścią Umowy, kosztorysem stanowiącym jej integralną część, dokumentacją projektową (jeśli dotyczy) oraz zakresem prac przewidzianych do realizacji.
+
+Dokonałem analizy zakresu robót objętych kosztorysem pod kątem ich kompletności, logicznej spójności oraz technicznej wykonalności.
+
+§2. Weryfikacja zakresu prac
+
+Potwierdzam, że przed rozpoczęciem robót przeanalizowałem wszystkie pozycje kosztorysowe oraz potencjalne prace towarzyszące i przygotowawcze, które mogą być niezbędne do prawidłowego wykonania inwestycji.
+
+Zobowiązuję się do zgłoszenia na piśmie (mailowo do Zarządu / Właściciela) wszelkich braków, nieścisłości lub potencjalnych prac dodatkowych, które mogą wystąpić w trakcie realizacji – przed rozpoczęciem robót budowlanych.
+
+Oświadczam, że po rozpoczęciu prac zgłaszanie dodatkowych robót wynikających z braku analizy kosztorysu lub niedostatecznej weryfikacji dokumentacji będzie traktowane jako błąd organizacyjny po mojej stronie.
+
+Wszelkie koszty powstałe w wyniku nieprawidłowej lub niepełnej weryfikacji kosztorysu przed rozpoczęciem robót obciążają mnie jako Kierownika Robót w pełnej wysokości.
+
+§3. Terminy wykonania prac:
+Planowane rozpoczęcie
+  Planowane zakonczenie
+
+{Begindate}
+  {Closedate}
+
+§4. Prace dodatkowe
+
+Wszelkie prace dodatkowe mogą być realizowane wyłącznie po:
+
+pisemnym zgłoszeniu,
+
+sporządzeniu odrębnej wyceny,
+
+uzyskaniu pisemnej zgody Klienta,
+
+zatwierdzeniu przez Zarząd / Właściciela.
+
+Zabrania się uzgadniania prac dodatkowych bezpośrednio z Klientem bez uprzedniej akceptacji Zarządu / Właściciela.
+
+§5. Odpowiedzialność organizacyjna
+
+Potwierdzam, że zakres prac określony w załączonym kosztorysie został przeze mnie zweryfikowany i przyjmuję odpowiedzialność za jego organizacyjną realizację zgodnie z zapisami Umowy.
+
+§6. Załącznik
+
+Załącznik nr 1 – Kosztorys inwestycji (podpisany przez Kierownika Robót na każdej stronie)
+
+Podpis: ______________________
+Data: ________________________',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'WORKS_MANAGER_STATEMENT';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-works-acceptance-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'WORKS_ACCEPTANCE' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Protokół odbioru prac wykończeniowych',
+                   'PL',
+                   'PROTOKÓŁ ODBIORU PRAC WYKOŃCZENIOWYCH
+
+z dnia _____._____.__________
+
+dotyczy umowy z dnia _____._____.__________
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+Wykonawca:
+  -1905234315Pan(-i) {ContactName} {ContactLastName}
+{ContactAddress}
+00Pan(-i) {ContactName} {ContactLastName}
+{ContactAddress}
+Klient:
+
+Protokół dotyczy lokalu przy ul. {UfCrm1662541716442}.
+
+Strony potwierdzają bezusterkowy odbiór prac w lokalu.*
+
+Strony potwierdzają odbiór lokalu z usterkami zgodnie z formularzem usterkowym.*
+
+Strony uzgodniły termin usunięcia usterek na _____ dni od daty podpisania niniejszego protokołu.*
+Klient akceptuje usterki i potwierdza przyjęcie lokalu bez usunięcia usterek.*
+
+Klient nie ma uwag do terminów wykonania prac.*
+Wszystkie klucze zostałe przekazane klientowi.*
+
+*niepotrzebne skreślić
+
+Protokół został sporządzony w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze stron.
+
+_____________________________________
+Wykonawca
+  _____________________________________
+Klient
+
+FORMULARZ USTERKOWY
+
+{UfCrm1662541716442}
+
+Lokalizacja
+  Opis
+
+_____________________________________
+Wykonawca
+  _____________________________________
+Klient
+
+15240-386715Dziękujemy za skorzystanie z naszych usług. Chcielibyśmy poznać Państwa opinię, aby nieustannie podnosić jakość naszych realizacji. Prosimy o poświęcenie kilku minut na wypełnienie ankiety
+00Dziękujemy za skorzystanie z naszych usług. Chcielibyśmy poznać Państwa opinię, aby nieustannie podnosić jakość naszych realizacji. Prosimy o poświęcenie kilku minut na wypełnienie ankiety
+
+ANKIETA SATYSFAKCJI KLIENTA
+1. Jak oceniają Państwo ogólną jakość świadczonych usług?
+  a) Bardzo dobrze
+b) Dobrze
+c) Średnio
+d) Źle
+e) Bardzo źle
+
+2. Jak oceniają Państwo kontakt i komunikację z naszym zespołem?
+  a) Bardzo dobrze
+b)  Dobrze
+c) Średnio
+d) Źle
+e) Bardzo źle
+
+3. Jak oceniają Państwo terminowość realizacji projektu?
+  a) Zgodnie z planem
+b) Niewielkie opóźnienie
+c)  Znaczne opóźnienie
+d) Nie dotrzymano terminu
+
+4. Czy zakres prac był zgodny z ustaleniami zawartymi w umowie?
+  a) Tak, w pełni
+b) Częściowo
+c) Nie
+
+5. Czy ekipa realizująca projekt była profesjonalna i rzetelna?
+  a) Tak, w pełni
+b) Częściowo
+c) Nie
+
+7. Jak oceniają Państwo czystość i porządek utrzymywany w trakcie prac?
+  a) Bardzo dobrze
+b) Dobrze
+c) Średnio
+d) Źle
+e) Bardzo źle
+
+8. Czy podczas realizacji projektu wystąpiły nieprzewidziane problemy? Jeśli tak, czy zostały one rozwiązane w satysfakcjonujący sposób?
+
+  a) Nie było problemów
+b) Tak, problemy były, ale zostały rozwiązane profesjonalnie
+c) Tak, ale sposób ich rozwiązania był niezadowalający
+d) Problemy nie zostały rozwiązane
+
+9. Czy poleciliby Państwo naszą firmę znajomym lub rodzinie?
+  a) Zdecydowanie tak
+b) Raczej tak
+c) Nie wiem
+d) Raczej nie
+e) Zdecydowanie nie
+
+10. Jakie elementy współpracy podobały się Państwu najbardziej?(krótka odpowiedź)
+
+11. Czy mają Państwo sugestie dotyczące tego, co możemy poprawić?(krótka odpowiedź)
+
+WZÓR OPINII
+
+Jeśli są Państwo zadowoleni z naszej pracy, będziemy wdzięczni za wystawienie opinii na Google i Facebooku.
+Aby ułatwić napisanie recenzji, przygotowaliśmy dwa schematy:
+Wersja 1 – Opinia rzeczowa
+Krótko opisz zakres realizowanych prac (np. „Firma Foremen wykonała kompleksowe wykończenie mojego mieszkania pod klucz”).
+Oceń jakość wykonania i komunikację („Prace zostały wykonane solidnie, a kontakt z zespołem był profesjonalny i sprawny”).
+Wspomnij o terminowości i zgodności z ustaleniami („Całość została wykonana zgodnie z ustalonym harmonogramem, bez zbędnych opóźnień”).
+Podziel się ogólną opinią i czy poleciłbyś Foremen innym („Zdecydowanie polecam! Profesjonalna obsługa i wysoka jakość wykończenia”).
+Wersja 2 – Opinia bardziej emocjonalna
+Opisz swoje obawy przed rozpoczęciem współpracy („Początkowo obawiałem się, czy ekipa dotrzyma terminów i czy efekt będzie zgodny z moimi oczekiwaniami”).
+Podziel się pozytywnymi doświadczeniami („Już po pierwszym spotkaniu wiedziałem, że mam do czynienia z profesjonalistami. Kontakt był doskonały, a wszystkie moje pytania zostały wyjaśnione”).
+Opisz efekt końcowy („Mieszkanie wygląda dokładnie tak, jak sobie wymarzyłem! Dopracowane detale, wysoka jakość materiałów i dbałość o każdy szczegół”).
+Wyraź swoją rekomendację („Jeśli szukacie solidnej firmy do wykończenia mieszkania, Foremen to strzał w dziesiątkę!”).
+Dziękujemy za poświęcony czas i zapraszamy do współpracy w przyszłości!
+Zespół Foremen',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'WORKS_ACCEPTANCE';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-handover-to-renovation-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'HANDOVER_TO_RENOVATION' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Protokół przekazania lokalu do remontu',
+                   'PL',
+                   'PROTOKÓŁ PRZEKAZANIA LOKALU
+przyznaczonego do remontu
+
+z dnia _____._____.__________
+
+dotyczy umowy z dnia _____._____.__________
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Przedstawiciel wykonawcy:{AssignedName} {AssignedLastName}{AssignedName} {AssignedLastName}
+Wykonawca:
+  -1905234315Pan(-i) {ContactName} {ContactLastName}
+{UfCrm1662541716442}
+00Pan(-i) {ContactName} {ContactLastName}
+{UfCrm1662541716442}
+Zamawiający:
+
+Strony potwierdzają przekazanie lokalu mieszkalnego przy ul. {UfCrm1662541716442} przyznaczonego do remontu wg. umowy o wykonanie prac wykończeniowych z dnia _____._____.__________
+
+Protokół został sporządzony w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze stron.
+Określone terminy wykonania prac:
+Planowane rozpoczęcie
+  Planowane zakonczenie
+
+{Begindate}
+  {Closedate}
+
+Informacje dotyczące dostępu do pomieszczeń:
+Kluczy do drzwi wejsciowych przekazane, szt.
+
+Pilot/kluczy do garażu, szt.
+
+Miejsce parkingowe numer
+
+Kod do domofonu
+
+Kontener na odpady
+
+Dodatkowe kluczy / informacja
+
+Formularz weryfikacyjny stanu lokalu:
+
+{UfCrm1662541716442}
+
+Do sprawdzenia
+  OK / Usterka + Komentarz
+
+Okna (otwieranie, brak przecieków, nieszczelności)
+
+Grzejniki (mocowanie, brak przecieków)
+
+Wentylacja
+
+Wylewka podłogowa
+
+Ściany. Jakość tynku, szpachlowania
+
+Ściany. Kąty i narożniki 90°
+
+Elektryka (panel, gniazda, włączniki)
+
+Zgodność faktycznego stanu lokalu z rzutami dewelopera i projektem
+
+Otwory drzwiowe:
+
+Pokój
+
+Wysokość, cm
+
+Szerokość, cm
+
+Grubość, cm
+
+_____________________________________
+Klient
+  _____________________________________
+Wykonawca
+
+Notatka dla brygadzista i managera projektu
+
+Nie zapomnij zabrać to z sobą na pierwsze spotkanie z klientem!
+
+Narzędzie / Przedmiot
+  OK
+
+Taśma miernicza
+
+Lampa / Latarka
+
+Dalmierz laserowy
+
+Ołówek, kreda
+
+Taśma malarska
+
+Wilgotnościomierz
+
+Poziomica
+
+Kątownik 90°
+
+Umowa o wykonanie prac
+
+Rzuty dewelopera
+
+Projekt wykonawczy
+
+Protokół przekazania lokalu
+
+Notatka dla klienta
+
+Gratulujemy z powodu nowego mieszkania! Cieszymy się, że wybrałeś nas dla stworzenia komfortu w swoim domu. Dołożymy wszelkich starań, aby proces wykończenia był dla Ciebie łatwy i bezstresowy, tak abyś otrzymał ciepły i przytulny dom swoich marzeń 😊
+
+W tym celu przygotowaliśmy dla Ciebie notatke z listą rzeczy i materiałów, na które należy się zdecydować podczas postępowych etapów.
+
+Do rozpoczęcia
+
+Przedmiot
+  Komentarz / Link / Nie dotyczy
+
+Projekt wykonawczy, elektryki
+
+Stelaż WC
+
+Bateria (podtynkowa/natynkowa?)
+
+Odpływ liniowy (?)
+
+Płytki, gres
+
+Wanna / Szkło / Walk-in
+
+Panele podłogowe (wysokość układania płytek w łazience)
+
+Zamowione:1. Płytki
+2. Drzwi3. Panele4. Listwy przypodłogowe
+  1. 2. 3.
+4.
+
+Od razu po rozpoczęciu
+
+Listwy przypodłogowe, ścienne i sufitowe, dekoracje
+
+Farba do sufitów i ścian
+
+Oświetlenie
+
+Памятка для клиента
+
+Рады, что Вы выбрали нас для сотворения комфорта в вашем доме. Сделаем всё, чтобы процесс ремонта прошёл для вас легко и без стресса, и вы получили дом своей мечты, в котором вам будет тепло и уютно 😊
+
+Для этого мы подготовили памятку со списком вещей и материалов, с которыми нужно определиться на разных этапах ремонта.
+
+До начала работ
+
+Предмет
+  Комментарий / Ссылка
+
+Дизайн-проект, проект электрики
+
+Стеллаж WC
+
+Смесители (встроенные?)
+
+Встроенный слив (?)
+
+Плитка
+
+Ванна / Душевая / Стекло
+
+Половое покрытие (знать высоту для укладки плитки в ванной)
+
+Заказаны:1. Плитка
+2. Двери3. Половое покрытие4. Плинтусы
+  1. 2. 3.
+4.
+
+На первом этапе работ
+
+Заказать стеновые и потолочные плинтусы, декор
+
+Заказать краски потолочная и стеновая
+
+Заказать освещение
+
+Подготовка к началу работ
+
+Чек-лист
+  OK
+
+Окна, двери и батареи проверены на царапины
+
+Окна оклеены и защищены
+
+Батареи сняты и оклеены
+
+Входная дверь: баннер снаружи, плёнка внутри, защитные уголки - напоминания о выключении света и заглушке воды
+
+Рекламный баннер на балконе
+
+Конверт со сметой на двери
+
+Сняты и закрыты электрические вентиляции
+
+Сняты и аккуратно обернуты в плёнку пластики с розеток и выключателей
+
+Защита порогов
+
+Патроны и лампочки подключены в каждой комнате
+
+Подготовка к сдаче объекта
+
+Чек-лист
+  OK
+
+Проверить монтаж вентиляции
+
+Сложить остатки материалов в одном месте и сообщить прорабу
+
+Сложить инструмент в одном месте
+
+Проверить развоздушивание батарей
+
+Проверить сифоны на течь
+
+Монтаж дверного порожка
+
+Пропылесосить, вынести мусор, очистить поверхности от остатков смесей
+
+Снять защитные плёнки и малярные ленты
+
+Снять и сложить рекламные баннеры',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'HANDOVER_TO_RENOVATION';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-design-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_DESIGN' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa o wykonanie projektu aranżacji wnętrza',
+                   'PL',
+                   'UMOWA O WYKONANIE PROJEKTU ARANŻACJI WNĘTRZA
+
+zawarta w Warszawie w dniu {DocumentCreateTime} pomiędzy:
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Peprezentowana przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},
+zwanym w treści umowy: Wykonawcą,
+a
+Panem/ią {ContactName} {ContactLastName}
+zamieszkałym/ą: {RequisitePrimaryAddressText}
+legitymującym/ą się: _______________________
+PESEL: _______________________
+zwanym w treści umowy Zamawiającym,
+
+zwanych dalej łącznie Stronami, o następującej treści:
+
+§ 1
+
+Zamawiający zleca a Wykonawca przyjmuje do wykonania dokumentację projektową, zwaną dalej przedmiotem umowy, dotyczącą:
+
+dwóch łazienek w lokalu mieszkalnym
+
+obejmującą:
+
+Plan funkcjonalny: aranżacja (rzuty meblowe) projektowanych pomieszczeń (2-3 wersje).
+Wizualizacje 3D  każdego z pomieszczeń (w cenie również 2 tury poprawek, które nie niosą za sobą istotnych zmian zatwierdzonego wcześniej przez Zamawiającego planu funkcjonalnego).
+Schemat rozmieszczenia punktów oświetleniowych i gniazd.
+Schemat wodno-kanalizacyjny.
+Plan posadzek i sufitów.
+Dokładny projekt łazienki: rzuty i widoki.
+Dokładne rozrysowanie wszystkich zabudów na wymiar występujących w projekcie.
+Dokładna lista materiałów oraz mebli użytych w projekcie + linki do sklepów.
+
+Projekt zostanie dostarczony Zamawiającemu w wersji PDF za pośrednictwem poczty elektronicznej.
+
+Strony zgodnie postanawiają, że w przypadku potwierdzenia możliwości przystąpienia do realizacji Zamówienia przez Wykonawcę termin wykonania projektu wnętrza wyniesie 3 tygodnie.
+
+Strony ustalają następujące zasady akceptowania zamówienia:
+Zamawiający w terminie nie dłuższym niż 2 dni robocze, od dnia przesłania przez Wykonawcę Projektu Wnętrza lub Modelu, zobowiązuje sie do jego zaakceptowania, albo zgłoszenia propozycji zmian lub poprawek, w formie elektronicznej na adres mailowy Wykonawcy info@foremen.eu.
+
+W przypadku zgłoszenia przez Zamawiającego propozycji zmian do przekazanego Projektu Modelu lub Wnętrza, Wykonawca zobowiązuje sie do jego zmiany lub poprawienia, zgodnie z otrzymanymi od zamawiającego wskazówkami.
+
+W celu unikniecia wątpliwości, strony zgodnie postanawiają, że Projekt zostaje odebrany:
+jeżeli Zamawiajacy zaakceptuje przedstawiony przez wykonawce Projekt Modelu lub Wnętrza albo nie zgłosi Wykonawcy w tym zakresie propozycji zmian;
+z dniem przesłania Zamawiającemu przez Wykonawcę w formie elektronicznej, zmienionego lub poprawionego Projektu, co do ktorego Zamawiający nie zgłaszał żadnych propozycji zmian lub z dniem przesłania Zamawiającemu przez Wykonawcę Projektu uwzględniającego poprawki lub zmiany.
+
+§ 2
+
+Strony ustalają wynagrodzenie za przedmiot umowy w wysokości ______ zł netto. Wynagrodzenie Wykonawcy, zostanie powiększone o odpowiednią stawkę podatku od towarów i usług (VAT), obowiązującą w dniu wystawienia faktury.
+Wynagrodzenie będzie płatne wg. faktur na numer konta wskazanego prez Wykonawcę, zgodnie z poniższym harmonogramem:
+a) zaliczka w wysokości 50% kwoty umowy – w terminie 3 dni od podpisaniu umowy.
+b) druga transza w wysokości 50% kwoty umowy – w terminie 3 dni po przekazaniu Zamawiającemu przez Wykonawcę całości projektu w sposób określony w §1.
+
+W przypadku opóźnienia w płatności drugiej transzy, Zamawiający zobowiązuje się do zapłaty odsetek ustawowych za opóźnienie w transakcjach handlowych, zgodnie z obowiązującymi przepisami prawa.
+
+§ 3
+
+Zamawiający zobowiązuje się:
+Do współdziałania w wykonaniu dzieła, w szczególności poprzez udzielenie Projektantowi wszelkich niezbędnych do wykonania dzieła informacji, materiałów, danych wyjściowych i dokumentów. Przekazać Wykonawcy niezwłocznie na jego żądanie wszelkie informacje niezbędne do realizacji przedmiotu umowy, w tym dokumenty, fotografie, wymiary, rysunki techniczne itp.
+Terminowego realizowania wypłat poszczególnych transz, zgodnie z p1 §2.
+
+Zamawiający może zgłosić maksymalnie dwie tury poprawek, które nie wymagają istotnych zmian w Projekcie (np. zmian w układzie ścian, instalacji wodno-kanalizacyjnej oraz elektrycznej). Każda zgłoszona poprawka wydłuża termin realizacji o maksymalnie 3 dni robocze.
+
+Każde zgłoszenie poprawek przez Zamaiającego powinno zawierać wskazówki, które w jasny sposób określają zakres proponowanych zmian.
+
+W celu uniknięcia wątpliwości, Strony postanawiają, że zgłoszenie poprawek lub zmian do projektu następuje z chwilą przekazania ich na adres mailowy Wykonawcy: info@foremen.eu.
+
+§ 4
+
+Wykonawca zapewni opracowanie dokumentacji projektowej z należytą starannością, w sposób zgodny z ustaleniami, określonymi w zadaniu technicznym, wymaganiami ustaw i  przepisami obowiązującymi Polskim prawem oraz zasadami wiedzy technicznej.
+
+Przekazywana dokumentacja będzie wzajemnie skoordynowana technicznie i skompletowana z punktu widzenia celu, któremu ma służyć.
+
+§ 5
+
+W ramach niniejszej umowy i w ramach umówionego wynagrodzenia, o którym mowa w p.1 §2 Wykonawca nie wykonuje nadzoru autorskiego w trakcie realizacji prac remontowo –wykończeniowych, ale zobowiązuje się do odpowiedzi na pytania ekipy remontowej i Wykonawców projektu wskazanych przez Zamawiającego.
+
+Wykonawca nie odpowiada za wybór podwykonawców, nie ponosi odpowiedzialności za jakość użytych materiałów budowlanych i nie odpowiada za nadzór autorski oraz prace wykońćzeniowe, wykonane trzecią osobą.
+
+Wykonawca nie odpowiada za zmiany w projekcie wynikające z ujawnionych wad konstrukcyjnych lokalu, które nie były widoczne w momencie podpisania umowy
+
+Wykonawca może żądać zmiany umowy lub terminu wykonania dokumentacji projektowej jeżeli Zamawiający w sposób tak istotny zmieni przedmiot umowy lub opóźni dostarczenie bądź zmieni dane, na podstawie których Wykonawca wykonuje dokumentację, że niemożliwe staje się wykonanie przedmiotu umowy w terminie uzgodnionym w umowie.
+
+§ 6
+
+W ramach realizacji projektu Wykonawca przenosi na Zamawiającego majątkowe prawa autorskie do Projektu w rozumieniu ustawy z dnia 4 lutego 1994 roku o prawie autorskim i prawach pokrewnych, z wyłączeniem prawa do dalszego komercyjnego wykorzystania przez Zamawiającego.
+
+Niniejsza umowa upoważnia Wykonawcę do dalszego komercyjnego wykorzystywania przedmiotu umowy w całości lub części.
+
+Wykonawca zastrzega sobie prawo do nie udostępniania materiałów źródłowych (min. pliki DWG).
+
+Możliwe są odstępstwa od koncepcji spowodowane stanem faktycznym mieszkania, jego elementów ściennych, itd. Dokumentacja projektowa nie uwzględnia: projektu budowlanego w zakresie uwzględniającym specyfikę robót budowlanych wraz z opiniami, uzgodnieniami, pozwoleniami i innymi dokumentami wymaganymi prawem budowlanym i innymi przepisami techniczno-budowlanymi.
+Możliwe są drobne odstępstwa w liście zakupowej względem wizualiacji.
+
+Wszelkie zmiany niniejszej umowy mogą być dokonywane, pod rygorem nieważności, jedynie w formie pisemnej.
+
+Umowa została sporządzona w dwóch jednobrzmiących egzemplarzach, po jednym dla każdej ze stron
+
+ ..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_DESIGN';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-works-pl-ru-bilingual" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_WORKS_PL_RU' AND t.locale = 'BILINGUAL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa PL-RU o wykonanie prac wykończeniowych',
+                   'BILINGUAL',
+                   'UMOWA O WYKONANIE PRAC WYKOŃCZENIOWYCH
+  ДОГОВОР НА ВЫПОЛНЕНИЕ ОТДЕЛОЧНЫХ РАБОТ
+
+nr {Id} zawarta w Warszawie w dniu {DocumentCreateTime} pomiędzy:
+  № {Id}, заключённый в г. Варшаве {DocumentCreateTime} между:
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Peprezentowana przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},zwanym w treści umowy: Wykonawcą,
+  {UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Peprezentowana przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},именуемого в тексте договора: «Подрядчик»,
+
+a
+  и
+
+Panem/ią {ContactName} {ContactLastName}zamieszkałym/ą: {RequisitePrimaryAddressText}PESEL: _______________________zwanym w treści umowy Zamawiającym,
+  г-ном / г-жой {ContactName} {ContactLastName}проживающим(ей) по адресу: {RequisitePrimaryAddressText}PESEL: _______________________именуемым(ой) в тексте договора «Заказчик»,
+
+zwanych dalej łącznie Stronami, o następującej treści:
+  далее совместно именуемые «Стороны», заключили настоящий договор о нижеследующем:
+
+§ 1PRZEDMIOT UMOWY
+  § 1ПРЕДМЕТ ДОГОВОРА
+
+Zamawiający zamawia, a Wykonawca przyjmuje do wykonania prace wykończeniowe w lokalu mieszkalnym Zamawiającego, zlokalizowanego przy {UfCrm1662541716442}, polegające na wykonaniu wykończenia lokalu mieszkalnego, a w szczególności wykonania prac wymienionych w załączniku nr 1 dołączony do niniejszej umowy. Powyższy lokal mieszkalny jest o powierzchni użytkowej nie przekraczającej 150 m2 lub jest to budynek mieszkalny jednorodzinny o powierzchni użytkowej nieprzekraczającej 300 m2.
+  Заказчик поручает, а Подрядчик принимает к выполнению отделочные работы в жилом помещении Заказчика, расположенном по адресу: {UfCrm1662541716442}, заключающиеся в выполнении отделки жилого помещения, в частности работ, перечисленных в Приложении № 1, прилагаемом к настоящему договору. Указанное жилое помещение имеет полезную площадь, не превышающую 150 м2, либо является одноквартирным жилым домом с полезной площадью, не превышающей 300 м2.
+
+Wykonawca zobowiązuje się do wykonania Przedmiotu Umowy zgodnie z Projektem, z należytą starannością, zgodnie zasadami wiedzy technicznej, sztuką budowlaną. Wykonawca zapewni właściwe kierownictwo, siłę roboczą, materiały, urządzenia i sprzęt niezbędne do prawidłowego wykonania Umowy.
+  Подрядчик обязуется выполнить Предмет договора в соответствии с Проектом, с должной тщательностью, в соответствии с принципами технических знаний и правилами строительного искусства. Подрядчик обеспечивает надлежащее руководство работами, рабочую силу, материалы, устройства и оборудование, необходимые для надлежащего исполнения договора.
+
+§ 2TERMIN I SPOSÓB WYKONANIA UMOWY
+  § 2СРОК И ПОРЯДОК ИСПОЛНЕНИЯ ДОГОВОРА
+
+Strony zgodnie ustalają termin rozpoczęcia prac na dzień {Begindate}, a przewidywany termin ukończenia wskazanych powyżej prac Strony ustalają na dzień {Closedate}.
+  Стороны согласовали дату начала работ - {Begindate}, а предполагаемый срок завершения вышеуказанных работ Стороны устанавливают на {Closedate}.
+
+Strony dopuszczają możliwość przedłużenia terminów wskazanych w ust. 1 w razie powstania przeszkód niezależnych od Wykonawcy (m.in. warunki pogodowe, przyczyny o charakterze technicznym), których nie przewidziano w dniu zawarcia niniejszej Umowy. O powstaniu okoliczności, o których mowa w zdaniu poprzedzającym, Wykonawca zobowiązuje się niezwłocznie poinformować Zamawiającego.
+  Стороны допускают возможность продления сроков, указанных в п. 1, в случае возникновения препятствий, не зависящих от Подрядчика (в том числе погодных условий, причин технического характера), которые не могли быть предусмотрены на день заключения настоящего договора. О возникновении обстоятельств, указанных в предыдущем предложении, Подрядчик обязуется незамедлительно уведомить Заказчика.
+
+Brak współdziałania Zamawiającego przy określeniu nowego terminu zakończenia realizacji Umowy będzie uprawniał Wykonawcę do jednostronnego wyznaczenia nowego terminu, na co Zamawiający wyraża zgodę.
+  Отсутствие содействия со стороны Заказчика при определении нового срока завершения исполнения договора будет давать Подрядчику право на одностороннее установление нового срока, на что Заказчик выражает согласие.
+
+Wykonawca wykona umowę samodzielnie lub za pomocą osób przez siebie wskazanych, gwarantujących należyte wykonanie umowy.
+  Подрядчик выполняет договор самостоятельно либо с привлечением указанных им лиц, обеспечивающих надлежащее исполнение договора.
+
+§ 3WYNAGRODZENIE
+  § 3ВОЗНАГРАЖДЕНИЕ
+
+Za wykonanie umowy Zamawiający zapłaci na rzecz Wykonawcy wynagrodzenie w kwocie {TotalBeforeTax} złotych (słownie: zł __/100) netto płatne przelewem na rachunek bankowy wskazany na wystawionej przez Wykonawcę fakturze. Wynagrodzenie Wykonawcy, zostanie powiększone o odpowiednią stawkę podatku od towarów i usług (VAT), obowiązującą w dniu wystawienia faktury.
+  За выполнение договора Заказчик уплачивает Подрядчику вознаграждение в размере {TotalBeforeTax}злотых ( зл __/100) нетто, подлежащее оплате банковским переводом на банковский счёт, указанный в счёте-фактуре, выставленном Подрядчиком. Вознаграждение Подрядчика увеличивается на соответствующую ставку налога на товары и услуги (VAT), действующую на день выставления счёта-фактуры.
+
+Zamawiający zapłaci Wykonawcy Wynagrodzenie w następujący sposób:1. 10% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od dnia podpisania umowy,
+2. 40% wynagrodzenia określonego w Załączniku 1 – w terminie 5 dni od rozpoczęcia prac,
+3. 45% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od momentu wykonania prac na kwotę 50% umowy,
+4. 5% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od dnia odbioru prac z Załącznika 1 oraz dostarczenia faktury końcowej.
+  Заказчик выплачивает Подрядчику Вознаграждение следующим образом:1. 10% вознаграждения, указанного в Приложении №1, — в течение 3 дней со дня подписания договора;
+2. 40% вознаграждения, указанного в Приложении №1, — в течение 5 дней с момента начала работ;
+3. 45% вознаграждения, указанного в Приложении №1, — в течение 3 дней с момента выполнения работ на сумму 50% от общей стоимости договора;
+4. 5% вознаграждения, указанного в Приложении №1, — в течение 3 дней со дня приемки работ согласно Приложению №1 и предоставления окончательного счета-фактуры
+
+Podstawę zapłaty wynagrodzenia stanowi protokół odbioru, sporządzony zgodnie z postanowieniami §6 niniejszej Umowy.
+  Основанием для выплаты вознаграждения является акт приёмки, составленный в соответствии с положениями § 6 настоящего договора.
+
+Strony ustalają, że w przypadku pojawienia się dodatkowych prac, nie wymienionych w Załączniku 1, zostaną one szczegółowo opisane w odrębnym aneksie do Umowy. Termin wykonania Prac zostanie przesunięty odpowiednio o ilość dni potrzebną dla wykonania prac dodatkowych. W tej sytuacji Strony przystąpią do wspólnego określenia nowego terminu zakończenia realizacji Umowy. Brak współdziałania Zamawiającego przy określeniu nowego terminu zakończenia realizacji Umowy będzie uprawniał Wykonawcę do jednostronnego wyznaczenia nowego terminu na co Zamawiający wyraża zgodę.
+  Стороны согласовали, что в случае возникновения дополнительных работ, не перечисленных в Приложении № 1, такие работы будут подробно описаны в отдельном дополнительном соглашении к договору. Срок выполнения работ подлежит соответствующему переносу на количество дней, необходимое для выполнения дополнительных работ. В такой ситуации Стороны приступят к совместному определению нового срока завершения исполнения договора. Отсутствие содействия со стороны Заказчика при определении нового срока завершения исполнения договора будет давать Подрядчику право на одностороннее установление нового срока, на что Заказчик выражает согласие.
+
+Ustalone aneksem prace dodatkowe powinny być opłacone przed ich wykonaniem w ciągu 3 dni po wystawieniu faktury.
+  Дополнительные работы, согласованные дополнительным соглашением, подлежат оплате до начала их выполнения, в течение 3 дней после выставления счёта-фактуры.
+
+Wykonawca nabywa z otrzymanych zaliczek oraz dostarcza materiały operacyjne niezbędne do realizacji Umowy, w szczególności: chemię budowlaną, przewody, kleje, płyty kartonowo-gipsowe, rury, gips itp.
+  Подрядчик за счёт полученных авансов приобретает и поставляет расходные материалы, необходимые для исполнения договора, в частности: строительную химию, провода, клеи, гипсокартонные плиты, трубы, гипс и т.п.
+
+Rozliczenie zaliczek następować będzie na podstawie dokumentów wystawianych przez Wykonawcę, w szczególności faktur pro forma, faktur VAT lub dokumentów potwierdzających wydanie materiałów z magazynu Wykonawcy (potwierdzenie dostawy).Strony zgodnie postanawiają, że materiały dostarczane przez Wykonawcę stanowią element kompleksowej realizacji Umowy, a ich rozliczenie odbywa się według cen stosowanych przez Wykonawcę w ramach prowadzonej działalności gospodarczej.
+  Расчёт авансов производится на основании документов, выставляемых Подрядчиком, в частности счетов pro forma, счетов-фактур VAT либо документов, подтверждающих выдачу материалов со склада Подрядчика (подтверждение поставки).Стороны совместно подтверждают, что материалы, поставляемые Подрядчиком, являются элементом комплексного исполнения договора, а их расчёт осуществляется по ценам, применяемым Подрядчиком в рамках осуществляемой им хозяйственной деятельности.
+
+Dokumenty zakupu materiałów od dostawców Wykonawcy stanowią dokumentację wewnętrzną Wykonawcy i nie stanowią podstawy rozliczeń pomiędzy Stronami.
+  Документы, подтверждающие закупку материалов у поставщиков Подрядчика, являются внутренней документацией Подрядчика и не служат основанием для расчётов между Сторонами.
+
+Zaliczki na materiały będą płacone systematycznie, zgodnie z zapotrzebowaniem zgłaszanym przez Wykonawcę.
+  Авансы на материалы выплачиваются систематически, в соответствии с потребностью, заявляемой Подрядчиком.
+
+W przypadku opóźnienia w płatnościach, Zamawiający zobowiązuje się do zapłaty odsetek ustawowych za każdy dzień zwłoki.
+  В случае просрочки платежей Заказчик обязуется уплатить законные проценты за каждый день просрочки.
+
+§ 4PRAWA I OBOWIĄZKI STRON
+  § 4ПРАВА И ОБЯЗАННОСТИ СТОРОН
+
+Zamawiający zobowiązuje się dostarczyć na czas materiał strategiczny: płytki, drzwi, panele, listwy, armaturę itd. (dodając 10% zapas w przypadku gresów, glazury, listwy i podłóg) jeśli nie zlecił zakup materiałów dla Wykonawcy.
+  Заказчик обязуется своевременно предоставить стратегические материалы: плитку, двери, панели, плинтусы, сантехническое оборудование и т. п. (с добавлением 10% запаса в случае керамогранита, керамической плитки, плинтусов и напольных покрытий), если он не поручил Подрядчику закупку материалов.
+
+Jeżeli materiał dostarczony przez Zamawiającego nie nadaje się do prawidłowego wykonania umowy, albo jeżeli zaistnieją inne okoliczności, które mogą przeszkodzić w wykonaniu umowy Wykonawca zobowiązuje się niezwłocznie zawiadomić o tym Zamawiającego. W przypadku zaistnienia takiej okoliczności, termin zakończenia prac może się wydłużyć.
+  Если материал, предоставленный Заказчиком, не пригоден для надлежащего исполнения договора либо возникнут иные обстоятельства, которые могут препятствовать исполнению договора, Подрядчик обязуется незамедлительно уведомить об этом Заказчика. В случае возникновения таких обстоятельств срок окончания работ может быть продлён.
+
+Wykonawca nie ponosi odpowiedzialności za brak dostępności, wstrzymanie dostaw lub wycofanie z produkcji materiałów wykończeniowych wskazanych przez Zamawiającego, jeżeli okoliczności te powstały z przyczyn niezależnych od Wykonawcy, w szczególności po dokonaniu przez Zamawiającego wyboru materiałów i ich zatwierdzeniu. W przypadku wystąpienia powyższych okoliczności Strony zobowiązują się do niezwłocznego uzgodnienia materiałów zamiennych o porównywalnych parametrach technicznych, jakościowych oraz estetycznych.
+  Подрядчик не несёт ответственности за отсутствие в наличии, приостановление поставок либо снятие с производства отделочных материалов, указанных Заказчиком, если такие обстоятельства возникли по причинам, не зависящим от Подрядчика, в частности после выбора и утверждения материалов Заказчиком. В случае возникновения вышеуказанных обстоятельств Стороны обязуются незамедлительно согласовать заменяющие материалы с сопоставимыми техническими, качественными и эстетическими параметрами.
+
+Zamawiający zobowiązuje się udostępnić Wykonawcy na czas trwania umowy wszystkie pomieszczenia, w których mają być wykonywane umówione prace, a także pomieszczenie sanitarne, wodę, prąd, światło oraz dostęp do szacht. Strony ustalają, że wszelkie koszty związane z zużyciem mediów w trakcie wykonywania prac wykończeniowych ponosi Zamawiający. Wykonawca zobowiązuje się do współpracy z firmą zajmującą się utylizacją odpadów na prośbę Zamawiającego. Koszty związane z utylizacją odpadów ponosi Zamawiający.
+  Заказчик обязуется на весь срок действия договора предоставить Подрядчику доступ ко всем помещениям, в которых должны выполняться согласованные работы, а также к санитарному помещению, воде, электроэнергии, освещению и доступу к шахтам. Стороны согласовали, что все расходы, связанные с потреблением коммунальных ресурсов в ходе выполнения отделочных работ, несёт Заказчик. Подрядчик обязуется по просьбе Заказчика взаимодействовать с компанией, осуществляющей утилизацию отходов. Расходы, связанные с утилизацией отходов, несёт Заказчик.
+
+Wykonawca oświadcza, że posiada ubezpieczenie OC w Towarzystwie Ubezpieczeniowym na kwotę 200 000 (dwieście tysięcy złotych 00/100) oraz ubezpieczenie powierzonego mienia.
+  Подрядчик заявляет, что имеет страхование гражданской ответственности в страховой компании на сумму 200 000 (двести тысяч злотых 00/100), а также страхование вверенного имущества.
+
+Wykonawca ma możliwość zaangażowania podwykonawców do prowadzenia prac oraz przekazywania im kluczy do Lokalu w tym celu, z tym zastrzeżeniem, że Wykonawca odpowiada za działania i zaniechania podwykonawców jak za własne.
+  Подрядчик вправе привлекать субподрядчиков для выполнения работ, а также передавать им ключи от Помещения для этой цели, с оговоркой, что Подрядчик отвечает за действия и бездействие субподрядчиков как за свои собственные.
+
+Zamawiający zobowiązuje się do nienawiązywania bezpośredniej współpracy z podwykonawcami, pracownikami oraz innymi osobami lub podmiotami działającymi na rzecz Wykonawcy w zakresie Umowy.
+  Заказчик обязуется не вступать в прямое сотрудничество с субподрядчиками, работниками, а также иными лицами или организациями, действующими в интересах Подрядчика в рамках настоящего договора.
+
+Strony zobowiązują się do zachowania poufności wszelkich informacji uzyskanych w związku z zawarciem i wykonywaniem Umowy.
+  Стороны обязуются сохранять конфиденциальность всей информации, полученной в связи с заключением и исполнением договора.
+
+§ 5KARY UMOWNE
+  § 5ДОГОВОРНЫЕ ШТРАФЫ
+
+Strony nie odpowiadają za niewykonanie lub nienależyte wykonanie umowy, jeżeli jest to spowodowane siłą wyższą. Dla celów niniejszej umowy siłą wyższą jest zdarzenie nadzwyczajne, zewnętrzne i niemożliwe do zapobieżenia i przewidzenia.
+  Стороны не несут ответственности за неисполнение или ненадлежащее исполнение договора, если это вызвано обстоятельствами непреодолимой силы. Для целей настоящего договора обстоятельствами непреодолимой силы считается чрезвычайное, внешнее и непредотвратимое, а также непредвидимое событие.
+
+W przypadku opóźnienia w wykonaniu prac z przyczyn leżących po stronie Wykonawcy, Zamawiający ma prawo do naliczenia kary umownej w wysokości 0,15% wartości wynagrodzenia netto określonego w niniejszej umowie za każdy dzień opóźnienia, nie więcej jednak niż 5% całkowitego wynagrodzenia netto.
+  В случае просрочки выполнения работ по причинам, лежащим на стороне Подрядчика, Заказчик имеет право начислить договорной штраф в размере 0,15% от размера вознаграждения нетто, определённого в настоящем договоре, за каждый день просрочки, однако не более 5% общей суммы вознаграждения нетто.
+
+Terminy wykonania prac mogą ulec odpowiedniemu wydłużeniu w przypadku, gdy Zamawiający nie dostarczy informacji, danych, decyzji, materiałów lub innych elementów niezbędnych do realizacji umowy w terminie określonym przez Wykonawcę. W takim przypadku wydłużenie terminu następuje o czas odpowiadający okresowi opóźnienia w dostarczeniu ww. informacji lub materiałów.
+  Сроки выполнения работ могут быть соответственно продлены в случае, если Заказчик не предоставит информацию, данные, решения, материалы либо иные элементы, необходимые для исполнения договора, в срок, установленный Подрядчиком. В таком случае продление срока происходит на период, соответствующий длительности задержки в предоставлении вышеуказанной информации или материалов.
+
+Brak dostępności materiałów nie stanowi nienależytego wykonania Umowy ani podstawy do naliczania kar umownych wobec Wykonawcy. Wykonawca nie ponosi odpowiedzialności za opóźnienia w realizacji przedmiotu umowy wynikające z braku dostępności materiałów lub komponentów u dostawców, w szczególności w przypadku zamówień indywidualnych lub niestandardowych, o ile dołożył należytej staranności w celu ich terminowego pozyskania.
+  Отсутствие материалов в наличии не является ненадлежащим исполнением договора и не служит основанием для начисления договорных штрафов в отношении Подрядчика. Подрядчик не несёт ответственности за задержки в выполнении предмета договора, вызванные отсутствием материалов или комплектующих у поставщиков, в частности в случае индивидуальных или нестандартных заказов, при условии, что им была проявлена должная осмотрительность для их своевременного получения.
+
+§ 6ODBIÓR PRAC
+  § 6ПРИЁМКА РАБОТ
+
+Warunkiem przystąpienia do odbioru jest dokonanie na rzecz Wykonawcy zapłaty wynagrodzenia określonego w harmonogramie płatności. W przypadku braku zapłaty wynagrodzenia Wykonawca ma prawo odmówić wyznaczenia terminu odbioru do momentu zapłaty wynagrodzenia. Za wydłużenie czasu realizacji Umowy z powodu braku zapłaty Wykonawca nie odpowiada i nie upoważnia Zamawiającego do naliczania kar umownych za wydłużenie terminu realizacji Umowy.
+  Условием начала процедуры приёмки является уплата в пользу Подрядчика вознаграждения, предусмотренного графиком платежей. В случае неуплаты вознаграждения Подрядчик вправе отказаться от назначения даты приёмки до момента её оплаты. За продление срока исполнения договора по причине отсутствия оплаты Подрядчик ответственности не несёт, и это не даёт Заказчику права начислять договорные штрафы за продление срока исполнения договора.
+
+Po wykonaniu prac stanowiących przedmiot Umowy, Wykonawca za pośrednictwem poczty elektronicznej (e-mail) zawiadomi Zamawiającego o zakończeniu prac oraz o możliwości protokolarnego odbioru Lokalu przez Zamawiającego.
+  После выполнения работ, составляющих предмет договора, Подрядчик посредством электронной почты (e-mail) уведомит Заказчика о завершении работ и о возможности протокольной приёмки Помещения Заказчиком.
+
+W zawiadomieniu Wykonawca wskaże termin odbioru, przy czym zawiadomienie to winno nastąpić na co najmniej 3 dni robocze przed proponowanym terminem odbioru. W przypadku gdy jest on niemożliwy do zrealizowania, Wykonawca ustali alternatywną datę, jednak nie później niż na 10 dni roboczych od daty gotowości do odbioru lokalu.
+  В уведомлении Подрядчик укажет дату приёмки, при этом такое уведомление должно быть направлено не менее чем за 3 рабочих дня до предложенной даты приёмки. Если указанная дата не может быть реализована, Подрядчик определит альтернативную дату, однако не позднее чем в течение 10 рабочих дней с даты готовности помещения к приёмке.
+
+Za dzień ukończenia prac Strony zgodnie uznają dzień w którym Wykonawca złożył Zamawiającemu oświadczenie o ukończeniu realizacji przedmiotu Umowy.
+  Днём завершения работ Стороны единогласно признают день, в который Подрядчик передал Заказчику заявление о завершении исполнения предмета договора.
+
+Odbiór Lokalu dokonywany jest w obecności Zamawiającego lub pełnomocnika Zamawiającego oraz przedstawiciela Wykonawcy
+  Приёмка Помещения производится в присутствии Заказчика либо его представителя, а также представителя Подрядчика.
+
+Strony przed podpisaniem protokołu odbioru dokonają przeglądu Lokalu. Z czynności odbioru Lokalu strony sporządzą protokół odbioru (zwany dalej: "Protokołem odbioru końcowego"). Do Protokołu odbioru końcowego Zamawiający może zgłosić wady w wykonaniu wykończenia Lokalu. Z chwilą podpisania protokołu odbioru końcowego przyjmuje się, że Zamawiający dokonał odbioru Lokalu.
+  Перед подписанием акта приёмки Стороны произведут осмотр Помещения. По результатам приёмки Помещения Стороны составят акт приёмки (далее — «Итоговый акт приёмки»). В Итоговом акте приёмки Заказчик вправе заявить о недостатках в выполнении отделки Помещения. С момента подписания Итогового акта приёмки считается, что Заказчик осуществил приёмку Помещения.
+
+Odbiór przedmiotu Umowy zostanie potwierdzony protokołem odbioru. Protokół musi zawierać co najmniej miejsce i datę sporządzenia, określenie Przedmiotu Umowy, wykaz stwierdzonych wad (jeśli takie wystąpią) oraz podpisy osób upoważnionych do reprezentacji każdej ze Stron.
+  Приёмка предмета договора подтверждается актом приёмки. Акт должен содержать как минимум место и дату составления, определение Предмета договора, перечень выявленных недостатков (если таковые имеются), а также подписи лиц, уполномоченных представлять каждую из Сторон.
+
+Zarówno protokół odbioru bezusterkowy, jak i protokół odbioru z wykazem usterek stanowią podstawę do uregulowania faktury końcowej. W przypadku protokołu usterkowego Zamawiający zobowiązuje się do zapłaty pełnej kwoty wynikającej z faktury końcowej w terminie określonym w umowie, przy jednoczesnym zobowiązaniu Wykonawcy do usunięcia wskazanych usterek w terminie nie dłuższym niż 14 dni od dnia sporządzenia protokołu lub w innym terminie uzgodnionym przez Strony.
+  Как бездефектный акт приёмки, так и акт приёмки с перечнем недостатков являются основанием для оплаты итогового счёта-фактуры. В случае составления акта с недостатками Заказчик обязуется оплатить полную сумму, вытекающую из итогового счёта-фактуры, в срок, определённый договором, при одновременной обязанности Подрядчика устранить указанные недостатки в срок не более 14 дней со дня составления акта либо в иной срок, согласованный Сторонами.
+
+Usuwanie wad:
+  Устранение недостатков:
+
+Jeśli w toku odbioru końcowego stwierdzone zostaną wady nadające się do usunięcia, Zamawiający uprawniony jest do sporządzenia protokołu odbioru z wykazem usterek. W takim przypadku Wykonawca wyznacza termin ich usunięcia, nie dłuższy niż 14 dni, chyba że z przyczyn technologicznych wymagany jest dłuższy czas, o czym Zamawiający zostanie poinformowany na piśmie. Po usunięciu usterek Wykonawca zobowiązany jest do ponownego zgłoszenia gotowości do odbioru, a Strony sporządzają aneks do protokołu odbioru potwierdzający usunięcie wad.
+  Если в ходе итоговой приёмки будут выявлены недостатки, подлежащие устранению, Заказчик вправе составить акт приёмки с перечнем недостатков. В таком случае Подрядчик назначает срок их устранения, не превышающий 14 дней, если только по технологическим причинам не требуется более длительный срок, о чём Заказчик будет письменно уведомлён. После устранения недостатков Подрядчик обязан повторно заявить о готовности к приёмке, а Стороны составляют приложение к акту приёмки, подтверждающее устранение недостатков.
+
+Wady nieusuwalne:
+  Неустранимые недостатки:
+
+W przypadku stwierdzenia wad nie nadających się do usunięcia, Zamawiający uprawniony jest do:
+  В случае выявления недостатков, не подлежащих устранению, Заказчик вправе:
+
+- Obniżenia kwoty wynagrodzenia maksymalnie o wartość prac wykonanych z wadami, zgodnie z Załącznikiem 1, jeżeli Przedmiot Umowy pomimo występujących wad nadaje się do użytkowania zgodnie z jego przeznaczeniem. Decyzja o obniżeniu wynagrodzenia powinna zostać odnotowana w protokole odbioru;
+  - уменьшить сумму вознаграждения максимум на стоимость работ, выполненных с недостатками, согласно Приложению № 1, если Предмет договора, несмотря на имеющиеся недостатки, пригоден к использованию в соответствии с его назначением. Решение об уменьшении вознаграждения должно быть отражено в акте приёмки;
+
+lub
+  или
+
+- Wymagania od Wykonawcy ponownego wykonania prac bez wad, wyznaczając mu w tym celu odpowiedni termin.
+  - потребовать от Подрядчика повторного выполнения работ без недостатков, установив ему для этого соответствующий срок.
+
+Jeżeli Zamawiający nie przystąpi do odbioru Lokalu w terminie 10 dni od zgłoszenia przez Wykonawcę gotowości do odbioru, Wykonawca wyznaczy dodatkowy termin odbioru. Brak przystąpienia do odbioru w dodatkowym terminie skutkuje uznaniem, iż odbiór Lokalu został dokonany bez uwag, co uprawnia Wykonawcę do wystawienia faktury końcowej.
+  Если Заказчик не приступит к приёмке Помещения в течение 10 дней с момента заявления Подрядчиком о готовности к приёмке, Подрядчик назначит дополнительный срок приёмки. Неприступление к приёмке в дополнительный срок влечёт признание того, что приёмка Помещения произведена без замечаний, что даёт Подрядчику право выставить итоговый счёт-фактуру.
+
+Wykonawca nie ponosi odpowiedzialności za efekt wizualny ścian oraz sufitów w Lokalu w przypadku nieskorzystania przez Zamawiającego z oferty wykonania gładzi - w przypadku, gdy stan ich wykonania odbiega od standardów.
+  Подрядчик не несёт ответственности за визуальный эффект стен и потолков в Помещении в случае, если Заказчик не воспользовался предложением по выполнению финишного выравнивания (гладзи), когда состояние их исполнения отклоняется от стандартов.
+
+Wykonawca informuje, że zgłoszenia usterek obejmują tylko i wyłącznie wady wynikające bezpośrednio z przedmiotu niniejszej Umowy. Wykonawca nie ponosi odpowiedzialności za usterki wynikające ze stanu technicznego budynku oraz za procesy związane z „pracą budynku”, takie jak osiadanie budynku, ugięcie stropu - czego skutkiem są pęknięcia i zarysowania w tynku o charakterze głębokim lub powierzchniowym, zarówno włosowate, proste i schodkowe, pęknięcia szlichty, zarysowania i pęknięcia stropu, zarysowania akrylu na styku powierzchni ścian oraz sufitów, itp. Wykonawca nie ponosi również odpowiedzialności za usterki na elementy wbudowane elektryczne i teletechniczne, takie jak skrzynki mieszkaniowe, teletechniczne, instalację domofonu i wideo domofonu, itp.
+  Подрядчик уведомляет, что заявления о недостатках охватывают исключительно дефекты, непосредственно вытекающие из предмета настоящего договора. Подрядчик не несёт ответственности за недостатки, возникающие из технического состояния здания, а также за процессы, связанные с «работой здания», такие как осадка здания, прогиб перекрытия, следствием которых являются трещины и царапины в штукатурке глубокого или поверхностного характера, в том числе волосяные, прямые и ступенчатые, трещины стяжки, царапины и трещины перекрытия, растрескивание акрила на стыках поверхностей стен и потолков и т. п. Подрядчик также не несёт ответственности за дефекты встроенных электрических и телекоммуникационных элементов, таких как квартирные и слаботочные щиты, домофонная и видеодомофонная установка и т. п.
+
+§ 7GWARANCJA
+  § 7ГАРАНТИЯ
+
+Wykonawca udziela gwarancji jakości oraz rękojmi za wady pac na okres 24 miesięcy.
+  Подрядчик предоставляет гарантию качества, а также несёт ответственность по законной гарантии за недостатки работ сроком на 24 месяца.
+
+Jeżeli w okresie gwarancji jakości i rękojmi zostaną stwierdzone wady, Wykonawca zrealizuje swoje zobowiązania wynikające z udzielonej gwarancji jakości lub rękojmi w terminie ustalonym z Zamawiającym.
+  Если в период действия гарантии качества и законной гарантии будут выявлены недостатки, Подрядчик исполнит свои обязательства, вытекающие из предоставленной гарантии качества либо законной гарантии, в срок, согласованный с Заказчиком.
+
+Termin na przystąpienie do usunięcia wady nie może być dłuższy niż 21 (dwadzieścia jeden) dni od daty powiadomienia Wykonawcy o jej wystąpieniu, jednakże jeżeli usunięcie wady będzie niemożliwe w powyższym terminie z przyczyn technologicznych, Strony uzgodnią inny termin usunięcia wady.
+  Срок для начала устранения недостатка не может превышать 21 (двадцать один) день с даты уведомления Подрядчика о его возникновении, однако если устранение недостатка невозможно в указанный срок по технологическим причинам, Стороны согласуют иной срок его устранения.
+
+Procedura zgłaszania wad.
+  Порядок заявления о недостатках.
+
+Zamawiający jest zobowiązany zgłosić Wykonawcy wszelkie wady w formie pisemnej w terminie 14 dni od ich stwierdzenia. Zgłoszenie powinno zawierać:
+  Заказчик обязан заявить Подрядчику обо всех недостатках в письменной форме в течение 14 дней с момента их обнаружения. Заявление должно содержать:
+
+Dokładny opis wady, zawierający wszelkie dostępne szczegóły,
+  подробное описание недостатка, содержащее все доступные детали,
+
+Fotografie, jeśli to możliwe, ilustrujące stwierdzone wady,
+  фотографии, если это возможно, иллюстрирующие выявленные недостатки,
+
+Datę stwierdzenia wady.
+  дату обнаружения недостатка.
+
+Zgłoszenie wad powinno być wysłane na adres e-mail Wykonawcy podany w umowie.
+  Заявление о недостатках должно быть направлено на адрес электронной почты Подрядчика, указанный в договоре.
+
+Badanie i Potwierdzenie Wad.
+  Проверка и подтверждение недостатков.
+
+Po otrzymaniu zgłoszenia, Wykonawca zobowiązuje się do niezwłocznego przeprowadzenia badania stwierdzonych wad.
+  После получения заявления Подрядчик обязуется незамедлительно провести проверку заявленных недостатков.
+
+Wykonawca ma obowiązek potwierdzić lub zaprzeczyć istnieniu zgłoszonych wad w terminie 7 dni od daty otrzymania zgłoszenia.
+  Подрядчик обязан подтвердить либо опровергнуть наличие заявленных недостатков в течение 7 дней с даты получения заявления.
+
+Usunięcie Wad.
+  Устранение недостатков.
+
+W przypadku potwierdzenia istnienia wad, Wykonawca zobowiązuje się do przystąpienie do ich usunięcia w terminie 21 dni od daty potwierdzenia wad.
+  В случае подтверждения наличия недостатков Подрядчик обязуется приступить к их устранению в течение 21 дня с даты подтверждения недостатков.
+
+W przypadku niemożności usunięcia wad w wyznaczonym terminie z przyczyn technologicznych, Strony uzgodnią inny termin usunięcia wady.
+  В случае невозможности устранения недостатков в установленный срок по технологическим причинам Стороны согласуют иной срок устранения недостатка.
+
+Jeżeli Zamawiający nie zgłosi w terminie wad, nieobjętych gwarancją jakości, Wykonawca nie ponosi odpowiedzialności za ich usunięcie w ramach gwarancji.
+  Если Заказчик не заявит в установленный срок о недостатках, не охватываемых гарантией качества, Подрядчик не несёт ответственности за их устранение в рамках гарантии.
+
+W przypadku, gdy stwierdzono wadę, a nie wynika ona z winy Wykonawcy, lecz jest rezultatem czynników niezależnych od jego działalności, Zamawiający zobowiązuje się do zapłaty pełnej kwoty wynagrodzenia za wykonanie pracy po likwidacji wady.
+  В случае, если установлен недостаток, который возник не по вине Подрядчика, а является результатом факторов, не зависящих от его деятельности, Заказчик обязуется оплатить полную сумму вознаграждения за выполненную работу после устранения недостатка.
+
+§ 8MATERIAŁY REKLAMOWE
+  § 8РЕКЛАМНЫЕ МАТЕРИАЛЫ
+
+Zamawiający wyraża zgodę na umieszczanie materiałów reklamowych przez Wykonawcę na drzwiach, balkonach oraz wewnątrz mieszkania, związanych z realizacją prac wykończeniowych.
+  Заказчик выражает согласие на размещение Подрядчиком рекламных материалов на дверях, балконах, а также внутри квартиры, связанных с выполнением отделочных работ.
+
+Materiały reklamowe pełnią funkcję zabezpieczającą przed uszkodzeniami, obejmują logo, informacje kontaktowe oraz wszelkie inne elementy promocyjne związane z działalnością Wykonawcy.
+  Рекламные материалы выполняют функцию защиты от повреждений и включают логотип, контактную информацию, а также любые иные рекламные элементы, связанные с деятельностью Подрядчика.
+
+Umieszczenie materiałów reklamowych może obejmować, ale nie jest ograniczone do:
+  Размещение рекламных материалов может включать, но не ограничивается следующим:
+
+Naklejek lub plakietek na drzwiach wejściowychBanerów lub transparentów na balkonachKartek informacyjnych wewnątrz mieszkania
+  наклейки или таблички на входных дверях;баннеры или растяжки на балконах;информационные листы внутри квартиры.
+
+Wykonawca ponosi odpowiedzialność za treść i formę umieszczanych materiałów reklamowych.
+  Подрядчик несет ответственность за содержание и форму размещаемых рекламных материалов.
+
+W przypadku, gdy materiały reklamowe naruszają prawa autorskie, normy etyczne lub prawo obowiązujące w danej jurysdykcji, Wykonawca zobowiązuje się niezwłocznie usunąć lub dostosować takie materiały zgodnie z życzeniem Zamawiającego.
+  В случае если рекламные материалы нарушают авторские права, этические нормы либо право, действующее в соответствующей юрисдикции, Подрядчик обязуется незамедлительно удалить такие материалы либо привести их в соответствие с пожеланием Заказчика.
+
+§ 9WYRAŻENIE ZGODY NA DOKUMENTACJĘ WIZUALNĄ
+  § 9СОГЛАСИЕ НА ВИЗУАЛЬНУЮ ДОКУМЕНТАЦИЮ
+
+Zgoda na wykonanie zdjęć i nagrań.
+  Согласие на выполнение фотографий и видеозаписей.
+
+Zamawiający wyraża zgodę na wykonanie fotografii i nagrań wideo dokumentujących postęp oraz efekty prac wykończeniowych realizowanych w ramach niniejszej umowy.
+  Заказчик выражает согласие на выполнение фотографий и видеозаписей, документирующих ход и результаты отделочных работ, выполняемых в рамках настоящего договора.
+
+Wykonawca zobowiązuje się do stosowania się do zasad profesjonalizmu i szacunku podczas robienia zdjęć oraz nagrań, unikając jednocześnie ujawniania danych osobowych Zamawiającego oraz dokładnego adresu Zamawiającego.
+  Подрядчик обязуется соблюдать принципы профессионализма и уважения при выполнении фотографий и видеозаписей, одновременно избегая раскрытия персональных данных Заказчика и точного адреса Заказчика.
+
+Publikacja w Mediach Społecznościowych.
+  Публикация в социальных сетях.
+
+Zamawiający wyraża zgodę na publikowanie wykonanych zdjęć i nagrań na oficjalnych profilach mediów społecznościowych należących do Wykonawcy.
+  Заказчик выражает согласие на публикацию выполненных фотографий и видеозаписей на официальных профилях в социальных сетях, принадлежащих Подрядчику.
+
+Wykonawca zobowiązuje się do publikacji jedynie ogólnych obrazów prac oraz efektów, bez ujawniania prywatnych informacji Zamawiającego.
+  Подрядчик обязуется публиковать исключительно общие изображения работ и их результатов, без раскрытия частной информации Заказчика.
+
+Ochrona Prywatności.
+  Защита конфиденциальности.
+
+W trakcie publikacji materiałów w mediach społecznościowych, Wykonawca zobowiązuje się do staranności w celu ochrony prywatności Zamawiającego.
+  При публикации материалов в социальных сетях Подрядчик обязуется проявлять должную осмотрительность в целях защиты конфиденциальности Заказчика.
+
+Zabrania się ujawniania dokładnego adresu Zamawiającego, danych osobowych czy innych informacji, które mogą naruszać prywatność Zamawiającego.
+  Запрещается раскрывать точный адрес Заказчика, персональные данные либо иные сведения, которые могут нарушать частную жизнь Заказчика.
+
+Wycofanie Zgody.
+  Отзыв согласия.
+
+Zamawiający ma prawo w każdym czasie wycofać swoją zgodę na dokumentację wizualną poprzez powiadomienie Wykonawcy na piśmie.
+  Заказчик вправе в любое время отозвать свое согласие на визуальную документацию путем письменного уведомления Подрядчика.
+
+W przypadku wycofania zgody, Wykonawca zobowiązuje się nie publikować ani udostępniać dalszych materiałów w mediach społecznościowych.
+  В случае отзыва согласия Подрядчик обязуется не публиковать и не распространять в дальнейшем материалы в социальных сетях.
+
+§ 10PRZETWARZANIE I OCHRONA DANYCH OSOBOWYCH
+  § 10ОБРАБОТКА И ЗАЩИТА ПЕРСОНАЛЬНЫХ ДАННЫХ
+
+Administratorem danych osobowych Zamawiającego jest {UfCrm1663076108RequisiteName}, z siedzibą w {UfCrm1663076108RequisiteAddress} NIP {UfCrm1663076108RequisiteNip}, REGON {UfCrm1663076108RequisiteRegon},
+  Администратором персональных данных Заказчика является {UfCrm1663076108RequisiteName}, с местонахождением по адресу: {UfCrm1663076108RequisiteAddress} NIP {UfCrm1663076108RequisiteNip}, REGON {UfCrm1663076108RequisiteRegon},
+
+Zamawiający ma prawo do: żądania od administratora dostępu do danych osobowych dotyczących jego osoby, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo do wniesienia sprzeciwu wobec przetwarzania, a także prawo do przenoszenia danych. Zamawiający ma prawo do wniesienia skargi na przetwarzanie jego danych osobowych do organu nadzorczego - GIODO/ UODO.
+  Заказчик имеет право: требовать от администратора доступ к персональным данным, касающимся его, их исправление, удаление либо ограничение обработки, право на внесение возражения против обработки, а также право на перенос данных. Заказчик имеет право подать жалобу в отношении обработки его персональных данных в надзорный орган — GIODO / UODO.
+
+Administrator informuje Zamawiającego, iż zgoda na przetwarzanie danych może zostać cofnięta w dowolnym momencie, przez wysłanie wiadomości e-mail na adres {UfCrm1663076108RequisiteEmail} lub w formie pisemnej na adres korespondencyjny.
+  Администратор информирует Заказчика о том, что согласие на обработку данных может быть отозвано в любой момент путем направления сообщения электронной почты на адрес {UfCrm1663076108RequisiteEmail} либо в письменной форме на корреспонденционный адрес.
+
+W ten sam sposób Zamawiający może żądać usunięcia, ograniczenia przetwarzania, przeniesienia lub poprawienia jego danych osobowych. Administrator Informuje także, że nie jesteście Państwo profilowani. Państwa dane nie będą przekazywane poza EOG ani udostępniane organizacjom międzynarodowym.
+  Тем же способом Заказчик может требовать удаления, ограничения обработки, переноса либо исправления своих персональных данных. Администратор также информирует, что вы не подлежите профилированию. Ваши данные не будут передаваться за пределы ЕЭЗ и не будут предоставляться международным организациям.
+
+Wykonawca informuje Zamawiającego, iż celem przetwarzania jego danych osobowych jest realizacja niniejszej umowy. Podstawą prawną przetwarzania danych osobowych jest art. 6 ust. 1 lit. B Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. w sprawie ochrony osób fizycznych w związku z przetwarzaniem danych osobowych i w sprawie swobodnego przepływu takich danych oraz uchylenia dyrektywy 95/46/WE (ogólne rozporządzenie o ochronie danych). Wykonawca informuje, że odbiorcą danych osobowych będzie administrator danych osobowych. Dane osobowe będą przetwarzane przez okres niezbędny do realizacji niniejszej umowy. Przekazanie danych osobowych ma charakter dobrowolny, ale jest konieczne do realizacji niniejszej umowy.
+  Подрядчик информирует Заказчика о том, что целью обработки его персональных данных является исполнение настоящего договора. Правовым основанием обработки персональных данных является ст. 6 п. 1 лит. b Регламента Европейского парламента и Совета (ЕС) 2016/679 от 27 апреля 2016 г. о защите физических лиц в связи с обработкой персональных данных и о свободном обращении таких данных, а также об отмене Директивы 95/46/WE (Общий регламент по защите данных). Подрядчик информирует, что получателем персональных данных будет администратор персональных данных. Персональные данные будут обрабатываться в течение периода, необходимого для исполнения настоящего договора. Предоставление персональных данных носит добровольный характер, однако является необходимым для исполнения настоящего договора.
+
+§ 11POSTANOWIENIA KOŃCOWE
+  § 11ЗАКЛЮЧИТЕЛЬНЫЕ ПОЛОЖЕНИЯ
+
+Wszelkie spory wynikające z Umowy lub mające związek z Umową będą rozstrzygane zgodnie z przepisami prawa polskiego przez sąd powszechny przy siedzibie Wykonawcy.
+  Все споры, возникающие из Договора либо связанные с Договором, подлежат разрешению в соответствии с положениями польского права общим судом по месту нахождения Подрядчика.
+
+W sprawach nieunormowanych w umowie mają zastosowanie przepisy Kodeksu cywilnego.
+  По вопросам, не урегулированным настоящим договором, применяются положения Гражданского кодекса.
+
+Wykonawca podaje adres poczty elektronicznej wykorzystywane w kontaktach pomiędzy Stronami: {UfCrm1663076108RequisiteEmail}
+  Подрядчик указывает адрес электронной почты, используемый для контактов между Сторонами: {UfCrm1663076108RequisiteEmail}
+
+Zamawiający podaje adres poczty elektronicznej wykorzystywane w kontaktach pomiędzy Stronami: {ContactEmail}
+  Заказчик указывает адрес электронной почты, используемый для контактов между Сторонами: {ContactEmail}
+
+Załączniki stanowią integralną część Umowy. Zmiana załączników stanowi zmianę Umowy.
+  Приложения составляют неотъемлемую часть Договора. Изменение приложений является изменением Договора.
+
+Wszelkie zmiany Umowy mogą nastąpić jedynie za zgodą stron wyrażoną w formie pisemnej pod rygorem nieważności.
+  Любые изменения Договора могут быть внесены исключительно по соглашению Сторон, выраженному в письменной форме под угрозой недействительности.
+
+Postanowienie ust. 6 powyżej nie dotyczy zatwierdzania dokumentów wykonawczych oraz uszczegóławiających, w szczególności zmiany termiów oraz zakresu prac, których akceptacja może nastąpić w formie dokumentowej, w tym drogą poczty elektronicznej.
+  Положение п. 6 выше не касается утверждения исполнительных и уточняющих документов, в частности изменения сроков и объема работ, согласование которых может осуществляться в документальной форме, в том числе посредством электронной почты.
+
+Umowa została sporządzona w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze stron.
+  Договор составлен в двух идентичных экземплярах, по одному для каждой из Сторон.
+
+OŚWIADCZENIE O AKCEPTACJI FAKTUR PRZESYŁANYCH DROGĄ ELEKTRONICZNĄ
+  ЗАЯВЛЕНИЕ О СОГЛАСИИ НА ПОЛУЧЕНИЕ СЧЕТОВ-ФАКТУР, НАПРАВЛЯЕМЫХ В ЭЛЕКТРОННОЙ ФОРМЕ
+
+Na podstawie art. 106n ust. 1 ustawy z dnia 11 marca 2004 r. o podatku od towarów i usług (t.j. Dz. U. z 2020 r. poz. 106 z dnia 23.01.2020 z późn. zm.) Zamawiający wyraża zgodę na przesyłanie faktur, duplikatów faktur oraz faktur korygujących w formie elektronicznej za usługi FOREMEN SPÓŁKA Z O.O..
+  На основании ст. 106n п. 1 закона от 11 марта 2004 г. о налоге на товары и услуги (сводный текст: Dz. U. от 2020 г., поз. 106 от 23.01.2020 с последующими изменениями) Заказчик выражает согласие на направление счетов-фактур, дубликатов счетов-фактур, а также корректировочных счетов-фактур в электронной форме за услуги FOREMEN SPÓŁKA Z O.O..
+
+Zamawiający zobowiązuje się przyjmować faktury, o których mowa w pkt. 1 niniejszego oświadczenia w formie papierowej, w szczególności w przypadku gdy przeszkody techniczne lub formalne uniemożliwiają przesłanie faktur drogą elektroniczną.
+  Заказчик обязуется принимать счета-фактуры, указанные в п. 1 настоящего заявления, в бумажной форме, в частности в случае, если технические или формальные препятствия делают невозможной отправку счетов-фактур в электронной форме.
+
+Zamawiający podaje adres e-mail do przesłania faktur drogą elektroniczną: {ContactEmail}
+  Заказчик указывает адрес электронной почты для направления счетов-фактур в электронной форме: {ContactEmail}
+
+W razie zmiany adresu e-mail Zamawiający zobowiązuje się do pisemnego powiadomienia o nowym adresie. Do dnia następnego po otrzymaniu powiadomienia skuteczne pozostają doręczenia na dotychczasowy adres e-mail.
+  В случае изменения адреса электронной почты Заказчик обязуется письменно уведомить о новом адресе. До дня, следующего за днем получения такого уведомления, надлежащими считаются отправления на прежний адрес электронной почты.
+
+Zamawiający oświadcza, że jest świadomy iż niniejsze oświadczenie może zostać wycofane, w następstwie czego wystawca faktur traci prawo do wystawiania i przesyłania faktur do odbiorcy drogą elektroniczną, począwszy od dnia następnego po otrzymaniu powiadomienia o wycofaniu akceptacji.
+  Заказчик заявляет, что ему известно о том, что настоящее заявление может быть отозвано, вследствие чего выставитель счетов-фактур утрачивает право на выставление и направление счетов-фактур получателю в электронной форме, начиная со дня, следующего за днем получения уведомления об отзыве согласия.
+
+..........................................................(data i podpis Wykonawcy)
+
+..........................................................(data i podpis Zamawiającego)
+
+..........................................................(дата и подпись Подрядчика)
+
+..........................................................(дата и подпись Заказчика)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_WORKS_PL_RU';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-packages-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_PACKAGES' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa Pakiety Foremen',
+                   'PL',
+                   'UMOWA O WYKOŃCZENIE LOKALU
+
+nr {Id} zawarta w Warszawie, w dniu {DocumentCreateTime} (zwana dalej: "Umową") pomiędzy:
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Reprezentowaną przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},
+zwanym w treści umowy: Wykonawcą,
+
+a
+
+Panem/ią {ContactName} {ContactLastName}
+zamieszkałym/ą: {RequisitePrimaryAddressText}
+legitymującym/ą się: _______________________
+PESEL: _______________________
+zwanym w treści umowy Zamawiającym,
+
+zwanych dalej łącznie Stronami, o następującej treści:
+
+§1 PRZEDMIOT UMOWY
+
+Przedmiotem Umowy jest wykończenie przez Wykonawcę lokalu mieszkalnego (zwanego dalej Lokalem) o powierzchni {UfCrm1691765118573} m2, zlokalizowanego przy ul. {UfCrm1662541716442}, (rzut mieszkania dostarczony przez Zamawiającego stanowi Załącznik nr 1 do Umowy), w zamian za wynagrodzenie określone w Umowie, które zapłaci Zamawiający. Wykonawca w tym celu wykona na rzecz Zamawiającego prace wykończeniowo-budowlane w Mieszkaniu na podstawie przygotowanego projektu według wybranego przez Zamawiającego pakietu wykończeniowego (dalej zwanego: Wybranym Pakietem).
+WYBRANY PAKIET: ..............
+Opis Wybranego Pakietu stanowi Załącznik nr 2 do Umowy. Opis całości prac w ramach Wybranego Pakietu wraz z materiałami i pracami dodatkowymi stanowić będzie Załącznik nr 3 „Kosztorys prac wykończeniowych” do Umowy, który zostanie sporządzony na podstawie ustaleń projektowych, dokumentacji branżowej i prospektu standardu deweloperskiego dostarczonych przez Zamawiającego. Kosztorys prac wykończeniowych zostanie sporządzony przez Wykonawcę w terminach określonych w §2 Umowy i stanie się integralną częścią Umowy na podstawie Aneksu zawartego przez Strony.
+Zakres projektowy:
+- Spotkanie projektowe dotyczące wyboru materiałów.
+- Wizualizacja łazienki oraz projekt układu funkcjonalnego (zwanego dalej: Wizualizacją
+z projektem).
+- Kosztorys prac wykończeniowych.
+- Projekt wykonawczy:
+• rzut zmian budowlanych
+• rzut instalacji elektrycznych
+• rzut instalacji wod.-kan.
+• rzut wykończenia ścian oraz sufitów
+• rzut układu podłóg
+• rzut projektowanych drzwi
+• rzut łazienki
+• widoki łazienki
+Szczegółowy opis standardu materiałowego i wizualnego pakietów wykończeniowych może być przedstawiony również w formie elektronicznej, w szczególności za pośrednictwem prezentacji online dostępnych na stronie internetowej Wykonawcy. Strony zgodnie postanawiają, że prezentacje online mają charakter informacyjno-poglądowy i nie stanowią samodzielnej podstawy do określenia zakresu prac ani materiałów, o ile niniejsza Umowa lub jej Załączniki nie stanowią inaczej.
+Zamawiający zobowiązuje się niezwłocznie w terminie do 2 dni roboczych podejmować wszelkie niezbędne decyzje w kwestiach skierowanych do niego przez Wykonawcę oraz przekazywać swoje decyzje i ustalenia do Wykonawcy. W przypadku wydłużenia czasu przekazywania informacji zwrotnej od Zamawiającego Wykonawca może o ten czas wydłużyć termin realizacji Umowy.
+Zamawiający ma możliwość wprowadzić do 2 korekt do Wizualizacji z projektem. Strony zgodnie postanawiają, że za korektę uznają jednorazowe wprowadzenie przez Zamawiającego od jednej do kilku zmian. Każda kolejna korekta do Wizualizacji z projektem wiąże się z kosztem dodatkowym w wysokości do 1.500,00 zł.
+Zamawiający ma możliwość wprowadzić zmiany między pakietowe. W przypadku wyboru materiałów wykończeniowych spoza Wybranego pakietu Zamawiający zobowiązuje się do poniesienia różnicy kosztów. Zamawiający może także wprowadzić do 5 zmian z wykorzystaniem materiałów spoza oferty materiałów, które znajdują się w asortymencie Wykonawcy. Strony zgodnie postanawiają, że materiały, o których mowa w zdaniu poprzednim każdorazowo zostaną zamówione przez Wykonawcę od jednego z producentów, z którymi Wykonawca współpracuje pod warunkiem, że dany materiał znajduje się w ich ofercie. Zamawiający zobowiązuje się ponieść koszty różnicy pomiędzy ceną materiału przewidzianego w rozwiązaniu pakietowym a ceną materiału faktycznie wybranego przez Zamawiającego, a także koszty dostawy (transportu) tego materiału.
+W przypadku, gdy zmiany zmniejszają ilość prac określoną w „Kosztorysie prac wykończeniowych”, Wykonawca dokona odpowiedniej korekty wartości Umowy.
+Zamawiający ma możliwość wprowadzić do 2 korekt Kosztorysu prac wykończeniowych. Strony zgodnie postanawiają, że za korektę uznają jednorazowe wprowadzenie przez Zamawiającego od jednej do kilku zmian. Każda kolejna korekta Kosztorysu prac wykończeniowych wiąże się z kosztem dodatkowym w wysokości do 1 500,00 zł.
+W zakresie wybranego pakietu Zamawiającemu przysługuje jedno spotkanie z architektem prowadzącym, dotyczące wyboru materiałów i ustaleń projektowych, trwające do 3 godzin zegarowych. Wszelkie ustalenia wykraczające poza powyższy zakres czasowy będą odbywać się zdalnie.
+Szczegółowe zestawienie materiałów wykończeniowych wybranych przez Zamawiającego, zawierające w szczególności nazwy handlowe, producentów, modele, formaty, kolory oraz inne istotne parametry, zostanie ujęte w Załączniku nr 4 „Zestawienie materiałów wykończeniowych”. Załącznik nr 4 zostanie sporządzony po dokonaniu wyboru materiałów przez Zamawiającego i po jego akceptacji stanie się integralną częścią Umowy.
+W odbiorze technicznym Lokalu od dewelopera może uczestniczyć przedstawiciel Wykonawcy, który sprawdzi Lokal pod kątem jego stanu technicznego. Warunkiem skorzystania z pomocy przy odbiorze jest potwierdzenie przez Zamawiającego terminu odbioru Lokalu nie później niż 5 dni roboczych przed planowanym terminem odbioru. Zamawiającemu przysługuje jedna wizyta przedstawiciela Wykonawcy w związku z odbiorem technicznym Lokalu od dewelopera.
+
+§2 TERMINY PROJEKTOWE
+
+W przypadku, gdy Lokal jest już w posiadaniu Zamawiającego, Wykonawca sporządzi inwentaryzację Lokalu w terminie nie dłuższym niż 7 dni roboczych od daty wypożyczenia kluczy do Lokalu. Wypożyczenie kluczy do Lokalu nastąpi w terminie 7 dni roboczych od dnia zaksięgowania na rachunku bankowym Wykonawcy kwoty wskazanej w §4 ust. 4 pkt a) Umowy. Po sporządzeniu inwentaryzacji Wykonawca skontaktuje się z zamawiającym w celu umówienia spotkania projektowego w najbliższym możliwym terminie. Wykonawca zobowiązuje się do sporządzenia:
+Wizualizacji łazienek oraz projektu układu funkcjonalnego – do 10 dni roboczych od wyboru materiałów.
+Kosztorysu prac wykończeniowych do 21 dni roboczych od daty akceptacji Wizualizacji z projektem.
+Dokumentacji projektowej – projektu wykonawczego – do 10 dni roboczych po zaksięgowaniu III raty wynagrodzenia zgodnie z harmonogramem płatności oraz po podpisaniu Aneksu do niniejszej Umowy, zawierającego „Kosztorys prac wykończeniowych”.
+W przypadku, gdy Zamawiający nie jest w posiadaniu Lokalu, Wykonawca rozpocznie prace nad Projektem w terminie nie wcześniej niż 3 miesiące przed datą planowanego odbioru Lokalu przez Zamawiającego, kontaktując się z Zamawiającym w celu umówienia spotkania projektowego. Zamawiający informuje, że przewidywany odbiór Lokalu ma nastąpić do dnia .................. W przypadku gdyby termin odbioru Lokalu uległ zmianie, Zamawiający poinformuje o tym Wykonawcę drogą mailową oraz wskaże nowy termin odbioru. Wykonawca zobowiązuje się do sporządzenia:
+Wizualizacji łazienek oraz projektu układu funkcjonalnego – do 10 dni roboczych od wyboru materiałów;
+Kosztorysu prac wykończeniowych do 14 dni roboczych od daty akceptacji Wizualizacji z projektem.
+Dokumentacji projektowej – projektu wykonawczego – do 10 dni roboczych po odbiorze Lokalu przez Zamawiającego i dokonaniu następujących czynności:
+a) inwentaryzacji Lokalu w terminie 7 dni roboczych od daty wypożyczenia kluczy do Lokalu, które to wypożyczenie nastąpi w terminie 3 dni roboczych od poinformowania przez Zamawiającego Wykonawcy, w drodze mailowej, o odbiorze Lokalu i podpisaniu przez Strony protokołu wypożyczenia kluczy,
+b) zaksięgowaniu III raty wynagrodzenia zgodnie z harmonogramem płatności
+c) podpisaniu Aneksu do niniejszej Umowy, zawierającego „Kosztorys prac wykończeniowych”.
+Terminy określone w ust. 1 i 2 powyżej mogą ulec zmianom w ramach indywidualnych uzgodnień pomiędzy Stronami.
+Zamawiający ma obowiązek w terminie nie dłuższym niż 2 dni robocze od dnia otrzymania Wizualizacji z projektem dokonać jej akceptacji lub zgłosić uwagi z uwzględnieniem §1 ust. 4 Umowy. W przypadku uchylienia przez Zamawiającego terminowi wskazanemu w zdaniu poprzedzającym, Zamawiający wyraża zgodę na wydłużenie terminów określonych w Umowie na przygotowanie przez Wykonawcę Korekty Wizualizacji z projektem o liczbę dni opóźnienia. Akceptacja lub zgłoszenie uwag do Wizualizacji z projektem powinno nastąpić przez Zamawiającego w drodze mailowej. Opisane w zdaniu poprzednim zasady dotyczące akceptacji przez Zamawiającego Wizualizacji z projektem stosuje się odpowiednio do akceptacji przez Zamawiającego Kosztorysu prac wykończeniowych i projektu wykonawczego.
+Do dnia akceptacji przez Zamawiającego Wizualizacji z projektem, Zamawiający może dokonać zamówienia dodatkowych prac i materiałów wykraczających poza prace zawarte w Wybranym pakiecie. W przypadku takiego zamówienia etap sporządzania Wizualizacji z projektem ulega wydłużeniu o 10 dni roboczych.
+W przypadku, gdy dodatkowe prace lub materiały wymagają poniesienia dodatkowych kosztów, Wykonawca sporządzi Kosztorys prac wykończeniowych, który zostanie wprowadzony do Umowy w drodze Aneksu podpisanego przez Strony. Zamawiający zobowiązuje się do płatności za prace i materiały dodatkowe doliczone do harmonogramu płatności w drodze Aneksu
+Zamawiający akceptuje fakt, że wprowadzone w Kosztorysie prac wykończeniowych dodatkowe prace lub materiały mogą wpłynąć na wydłużenie okresu realizacji Umowy. W tej sytuacji Strony przystąpią do wspólnego określenia nowego terminu zakończenia realizacji Umowy. Brak współdziałania Zamawiającego przy określeniu nowego terminu zakończenia realizacji Umowy będzie uprawniał Wykonawcę do jednostronnego wyznaczenia nowego terminu na co Zamawiający wyraża zgodę.
+W przypadku wprowadzenia przez Zamawiającego zmian w ustaleniach projektowych po uprzednim ich zaakceptowaniu, Wykonawca ma prawo doliczyć dodatkową opłatę w wysokości 1500 zł jeżeli wprowadzone zmiany wymagają wykonania nowej Wizualizacji z projektem. W przypadku konieczności wydłużenia terminów realizacji Umowy w związku z sytuacją opisaną w zdaniu poprzednim zastosowanie znajduje zdanie drugie i trzecie ust. 7 powyżej.
+Zamawiający ma możliwość odbycia dodatkowego spotkania z architektem w kwocie 200 zł za każdą rozpoczętą godzinę zegarową, po akceptacji obu Stron Umowy.
+
+§3 UPRAWNIENIA I ZOBOWIĄZANIA STRON
+
+Do uprawnień Wykonawcy należy:
+Nieodpłatne korzystanie z mediów:
+• elektryczność;
+• łazienka/toaleta;
+• woda;
+• transport windami.
+Możliwość zaangażowania podwykonawców do prowadzenia prac oraz przekazywania im kluczy do Lokalu w tym celu, z tym zastrzeżeniem, że Wykonawca odpowiada za działania i zaniechania podwykonawców jak za własne.
+Strony sporządzą i podpiszą protokół z pozostawionych w lokalu przedmiotów i materiałów należących do Zamawiającego.
+Do obowiązków Wykonawcy należy:
+Rzetelne prowadzenie prac, zgodnie z przekazaną przez Zamawiającego dokumentacją techniczną, wykonawczą oraz zgodnie z zasadami sztuki i praktyki budowlanej, a w szczególności zgodnie zobowiązującymi normami i przepisami prawa budowlanego oraz wymogami BHP.
+Terminowe wykonanie i przekazanie całego przedmiotu Umowy.
+Zastosowanie materiałów zgodnie z Wybranym pakietem.
+Sprawowanie ciągłego nadzoru technicznego nad prowadzonymi w Lokalu pracami.
+Rozpoczęcie i zakończenie prac zgodnie z harmonogramem wykonania prac, z uwzględnieniem jego zmian dopuszczalnych przez Umowę.
+Wywóz odpadów budowlanych.
+Ponoszenie odpowiedzialności za wszelkie szkody, wyrządzone z winy Wykonawcy w Lokalu lub jego wyposażeniu, a także w sąsiednich nieruchomościach. Wykonawca posiada ubezpieczenie OC.
+Pozostawienie miejsca pracy w czystości i w stanie uporządkowanym po zakończeniu prac.
+Wykonawca nie ponosi odpowiedzialności za brak dostępności, wstrzymanie dostaw lub wycofanie z produkcji materiałów wykończeniowych wskazanych w Załączniku nr 4, jeżeli okoliczności te powstały z przyczyn niezależnych od Wykonawcy, w szczególności po dokonaniu przez Zamawiającego wyboru materiałów i ich zatwierdzeniu. W przypadku wystąpienia powyższych okoliczności Strony zobowiązują się do niezwłocznego uzgodnienia materiałów zamiennych o porównywalnych parametrach technicznych, jakościowych oraz estetycznych.
+Do obowiązków Zamawiającego należy:
+Dostarczenie Wykonawcy w terminie ustalonym przez Strony dokumentacji technicznej
+dotyczącej Lokalu, zawierającej w szczególności:
+• dokumentację budowlaną (np. rzuty architektoniczne - po inwentaryzacji geodezyjnej, standard deweloperski);
+• dokumentację elektryczną;
+• dokumentację sanitarną Lokalu (w tym wentylacja, klimatyzacja, układ wod.-kan. i CO)
+Zapewnienie Wykonawcy stałego dostępu do Lokalu w okresie prowadzonych w nim prac oraz protokolarne przekazanie kompletu kluczy do Lokalu w terminie 7 dni roboczych od daty zaakceptowania projektu wykonawczego.
+W związku z koniecznością zapewnienia bezpieczeństwa osób i mienia, Zamawiający zobowiązuje się do niewykonywania w Lokalu osobiście lub za pomocą podmiotów trzecich jakichkolwiek prac wykończeniowych oraz Zamawiający zobowiązuje się do nie wchodzenia do Lokalu w trakcie prowadzonych prac. W przypadku konieczności wejścia Zamawiającego do Lokalu w trakcie prowadzonych prac, Zamawiający skontaktuje się z Wykonawcą w celu ustalenia terminu wizyty.
+Zapewnienie Wykonawcy dostępu do mediów wskazanych w ust. 1 powyżej (czynne instalacje w Lokalu).
+Umożliwienie Wykonawcy prowadzenia prac w kolejności, jaką uzna za konieczną, w celu zakończenia prac w terminach Umownych.
+Zapłacenie uzgodnionego z Wykonawcą wynagrodzenia zgodnie z harmonogramem płatności określonym w § 4 Umowy oraz w Aneksie do Umowy.
+Zamawiający zobowiązuje się umożliwić Wykonawcy wykonanie fotografii oraz promocyjnego filmu video Lokalu po wykonaniu w nim prac wykończeniowych. W tym celu Wykonawca ma prawo zaangażować podwykonawców. Zamawiający oświadcza, że wyraża zgodę na wykorzystanie przez Wykonawcę oraz podwykonawców wizerunku Lokalu dla celów reklamowych. Wykonawca i podwykonawca zapewnia nie ujawniać informacji poufnych takich jak szczegółów adresowych Lokalu lub danych Zamawiającego.
+Zamawiający wyraża zgodę na wywieszenie banerów reklamowych Wykonawcy w okresie trwania prac wykończeniowych, w przypadku gdy nie sprzeciwiają się temu wewnętrzne regulacje obowiązujące w danym budynku lub danej inwestycji.
+Zamawiający zobowiązuje się do poinformowania wspólnoty mieszkaniowej oraz najbliższego sąsiedztwa o planowanym terminie wykończenia Lokalu.
+Wszelkie informacje uzyskane przez Zamawiającego w związku z zawarciem i wykonywaniem niniejszej Umowy Zamawiający zobowiązany jest traktować jako poufne. Informacje uzyskane od Wykonawcy, nie mogą być przekazywane osobom trzecim bez zgody Wykonawcy ani wykorzystywane do jakiegokolwiek innego celu niż wykonywanie niniejszej Umowy.
+Obowiązek zachowania poufności rozpoczyna się z dniem zawarcia niniejszej Umowy i trwa również przez okres 5 lat w przypadku rozwiązania lub wygaśnięcia niniejszej Umowy.
+Zobowiązanie do zachowania poufności nie dotyczy sytuacji, gdy Zamawiający zobowiązany jest ujawnić te informacje na żądanie organu lub instytucji, które zgodnie z bezwzględnie obowiązującymi przepisami prawa uprawnione są żądać ujawnienia tych informacji.
+Zamawiający zobowiązuje się do nienawiązywania bezpośredniej współpracy z podwykonawcami, pracownikami oraz innymi osobami lub podmiotami działającymi na rzecz Wykonawcy w zakresie Umowy.
+W budynkach wielopiętrowych bez windy bądź w przypadku awarii windy istniejącej Wykonawca ma prawo doliczyć dodatkową opłatę za utrudnienia w transporcie materiałów i prowadzeniu prac w wysokości 2000 zł.
+W przypadku braku możliwości udostępnienia Wykonawcy przez Zamawiającego miejsca postojowego, Wykonawca ma prawo doliczyć dodatkową opłatę związaną z wynajęciem miejsca postojowego na czas prowadzenia Prac w Lokalu w wysokości 400 zł za każdy rozpoczęty miesiąc wynajmu.
+
+§4 WYNAGRODZENIE
+
+Strony określają szacunkowe wynagrodzenia Wykonawcy za realizację przedmiotu Umowy na kwotę ................. zł brutto (słownie: ................................ złotych ......................... gr brutto). Na dzień zawarcia Umowy wynagrodzenie to stanowi iloczyn ceny metra kwadratowego wykończenia Lokalu zgodnie z Wybranym pakietem oraz powierzchni Lokalu w przypadku lokali powyżej 40 m2. W przypadku lokali o powierzchni do 40 m2 wynagrodzenie określone w zdaniu pierwszym zawsze będzie obliczone przy zastosowaniu powierzchni lokalu wynoszącej 40 m2 niezależnie od rzeczywistej jego powierzchni. W celu uniknięcia wątpliwości Wykonawca informuje Zamawiającego, że powyższe wynagrodzenie nie ma charaktery ryczałtowego i może ono ulec zmianie na skutek sporządzenia przez Wykonawcę Kosztorysu prac wykończeniowych, który będzie zawierał wszelkie koszty związane z materiałami i pracami dodatkowymi wykraczającymi poza Wybrany pakiet z zastrzeżeniem ust. 2 poniżej.
+Wynagrodzenie nie zawiera kosztów Wykonawcy związanych z rozwiązaniem nieprzewidzianych problemów, których Wykonawca mimo zachowania należytej staranności nie mógł przewidzieć. W przypadku wystąpienia takiej sytuacji, Wykonawca może żądać podwyższenia wynagrodzenia w drodze Aneksu do Umowy nawet po zaakceptowaniu przez Strony Kosztorysu prac wykończeniowych, o czym Zamawiający zostanie poinformowany. W przypadku odmowy zawarcia przez Zamawiającego wskazanego Aneksu do Umowy Wykonawcy będzie przysługiwało prawo do odstąpienia od Umowy, a okoliczność ta będzie uznawana za odstąpienie z winy Zamawiającego.
+W przypadku, gdy Zamawiający nie dostarczy Wykonawcy pełnej dokumentacji określonej w §3 ust. 5 lit. a Umowy bądź dokumentacja ta nie będzie zgodna ze stanem faktycznym Lokalu, Wykonawca poinformuje o tym Zamawiającego, a wszelkie dodatkowe koszty związane z niezgodnością wskazanej dokumentacji ze stanem faktycznym Lokalu zostaną wycenione przez Wykonawcę po dokonaniu inwentaryzacji, gdzie zaktualizowany zostanie metraż mieszkania po podłodze i uwzględniony w Kosztorysie prac wykończeniowych.
+Zamawiający dokona zapłaty wynagrodzenia na rachunek bankowy Foremen sp. z o.o.:
+
+93 1090 1753 0000 0001 5005 1696
+
+w następujących częściach:
+10% wynagrodzenia określonego w §4 pkt 1 w ciągu 5 dni roboczych od podpisania Umowy,
+20% wynagrodzenia określonego w §4 pkt 1 w ciągu 5 dni roboczych od daty akceptacji Wizualizacji z projektem,
+30% wynagrodzenia określonego w §4 pkt 1 w ciągu 7 dni roboczych od podpisania Aneksu do Umowy zawierającego Kosztorys prac wykończeniowych,
+35% wynagrodzenia określonego w §4 pkt 1 w ciągu 7 dni roboczych od zgłoszenia wykonania 35% prac wykończeniowych określonych w umowie.
+5% wynagrodzenia określonego w §4 pkt 1 w ciągu 7 dni roboczych od daty odbioru przez Zamawiającego przedmiotu Umowy. W przypadku gdy w Kosztorys prac wykończeniowych jest wyższy od wynagrodzenia określonego w §4 pkt 1 transze do opłaty są liczone od Kosztorys prac wykończeniowych (Załącznik 3)
+
+Zamawiający w tytule przelewu powinien podać: Nr umowy oraz imię i nazwisko.
+
+§5 TERMIN WYKONANIA
+
+Strony zgodnie ustalają następujący harmonogram wykonania prac:
+Termin realizacji prac wykończeniowych: 12 tygodni od dnia protokolarnego przekazania Wykonawcy przez Zamawiającego kompletu kluczy do Lokalu tj. kluczy wejściowych do Lokalu, kluczy wejściowych do budynku, kluczy do szafek technicznych z licznikami energii elektrycznej, wody i gazu oraz pilot do bramy garażowej lub umożliwiający wjazd na teren parkingu osiedlowego, zgodnie z §3 ust. 4 lit. b Umowy oraz uiszczenia wynagrodzenia zgodnego z §4 Umowy.
+Zgłoszenie przez Wykonawcę gotowości do odbioru wykonanych prac w Lokalu w ciągu 7 dni roboczych od daty zakończenia prac.
+Ustalenie terminu odbioru w ciągu 7 dni roboczych od dnia zgłoszenia gotowości do odbioru przez Wykonawcę.
+Odbiór przez Zamawiającego przedmiotu Umowy w ciągu 7 dni roboczych od dnia zgłoszenia gotowości do odbioru przez Wykonawcę.
+Wykonawca zobowiązuje się do wykonania przedmiotu Umowy zgodnie z projektem wykonawczym oraz Kosztorysem prac wykończeniowych z zastrzeżeniem §4 ust. 2 Umowy.
+Strony przedłużą okres prowadzenia prac o odpowiedni i uzasadniony czas w sytuacji gdy:
+Wykonawca nie jest w stanie zakończyć prac w terminie z przyczyn, za które nie ponosi odpowiedzialności, wynikających np. z siły wyższej. W tej sytuacji czas realizacji Umowy zostanie wydłużony o czas przez który Wykonawca z wyżej określonych przyczyn nie mógł prowadzić prac.
+Wykonawca nie jest w stanie prowadzić prac z winy Zamawiającego. W tej sytuacji czas realizacji Umowy zostanie wydłużony o czas przez który Wykonawca z wyżej określonej przyczyny nie mógł prowadzić prac.
+Producent wycofa z oferty wybrany przez Zamawiającego materiał, bądź wybrany przez Zamawiającego materiał jest niedostępny. W tej sytuacji czas realizacji Umowy wydłuży się o czas potrzebny na dostarczenie nowego materiału wybranego przez Zamawiającego pod warunkiem, że nowy materiał nie będzie skutkował koniecznością wprowadzenia zmian do projektu.
+Producent dostarczy Wykonawcy materiał lub urządzenie wadliwe, podlegające reklamacji. W tej sytuacji Wykonawca nie bierze odpowiedzialności za czas trwania reklamacji, nie jest też ona podstawą do zmiany harmonogramu płatności. Terminy umowne mogą się wydłużyć o liczbę dni odpowiadającą czasowi oczekiwania na towar wolny od wad w przypadku jego reklamacji. Materiał lub urządzenie zostanie niezwłocznie zareklamowany i wymieniony na nowe w najszybszym, technicznie możliwym terminie. W takiej sytuacji Strony wspólnie uzgodnią terminarz prac i ich zakończenia, mając na uwadze opisane powyżej okoliczności w drodze aneksu do Umowy.
+Termin realizacji pokrywa się z przerwą świąteczną, końcowy termin realizacji prac może zostać wydłużony o dodatkowe 10 dni roboczych.
+Zamawiający nie wywiązuje się z terminowego uiszczenia wynagrodzenia zgodnie z § 4. Termin realizacji prac zostanie wtedy wydłużony o liczbę dni zwłoki uiszczenia wynagrodzenia
+
+§6 ODBIÓR PRAC
+
+Za dzień ukończenia prac Strony zgodnie uznają dzień w którym Wykonawca złożył Zamawiającemu oświadczenie o ukończeniu realizacji przedmiotu Umowy.
+Po wykonaniu prac stanowiących przedmiot Umowy, Wykonawca za pośrednictwem poczty elektronicznej (e-mail) zawiadomi Zamawiającego o zakończeniu prac oraz o możliwości protokolarnego odbioru Lokalu przez Zamawiającego.
+W zawiadomieniu Wykonawca wskaże termin odbioru, przy czym zawiadomienie to winno nastąpić na co najmniej 3 dni robocze przed proponowanym terminem odbioru. W przypadku gdy jest on niemożliwy do zrealizowania, Wykonawca ustali alternatywną datę, jednak nie później niż na 10 dni roboczych od daty gotowości do odbioru lokalu.
+Odbiór Lokalu dokonywany jest w obecności Zamawiającego lub pełnomocnika Zamawiającego oraz przedstawiciela Wykonawcy.
+Nieprzystąpienie przez Zamawiającego do odbioru lokalu upoważnia Wykonawcę do sporządzenia protokołu z niestawiennictwa. W takim przypadku Wykonawca wyznacza drugi termin ostateczny. Nieprzystąpienie Zamawiającego do odbioru lokalu nie upoważnia Zamawiającego do odstąpienia od umowy, naliczenia kar umownych czy żądania od Wykonawcy odszkodowania. Uchybienie przez Zamawiającego drugiemu terminowi odbioru upoważnia Wykonawcę do sporządzenia jednostronnego protokołu odbioru. Sporządzenie przez Wykonawcę jednostronnego protokołu odbioru nie zwalnia Zamawiającego z obowiązku zapłaty wynagrodzenia Wykonawcy zgodnie z harmonogramem płatności.
+Strony przed podpisaniem protokołu odbioru dokonają przeglądu Lokalu. Z czynności odbioru Lokalu strony sporządzą protokół odbioru (zwany dalej: "Protokołem odbioru końcowego"). Do Protokołu odbioru końcowego Zamawiający może zgłosić wady w wykonaniu wykończenia Lokalu. Z chwilą podpisania protokołu odbioru końcowego przyjmuje się, że Zamawiający dokonał odbioru Lokalu.
+Wykonawca jest zobowiązany w terminie 14 dni roboczych od dnia podpisania protokołu odbioru końcowego, doręczyć Zamawiającemu oświadczenie o uznaniu wad lub oświadczenie o odmowie uznania wad oraz o przyczynach odmowy.
+Wykonawca jest zobowiązany w terminie 30 dni roboczych od dnia podpisania protokołu odbioru końcowego, usunąć uznane wady. W przypadku wad, których nie można usunąć w tym terminie, mimo zachowania należytej staranności, Wykonawca wskaże inny, odpowiedni termin usunięcia wad wraz z uzasadnieniem opóźnienia. Zamawiający zobowiązany jest udostępnić Wykonawcy Lokal w celu usunięcia wad.
+Po usunięciu uznanych wad, Strony sporządzą notatkę, w której potwierdzą usunięcie wad. W przypadku, gdy jedna ze stron odmówi podczas odbioru podpisania protokołu, protokół zostanie podpisany jednostronnie.
+Wykonawca nie ponosi odpowiedzialności za efekt wizualny ścian oraz sufitów w Lokalu w przypadku nieskorzystania przez Zamawiającego z oferty wykonania gładzi - w przypadku, gdy stan ich wykonania odbiega od standardów.
+Wykonawca informuje, że zgłoszenia usterek obejmują tylko i wyłącznie wady wynikające bezpośrednio z przedmiotu niniejszej Umowy. Wykonawca nie ponosi odpowiedzialności za usterki wynikające ze stanu technicznego budynku oraz za procesy związane z „pracą budynku”, takie jak osiadanie budynku, ugięcie stropu - czego skutkiem są pęknięcia i zarysowania w tynku o charakterze głębokim lub powierzchniowym, zarówno włosowate, proste i schodkowe, pęknięcia szlichty, zarysowania i pęknięcia stropu, zarysowania akrylu na styku powierzchni ścian oraz sufitów, itp. Wykonawca nie ponosi również odpowiedzialności za usterki na elementy wbudowane elektryczne i teletechniczne, takie jak skrzynki mieszkaniowe, teletechniczne, instalację domofonu i wideo domofonu, itp.
+Warunkiem przystąpienia do odbioru jest dokonanie na rzecz Wykonawcy zapłaty wynagrodzenia określonego w harmonogramie płatności. W przypadku braku zapłaty wynagrodzenia Wykonawca ma prawo odmówić wyznaczenia terminu odbioru do momentu zapłaty wynagrodzenia. Za wydłużenie czasu realizacji Umowy z powodu braku zapłaty Wykonawca nie odpowiada i nie upoważnia Zamawiającego do naliczania kar umownych za wydłużenie terminu realizacji Umowy.
+
+§7 GWARANCJA
+
+Wykonawca ponosi odpowiedzialność za wady fizyczne i prawne na zasadach określonych w powszechnie obowiązujących przepisach prawa.
+Wykonawca nie ponosi odpowiedzialności za wady wynikające z winy Zamawiającego, a w szczególności użytkowania Lokalu w sposób niezgodny z zasadami eksploatacji i użytkowania.
+Wykonawca udziela Zamawiającemu gwarancji jakości która rozpocznie swój bieg od dnia sporządzenia Protokołu odbioru końcowego. Okres gwarancji wynosi odpowiednio:
+na roboty budowlane – 24 miesięcy;
+na materiały – zgodnie z zasadami udzielania gwarancji przez producentów danych materiałów, z wyłączeniem materiałów dostarczonych przez Klienta.
+W okresie trwania gwarancji Wykonawca zobowiązuje się do ustosunkowania się do zgłoszonych wad, w terminie 14 dni roboczych od daty zgłoszenia przez Zamawiającego na adres email: {UfCrm1663076108RequisiteEmail}
+Wykonawca zobowiązuje się usuwać usterki, o których zostanie powiadomiony zgodnie z przepisami Kodeksu cywilnego w możliwie najkrótszym terminie.
+Do okresu od którego obowiązuje rękojmia stosuje się odpowiednio ust. 3 powyżej.
+
+§8 KARY UMOWNE
+
+Strony nie odpowiadają za niewykonanie lub nienależyte wykonanie umowy, jeżeli jest to spowodowane siłą wyższą. Do okoliczności siły wyższej zalicza się w szczególności, ale nie wyłącznie:
+Klęski żywiołowe i katastrofy naturalne, w tym: pożary, powodzie, trzęsienia ziemi, huragany, anomalie pogodowe, zagrożenia epidemiczne;
+Działania o charakterze politycznym i militarnym, nekrologi społeczne i zamieszki;
+Akty władzy państwowej, w tym: zmiany przepisów prawnych, decyzje i akty organów administracji rządowej lub samorządowej uniemożliwiające wykonanie Umowy.
+W przypadku opóźnienia w wykonaniu prac z przyczyn leżących po stronie Wykonawcy, Zamawiający ma prawo do naliczenia kary umownej w wysokości 0,1% wartości wynagrodzenia netto określonego w niniejszej umowie za każdy dzień opóźnienia, nie więcej jednak niż 5% całkowitego wynagrodzenia netto.
+Brak dostępności materiałów nie stanowi nienależytego wykonania Umowy ani podstawy do naliczania kar umownych wobec Wykonawcy. Wykonawca nie ponosi odpowiedzialności za opóźnienia w realizacji przedmiotu umowy wynikające z braku dostępności materiałów lub komponentów u dostawców, w szczególności w przypadku zamówień indywidualnych lub niestandardowych, o ile dołożył należytej staranności w celu ich terminowego pozyskania.
+Terminy wykonania prac mogą ulec odpowiedniemu wydłużeniu w przypadku, gdy Zamawiający nie dostarczy informacji, danych, decyzji, materiałów lub innych elementów niezbędnych do realizacji umowy w terminie określonym przez Wykonawcę. W takim przypadku wydłużenie terminu następuje o czas odpowiadający okresowi opóźnienia w dostarczeniu ww. informacji lub materiałów
+
+§9 ODSTĄPIENIE OD UMOWY
+
+Wykonawca, oprócz przypadków wprost wynikających z przepisów Kodeksu cywilnego, może odstąpić od Umowy, gdy:
+Zamawiający pozostaje w zwłoce z zapłatą wynagrodzenia Wykonawcy zgodnie z postanowieniami Umowy i nie płaci tego wynagrodzenia pomimo mailowego wezwania do zapłaty wyznaczającego dodatkowy 7 dniowy termin do zapłaty;
+Zamawiający narusza obowiązek określony w §3 ust. 1 pkt a) Umowy;
+Zamawiający narusza obowiązek określony w §3 ust. 4 pkt a) Umowy;
+Zamawiający narusza obowiązek określony w §3 ust. 4 pkt b) Umowy;
+Zamawiający narusza obowiązek określony w §3 ust. 4 pkt d) Umowy;
+Zamawiający narusza obowiązek określony w §3 ust. 4 pkt e) Umowy;
+Zamawiający narusza obowiązek określony w §3 ust. 10 Umowy.
+Odstąpienie od Umowy z przyczyn określonych w ust. 1 pkt od b do f Umowy powinno zostać poprzedzone przez Wykonawcę pisemnym wezwaniem do usunięcia przez Zamawiającego naruszeń z oznaczeniem dodatkowego co najmniej 7 - dniowego terminu.
+Zamawiający oprócz przypadków wprost wynikających z przepisów Kodeksu cywilnego może odstąpić od Umowy, gdy:
+Wykonawca narusza obowiązki określone w §3 ust. 3 pkt a),
+Wykonawca narusza obowiązek określony w §3 ust. 3 pkt c),
+Wykonawca narusza obowiązek określony w §3 ust. 3 pkt f),
+Wykonawca popada w zwłokę względem terminu określonego w §5 ust. 1 pkt a) Umowy,
+Wykonawca nie usuwa uznanych wad w terminie określonym w §6 ust. 8 Umowy.
+Odstąpienie od Umowy z przyczyn określonych w ust. 3 pkt od a do e Umowy powinno zostać poprzedzone przez Zamawiającego pisemnym wezwaniem do usunięcia przez Wykonawcę naruszeń z oznaczeniem dodatkowego co najmniej 21 - dniowego terminu.
+W przypadku, gdy nastąpi zmiana stawki podatku VAT, cena ulegnie również odpowiedniej zmianie zgodnie ze stosownymi aktami prawnymi. Strony postanawiają, że w przypadku opisanym, gdy po stronie Zamawiającego powstanie obowiązek dopłaty, Zamawiającemu przysługiwać będzie prawo odstąpienia od niniejszej umowy.
+Zamawiającemu przysługuje gwarancja ceny pakietu w okresie 12 miesięcy od dnia podpisania Umowy do dnia Protokolarnego przekazania kluczy. Jeżeli protokolarne przekazanie kluczy odbędzie się w terminie dłuższym niż 12 miesiące od dnia podpisania Umowy, Wykonawca ma prawo do waloryzacji ceny pakietu w oparciu o aktualne ceny pakietów. Zamawiający ma prawo odstąpić od umowy bez konsekwencji w przypadku, gdy nie zgadza się na waloryzację ceny.
+W przypadku odstąpienia od Umowy ustala się następujący tryb działania:
+Wykonawca powinien natychmiast wstrzymać i zabezpieczyć prace zgodnie z zasadami sztuki budowlanej.
+Strony dokonają komisyjnie inwentaryzacji stanu zaawansowania prac, w tym prac wstrzymanych i wykonanych, jeżeli do odstąpienia doszło po rozpoczęciu przez Wykonawcę realizacji prac wykończeniowych na podstawie § 5 ust. 1 pkt a Umowy, po czym Wykonawca zapewni zabezpieczenie Lokalu i przekaże go Zamawiającemu w terminie ustalonym przez Strony na podstawie protokołu przejęcia Lokalu oraz protokołu inwentaryzacji zaawansowania prac według stanu na dzień odstąpienia od Umowy.
+Powyższe protokoły zostaną sporządzone w terminie wyznaczonym przez Strony. W przypadku odmowy sporządzenia przez Zamawiającego protokołu inwentaryzacji zaawansowania prac, Wykonawcy będzie przysługiwało uprawnienie do jednostronnego sporządzenia wymienionego protokołu, na co zgodę wyraża Zamawiający.
+Zamawiający zobowiązany jest do zapłaty na rzecz Wykonawcy Wynagrodzenia za prace wykonane do dnia ustania Umowy, a stwierdzone w protokole inwentaryzacji, na podstawie wystawionej przez Wykonawcę faktury VAT, w terminie 7 dni od dnia wystawienia przedmiotowej faktury.
+Odstąpienie od Umowy dla swojej ważności musi nastąpić w formie pisemnej wraz ze wskazaniem uzasadnienia. Ilekroć niniejsza Umowa przewiduje prawo odstąpienia od Umowy, może ono być wykonane w terminie 48 miesięcy od dnia zawarcia Umowy.
+Strony zastrzegają, że odstąpienie od Umowy wywołuje skutek na przyszłość.
+W przypadku odstąpienia od Umowy przez którąkolwiek ze Stron, niezależnie od przyczyny, Wykonawcy należy się wynagrodzenie:
+w wysokości określonej w §4 ust. 4 pkt a) Umowy jeżeli do odstąpienia doszło po przedstawieniu przez Wykonawcę Zamawiającemu Wizualizacji z projektem do akceptacji zgodnie z §2 ust. 4 Umowy;
+w wysokości określonej w §4 ust. 4 pkt a) i b) Umowy jeżeli do odstąpienia doszło po przedstawieniu przez Wykonawcę Zamawiającego projektu wykonawczego do akceptacji zgodnie z §2 ust. 4 Umowy;
+w wysokości określonej w §4 ust. 4 pkt a) i b) Umowy oraz w protokole inwentaryzacji zaawansowania prac jeżeli do odstąpienia doszło po rozpoczęciu przez Wykonawcę realizacji prac wykończeniowych na podstawie § 5 ust. 1 pkt a) Umowy.
+W przypadku odstąpienia od umowy Zamawiający nabywa prawo do dysponowania Wizualizacją wraz z projektem oraz projektem wykonawczym z chwilą zapłacenia na rzecz Wykonawcy wynagrodzenia, o którym mowa w ust. 11 powyżej.
+W celu uniknięcia wątpliwości Strony precyzują, że wypowiedzenie Umowy nie ma wpływu na możliwość dochodzenia przez Wykonawcę wynagrodzenia określonego w ust. 11 powyżej.
+
+§10 OCHRONA DANYCH OSOBOWYCH
+
+Wypełniając obowiązek Wykonawcy określony w art. 13 Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. w sprawie ochrony osób fizycznych w związku z przetwarzaniem danych osobowych i w sprawie swobodnego przepływu takich danych oraz uchylenia dyrektywy 95/46/WE (dalej jako „RODO”), Wykonawca informuje Zamawiającego że:
+Administratorem danych osobowych Zamawiającego jest {UfCrm1663076108RequisiteName}, z siedzibą w {UfCrm1663076108RequisiteAddress} NIP {UfCrm1663076108RequisiteNip}, REGON {UfCrm1663076108RequisiteRegon},
+W sprawach dotyczących danych osobowych, można skontaktować się z Wykonawcą pisemnie lub za pośrednictwem poczty elektronicznej: {UfCrm1663076108RequisiteEmail};
+Dane osobowe Zamawiającego przetwarzane są w celu wykonania zobowiązań Wykonawcy wynikających z Umowy i podstawą prawną przetwarzania danych osobowych Zamawiającego jest wykonanie Umowy i wszystkich zobowiązań z niej wynikających. Podanie danych osobowych przez Zamawiającego jest dobrowolne, ale konieczne do wykonania Umowy przez Wykonawcę;
+Dane osobowe Zamawiającego mogą zostać przekazane stronom trzecim, które będą
+przetwarzać takie dane, jako procesorzy danych w imieniu Wykonawcy, np. agenci, podwykonawcy i doradcy Wykonawcy zaangażowani w wykonywanie Umowy;
+Dane osobowe Zamawiającego będą przetwarzane nie dłużej, niż jest to konieczne do wykonania Umowy i wszystkich obowiązków Wykonawcy jak również w celu obrony lub egzekwowania wszelkich ewentualnych roszczeń i skarg;
+W każdej chwili Zamawiający ma prawo dostępu do swoich danych osobowych, ich poprawiania, usuwania lub ograniczania, a także prawo do sprzeciwu wobec przetwarzania swoich danych osobowych, prawo do przekazania swoich danych osobowych do innego administratora danych i prawo do złożenia skargi do właściwego organu nadzoru (którym jest Prezes Urzędu Ochrony Danych Osobowych);
+Dane osobowe Zamawiającego mogą być przekazywane poza Europejski Obszar Gospodarczy z zastrzeżeniem przestrzegania przez Wykonawcę postanowień rozdziału V RODO;
+Dane osobowe Zamawiającego nie będą przetwarzane w sposób zautomatyzowany, w tym w żadnej formie profilowania.
+
+§11 POSTANOWIENIA KOŃCOWE
+
+Wszelkie spory wynikające z Umowy lub mające związek z Umową będą rozstrzygane zgodnie z przepisami prawa polskiego przez sąd powszechny przy siedzibie Wykonawcy.
+W zakresie nieuregulowanym Umową mają zastosowanie przepisy Kodeksu Cywilnego.
+Strony ustalają następujące adresy poczty elektronicznej wykorzystywane w kontaktach pomiędzy nimi:Wykonawca: {UfCrm1663076108RequisiteEmail}Zamawiający: {ContactEmail}
+Załączniki stanowią integralną część Umowy. Zmiana załączników stanowi zmianę Umowy.
+Wszelkie zmiany Umowy wymagają formy pisemnej pod rygorem nieważności.
+Postanowienie ust. 5 powyżej nie dotyczy zatwierdzania dokumentów wykonawczych oraz uszczegóławiających, w szczególności: Wizualizacji z projektem, Załącznika 3 „Kosztorys prac wykończeniowych” oraz Załącznika nr 4 „Zestawienie materiałów wykończeniowych”, których akceptacja może nastąpić w formie dokumentowej, w tym drogą poczty elektronicznej.
+Umowa została sporządzona w dwóch jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.
+
+OŚWIADCZENIE O AKCEPTACJI FAKTUR PRZESYŁANYCH DROGĄ ELEKTRONICZNĄ
+
+Działając na podstawie art. 106n ust. 1 ustawy z dnia 11 marca 2004 r. o podatku od towarów i usług (t.j. Dz. U. z 2020 r. poz. 106 z dnia 23.01.2020 z późn. zm.) Zamawiający wyraża zgodę na przesyłanie faktur, duplikatów faktur oraz faktur korygujących w formie elektronicznej za usługi {UfCrm1663076108RequisiteName}.
+Zamawiający zobowiązuje się przyjmować faktury, o których mowa w pkt. 1 niniejszego oświadczenia w formie papierowej, w szczególności w przypadku gdy przeszkody techniczne lub formalne uniemożliwiają przesłanie faktur drogą elektroniczną.
+Zamawiający podaje adres e-mail do przesłania faktur drogą elektroniczną:
+{ContactEmail}
+W razie zmiany adresu e-mail Zamawiający zobowiązuje się do pisemnego powiadomienia o nowym adresie. Do dnia następnego po otrzymaniu powiadomienia skuteczne pozostają doręczenia na dotychczasowy adres e-mail.
+Zamawiający oświadcza, że jest świadomy iż niniejsze oświadczenie może zostać wycofane, w następstwie czego wystawca faktur traci prawo do wystawiania i przesyłania faktur do odbiorcy drogą elektroniczną, począwszy od dnia następnego po otrzymaniu powiadomienia o wycofaniu akceptacji.
+
+..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)
+
+ZAŁĄCZNIK 2 DO UMOWY O WYKOŃCZENIE LOKALU NR {Id}
+
+ZAWARTOŚĆ PAKIETÓW WYKOŃCZENIOWYCH
+
+Zakres prac oraz materiałów zawartych w pakietach wykończeniowych:
+
+Pakiet
+  Start
+  Comfort
+  Prestige
+
+Podłoga
+
+Panele
+  Panele laminowane lub winylowe
+  Panele laminowane lub winylowe
+  Panele winylowe lub deska warstwowa
+
+Listwy przypodłogowe
+  PVC
+  PVC
+  PVC
+
+Listwy dylatacyjne lub akrylowanie przy łączeniu posadzek
+  +
+  +
+  +
+
+Drzwi
+  Z widoczną ośczeżnicą
+  Ukryte lub z ośczeżnicą bezprzylgową
+  Ukryte lub z ośczeżnicą bezprzylgową
+
+Prace glazurnicze
+
+Hydroizolacja całej łazienki
+  +
+  +
+  +
+
+Płytki ścienne oraz podłogowe, format
+  Od 30x30 do 60x60
+  Od 6x6 do 120x120
+  Od mozaiki do 120x120
+
+Wysokość ułożenia płytek
+  Do sufitu
+  Do sufitu
+  Do sufitu
+
+Fugowanie
+  Spoina cementowa + silikonowanie narożników
+  Spoina cementowa + silikonowanie narożników
+  Spoina cementowa + silikonowanie narożników
+
+Ściany
+
+Malowanie
+  Na biało farbą Flugger
+  W kolorze farbą Flugger
+  W kolorze farbą Flugger
+
+Aneks kuchenny
+  Płytki nad blatem kuchennym do wysokości 60 cm
+  Płytki nad blatem kuchennym do wysokości 60 cm
+  Płytki nad blatem kuchennym do wysokości 60 cm
+
+Tapeta i tynk dekoracyjny
+  -
+  1 ściana do 10 m2
+  2 ściany do 20 m2 łącznie
+
+Sztukateria ścienna lub przysufitowa
+  -
+  Do 15 mb
+  Do 30 mb
+
+Karnisze sufitowe
+  Karnisz widoczny
+  Szyna sufitowa z listwą maskującą
+  Szyna sufitowa z listwą maskującą
+
+Łazienka
+
+Dostosowanie oraz wkucie w ścianę punktów hydraylicznych bez ich przenieśienia do innej ściany
+  +
+  +
+  +
+
+Miska WC wisząca w zabudowie
+  +
+  +
+  +
+
+Wanna / prysznic
+  Wanna w zabudowie lub brodzik przysznicowy z kabiną
+  Wanna w zabudowie lub brodzik przysznicowy z kabiną lub przegrodą szklaną
+  Wanna w zabudowie lub wolnostojąca / brodzik prysznicowy / odpływ liniowy z przegrodą szklaną
+
+Bateria wannowa / prysznicowa
+  Natynkowa
+  Natynkowa
+  Podtynkowa
+
+Umywalka
+  Nablatowa
+  Nablatowa / wpuszczana / podblatowa
+  Nablatowa / wpuszczana / podblatowa
+
+Bateria umywalkowa
+  Natynkowa
+  Natynkowa
+  Podtynkowa
+
+Montaż lustra łazienkowego
+  +
+  Z podświetleniem LED
+  Z podświetleniem LED
+
+Prezentacje pakietów wykończeniowych online:
+
+Pakiet Start: https://heyzine.com/flip-book/48984cd0ba.html
+Pakiet Comfort: https://heyzine.com/flip-book/b7077a449f.html
+Pakiet Prestige: https://heyzine.com/flip-book/40bcfb3cd8.html
+
+Powyższe prezentacje online stanowią materiał poglądowy, przedstawiający przykładowe rozwiązania estetyczne, materiały oraz standard wykończenia. Zakres prac oraz materiałów objętych Umową określony jest wiążąco w niniejszym Załączniku nr 2 oraz w Załączniku nr 3 (Kosztorys prac wykończeniowych) i Załączniku nr 4 (Zestawienie materiałów wykończeniowych).
+
+Prezentacje online obowiązują w wersji aktualnej na dzień zawarcia Umowy i mają charakter informacyjno-poglądowy. Zmiany treści prezentacji online po tej dacie nie mają wpływu na zakres zobowiązań Stron wynikających z Umowy. W przypadku jakichkolwiek rozbieżności pomiędzy treścią prezentacji online a treścią Umowy lub jej Załączników, pierwszeństwo ma Umowa oraz jej Załączniki.
+
+Zakres prac i elementów nieobjętych Pakietem.
+
+Pakiety wykończeniowe nie obejmują wykonania, dostawy ani montażu następujących elementów, o ile Umowa lub inne Załączniki nie stanowią wyraźnie inaczej:
+mebli wolnostojących,
+mebli na wymiar oraz elementów stolarskich, w tym zabudów meblowych,
+zabudów kuchennych oraz szaf wnękowych,
+schodów, balustrad oraz innych elementów komunikacji pionowej,
+systemów klimatyzacji, wentylacji mechanicznej oraz rekuperacji,
+sufitów podwieszanych oraz zabudów sufitowych,
+szpachlowania, gładzi gipsowych oraz innych prac związanych z pełnym wyrównaniem i wygładzeniem powierzchni ścian i sufitów,
+przeróbek instalacji elektrycznej oraz hydraulicznej,
+elementów konstrukcyjnych oraz zmian układu konstrukcyjnego Lokalu,
+prac wymagających uzyskania odrębnych pozwoleń administracyjnych,
+dostawy oraz montażu sprzętu AGD i RTV,
+innych prac lub elementów niewskazanych wyraźnie w zakresie Pakietu.
+
+Pakiet obejmuje wyłącznie montaż punktów oświetleniowych przewidzianych w instalacji elektrycznej wykonanej przez dewelopera. Pakiet nie obejmuje doboru ani zakupu opraw oświetleniowych. Zmiana rodzaju oświetlenia, zwiększenie liczby punktów świetlnych oraz przeróbki instalacji elektrycznej stanowią prace dodatkowe wymagające odrębnych ustaleń.
+
+Liczba łazienek w pakiecie w zależności od metrażu mieszkania lub domu:
+
+Metraż
+  Liczba łazienek / toalet
+
+Do 60 m2
+  1 łazienka (metraż do 6 m²)
+
+60 – 90 m2
+  1 łazienka i 1 toaleta (łączny metraż do 9 m²)
+
+90 – 120 m2
+  2 łazienki (łączny metraż do 12 m²)
+
+120 – 160 m2
+  2 łazienki i 1 toaleta (łączny metraż do 15 m²)
+
+160 – 200 m2
+  3 łazienki (łączny metraż do 18 m²)
+
+Powyżej 200 m2
+  3 łazienki i 1 toaleta (łączny metraż do 21 m²)
+
+Założenia przy rozpoczęciu prac:
+
+Wykonana jest instalacja c.o. odebrana pod ciśnieniem. Grzejniki ścienne zamontowane lub dostarczone i gotowe do montażu.
+Instalacje wodno-kanalizacyjne są rozprowadzone w miejscach docelowego montażu urządzeń. Wykończenie w pakiecie zawiera wyłącznie dostosowanie oraz wkucie w ścianę punktów hydraulicznych bez ich przenieśienia do innej ściany.
+Instalacja elektro-techniczna wykonana jest bez opraw oświetleniowych. Zamontowane liczniki energii. Osprzęt elektryczny, t.j gniazdka oraz włączniki zamontowane lub dostarczone i gotowe do montażu.
+Zamontowane lub dostarczone i gotowe do montażu kratki wentylacyjne.
+Wykonane są jastrychy cementowe.
+Wykonane są tynki gipsowe – w przypadku tynków cementowo-wapiennych naliczona zostanie dopłata za szpachlowanie ścian oraz sufitów, a przypadku wystąpienia dylatacji – dopłata za naprawę ścian.
+
+..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)
+
+ZAŁĄCZNIK 4 DO UMOWY O WYKOŃCZENIE LOKALU NR {Id}
+
+ZESTAWIENIE MATERIAŁÓW WYKOŃCZENIOWYCH',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_PACKAGES';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-complex-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_COMPLEX' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa kompleks (prace + projekt)',
+                   'PL',
+                   'UMOWA O WYKOŃCZENIE LOKALU
+
+nr {Id} zawarta w Warszawie w dniu {DocumentCreateTime} pomiędzy:
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Peprezentowana przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},
+zwanym w treści umowy: Wykonawcą,
+a
+Panem/ią {ContactName} {ContactLastName}
+zamieszkałym/ą: {RequisitePrimaryAddressText}
+legitymującym/ą się: _______________________
+PESEL: _______________________
+zwanym w treści umowy Zamawiającym,
+
+zwanych dalej łącznie Stronami, o następującej treści:
+
+§ 1
+PRZEDMIOT UMOWY
+
+Zamawiający zamawia, a Wykonawca przyjmuje do wykonania prace wykończeniowe w lokalu mieszkalnym Zamawiającego, zlokalizowanego przy ul. {UfCrm1662541716442}, polegające na wykonaniu wykończenia lokalu mieszkalnego, a w szczególności wykonania prac wymienionych w załączniku nr 1 dołączony do niniejszej umowy. Powyższy lokal mieszkalny jest o powierzchni użytkowej nie przekraczającej 150 m2 lub jest to budynek mieszkalny jednorodzinny o powierzchni użytkowej nieprzekraczającej 300 m2.
+Wykonawca zobowiązuje się do wykonania Przedmiotu Umowy zgodnie z Projektem, z należytą starannością, zgodnie zasadami wiedzy technicznej, sztuką budowlaną. Wykonawca zapewni właściwe kierownictwo, siłę roboczą, materiały, urządzenia i sprzęt niezbędne do prawidłowego wykonania Umowy.
+
+§ 2
+DOKUMENTACJA PROJEKTOWA
+
+Strony zgodnie postanawiają, że w ramach realizacji kompleksowego wykończenia lokalu przedmiotem umowy jest również opracowanie dokumentacji projektowej, dotyczącą:
+
+dwóch łazienek w lokalu mieszkalnym
+
+i obejmującą:
+
+Plan funkcjonalny: aranżacja (rzuty meblowe) projektowanych pomieszczeń (2-3 wersje).
+Wizualizacje 3D  każdego z pomieszczeń (w cenie również 2 tury poprawek, które nie niosą za sobą istotnych zmian zatwierdzonego wcześniej przez Zamawiającego planu funkcjonalnego).
+Schemat rozmieszczenia punktów oświetleniowych i gniazd.
+Schemat wodno-kanalizacyjny.
+Plan posadzek i sufitów.
+Dokładny projekt łazienki: rzuty i widoki.
+Dokładne rozrysowanie wszystkich zabudów na wymiar występujących w projekcie.
+Dokładna lista materiałów oraz mebli użytych w projekcie + linki do sklepów
+
+Strony zgodnie postanawiają, że w przypadku potwierdzenia możliwości przystąpienia do realizacji Zamówienia przez Wykonawcę termin wykonania projektu wnętrza wyniesie 3 tygodnie.
+Projekt zostanie dostarczony Zamawiającemu w wersji PDF za pośrednictwem poczty elektronicznej na adres {ContactEmail}.
+Strony zgodnie postanawiają, że w przypadku potwierdzenia możliwości przystąpienia do realizacji Zamówienia przez Wykonawcę termin wykonania projektu wnętrza wyniesie 3 tygodnie.
+Strony ustalają następujące zasady akceptowania zamówienia:
+Zamawiający w terminie nie dłuższym niż 2 dni robocze, od dnia przesłania przez Wykonawcę Projektu Wnętrza lub Modelu, zobowiązuje sie do jego zaakceptowania, albo zgłoszenia propozycji zmian lub poprawek, w formie elektronicznej na adres mailowy Wykonawcy {UfCrm1663076108RequisiteEmail}.
+W przypadku zgłoszenia przez Zamawiającego propozycji zmian do przekazanego Projektu Modelu lub Wnętrza, Wykonawca zobowiązuje sie do jego zmiany lub poprawienia, zgodnie z otrzymanymi od zamawiającego wskazówkami.
+W celu unikniecia wątpliwości, strony zgodnie postanawiają, że Projekt zostaje odebrany:
+jeżeli Zamawiajacy zaakceptuje przedstawiony przez wykonawce Projekt Modelu lub Wnętrza albo nie zgłosi Wykonawcy w tym zakresie propozycji zmian;
+z dniem przesłania Zamawiającemu przez Wykonawcę w formie elektronicznej, zmienionego lub poprawionego Projektu, co do ktorego Zamawiający nie zgłaszał żadnych propozycji zmian lub z dniem przesłania Zamawiającemu przez Wykonawcę Projektu uwzględniającego poprawki lub zmiany.
+Zamawiający może zgłosić maksymalnie dwie tury poprawek, które nie wymagają istotnych zmian w Projekcie (np. zmian w układzie ścian, instalacji wodno-kanalizacyjnej oraz elektrycznej). Każda zgłoszona poprawka wydłuża termin realizacji o maksymalnie 5 dni robocze.
+Każde zgłoszenie poprawek przez Zamaiającego powinno zawierać wskazówki, które w jasny sposób określają zakres proponowanych zmian.
+W celu uniknięcia wątpliwości, Strony postanawiają, że zgłoszenie poprawek lub zmian do projektu następuje z chwilą przekazania ich na adres mailowy Wykonawcy: {UfCrm1663076108RequisiteEmail}.
+W ramach realizacji projektu Wykonawca przenosi na Zamawiającego majątkowe prawa autorskie do Projektu w rozumieniu ustawy z dnia 4 lutego 1994 roku o prawie autorskim i prawach pokrewnych, z wyłączeniem prawa do dalszego komercyjnego wykorzystania przez Zamawiającego. Niniejsza umowa upoważnia Wykonawcę do dalszego komercyjnego wykorzystywania przedmiotu umowy w całości lub części. Wykonawca zastrzega sobie prawo do nie udostępniania materiałów źródłowych (min. pliki DWG).
+Możliwe są odstępstwa od koncepcji spowodowane stanem faktycznym mieszkania, jego elementów ściennych, itd. Dokumentacja projektowa nie uwzględnia: projektu budowlanego w zakresie uwzględniającym specyfikę robót budowlanych wraz z opiniami, uzgodnieniami, pozwoleniami i innymi dokumentami wymaganymi prawem budowlanym i innymi przepisami techniczno-budowlanymi.
+§ 2
+TERMIN I SPOSÓB WYKONANIA UMOWY
+
+Strony zgodnie ustalają przewidywany termin rozpoczęcia prac na dzień {Begindate}, a przewidywany termin ukończenia wskazanych powyżej prac Strony ustalają na dzień {Closedate}.
+Dokumentacja projektowa zostanie dostarczona w formie elektronicznej w terminie 3 tygodni od dnia otrzymania pierwszej płatnośсi zgodnie z ust. 2 § 3.
+Strony dopuszczają możliwość przedłużenia terminów wskazanych w ust. 1 w razie powstania przeszkód niezależnych od Wykonawcy (m.in. warunki pogodowe, przyczyny o charakterze technicznym), których nie przewidziano w dniu zawarcia niniejszej Umowy. O powstaniu okoliczności, o których mowa w zdaniu poprzedzającym, Wykonawca zobowiązuje się niezwłocznie poinformować Zamawiającego.
+Wykonawca wykona umowę samodzielnie lub za pomocą osób przez siebie wskazanych, gwarantujących należyte wykonanie umowy.
+
+§ 3
+WYNAGRODZENIE
+
+Strony postanawiają, że wynagrodzenie za wykonanie prac wykończeniowych zostanie określone na podstawie kosztorysu, który zostanie sporządzony po zakończeniu prac projektowych. Do niniejszej umowy, jako załącznik, dołączony zostaje cennik prac wykończeniowych.
+Wynagrodzenie za projekt ustalone jest w kwocie ______ (slownie:) zł netto i będzie płatne w dwóch transzach:
+50% po podpisaniu umowy
+50% po dostarczeniu kompletnego projektu.
+Ostateczna wycena (kosztorys) zostanie przygotowana na podstawie zatwierdzonego przez Zamawiającego projektu aranżacji wnętrza i będzie stanowiła podstawę do zawarcia aneksu do niniejszej umowy, w którym Strony określą całkowitą kwotę wynagrodzenia płatną zgodnie z harmonogram płatności określonym w ust. 5 niniejszego paragrafu.
+Ceny w umowie są cenami netto. Wynagrodzenie Wykonawcy, zostanie powiększone o odpowiednią stawkę podatku od towarów i usług (VAT), obowiązującą w dniu wystawienia faktury.
+Harmonogram płatności. Zamawiający zapłaci Wykonawcy Wynagrodzenie w następujący sposób:
+10% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od dnia podpisania umowy,
+40% wynagrodzenia określonego w Załączniku 1 – w terminie 5 dni od rozpoczęcia prac,
+45% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od momentu wykonania prac na kwotę 50% od umowy,
+5% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od dnia odbioru prac z Załącznika 1 oraz dostarczenia faktury końcowej.
+Podstawę zapłaty wynagrodzenia stanowi protokół odbioru, sporządzony zgodnie z postanowieniami §6 niniejszej Umowy.
+Strony ustalają, że w przypadku pojawienia się dodatkowych prac, nie wymienionych w Załączniku 1, zostaną one szczegółowo opisane w odrębnym aneksie do Umowy. Termin wykonania Prac zostanie przesunięty odpowiednio o ilość dni potrzebną dla wykonania prac dodatkowych. W tej sytuacji Strony przystąpią do wspólnego określenia nowego terminu zakończenia realizacji Umowy. Brak współdziałania Zamawiającego przy określeniu nowego terminu zakończenia realizacji Umowy będzie uprawniał Wykonawcę do jednostronnego wyznaczenia nowego terminu na co Zamawiający wyraża zgodę.
+Ustalone aneksem prace dodatkowe powinny być opłacone przed ich wykonaniem w ciągu 3 dni po wystawieniu faktury.
+Wykonawca nabywa z otrzymanych zaliczek oraz dostarcza materiały operacyjne niezbędne do realizacji Umowy, w szczególności: chemię budowlaną, przewody, kleje, płyty kartonowo-gipsowe, rury, gips itp.
+Rozliczenie zaliczek następować będzie na podstawie dokumentów wystawianych przez Wykonawcę, w szczególności faktur pro forma, faktur VAT lub dokumentów potwierdzających wydanie materiałów z magazynu Wykonawcy (potwierdzenie dostawy).Strony zgodnie postanawiają, że materiały dostarczane przez Wykonawcę stanowią element kompleksowej realizacji Umowy, a ich rozliczenie odbywa się według cen stosowanych przez Wykonawcę w ramach prowadzonej działalności gospodarczej.
+Dokumenty zakupu materiałów od dostawców Wykonawcy stanowią dokumentację wewnętrzną Wykonawcy i nie stanowią podstawy rozliczeń pomiędzy Stronami.
+Zaliczki na materiały będą płacone systematycznie, zgodnie z zapotrzebowaniem zgłaszanym przez Wykonawcę.
+W przypadku opóźnienia w płatnościach, Zamawiający zobowiązuje się do zapłaty odsetek ustawowych za każdy dzień zwłoki.
+
+§ 4
+PRAWA I OBOWIĄZKI STRON
+
+Zamawiający zobowiązuje się do współdziałania w wykonaniu dzieła, w szczególności poprzez udzielenie wszelkich niezbędnych do wykonania dzieła informacji, materiałów, danych wyjściowych i dokumentów. Przekazać Wykonawcy niezwłocznie na jego żądanie wszelkie informacje niezbędne do realizacji przedmiotu umowy, w tym dokumenty, fotografie, wymiary, rysunki techniczne itp
+Zamawiający zobowiązuje się dostarczyć na czas materiał strategiczny: płytki, drzwi, panele, listwy, armaturę itd. (dodając 10% zapas w przypadku gresów, glazury, listwy i podłóg) jeśli nie zlecił zakup materiałów dla Wykonawcy.
+Jeżeli materiał dostarczony przez Zamawiającego nie nadaje się do prawidłowego wykonania umowy, albo jeżeli zaistnieją inne okoliczności, które mogą przeszkodzić w wykonaniu umowy Wykonawca zobowiązuje się niezwłocznie zawiadomić o tym Zamawiającego. W przypadku zaistnienia takiej okoliczności, termin zakończenia prac może się wydłużyć.
+Wykonawca nie ponosi odpowiedzialności za brak dostępności, wstrzymanie dostaw lub wycofanie z produkcji materiałów wykończeniowych wskazanych przez Zamawiającego, jeżeli okoliczności te powstały z przyczyn niezależnych od Wykonawcy, w szczególności po dokonaniu przez Zamawiającego wyboru materiałów i ich zatwierdzeniu. W przypadku wystąpienia powyższych okoliczności Strony zobowiązują się do niezwłocznego uzgodnienia materiałów zamiennych o porównywalnych parametrach technicznych, jakościowych oraz estetycznych.
+Zamawiający zobowiązuje się udostępnić Wykonawcy na czas trwania umowy wszystkie pomieszczenia, w których mają być wykonywane umówione prace, a także pomieszczenie sanitarne, wodę, prąd, światło oraz dostęp do szacht. Strony ustalają, że wszelkie koszty związane z zużyciem mediów w trakcie wykonywania prac wykończeniowych ponosi Zamawiający. Wykonawca zobowiązuje się do współpracy z firmą zajmującą się utylizacją odpadów na prośbę Zamawiającego. Koszty związane z utylizacją odpadów ponosi Zamawiający.
+Wykonawca oświadcza, że posiada ubezpieczenie OC w Towarzystwie Ubezpieczeniowym na kwotę 200 000 (dwieście tysięcy złotych 00/100) oraz ubezpieczenie powierzonego mienia.
+Wykonawca ma możliwość zaangażowania podwykonawców do prowadzenia prac oraz przekazywania im kluczy do Lokalu w tym celu, z tym zastrzeżeniem, że Wykonawca odpowiada za działania i zaniechania podwykonawców jak za własne.
+Zamawiający zobowiązuje się do nienawiązywania bezpośredniej współpracy z podwykonawcami, pracownikami oraz innymi osobami lub podmiotami działającymi na rzecz Wykonawcy w zakresie Umowy.
+Strony zobowiązują się do zachowania poufności wszelkich informacji uzyskanych w związku z zawarciem i wykonywaniem Umowy.
+
+§ 5
+KARY UMOWNE
+
+Strony nie odpowiadają za niewykonanie lub nienależyte wykonanie umowy, jeżeli jest to spowodowane siłą wyższą. Dla celów niniejszej umowy siłą wyższą jest zdarzenie nadzwyczajne, zewnętrzne i niemożliwe do zapobieżenia i przewidzenia.
+W przypadku opóźnienia w wykonaniu prac z przyczyn leżących po stronie Wykonawcy, Zamawiający ma prawo do naliczenia kary umownej w wysokości 0,15% wartości wynagrodzenia netto określonego w niniejszej umowie za każdy dzień opóźnienia, nie więcej jednak niż 5% całkowitego wynagrodzenia netto.
+Terminy wykonania prac mogą ulec odpowiedniemu wydłużeniu w przypadku, gdy Zamawiający nie dostarczy informacji, danych, decyzji, materiałów lub innych elementów niezbędnych do realizacji umowy w terminie określonym przez Wykonawcę. W takim przypadku wydłużenie terminu następuje o czas odpowiadający okresowi opóźnienia w dostarczeniu ww. informacji lub materiałów.
+Brak dostępności materiałów nie stanowi nienależytego wykonania Umowy ani podstawy do naliczania kar umownych wobec Wykonawcy. Wykonawca nie ponosi odpowiedzialności za opóźnienia w realizacji przedmiotu umowy wynikające z braku dostępności materiałów lub komponentów u dostawców, w szczególności w przypadku zamówień indywidualnych lub niestandardowych, o ile dołożył należytej staranności w celu ich terminowego pozyskania.
+
+§ 6
+ ODBIORY
+
+Warunkiem przystąpienia do odbioru jest dokonanie na rzecz Wykonawcy zapłaty wynagrodzenia określonego w harmonogramie płatności. W przypadku braku zapłaty wynagrodzenia Wykonawca ma prawo odmówić wyznaczenia terminu odbioru do momentu zapłaty wynagrodzenia. Za wydłużenie czasu realizacji Umowy z powodu braku zapłaty Wykonawca nie odpowiada i nie upoważnia Zamawiającego do naliczania kar umownych za wydłużenie terminu realizacji Umowy.
+Po wykonaniu prac stanowiących przedmiot Umowy, Wykonawca za pośrednictwem poczty elektronicznej (e-mail) zawiadomi Zamawiającego o zakończeniu prac oraz o możliwości protokolarnego odbioru Lokalu przez Zamawiającego.
+W zawiadomieniu Wykonawca wskaże termin odbioru, przy czym zawiadomienie to winno nastąpić na co najmniej 3 dni robocze przed proponowanym terminem odbioru. W przypadku gdy jest on niemożliwy do zrealizowania, Wykonawca ustali alternatywną datę, jednak nie później niż na 10 dni roboczych od daty gotowości do odbioru lokalu.
+Za dzień ukończenia prac Strony zgodnie uznają dzień w którym Wykonawca złożył Zamawiającemu oświadczenie o ukończeniu realizacji przedmiotu Umowy.
+Odbiór Lokalu dokonywany jest w obecności Zamawiającego lub pełnomocnika Zamawiającego oraz przedstawiciela Wykonawcy
+Strony przed podpisaniem protokołu odbioru dokonają przeglądu Lokalu. Z czynności odbioru Lokalu strony sporządzą protokół odbioru (zwany dalej: "Protokołem odbioru końcowego"). Do Protokołu odbioru końcowego Zamawiający może zgłosić wady w wykonaniu wykończenia Lokalu. Z chwilą podpisania protokołu odbioru końcowego przyjmuje się, że Zamawiający dokonał odbioru Lokalu.
+Odbiór przedmiotu Umowy zostanie potwierdzony protokołem odbioru. Protokół musi zawierać co najmniej miejsce i datę sporządzenia, określenie Przedmiotu Umowy, wykaz stwierdzonych wad (jeśli takie wystąpią) oraz podpisy osób upoważnionych do reprezentacji każdej ze Stron.
+Zarówno protokół odbioru bezusterkowy, jak i protokół odbioru z wykazem usterek stanowią podstawę do uregulowania faktury końcowej. W przypadku protokołu usterkowego Zamawiający zobowiązuje się do zapłaty pełnej kwoty wynikającej z faktury końcowej w terminie określonym w umowie, przy jednoczesnym zobowiązaniu Wykonawcy do usunięcia wskazanych usterek w terminie nie dłuższym niż 14 dni od dnia sporządzenia protokołu lub w innym terminie uzgodnionym przez Strony.
+Usuwanie wad:
+Jeśli w toku odbioru końcowego stwierdzone zostaną wady nadające się do usunięcia, Zamawiający uprawniony jest do sporządzenia protokołu odbioru z wykazem usterek. W takim przypadku Wykonawca wyznacza termin ich usunięcia, nie dłuższy niż 14 dni, chyba że z przyczyn technologicznych wymagany jest dłuższy czas, o czym Zamawiający zostanie poinformowany na piśmie. Po usunięciu usterek Wykonawca zobowiązany jest do ponownego zgłoszenia gotowości do odbioru, a Strony sporządzają aneks do protokołu odbioru potwierdzający usunięcie wad.
+Wady nieusuwalne:
+W przypadku stwierdzenia wad nie nadających się do usunięcia, Zamawiający uprawniony jest do:
+- Obniżenia kwoty wynagrodzenia maksymalnie o wartość prac wykonanych z wadami, zgodnie z Załącznikiem 1, jeżeli Przedmiot Umowy pomimo występujących wad nadaje się do użytkowania zgodnie z jego przeznaczeniem. Decyzja o obniżeniu wynagrodzenia powinna zostać odnotowana w protokole odbioru;
+lub
+- Wymagania od Wykonawcy ponownego wykonania prac bez wad, wyznaczając mu w tym celu odpowiedni termin.
+Jeżeli Zamawiający nie przystąpi do odbioru Lokalu w terminie 10 dni od zgłoszenia przez Wykonawcę gotowości do odbioru, Wykonawca wyznaczy dodatkowy termin odbioru. Brak przystąpienia do odbioru w dodatkowym terminie skutkuje uznaniem, iż odbiór Lokalu został dokonany bez uwag, co uprawnia Wykonawcę do wystawienia faktury końcowej.
+Wykonawca nie ponosi odpowiedzialności za efekt wizualny ścian oraz sufitów w Lokalu w przypadku nieskorzystania przez Zamawiającego z oferty wykonania gładzi - w przypadku, gdy stan ich wykonania odbiega od standardów.
+Wykonawca informuje, że zgłoszenia usterek obejmują tylko i wyłącznie wady wynikające bezpośrednio z przedmiotu niniejszej Umowy. Wykonawca nie ponosi odpowiedzialności za usterki wynikające ze stanu technicznego budynku oraz za procesy związane z „pracą budynku”, takie jak osiadanie budynku, ugięcie stropu - czego skutkiem są pęknięcia i zarysowania w tynku o charakterze głębokim lub powierzchniowym, zarówno włosowate, proste i schodkowe, pęknięcia szlichty, zarysowania i pęknięcia stropu, zarysowania akrylu na styku powierzchni ścian oraz sufitów, itp. Wykonawca nie ponosi również odpowiedzialności za usterki na elementy wbudowane elektryczne i teletechniczne, takie jak skrzynki mieszkaniowe, teletechniczne, instalację domofonu i wideo domofonu, itp.
+
+§ 7
+GWARANCJA
+
+Wykonawca udziela gwarancji jakości oraz rękojmi za wady pac na okres 24 miesięcy.
+Jeżeli w okresie gwarancji jakości i rękojmi zostaną stwierdzone wady, Wykonawca zrealizuje swoje zobowiązania wynikające z udzielonej gwarancji jakości lub rękojmi w terminie ustalonym z Zamawiającym.
+Termin na przystąpienie do usunięcia wady nie może być dłuższy niż 21 (dwadzieścia jeden) dni od daty powiadomienia Wykonawcy o jej wystąpieniu, jednakże jeżeli usunięcie wady będzie niemożliwe w powyższym terminie z przyczyn technologicznych, Strony uzgodnią inny termin usunięcia wady.
+Procedura zgłaszania wad.
+Zamawiający jest zobowiązany zgłosić Wykonawcy wszelkie wady w formie pisemnej w terminie 14 dni od ich stwierdzenia. Zgłoszenie powinno zawierać:
+Dokładny opis wady, zawierający wszelkie dostępne szczegóły,
+Fotografie, jeśli to możliwe, ilustrujące stwierdzone wady,
+Datę stwierdzenia wady.
+Zgłoszenie wad powinno być wysłane na adres e-mail Wykonawcy podany w umowie.
+Badanie i Potwierdzenie Wad.
+Po otrzymaniu zgłoszenia, Wykonawca zobowiązuje się do niezwłocznego przeprowadzenia badania stwierdzonych wad.
+Wykonawca ma obowiązek potwierdzić lub zaprzeczyć istnieniu zgłoszonych wad w terminie 7 dni od daty otrzymania zgłoszenia.
+Usunięcie Wad.
+W przypadku potwierdzenia istnienia wad, Wykonawca zobowiązuje się do przystąpienie do ich usunięcia w terminie 21 dni od daty potwierdzenia wad.
+W przypadku niemożności usunięcia wad w wyznaczonym terminie z przyczyn technologicznych, Strony uzgodnią inny termin usunięcia wady.
+Jeżeli Zamawiający nie zgłosi w terminie wad, nieobjętych gwarancją jakości, Wykonawca nie ponosi odpowiedzialności za ich usunięcie w ramach gwarancji.
+W przypadku, gdy stwierdzono wadę, a nie wynika ona z winy Wykonawcy, lecz jest rezultatem czynników niezależnych od jego działalności, Zamawiający zobowiązuje się do zapłaty pełnej kwoty wynagrodzenia za wykonanie pracy po likwidacji wady.
+
+§ 8
+MATERIAŁY REKLAMOWE
+
+Zamawiający wyraża zgodę na umieszczanie materiałów reklamowych przez Wykonawcę na drzwiach, balkonach oraz wewnątrz mieszkania, związanych z realizacją prac wykończeniowych.
+Materiały reklamowe pełnią funkcję zabezpieczającą przed uszkodzeniami, obejmują logo, informacje kontaktowe oraz wszelkie inne elementy promocyjne związane z działalnością Wykonawcy.
+Umieszczenie materiałów reklamowych może obejmować, ale nie jest ograniczone do:
+Naklejek lub plakietek na drzwiach wejściowych
+Banerów lub transparentów na balkonach
+Kartek informacyjnych wewnątrz mieszkania
+Wykonawca ponosi odpowiedzialność za treść i formę umieszczanych materiałów reklamowych.
+W przypadku, gdy materiały reklamowe naruszają prawa autorskie, normy etyczne lub prawo obowiązujące w danej jurysdykcji, Wykonawca zobowiązuje się niezwłocznie usunąć lub dostosować takie materiały zgodnie z życzeniem Zamawiającego
+
+§ 9
+WYRAŻENIE ZGODY NA DOKUMENTACJĘ WIZUALNĄ
+
+Zgoda na wykonanie zdjęć i nagrań.
+Zamawiający wyraża zgodę na wykonanie fotografii i nagrań wideo dokumentujących postęp oraz efekty prac wykończeniowych realizowanych w ramach niniejszej umowy.
+Wykonawca zobowiązuje się do stosowania się do zasad profesjonalizmu i szacunku podczas robienia zdjęć oraz nagrań, unikając jednocześnie ujawniania danych osobowych Zamawiającego oraz dokładnego adresu Zamawiającego.
+
+Publikacja w Mediach Społecznościowych.
+Zamawiający wyraża zgodę na publikowanie wykonanych zdjęć i nagrań na oficjalnych profilach mediów społecznościowych należących do Wykonawcy.
+Wykonawca zobowiązuje się do publikacji jedynie ogólnych obrazów prac oraz efektów, bez ujawniania prywatnych informacji Zamawiającego.
+
+Ochrona Prywatności.
+W trakcie publikacji materiałów w mediach społecznościowych, Wykonawca zobowiązuje się do staranności w celu ochrony prywatności Zamawiającego.
+Zabrania się ujawniania dokładnego adresu Zamawiającego, danych osobowych czy innych informacji, które mogą naruszać prywatność Zamawiającego.
+
+Wycofanie Zgody.
+Zamawiający ma prawo w każdym czasie wycofać swoją zgodę na dokumentację wizualną poprzez powiadomienie Wykonawcy na piśmie.
+W przypadku wycofania zgody, Wykonawca zobowiązuje się nie publikować ani udostępniać dalszych materiałów w mediach społecznościowych.
+
+§ 11
+PRZETWARZANIE I OCHRONA DANYCH OSOBOWYCH
+
+Administratorem danych osobowych Zamawiającego jest {UfCrm1663076108RequisiteName}, z siedzibą w {UfCrm1663076108RequisiteAddress} NIP {UfCrm1663076108RequisiteNip}, REGON {UfCrm1663076108RequisiteRegon},
+Zamawiający ma prawo do: żądania od administratora dostępu do danych osobowych dotyczących jego osoby, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo do wniesienia sprzeciwu wobec przetwarzania, a także prawo do przenoszenia danych. Zamawiający ma prawo do wniesienia skargi na przetwarzanie jego danych osobowych do organu nadzorczego - GIODO/ UODO.
+Administrator informuje Zamawiającego, iż zgoda na przetwarzanie danych może zostać cofnięta w dowolnym momencie, przez wysłanie wiadomości e-mail na adres {UfCrm1663076108RequisiteEmail} lub w formie pisemnej na adres korespondencyjny.
+W ten sam sposób Zamawiający może żądać usunięcia, ograniczenia przetwarzania, przeniesienia lub poprawienia jego danych osobowych. Administrator Informuje także, że nie jesteście Państwo profilowani. Państwa dane nie będą przekazywane poza EOG ani udostępniane organizacjom międzynarodowym.
+Wykonawca informuje Zamawiającego, iż celem przetwarzania jego danych osobowych jest realizacja niniejszej umowy. Podstawą prawną przetwarzania danych osobowych jest art. 6 ust. 1 lit. B Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. w sprawie ochrony osób fizycznych w związku z przetwarzaniem danych osobowych i w sprawie swobodnego przepływu takich danych oraz uchylenia dyrektywy 95/46/WE (ogólne rozporządzenie o ochronie danych). Wykonawca informuje, że odbiorcą danych osobowych będzie administrator danych osobowych. Dane osobowe będą przetwarzane przez okres niezbędny do realizacji niniejszej umowy. Przekazanie danych osobowych ma charakter dobrowolny, ale jest konieczne do realizacji niniejszej umowy.
+
+§ 11
+POSTANOWIENIA KOŃCOWE
+
+Wszelkie spory wynikające z Umowy lub mające związek z Umową będą rozstrzygane zgodnie z przepisami prawa polskiego przez sąd powszechny przy siedzibie Wykonawcy.
+W sprawach nieunormowanych w umowie mają zastosowanie przepisy Kodeksu cywilnego.
+Wykonawca podaje adres poczty elektronicznej wykorzystywane w kontaktach pomiędzy Stronami: {UfCrm1663076108RequisiteEmail}
+Zamawiający podaje adres poczty elektronicznej wykorzystywane w kontaktach pomiędzy Stronami: {ContactEmail}
+Załączniki stanowią integralną część Umowy. Zmiana załączników stanowi zmianę Umowy.
+Wszelkie zmiany Umowy mogą nastąpić jedynie za zgodą stron wyrażoną w formie pisemnej pod rygorem nieważności.
+Postanowienie ust. 6 powyżej nie dotyczy zatwierdzania dokumentów wykonawczych oraz uszczegóławiających, w szczególności zmiany termiów oraz zakresu prac, których akceptacja może nastąpić w formie dokumentowej, w tym drogą poczty elektronicznej.
+Umowa została sporządzona w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze stron.
+
+OŚWIADCZENIE O AKCEPTACJI FAKTUR PRZESYŁANYCH DROGĄ ELEKTRONICZNĄ
+Na podstawie art. 106n ust. 1 ustawy z dnia 11 marca 2004 r. o podatku od towarów i usług (t.j. Dz. U. z 2020 r. poz. 106 z dnia 23.01.2020 z późn. zm.) Zamawiający wyraża zgodę na przesyłanie faktur, duplikatów faktur oraz faktur korygujących w formie elektronicznej za usługi {UfCrm1663076108RequisiteName}.
+Zamawiający zobowiązuje się przyjmować faktury, o których mowa w pkt. 1 niniejszego oświadczenia w formie papierowej, w szczególności w przypadku gdy przeszkody techniczne lub formalne uniemożliwiają przesłanie faktur drogą elektroniczną.
+Zamawiający podaje adres e-mail do przesłania faktur drogą elektroniczną:
+{ContactEmail}
+W razie zmiany adresu e-mail Zamawiający zobowiązuje się do pisemnego powiadomienia o nowym adresie. Do dnia następnego po otrzymaniu powiadomienia skuteczne pozostają doręczenia na dotychczasowy adres e-mail.
+Zamawiający oświadcza, że jest świadomy iż niniejsze oświadczenie może zostać wycofane, w następstwie czego wystawca faktur traci prawo do wystawiania i przesyłania faktur do odbiorcy drogą elektroniczną, począwszy od dnia następnego po otrzymaniu powiadomienia o wycofaniu akceptacji.
+
+ ..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)
+
+Załącznik 2 do umowy o wykonanie prac wykończeniowych z dnia {DocumentCreateTime}
+
+PRACE DODATKOWE
+
+Prace dodatkowe
+  Jednostka
+  Cena netto, zł
+  Ilość
+  Wartość netto, zł
+  Zamawiający
+  Wykonawca
+
+..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_COMPLEX';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-subcontractor-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_SUBCONTRACTOR' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa o podwykonawstwo',
+                   'PL',
+                   'UMOWA O PODWYKONAWSTWO W ZAKRESIE WYKONYWANIA PRAC WYKOŃCZENIOWYCH
+
+zawarta w Warszawie w dniu _____._____._____________ pomiędzy:
+
+FOREMEN SPÓŁKA Z O.O.
+ul. Trakt Lubelski 251P lok. 2, 04-667 Warszawa
+NIP: 9522224536
+reprezentowaną przez: Aleksiej Kozłowski
+zwaną dalej „Zamawiającym” lub „Foremen”
+
+a
+
+FIRMA
+NIP:
+ADRES SIEDZIBY,
+zwanym dalej „Wykonawcą”
+
+zwanymi dalej łącznie „Stronami”.
+
+§1
+OŚWIADCZENIA FOREMEN
+
+Foremen oświadcza, że w ramach prowadzonej działalności gospodarczej wykonuje kompleksowe wykończenia wnętrz lokali mieszkalnych lub usługowych, zwanych dalej „Lokalami" lub indywidualnie „Lokalem"
+
+§ 2
+PRZEDMIOT UMOWY
+
+Zamawiający zleca, a Wykonawca przyjmuje do wykonania prace wykończeniowe w lokalach wskazanych każdorazowo przez Zamawiającego w odrębnym Zleceniu Szczegółowym.
+Zakres prac, termin realizacji oraz wynagrodzenie określane będą każdorazowo w Zleceniu Szczegółowym stanowiącym integralną część niniejszej Umowy.
+Wykonawca zobowiązuje się do wykonywania prac zgodnie z projektem, zasadami wiedzy technicznej, sztuką budowlaną oraz obowiązującymi przepisami prawa.
+
+§ 3
+OBOWIĄZKI WYKONAWCY
+
+Wykonawca oświadcza, że jest podmiotem świadczącym profesjonalnie usługi objęte Przedmiotem Umowy oraz że posiada odpowiednią wiedzę, doświadczenie oraz sprzęt niezbędne do wykonania Umowy.
+Wykonawca zobowiązuje się do wykonania Przedmiotu Umowy zgodnie z Projektem, z należytą starannością, zgodnie zasadami wiedzy technicznej, sztuką budowlaną oraz przepisami prawa budowlanego. Wykonawca zapewni właściwe kierownictwo, siłę roboczą, materiały (zgodnie z niniejszą Umową), urządzenia i sprzęt niezbędne do prawidłowego wykonania Umowy.
+W trakcie wykonywania niniejszej Umowy Wykonawca zobowiązuje się do:
+przestrzegania przepisów BHP;
+utrzymywania przekazanej mu części terenu budowy oraz użytkowanych ciągów komunikacyjnych w należytej czystości oraz porządku (w szczególności do usuwania na bieżąco odpadów i śmieci, zamiatania podłóg itp.);
+stosowania wyłącznie materiałów dopuszczonych do obrotu na terenie RP;
+niezwłocznego informowania Zamawiającego o wszelkich okolicznościach mogących mieć wpływ na termin realizacji prac;
+stosowania się do poleceń i wskazówek Foremen oraz niezwłocznego usuwania wszelkiego rodzaju wad, uchybień lub innych niezgodności stwierdzonych przez Foremen.
+Wykonawca ponosi pełną odpowiedzialność za materiały przekazane mu przez Zamawiającego od momentu ich wydania do momentu podpisania protokołu odbioru.
+
+§ 4
+WYKONANIE PRAC
+
+Wykonawca wykona Prace zgodnie z Harmonogramem, określonym w Zleceniu Szczegółowym.
+Foremen powiadomi Wykonawcę o terminie przekazania Lokalu do wykonania Prac pisemnie, co najmniej z 7 dniowym wyprzedzeniem.
+Potwierdzeniem przekazania Lokalu będzie protokół podpisany przez Strony.
+Foremen przekaże Wykonawcy materiały określone w danym Zleceniu Szczegółowym dodając 10% zapas w przypadku gresów, glazury i podłóg. Harmonogram dostaw zostanie ustalony przez Strony według zapotrzebowania. Z chwilą dostarczenia materiału na miejsce wykonywania Prac, co zostanie potwierdzone podpisaniem dokumentu „WZ", Wykonawca ponosi pełną odpowiedzialność finansową za przekazane materiały na zasadzie ryzyka.
+Jeżeli w trakcie wykonywania Prac Foremen uzna, że materiały, urządzenia lub sposób wykonania Prac są niezgodne z Umową lub Wykonawca wykonuje Prace niezgodnie ze sztuką budowlaną lub przepisami prawa budowlanego, jest on uprawniony do ich odrzucenia i żądania, według własnego wyboru, zastąpienia wadliwych elementów Prac nowymi - pozbawionymi wad, ponownego ich wykonania bądź usunięcia wad. Jeżeli Wykonawca nie zastosuje się do takiego żądania, Foremen może samodzielnie lub z pomocą zatrudnionych w tym celu osób trzecich wykonać obowiązki Wykonawcy wskazane w zdaniu poprzednim na koszt i ryzyko Wykonawcy.
+Wykonawca ponosi pełną odpowiedzialność za materiały i sprzęt przekazany mu przez Foremen – od momentu ich wydania do momentu zakończenia prac i zdania Lokalu. W przypadku kradzieży lub zniszczenia – Wykonawca zobowiązuje się do zwrotu wartości na podstawie aktualnej ceny rynkowej.
+
+§ 5
+ODBIÓR PRAC
+
+Po zakończeniu prac Wykonawca zgłosi gotowość do odbioru pisemnie lub drogą mailową na adres info@foremen.eu.
+Z odbioru sporządza się protokół odbioru.
+W przypadku stwierdzenia wad Wykonawca zobowiązuje się do ich usunięcia w terminie 7 dni, chyba że Strony ustalą inaczej.
+
+§ 6
+WYNAGRODZENIE I ROZLICZENIA
+
+Wynagrodzenie za wykonanie prac określane będzie każdorazowo w Zleceniu Szczegółowym.
+Rozliczenie następuje etapowo na podstawie podpisanych protokołów odbioru częściowego zgodnie z harmonogramem:
+1 etap – po wykonaniu prac wstępnych, wyburzeń, konstrukcji, instalacji hydraulicznych oraz elektrycznych;
+2 etap – po wykonaniu prac glazurniczych;
+3 etap – po wykonaniu gładzi oraz prac malarskich;
+4 etap – po wykonaniu montażu armatury sanitarnej, elektryki, posadzek oraz drzwi.
+Wykonawca wystawi fakturę VAT po podpisaniu protokołu odbioru. Termin płatności wynosi 3 dni od dnia doręczenia prawidłowo wystawionej faktury na adres: invoice@foremen.eu.
+Strony zgodnie postanawiają, że Wykonawca nie będzie uprawniony do żądania od Foremen wynagrodzenia za prace dodatkowe, jeżeli Wykonawca wykona prace dodatkowe bez uzyskania uprzedniej pisemnej zgody Foremen.
+Wykonawca w ramach wynagrodzenia określonego w ust. 1 powyżej zobowiązuje się do sporządzenia we własnym zakresie listy produktów niezbędnych do prawidłowego zainstalowania dostarczonych przez Foremen materiałów (np.  kleje, fugi, pianki, akryle itp. materiałów niezbędnych do wykonania wszystkich wskazanych w Zleceniu Szczegółowym). W przypadki jeśli lista zostanie sporządzona niekompletnie, Wykonawca we własnym zakresie dokupi materiały niezbędne do wykonania zlecenia i wystawi refakturę dla Foremen.
+W przypadku zwłoki w płatności Wynagrodzenia lub jego części przez Foremen, Wykonawca uprawniony jest do dochodzenia odsetek ustawowych.
+
+§ 7
+KARY UMOWNE
+
+W przypadku opóźnienia w wykonaniu prac Zamawiający ma prawo naliczyć karę umowną w wysokości 0,5% wartości Zlecenia Szczegółowego za każdy dzień opóźnienia, nie więcej niż 15% jego wartości.
+W przypadku odstąpienia od Umowy z winy Wykonawcy – kara umowna wynosi 10% wartości danego Zlecenia Szczegółowego.
+Zamawiający ma prawo dochodzić odszkodowania przewyższającego wysokość zastrzeżonych kar umownych.
+
+§ 8
+GWARANCJA I RĘKOJMIA
+
+Wykonawca udziela gwarancji i rękojmi na okres 24 miesięcy od dnia podpisania protokołu odbioru końcowego.
+Termin przystąpienia do usunięcia wady nie może przekroczyć 14 dni od dnia zgłoszenia.
+
+§ 9
+PODWYKONAWCY
+
+Wykonawca uprawniony jest do wykonywania Prac przy pomocy podwykonawców tylko w przypadku uzyskania uprzedniej pisemnej zgody FOREMEN.
+Wykonawca ponosi pełną odpowiedzialność za działania i zaniechania podwykonawców jak za działania i zaniechania własne.
+
+§ 10
+POUFNOŚĆ I ZAKAZ KONKURENCJI
+
+Wykonawca zobowiązuje się do zachowania poufności wszelkich informacji uzyskanych w związku z realizacją Umowy.
+Wykonawca nie jest uprawniony do kontaktowania się z inwestorem końcowym bez uprzedniej pisemnej zgody Zamawiającego w celu składania mu ofert handlowych oraz współpracy z nim przy kolejnych inwestycjach.
+W przypadku naruszenia zakazu konkurencji Wykonawca zapłaci karę umowną w wysokości 20 000 zł.
+Wykonawca zobowiązuje się do niepodejmowania prób bezpośredniego zatrudnienia pracowników, podwykonawców ani osób współpracujących z Foremen przez okres 12 miesięcy od zakończenia niniejszej Umowy, bez pisemnej zgody Foremen. W przypadku naruszenia niniejszego zakazu, Wykonawca zapłaci karę umowną w wysokości 10 000 zł za każdą taką osobę.
+
+§ 11
+OBOWIĄZYWANIE UMOWY
+
+Umowa została zawarta na czas nieokreślony.
+Foremen przysługuje prawo odstąpienia od Umowy, w następujących przypadkach:
+- opóźnienia w wykonaniu przez Wykonawcę Prac objętych Zleceniem Szczegółowym powyżej 14 dni,
+- opóźnienia w usuwaniu przez Wykonawcę wad Prac zgłoszonych przy odbiorze Lokalu albo
+- zgłoszonych Wykonawcy w ramach gwarancji jakości lub rękojmi powyżej 14 dni,
+- rażącego naruszenia postanowień Umowy,
+- nienależytego wykonywania przez Wykonawcę obowiązków wynikających z Umowy, pomimo uprzedniego wezwania ze strony Wykonawcy do zmiany sposobu wykonywania Umowy.
+Wykonawcy przysługuje prawo odstąpienia od Umowy w następujących przypadkach:
+zwłoki FOREMEN w płatności Wynagrodzenia należnego Wykonawcy powyżej 60 dni,
+jeżeli FOREMEN nie zleci Wykonawcy wykonania Prac w Lokalu przez okres dłuższy niż 12 miesiące.
+Umowa może zostać rozwiązania przez Strony w każdym czasie, za porozumieniem Stron.
+W przypadku rozwiązania Umowy, FOREMEN zapłaci Wykonawcy wynagrodzenie za wykonane do dnia odstąpienia od Umowy Prace, z potrąceniem ewentualnych kar umownych jeżeli będą należne FOREMEN zgodnie z §12 Umowy. Strony ustalą wysokość wynagrodzenia należnego Wykonawcy na podstawie protokołu inwentaryzacji Prac wykonanych do dnia rozwiązania Umowy.
+
+§ 12
+POSTANOWIENIA KOŃCOWE
+
+Wszelkie zmiany Umowy wymagają formy pisemnej pod rygorem nieważności.
+W sprawach nieuregulowanych zastosowanie mają przepisy Kodeksu cywilnego.
+Wykonawca wyraża zgodę na przetwarzanie jego danych osobowych przez FOREMEN w celu określonym w art. 43 ust. 1 pkt 8 i 11 ustawy z dnia 29 sierpnia 1997 roku o ochronie danych osobowych (tekst jednolity z dnia 26 czerwca 2014 r., Dz.U. z 2014 r. poz. 1182), tj. w sprawach związanych z wykonaniem Umowy.
+Spory będą rozstrzygane przez sąd właściwy dla siedziby Zamawiającego.
+Umowę sporządzono w dwóch jednobrzmiących egzemplarzach, po jednym dla każdej ze Stron.
+
+..........................................................
+(data i podpis Zamawiającego)
+  ..........................................................
+(data i podpis Wykonawcy)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_SUBCONTRACTOR';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-works-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_WORKS' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa o wykonanie prac wykończeniowych',
+                   'PL',
+                   'UMOWA O WYKONANIE PRAC WYKOŃCZENIOWYCH
+
+nr {Id} zawarta w Warszawie w dniu {DocumentCreateTime} pomiędzy:
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Reprezentowaną przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},
+zwanym w treści umowy: Wykonawcą,
+a
+Panem/ią {ContactName} {ContactLastName}
+zamieszkałym/ą: {RequisitePrimaryAddressText}
+legitymującym/ą się: _______________________
+PESEL: _______________________
+zwanym w treści umowy Zamawiającym,
+
+zwanych dalej łącznie Stronami, o następującej treści:
+
+§ 1
+PRZEDMIOT UMOWY
+
+Zamawiający zamawia, a Wykonawca przyjmuje do wykonania prace wykończeniowe w lokalu mieszkalnym Zamawiającego, zlokalizowanego przy ul. {UfCrm1662541716442}, polegające na wykonaniu wykończenia lokalu mieszkalnego, a w szczególności wykonania prac wymienionych w załączniku nr 1 dołączony do niniejszej umowy. Powyższy lokal mieszkalny jest o powierzchni użytkowej wynoszącej [ {UfCrm1691765118573} ] m2, co stanowi powierzchnię użytkową nieprzekraczającą 150 m2 (lub jest to budynek mieszkalny jednorodzinny o powierzchni użytkowej nieprzekraczającej 300 m2).
+Wykonawca zobowiązuje się do wykonania Przedmiotu Umowy zgodnie z Projektem, z należytą starannością, zgodnie zasadami wiedzy technicznej, sztuką budowlaną. Wykonawca zapewni właściwe kierownictwo, siłę roboczą, materiały, urządzenia i sprzęt niezbędne do prawidłowego wykonania Umowy.
+
+§ 2
+TERMIN I SPOSÓB WYKONANIA UMOWY
+
+Strony zgodnie ustalają termin rozpoczęcia prac na dzień {Begindate}, a przewidywany termin ukończenia wskazanych powyżej prac Strony ustalają na dzień {Closedate}.
+Strony dopuszczają możliwość przedłużenia terminów wskazanych w ust. 1 w razie powstania przeszkód niezależnych od Wykonawcy (m.in. warunki pogodowe, przyczyny o charakterze technicznym), których nie przewidziano w dniu zawarcia niniejszej Umowy. O powstaniu okoliczności, o których mowa w zdaniu poprzedzającym, Wykonawca zobowiązuje się niezwłocznie poinformować Zamawiającego.
+Brak współdziałania Zamawiającego przy określeniu nowego terminu zakończenia realizacji Umowy będzie uprawniał Wykonawcę do jednostronnego wyznaczenia nowego terminu, na co Zamawiający wyraża zgodę.
+Wykonawca wykona umowę samodzielnie lub za pomocą osób przez siebie wskazanych, gwarantujących należyte wykonanie umowy.
+
+§ 3
+WYNAGRODZENIE
+
+Za wykonanie umowy Zamawiający zapłaci na rzecz Wykonawcy wynagrodzenie w kwocie {TotalBeforeTax} złotych netto płatne przelewem na rachunek bankowy wskazany na wystawionej przez Wykonawcę fakturze. Wynagrodzenie Wykonawcy, zostanie powiększone o odpowiednią stawkę podatku od towarów i usług (VAT), obowiązującą w dniu wystawienia faktury.
+Zamawiający zapłaci Wykonawcy Wynagrodzenie w następujący sposób:
+10% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od dnia podpisania umowy,
+40% wynagrodzenia określonego w Załączniku 1 – w terminie 5 dni od rozpoczęcia prac,
+45% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od momentu wykonania prac na kwotę 50% od umowy,
+5% wynagrodzenia określonego w Załączniku 1 – w terminie 3 dni od dnia odbioru prac z Załącznika 1 oraz dostarczenia faktury końcowej.
+Podstawę zapłaty wynagrodzenia stanowi protokół odbioru, sporządzony zgodnie z postanowieniami §6 niniejszej Umowy.
+Strony ustalają, że w przypadku pojawienia się dodatkowych prac, nie wymienionych w Załączniku 1, zostaną one szczegółowo opisane w odrębnym aneksie do Umowy. Termin wykonania Prac zostanie przesunięty odpowiednio o ilość dni potrzebną dla wykonania prac dodatkowych. W tej sytuacji Strony przystąpią do wspólnego określenia nowego terminu zakończenia realizacji Umowy. Brak współdziałania Zamawiającego przy określeniu nowego terminu zakończenia realizacji Umowy będzie uprawniał Wykonawcę do jednostronnego wyznaczenia nowego terminu na co Zamawiający wyraża zgodę.
+Ustalone aneksem prace dodatkowe powinny być opłacone przed ich wykonaniem w ciągu 3 dni po wystawieniu faktury.
+Wykonawca nabywa z otrzymanych zaliczek oraz dostarcza materiały operacyjne niezbędne do realizacji Umowy, w szczególności: chemię budowlaną, przewody, kleje, płyty kartonowo gipsowe, rury, gips itp.
+Rozliczenie zaliczek następować będzie na podstawie dokumentów wystawianych przez Wykonawcę, w szczególności faktur pro forma, faktur VAT lub dokumentów potwierdzających wydanie materiałów z magazynu Wykonawcy (potwierdzenie dostawy).Strony zgodnie postanawiają, że materiały dostarczane przez Wykonawcę stanowią element kompleksowej realizacji Umowy, a ich rozliczenie odbywa się według cen stosowanych przez Wykonawcę w ramach prowadzonej działalności gospodarczej.
+Dokumenty zakupu materiałów od dostawców Wykonawcy stanowią dokumentację wewnętrzną Wykonawcy i nie stanowią podstawy rozliczeń pomiędzy Stronami.
+Zaliczki na materiały będą płacone systematycznie, zgodnie z zapotrzebowaniem zgłaszanym przez Wykonawcę.
+W przypadku opóźnienia w płatnościach, Zamawiający zobowiązuje się do zapłaty odsetek ustawowych za każdy dzień zwłoki.
+
+§ 4
+PRAWA I OBOWIĄZKI STRON
+
+Zamawiający zobowiązuje się dostarczyć na czas materiał strategiczny: płytki, drzwi, panele, listwy, armaturę itd. (dodając 10% zapas w przypadku gresów, glazury, listwy i podłóg) jeśli nie zlecił zakup materiałów dla Wykonawcy.
+Jeżeli materiał dostarczony przez Zamawiającego nie nadaje się do prawidłowego wykonania umowy albo jeżeli zaistnieją inne okoliczności, które mogą przeszkodzić w wykonaniu umowy Wykonawca zobowiązuje się niezwłocznie zawiadomić o tym Zamawiającego. W przypadku zaistnienia takiej okoliczności, termin zakończenia prac może się wydłużyć.
+Wykonawca nie ponosi odpowiedzialności za brak dostępności, wstrzymanie dostaw lub wycofanie z produkcji materiałów wykończeniowych wskazanych przez Zamawiającego, jeżeli okoliczności te powstały z przyczyn niezależnych od Wykonawcy, w szczególności po dokonaniu przez Zamawiającego wyboru materiałów i ich zatwierdzeniu. W przypadku wystąpienia powyższych okoliczności Strony zobowiązują się do niezwłocznego uzgodnienia materiałów zamiennych o porównywalnych parametrach technicznych, jakościowych oraz estetycznych.
+Zamawiający zobowiązuje się udostępnić Wykonawcy na czas trwania umowy wszystkie pomieszczenia, w których mają być wykonywane umówione prace, a także pomieszczenie sanitarne, wodę, prąd, światło oraz dostęp do szacht. Strony ustalają, że wszelkie koszty związane z zużyciem mediów w trakcie wykonywania prac wykończeniowych ponosi Zamawiający. Wykonawca zobowiązuje się do współpracy z firmą zajmującą się utylizacją odpadów na prośbę Zamawiającego. Koszty związane z utylizacją odpadów ponosi Zamawiający.
+Wykonawca oświadcza, że posiada ubezpieczenie OC w Towarzystwie Ubezpieczeniowym na kwotę 200 000 (dwieście tysięcy złotych 00/100) oraz ubezpieczenie powierzonego mienia.
+Wykonawca ma możliwość zaangażowania podwykonawców do prowadzenia prac oraz przekazywania im kluczy do Lokalu w tym celu, z tym zastrzeżeniem, że Wykonawca odpowiada za działania i zaniechania podwykonawców jak za własne.
+Zamawiający zobowiązuje się do nienawiązywania bezpośredniej współpracy z podwykonawcami, pracownikami oraz innymi osobami lub podmiotami działającymi na rzecz Wykonawcy w zakresie Umowy.
+Strony zobowiązują się do zachowania poufności wszelkich informacji uzyskanych w związku z zawarciem i wykonywaniem Umowy.
+
+§ 5
+KARY UMOWNE
+
+Strony nie odpowiadają za niewykonanie lub nienależyte wykonanie umowy, jeżeli jest to spowodowane siłą wyższą. Do okoliczności siły wyższej zalicza się w szczególności, ale nie wyłącznie:
+Klęski żywiołowe i katastrofy naturalne, w tym: pożary, powodzie, trzęsienia ziemi, huragany, anomalie pogodowe, zagrożenia epidemiczne;
+Działania o charakterze politycznym i militarnym, nekrologi społeczne i zamieszki;
+Akty władzy państwowej, w tym: zmiany przepisów prawnych, decyzje i akty organów administracji rządowej lub samorządowej uniemożliwiające wykonanie Umowy.
+W przypadku opóźnienia w wykonaniu prac z przyczyn leżących po stronie Wykonawcy, Zamawiający ma prawo do naliczenia kary umownej w wysokości 0,15% wartości wynagrodzenia netto określonego w niniejszej umowie za każdy dzień opóźnienia, nie więcej jednak niż 5% całkowitego wynagrodzenia netto.
+Terminy wykonania prac mogą ulec odpowiedniemu wydłużeniu w przypadku, gdy Zamawiający nie dostarczy informacji, danych, decyzji, materiałów lub innych elementów niezbędnych do realizacji umowy w terminie określonym przez Wykonawcę. W takim przypadku wydłużenie terminu następuje o czas odpowiadający okresowi opóźnienia w dostarczeniu ww. informacji lub materiałów.
+Brak dostępności materiałów nie stanowi nienależytego wykonania Umowy ani podstawy do naliczania kar umownych wobec Wykonawcy. Wykonawca nie ponosi odpowiedzialności za opóźnienia w realizacji przedmiotu umowy wynikające z braku dostępności materiałów lub komponentów u dostawców, w szczególności w przypadku zamówień indywidualnych lub niestandardowych, o ile dołożył należytej staranności w celu ich terminowego pozyskania.
+
+§ 6
+ ODBIÓR PRAC
+
+Warunkiem przystąpienia do odbioru jest dokonanie na rzecz Wykonawcy zapłaty wynagrodzenia określonego w harmonogramie płatności. W przypadku braku zapłaty wynagrodzenia Wykonawca ma prawo odmówić wyznaczenia terminu odbioru do momentu zapłaty wynagrodzenia. Za wydłużenie czasu realizacji Umowy z powodu braku zapłaty Wykonawca nie odpowiada i nie upoważnia Zamawiającego do naliczania kar umownych za wydłużenie terminu realizacji Umowy.
+Po wykonaniu prac stanowiących przedmiot Umowy, Wykonawca za pośrednictwem poczty elektronicznej (e-mail) zawiadomi Zamawiającego o zakończeniu prac oraz o możliwości protokolarnego odbioru Lokalu przez Zamawiającego.
+W zawiadomieniu Wykonawca wskaże termin odbioru, przy czym zawiadomienie to winno nastąpić na co najmniej 3 dni robocze przed proponowanym terminem odbioru. W przypadku gdy jest on niemożliwy do zrealizowania, Wykonawca ustali alternatywną datę, jednak nie później niż na 10 dni roboczych od daty gotowości do odbioru lokalu.
+Za dzień ukończenia prac Strony zgodnie uznają dzień, w którym Wykonawca złożył Zamawiającemu oświadczenie o ukończeniu realizacji przedmiotu Umowy.
+Odbiór Lokalu dokonywany jest w obecności Zamawiającego lub pełnomocnika Zamawiającego oraz przedstawiciela Wykonawcy
+Strony przed podpisaniem protokołu odbioru dokonają przeglądu Lokalu. Z czynności odbioru Lokalu strony sporządzą protokół odbioru (zwany dalej: "Protokołem odbioru końcowego"). Do Protokołu odbioru końcowego Zamawiający może zgłosić wady w wykonaniu wykończenia Lokalu. Z chwilą podpisania protokołu odbioru końcowego przyjmuje się, że Zamawiający dokonał odbioru Lokalu.
+Odbiór przedmiotu Umowy zostanie potwierdzony protokołem odbioru. Protokół musi zawierać co najmniej miejsce i datę sporządzenia, określenie Przedmiotu Umowy, wykaz stwierdzonych wad (jeśli takie wystąpią) oraz podpisy osób upoważnionych do reprezentacji każdej ze Stron.
+Zarówno protokół odbioru bezusterkowy, jak i protokół odbioru z wykazem usterek stanowią podstawę do uregulowania faktury końcowej. W przypadku protokołu usterkowego Zamawiający zobowiązuje się do zapłaty pełnej kwoty wynikającej z faktury końcowej w terminie określonym w umowie, przy jednoczesnym zobowiązaniu Wykonawcy do usunięcia wskazanych usterek w terminie nie dłuższym niż 14 dni od dnia sporządzenia protokołu lub w innym terminie uzgodnionym przez Strony.
+Usuwanie wad:
+Jeśli w toku odbioru końcowego stwierdzone zostaną wady nadające się do usunięcia, Zamawiający uprawniony jest do sporządzenia protokołu odbioru z wykazem usterek. W takim przypadku Wykonawca wyznacza termin ich usunięcia, nie dłuższy niż 14 dni, chyba że z przyczyn technologicznych wymagany jest dłuższy czas, o czym Zamawiający zostanie poinformowany na piśmie. Po usunięciu usterek Wykonawca zobowiązany jest do ponownego zgłoszenia gotowości do odbioru, a Strony sporządzają aneks do protokołu odbioru potwierdzający usunięcie wad.
+Wady nieusuwalne:
+W przypadku stwierdzenia wad nie nadających się do usunięcia, Zamawiający uprawniony jest do:
+- Obniżenia kwoty wynagrodzenia maksymalnie o wartość prac wykonanych z wadami, zgodnie z Załącznikiem 1, jeżeli Przedmiot Umowy pomimo występujących wad nadaje się do użytkowania zgodnie z jego przeznaczeniem. Decyzja o obniżeniu wynagrodzenia powinna zostać odnotowana w protokole odbioru;
+lub
+- Wymagania od Wykonawcy ponownego wykonania prac bez wad, wyznaczając mu w tym celu odpowiedni termin.
+Jeżeli Zamawiający nie przystąpi do odbioru Lokalu w terminie 10 dni od zgłoszenia przez Wykonawcę gotowości do odbioru, Wykonawca wyznaczy dodatkowy termin odbioru. Brak przystąpienia do odbioru w dodatkowym terminie skutkuje uznaniem, iż odbiór Lokalu został dokonany bez uwag, co uprawnia Wykonawcę do wystawienia faktury końcowej.
+Wykonawca nie ponosi odpowiedzialności za efekt wizualny ścian oraz sufitów w Lokalu w przypadku nieskorzystania przez Zamawiającego z oferty wykonania gładzi - w przypadku, gdy stan ich wykonania odbiega od standardów.
+Wykonawca informuje, że zgłoszenia usterek obejmują tylko i wyłącznie wady wynikające bezpośrednio z przedmiotu niniejszej Umowy. Wykonawca nie ponosi odpowiedzialności za usterki wynikające ze stanu technicznego budynku oraz za procesy związane z „pracą budynku”, takie jak osiadanie budynku, ugięcie stropu - czego skutkiem są pęknięcia i zarysowania w tynku o charakterze głębokim lub powierzchniowym, zarówno włosowate, proste i schodkowe, pęknięcia szlichty, zarysowania i pęknięcia stropu, zarysowania akrylu na styku powierzchni ścian oraz sufitów, itp. Wykonawca nie ponosi również odpowiedzialności za usterki na elementy wbudowane elektryczne i teletechniczne, takie jak skrzynki mieszkaniowe, teletechniczne, instalację domofonu i wideo domofonu, itp.
+
+§ 7
+GWARANCJA
+
+Wykonawca udziela gwarancji jakości oraz rękojmi za wady pac na okres 24 miesięcy.
+Jeżeli w okresie gwarancji jakości i rękojmi zostaną stwierdzone wady, Wykonawca zrealizuje swoje zobowiązania wynikające z udzielonej gwarancji jakości lub rękojmi w terminie ustalonym z Zamawiającym.
+Termin na przystąpienie do usunięcia wady nie może być dłuższy niż 21 (dwadzieścia jeden) dni od daty powiadomienia Wykonawcy o jej wystąpieniu, jednakże, jeżeli usunięcie wady będzie niemożliwe w powyższym terminie z przyczyn technologicznych, Strony uzgodnią inny termin usunięcia wady.
+Procedura zgłaszania wad.
+Zamawiający jest zobowiązany zgłosić Wykonawcy wszelkie wady w formie pisemnej w terminie 14 dni od ich stwierdzenia. Zgłoszenie powinno zawierać:
+Dokładny opis wady, zawierający wszelkie dostępne szczegóły,
+Fotografie, jeśli to możliwe, ilustrujące stwierdzone wady,
+Datę stwierdzenia wady.
+Zgłoszenie wad powinno być wysłane na adres e-mail Wykonawcy podany w umowie.
+Badanie i Potwierdzenie Wad.
+Po otrzymaniu zgłoszenia, Wykonawca zobowiązuje się do niezwłocznego przeprowadzenia badania stwierdzonych wad.
+Wykonawca ma obowiązek potwierdzić lub zaprzeczyć istnieniu zgłoszonych wad w terminie 7 dni od daty otrzymania zgłoszenia.
+Usunięcie Wad.
+W przypadku potwierdzenia istnienia wad, Wykonawca zobowiązuje się do przystąpienie do ich usunięcia w terminie 21 dni od daty potwierdzenia wad.
+W przypadku niemożności usunięcia wad w wyznaczonym terminie z przyczyn technologicznych, Strony uzgodnią inny termin usunięcia wady.
+Jeżeli Zamawiający nie zgłosi w terminie wad, nieobjętych gwarancją jakości, Wykonawca nie ponosi odpowiedzialności za ich usunięcie w ramach gwarancji.
+W przypadku, gdy stwierdzono wadę, a nie wynika ona z winy Wykonawcy, lecz jest rezultatem czynników niezależnych od jego działalności, Zamawiający zobowiązuje się do zapłaty pełnej kwoty wynagrodzenia za wykonanie pracy po likwidacji wady.
+
+§ 8
+MATERIAŁY REKLAMOWE
+
+Zamawiający wyraża zgodę na umieszczanie materiałów reklamowych przez Wykonawcę na drzwiach, balkonach oraz wewnątrz mieszkania, związanych z realizacją prac wykończeniowych.
+Materiały reklamowe pełnią funkcję zabezpieczającą przed uszkodzeniami, obejmują logo, informacje kontaktowe oraz wszelkie inne elementy promocyjne związane z działalnością Wykonawcy.
+Umieszczenie materiałów reklamowych może obejmować, ale nie jest ograniczone do:
+Naklejek lub plakietek na drzwiach wejściowych
+Banerów lub transparentów na balkonach
+Kartek informacyjnych wewnątrz mieszkania
+Wykonawca ponosi odpowiedzialność za treść i formę umieszczanych materiałów reklamowych.
+W przypadku, gdy materiały reklamowe naruszają prawa autorskie, normy etyczne lub prawo obowiązujące w danej jurysdykcji, Wykonawca zobowiązuje się niezwłocznie usunąć lub dostosować takie materiały zgodnie z życzeniem Zamawiającego
+
+§ 9
+WYRAŻENIE ZGODY NA DOKUMENTACJĘ WIZUALNĄ
+
+Zgoda na wykonanie zdjęć i nagrań.
+Zamawiający wyraża zgodę na wykonanie fotografii i nagrań wideo dokumentujących postęp oraz efekty prac wykończeniowych realizowanych w ramach niniejszej umowy.
+Wykonawca zobowiązuje się do stosowania się do zasad profesjonalizmu i szacunku podczas robienia zdjęć oraz nagrań, unikając jednocześnie ujawniania danych osobowych Zamawiającego oraz dokładnego adresu Zamawiającego.
+
+Publikacja w Mediach Społecznościowych.
+Zamawiający wyraża zgodę na publikowanie wykonanych zdjęć i nagrań na oficjalnych profilach mediów społecznościowych należących do Wykonawcy.
+Wykonawca zobowiązuje się do publikacji jedynie ogólnych obrazów prac oraz efektów, bez ujawniania prywatnych informacji Zamawiającego.
+
+Ochrona Prywatności.
+W trakcie publikacji materiałów w mediach społecznościowych, Wykonawca zobowiązuje się do staranności w celu ochrony prywatności Zamawiającego.
+Zabrania się ujawniania dokładnego adresu Zamawiającego, danych osobowych czy innych informacji, które mogą naruszać prywatność Zamawiającego.
+
+Wycofanie Zgody.
+Zamawiający ma prawo w każdym czasie wycofać swoją zgodę na dokumentację wizualną poprzez powiadomienie Wykonawcy na piśmie.
+W przypadku wycofania zgody, Wykonawca zobowiązuje się nie publikować ani udostępniać dalszych materiałów w mediach społecznościowych.
+
+§ 10
+PRZETWARZANIE I OCHRONA DANYCH OSOBOWYCH
+
+Administratorem danych osobowych Zamawiającego jest {UfCrm1663076108RequisiteName}, z siedzibą w {UfCrm1663076108RequisiteAddress} NIP {UfCrm1663076108RequisiteNip}, REGON {UfCrm1663076108RequisiteRegon},
+Zamawiający ma prawo do: żądania od administratora dostępu do danych osobowych dotyczących jego osoby, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo do wniesienia sprzeciwu wobec przetwarzania, a także prawo do przenoszenia danych. Zamawiający ma prawo do wniesienia skargi na przetwarzanie jego danych osobowych do organu nadzorczego - GIODO/ UODO.
+Administrator informuje Zamawiającego, iż zgoda na przetwarzanie danych może zostać cofnięta w dowolnym momencie, przez wysłanie wiadomości e-mail na adres {UfCrm1663076108RequisiteEmail} lub w formie pisemnej na adres korespondencyjny.
+W ten sam sposób Zamawiający może żądać usunięcia, ograniczenia przetwarzania, przeniesienia lub poprawienia jego danych osobowych. Administrator Informuje także, że nie jesteście Państwo profilowani. Państwa dane nie będą przekazywane poza EOG ani udostępniane organizacjom międzynarodowym.
+Wykonawca informuje Zamawiającego, iż celem przetwarzania jego danych osobowych jest realizacja niniejszej umowy. Podstawą prawną przetwarzania danych osobowych jest art. 6 ust. 1 lit. B Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. w sprawie ochrony osób fizycznych w związku z przetwarzaniem danych osobowych i w sprawie swobodnego przepływu takich danych oraz uchylenia dyrektywy 95/46/WE (ogólne rozporządzenie o ochronie danych). Wykonawca informuje, że odbiorcą danych osobowych będzie administrator danych osobowych. Dane osobowe będą przetwarzane przez okres niezbędny do realizacji niniejszej umowy. Przekazanie danych osobowych ma charakter dobrowolny, ale jest konieczne do realizacji niniejszej umowy.
+
+§ 11
+POSTANOWIENIA KOŃCOWE
+
+Wszelkie spory wynikające z Umowy lub mające związek z Umową będą rozstrzygane zgodnie z przepisami prawa polskiego przez sąd powszechny przy siedzibie Wykonawcy.
+W sprawach nieunormowanych w umowie mają zastosowanie przepisy Kodeksu cywilnego.
+Wykonawca podaje adres poczty elektronicznej wykorzystywane w kontaktach pomiędzy Stronami: {UfCrm1663076108RequisiteEmail}
+Zamawiający podaje adres poczty elektronicznej wykorzystywane w kontaktach pomiędzy Stronami: {ContactEmail}
+Załączniki stanowią integralną część Umowy. Zmiana załączników stanowi zmianę Umowy.
+Wszelkie zmiany Umowy mogą nastąpić jedynie za zgodą stron wyrażoną w formie pisemnej pod rygorem nieważności.
+Postanowienie ust. 6 powyżej nie dotyczy zatwierdzania dokumentów wykonawczych oraz uszczegóławiających, w szczególności zmiany terminów oraz zakresu prac, których akceptacja może nastąpić w formie dokumentowej, w tym drogą poczty elektronicznej.
+Umowa została sporządzona w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze stron.
+
+OŚWIADCZENIE O AKCEPTACJI FAKTUR PRZESYŁANYCH DROGĄ ELEKTRONICZNĄ
+Na podstawie art. 106n ust. 1 ustawy z dnia 11 marca 2004 r. o podatku od towarów i usług (t.j. Dz. U. z 2020 r. poz. 106 z dnia 23.01.2020 z późn. zm.) Zamawiający wyraża zgodę na przesyłanie faktur, duplikatów faktur oraz faktur korygujących w formie elektronicznej za usługi {UfCrm1663076108RequisiteName}.
+Zamawiający zobowiązuje się przyjmować faktury, o których mowa w pkt. 1 niniejszego oświadczenia w formie papierowej, w szczególności w przypadku, gdy przeszkody techniczne lub formalne uniemożliwiają przesłanie faktur drogą elektroniczną.
+Zamawiający podaje adres e-mail do przesłania faktur drogą elektroniczną:
+{ContactEmail}
+W razie zmiany adresu e-mail Zamawiający zobowiązuje się do pisemnego powiadomienia o nowym adresie. Do dnia następnego po otrzymaniu powiadomienia skuteczne pozostają doręczenia na dotychczasowy adres e-mail.
+Zamawiający oświadcza, że jest świadomy, iż niniejsze oświadczenie może zostać wycofane, w następstwie czego wystawca faktur traci prawo do wystawiania i przesyłania faktur do odbiorcy drogą elektroniczną, począwszy od dnia następnego po otrzymaniu powiadomienia o wycofaniu akceptacji.
+
+ ..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_WORKS';
+        </sql>
+    </changeSet>
+
+    <changeSet id="160-seed-template-contract-reservation-pl" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM document_templates t
+                JOIN signable_document_types dt ON t.document_type_id = dt.id
+                WHERE dt.code = 'CONTRACT_RESERVATION' AND t.locale = 'PL'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO document_templates
+                (document_type_id, name, locale, storage_uri, version, active, uploaded_by_id, created_date, created_by)
+            SELECT dt.id,
+                   'Umowa rezerwacyjna usług wykończeniowych',
+                   'PL',
+                   'UMOWA REZERWACYJNA USŁUG WYKOŃCZENIOWYCH
+
+zawarta w Warszawie, dnia {DocumentCreateTime} pomiędzy:
+
+{UfCrm1663076108RequisiteName}
+{UfCrm1663076108RequisiteAddress}
+NIP {UfCrm1663076108RequisiteNip}
+Peprezentowana przez {UfCrm1663076108RequisiteRepresentativeName} – {UfCrm1663076108RequisiteRepresentativeRole},
+zwanym w treści umowy: Wykonawcą,
+a
+Panem/ią {ContactName} {ContactLastName}
+zamieszkałym/ą: {RequisitePrimaryAddressText}
+legitymującym/ą się: _______________________
+PESEL: _______________________
+zwanym w treści umowy Zamawiającym,
+
+zwanych dalej łącznie Stronami, o następującej treści:
+
+§ 1
+PRZEDMIOT UMOWY
+
+Wykonawca zobowiązuje się do zarezerwowania terminu na wykonanie prac wykończeniowych w lokalu Zamawiającego, zlokalizowanym przy {UfCrm1662541716442}. Planowany termin rozpoczęcia prac został określony w §2 umowy.
+Szczegółowy zakres prac zostanie określony po opracowaniu projektu i wykonaniu szczegółowej wyceny.
+
+§ 2
+TERMIN REALIZACJI
+
+Prace zostaną rozpoczęte w przybliżonym terminie {Begindate}.
+Dokładna data rozpoczęcia zostanie ostatecznie ustalona po zakończeniu etapu projektowego i wykonaniu szczegółowej wyceny, z uwzględnieniem zasad określonych w ust. 3 i 4.
+Przybliżony termin rozpoczęcia prac, o którym mowa w ust. 1, musi zostać potwierdzony podpisaną umową o wykonanie prac wykończeniowych nie później niż na 14 dni przed tym terminem.
+W przypadku, gdy umowa o wykonanie prac wykończeniowych zostanie podpisana w terminie krótszym niż 14 dni przed planowaną datą rozpoczęcia prac, dokładna data rozpoczęcia prac zostaje przesunięta o 14 dni w przód, licząc od dnia podpisania umowy o wykonanie prac wykończeniowych.
+W przypadku opóźnienia niezależnego od Wykonawcy, termin może ulec przedłużeniu po uprzednim powiadomieniu Zamawiającego.
+
+§ 3
+WYNAGRODZENIE
+
+W celu potwierdzenia rezerwacji terminu Zamawiający zobowiązuje się wpłacić zadatek w wysokości 3000 (trzy tysiące złotych 00/100) na konto bankowe Wykonawcy:
+93 1090 1753 0000 0001 5005 1696.
+W przypadku rezygnacji przez Zamawiającego z umowy, zadatek nie podlega zwrotowi.
+W przypadku gdy Wykonawca nie rozpocznie prac w terminie określonym w § 2 niniejszej umowy, Zamawiający ma prawo do odstąpienia od umowy ze skutkiem natychmiastowym oraz żądania zwrotu wpłaconego zadatku w pełnej wysokości. Wykonawca zobowiązuje się do zwrotu zadatku na wskazany przez Zamawiającego rachunek bankowy w terminie 14 dni od dnia otrzymania oświadczenia o rezygnacji.
+Zadatek zostanie zaliczony na poczet całkowitej kwoty wynagrodzenia za wykonane prace.
+
+§ 4
+PRZETWARZANIE DANYCH OSOBOWYCH
+
+Administratorem danych osobowych Zamawiającego jest {UfCrm1663076108RequisiteName}, z siedzibą w {UfCrm1663076108RequisiteAddress} NIP {UfCrm1663076108RequisiteNip}, REGON {UfCrm1663076108RequisiteRegon},
+Zamawiający ma prawo do: żądania od administratora dostępu do danych osobowych dotyczących jego osoby, ich sprostowania, usunięcia lub ograniczenia przetwarzania, prawo do wniesienia sprzeciwu wobec przetwarzania, a także prawo do przenoszenia danych. Zamawiający ma prawo do wniesienia skargi na przetwarzanie jego danych osobowych do organu nadzorczego - GIODO/ UODO.
+Administrator informuje Zamawiającego, iż zgoda na przetwarzanie danych może zostać cofnięta w dowolnym momencie, przez wysłanie wiadomości e-mail na adres {UfCrm1663076108RequisiteEmail} lub w formie pisemnej na adres korespondencyjny.
+W ten sam sposób Zamawiający może żądać usunięcia, ograniczenia przetwarzania, przeniesienia lub poprawienia jego danych osobowych. Administrator Informuje także, że nie jesteście Państwo profilowani. Państwa dane nie będą przekazywane poza EOG ani udostępniane organizacjom międzynarodowym.
+Wykonawca informuje Zamawiającego, iż celem przetwarzania jego danych osobowych jest realizacja niniejszej umowy. Podstawą prawną przetwarzania danych osobowych jest art. 6 ust. 1 lit. B Rozporządzenia Parlamentu Europejskiego i Rady (UE) 2016/679 z dnia 27 kwietnia 2016 r. w sprawie ochrony osób fizycznych w związku z przetwarzaniem danych osobowych i w sprawie swobodnego przepływu takich danych oraz uchylenia dyrektywy 95/46/WE (ogólne rozporządzenie o ochronie danych). Wykonawca informuje, że odbiorcą danych osobowych będzie administrator danych osobowych. Dane osobowe będą przetwarzane przez okres niezbędny do realizacji niniejszej umowy. Przekazanie danych osobowych ma charakter dobrowolny, ale jest konieczne do realizacji niniejszej umowy.
+
+§ 5
+POSTANOWIENIA KOŃCOWE
+
+Wszelkie zmiany umowy mogą nastąpić jedynie za zgodą stron wyrażoną w formie pisemnej pod rygorem nieważności.
+W sprawach nieunormowanych w umowie mają zastosowanie przepisy Kodeksu cywilnego.
+Umowa została sporządzona w dwóch jednobrzmiących egzemplarzach po jednym dla każdej ze stron.
+
+ ..........................................................
+(data i podpis Wykonawcy)
+  ..........................................................
+(data i podpis Zamawiającego)',
+                   1, true,
+                   (SELECT u.id FROM users u JOIN roles r ON u.role_id = r.id
+                    WHERE r.code = 'ADMIN' ORDER BY u.id LIMIT 1),
+                   NOW(), 'seed:for-05-08-templates'
+            FROM signable_document_types dt WHERE dt.code = 'CONTRACT_RESERVATION';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

@@ -16,13 +16,9 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.foremen.dao.CompanyProfileDao;
-import com.foremen.dao.CompanyProfileDao;
+
 import com.foremen.dao.DocumentTemplateDao;
 import com.foremen.dao.ProjectMemberDao;
-import com.foremen.dao.RoomDao;
-import com.foremen.dao.ProjectMemberDao;
-import com.foremen.dao.RoomDao;
 import com.foremen.dao.SignableDocumentDao;
 import com.foremen.dao.model.DocumentStatus;
 import com.foremen.dao.model.DocumentTemplateEntity;
@@ -93,11 +89,9 @@ class SignableDocumentFreezeImmutabilityTest {
     @Mock
     private DocumentTemplateDao templateDao;
     @Mock
-    private CompanyProfileDao companyProfileDao;
-    @Mock
     private ProjectMemberDao projectMemberDao;
     @Mock
-    private RoomDao roomDao;
+    private MergeContextFactory mergeContextFactory;
     @Mock
     private DocumentDtoMapper dtoMapper;
     @Mock
@@ -129,11 +123,10 @@ class SignableDocumentFreezeImmutabilityTest {
         service = new SignableDocumentService(
                 documentDao,           // SignableDocumentDao
                 templateDao,           // DocumentTemplateDao
-                companyProfileDao,     // CompanyProfileDao
                 null,                  // ProjectDao
                 projectMemberDao,      // ProjectMemberDao
-                roomDao,               // RoomDao
                 null,                  // UserDao
+                mergeContextFactory,   // MergeContextFactory
                 null,                  // SignableDocumentServiceMapper
                 dtoMapper,             // DocumentDtoMapper
                 null,                  // ProjectAccessCache
@@ -226,10 +219,12 @@ class SignableDocumentFreezeImmutabilityTest {
         doc.setTemplateLocale("PL");
         when(documentDao.findById(DOCUMENT_ID)).thenReturn(Optional.of(doc));
 
-        // Merge-context assembly reads these (best-effort, empty is fine for the freeze-gate test).
-        when(projectMemberDao.findByProjectId(PROJECT_ID)).thenReturn(List.of());
-        when(roomDao.findByProjectId(PROJECT_ID)).thenReturn(List.of());
-        when(companyProfileDao.findAll()).thenReturn(List.of());
+        // Merge-context assembly is delegated to MergeContextFactory; a minimal context (just the
+        // required document) is enough for the freeze-gate test.
+        when(mergeContextFactory.build(any(), any(SignableDocumentEntity.class)))
+                .thenAnswer(inv -> MergeContext.builder()
+                        .document(inv.getArgument(1, SignableDocumentEntity.class))
+                        .build());
 
         DocumentTemplateEntity template = new DocumentTemplateEntity();
         template.setStorageUri("template body {Token}");

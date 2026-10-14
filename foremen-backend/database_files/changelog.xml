@@ -583,4 +583,25 @@
          omitted (deny-by-default). Idempotent via SELECT COUNT(*) + MARK_RAN. Registered LAST,
          after 157. -->
     <include file="database_files/changesets/158-seed-unplanned-expense-categories-resource.xml"/>
+    <!-- FOR-05-08: widen document_templates.storage_uri (the inline template body) from
+         VARCHAR(512) to TEXT so a real contract body fits. Idempotent (no-op if already TEXT),
+         guarded by columnExists. Registered LAST, after 158. -->
+    <include file="database_files/changesets/159-widen-document-template-body.xml"/>
+    <!-- FOR-05-08: seed the real document templates from docs/templates/*.docx. Bitrix-era tokens
+         mapped to supported backend merge tokens (A2); unresolved tokens blanked to '_____'. Body
+         stored inline in storage_uri (TEXT, 159); uploaded_by_id = bootstrap ADMIN. Each insert is
+         guarded by a (type, locale) COUNT=0 precondition. MUST run after 159. Registered LAST. -->
+    <include file="database_files/changesets/160-seed-document-templates.xml"/>
+    <!-- FOR-05-08: widen signable_documents.document_uri (which stores the rendered DRAFT body on
+         generate) from VARCHAR(512) to TEXT so a real merged contract body fits; generate was
+         failing with "value too long for type character varying(512)" (HTTP 500). Idempotent
+         (no-op if already TEXT), guarded by columnExists; column stays NULLABLE. Registered LAST,
+         after 160. -->
+    <include file="database_files/changesets/161-widen-signable-document-uri.xml"/>
+    <!-- FOR-05-08: fix merge-token placement in two seeded templates (WORKS_ACCEPTANCE,
+         HANDOVER_TO_RENOVATION) whose .docx extraction duplicated the executor-requisites +
+         representative header and the client block (with stray Bitrix cell-id digits). Collapses
+         them to a single correctly-labelled block via idempotent REPLACE(); every token was already
+         a valid resolver token, only its placement was wrong. Registered LAST, after 161. -->
+    <include file="database_files/changesets/162-fix-template-token-placement.xml"/>
 </databaseChangeLog>

@@ -67,6 +67,7 @@ public class ProjectController implements AdminController<
     private final ProjectService service;
     private final ProjectControllerMapper controllerMapper;
     private final AuditServiceMapper auditServiceMapper;
+    private final com.foremen.service.document.ProjectTemplateViewService projectTemplateViewService;
 
     @Override
     public ControllerToServiceMapper<ProjectServiceModel, ProjectServiceExtendedModel,
@@ -157,6 +158,23 @@ public class ProjectController implements AdminController<
     @PermissionOperation("READ")
     public ResponseEntity<ProjectReadDto> findById(@PathVariable Long id) {
         return ResponseEntity.ok(service.findByIdProjected(id));
+    }
+
+    /**
+     * FOR-05-08 (template placeholder values): the per-project snapshot of every value a document
+     * template's {@code {Token}} placeholders can be filled from — the nested value groups plus a
+     * flat {@code tokenName → value} map. Reuses the same merge resolver engine that fills a real
+     * generated document, so the preview matches generation. {@code PROJECTS} READ (same gate as the
+     * project by-id read; the service applies project-scope on load).
+     *
+     * @param projectId the project to resolve template values for
+     * @return the resolved template-value view
+     */
+    @GetMapping("/{projectId}/template-view")
+    @PermissionOperation("READ")
+    public ResponseEntity<com.foremen.service.document.ProjectTemplateViewDTO> templateView(
+            @PathVariable Long projectId) {
+        return ResponseEntity.ok(projectTemplateViewService.getView(projectId));
     }
 
     /** Adapts a projected list DTO into the identically-shaped read DTO for the extended endpoint. */

@@ -16,20 +16,27 @@ import com.foremen.dao.model.SignatureStatus;
  *
  * <p><b>Confidentiality (R9.6, R13.3):</b> client-reachable; carries NO cost/estimate/margin field.
  *
- * @param id            the signature id
- * @param signerUserId  the explicit signer user id, or {@code null} when resolved by role
- * @param signerRole    the signer role (e.g. {@code CLIENT}), or {@code null}
- * @param method        the signing method
- * @param level         the eIDAS level
- * @param status        {@code PENDING} / {@code SIGNED} / {@code DECLINED}
- * @param signedAt      completion timestamp, or {@code null} until signed
- * @param evidenceUri   scan / tablet image / sealed-PDF uri, or {@code null} until signed
- * @param declineReason reason on {@code DECLINED}, or {@code null}
+ * @param id              the signature id
+ * @param signerUserId    the explicit signer user id, or {@code null} when resolved by role
+ * @param signerUserName  the explicit signer's display name, or {@code null} when resolved by role
+ *                        (resolved from the signer user; lets the UI show "name + role" without
+ *                        cross-referencing a possibly-incomplete project-members list)
+ * @param signerRole      the signer role (e.g. {@code CLIENT}), or {@code null}
+ * @param signerUserRoleCode the explicit signer's own (global) role code, or {@code null} when
+ *                        resolved by role; the UI prefers {@code signerRole} and falls back to this
+ * @param method          the signing method
+ * @param level           the eIDAS level
+ * @param status          {@code PENDING} / {@code SIGNED} / {@code DECLINED}
+ * @param signedAt        completion timestamp, or {@code null} until signed
+ * @param evidenceUri     scan / tablet image / sealed-PDF uri, or {@code null} until signed
+ * @param declineReason   reason on {@code DECLINED}, or {@code null}
  */
 public record DocumentSignatureDto(
         Long id,
         Long signerUserId,
+        String signerUserName,
         String signerRole,
+        String signerUserRoleCode,
         SignatureMethod method,
         SignatureLevel level,
         SignatureStatus status,

@@ -76,6 +76,16 @@ public class DocumentTemplateController {
     }
 
     /**
+     * The raw {@code {Token}} source body of a template version — the editable text the WYSIWYG
+     * editor loads (R3a.5). {@code DOCUMENT_TEMPLATES} READ.
+     */
+    @GetMapping("/{id}/body")
+    @RequiresPermission(resource = RESOURCE, operation = READ)
+    public ResponseEntity<TemplateBodyRef> body(@PathVariable Long id) {
+        return ResponseEntity.ok(new TemplateBodyRef(service.bodyText(id)));
+    }
+
+    /**
      * The version history for one (type, locale), newest first (R3a.5). {@code DOCUMENT_TEMPLATES}
      * READ.
      */
@@ -145,5 +155,14 @@ public class DocumentTemplateController {
     @RequiresPermission(resource = RESOURCE, operation = READ)
     public ResponseEntity<TestMergeResultDto> testMerge(@PathVariable Long id) {
         return ResponseEntity.ok(service.testMerge(id));
+    }
+
+    /**
+     * The raw {@code {Token}} source body of a template version (R3a.5), returned as JSON
+     * {@code { body }}. Mirrors the signable-document body-read shape.
+     *
+     * @param body the template body token-text (never {@code null}; empty string when unset)
+     */
+    public record TemplateBodyRef(String body) {
     }
 }

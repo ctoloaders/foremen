@@ -28,6 +28,20 @@ public interface ProjectMemberDao extends AdminDao<ProjectMemberEntity, Long> {
     List<ProjectMemberEntity> findByProjectId(Long projectId);
 
     /**
+     * FOR-05-08 (template-view): the project's members with their {@code user} and {@code projectRole}
+     * eagerly fetched in a single query, ordered by membership id ascending for a deterministic
+     * primary-CLIENT / representative selection. Backs {@code ProjectTemplateViewService}, which
+     * resolves the client / representative merge tokens from these members without an N+1 over the
+     * LAZY {@code user} / {@code projectRole} associations.
+     */
+    @Query("SELECT pm FROM ProjectMemberEntity pm "
+            + "JOIN FETCH pm.user "
+            + "JOIN FETCH pm.projectRole "
+            + "WHERE pm.projectId = :projectId "
+            + "ORDER BY pm.id ASC")
+    List<ProjectMemberEntity> findByProjectIdWithUserAndRole(@Param("projectId") Long projectId);
+
+    /**
      * FOR-05-09 Req 9 (task 8.1): counts the Project_Members of a project whose Project_Role code
      * equals {@code roleCode} (case-sensitive, as stored) and whose Assignment_Status equals
      * {@code status}. Used by the last-ACTIVE-MANAGER / last-ACTIVE-CLIENT guard to decide whether a

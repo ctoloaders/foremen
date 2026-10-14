@@ -41,6 +41,8 @@ public interface DocumentDtoMapper {
     SignableDocumentDto toDto(SignableDocumentEntity entity);
 
     @Mapping(target = "signerUserId", source = "signerUser.id")
+    @Mapping(target = "signerUserName", source = "signerUser.name")
+    @Mapping(target = "signerUserRoleCode", source = "signerUser.role.code")
     DocumentSignatureDto toDto(DocumentSignatureEntity entity);
 
     List<DocumentSignatureDto> toSignatureDtos(List<DocumentSignatureEntity> entities);

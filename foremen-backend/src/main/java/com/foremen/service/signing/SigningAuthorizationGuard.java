@@ -95,6 +95,12 @@ public class SigningAuthorizationGuard {
         SAVE_BODY,
         /** Freeze the PDF and move to {@code PENDING_SIGNATURES} (an {@code UPDATE}). Write action. */
         REQUEST_SIGNATURES,
+        /**
+         * Edit the designated-signer set of a {@code PENDING_SIGNATURES} document — add / remove
+         * still-pending signers, change a pending signer's method (an {@code UPDATE}). Write action,
+         * reserved for the executor (MANAGER/ADMIN, and FOREMAN for its owned types); never CLIENT.
+         */
+        EDIT_SIGNERS,
         /** Void the document (an {@code UPDATE}). Write action. */
         VOID,
         /** Delete the document (a {@code DELETE}). Write action. */

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-08: the signable_documents.document_uri column doubles as the DRAFT BODY text the
+         merge engine writes on `generate` (SignableDocumentService.applyBody stores the rendered
+         merged body here, not a short object-storage uri). The original VARCHAR(512) is far too
+         small for a real contract body (thousands of characters) and generate failed with
+         "value too long for type character varying(512)" (HTTP 500). Widen it to TEXT.
+         Idempotent: the modifyDataType is a no-op if already TEXT; guarded by columnExists so it
+         only runs where the table/column is present. document_uri is NULLABLE (a DRAFT has none
+         until generate), so NO NOT NULL constraint is re-asserted. -->
+    <changeSet id="161-widen-signable-document-uri" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="signable_documents" columnName="document_uri"/>
+        </preConditions>
+
+        <modifyDataType tableName="signable_documents" columnName="document_uri" newDataType="TEXT"/>
+    </changeSet>
+
+</databaseChangeLog>
