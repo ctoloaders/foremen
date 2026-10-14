@@ -11,7 +11,6 @@ import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.HttpMethod;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageOptions;
-import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.core.io.DefaultResourceLoader;
@@ -80,7 +79,19 @@ public class GcsImageStorage implements ImageStorage {
     private final ImageReferenceLookup referenceLookup;
     private final DataSize maxUploadSize;
 
-    private Storage storage;
+    /**
+     * The lazily-built GCS client. Guarded by {@link #storageLock} and published through
+     * {@link #storage()}. It is intentionally NOT built in a {@code @PostConstruct}: resolving GCS
+     * credentials can block indefinitely (e.g. Application Default Credentials probing a
+     * metadata/token endpoint, or a wedged credential-file mount in local Docker), and doing that at
+     * bean-init time would hang the whole Spring context startup — the backend would never bind its
+     * HTTP port. Building on first actual use keeps the application boot fast and resilient: image
+     * storage only touches GCS when a feature that needs it is exercised, and a credential problem
+     * surfaces there as a handled error rather than a startup hang.
+     */
+    private volatile Storage storage;
+
+    private final Object storageLock = new Object();
 
     public GcsImageStorage(ImageStorageProperties properties, ImageReferenceLookup referenceLookup) {
         this.properties = properties;
@@ -88,9 +99,22 @@ public class GcsImageStorage implements ImageStorage {
         this.maxUploadSize = parseMaxUploadSize(properties.maxUploadSize());
     }
 
-    @PostConstruct
-    void init() {
-        this.storage = buildStorage();
+    /**
+     * Return the GCS client, building it on first use (double-checked locking). See {@link #storage}
+     * for why the client is created lazily rather than in a {@code @PostConstruct}.
+     */
+    private Storage storage() {
+        Storage local = this.storage;
+        if (local == null) {
+            synchronized (storageLock) {
+                local = this.storage;
+                if (local == null) {
+                    local = buildStorage();
+                    this.storage = local;
+                }
+            }
+        }
+        return local;
     }
 
     @Override
@@ -139,7 +163,7 @@ public class GcsImageStorage implements ImageStorage {
         BlobId blobId = BlobId.of(properties.bucket(), objectKey);
         BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(contentType).build();
         try {
-            storage.create(blobInfo, file.getBytes());
+            storage().create(blobInfo, file.getBytes());
         } catch (IOException e) {
             throw new ForemenValidationException("error.image.upload.failed");
         }
@@ -170,7 +194,7 @@ public class GcsImageStorage implements ImageStorage {
         long ttl = ttlSeconds > 0 ? ttlSeconds : 600L;
 
         Storage.SignUrlOption[] options = buildSignOptions();
-        URL url = storage.signUrl(blobInfo, ttl, TimeUnit.SECONDS, options);
+        URL url = storage().signUrl(blobInfo, ttl, TimeUnit.SECONDS, options);
         return url == null ? null : url.toString();
     }
 
@@ -216,7 +240,7 @@ public class GcsImageStorage implements ImageStorage {
             return;
         }
         try {
-            storage.delete(BlobId.of(properties.bucket(), objectKey));
+            storage().delete(BlobId.of(properties.bucket(), objectKey));
         } catch (RuntimeException e) {
             // Deleting an already-absent object (or a transient storage error) must not fail the
             // owning write transaction; reconciliation (task 3.5) will reclaim any leftover.
@@ -239,7 +263,7 @@ public class GcsImageStorage implements ImageStorage {
      */
     Set<String> listObjectKeys() {
         Set<String> keys = new HashSet<>();
-        for (Blob blob : storage.list(properties.bucket()).iterateAll()) {
+        for (Blob blob : storage().list(properties.bucket()).iterateAll()) {
             if (blob != null && blob.getName() != null) {
                 keys.add(blob.getName());
             }
@@ -260,7 +284,7 @@ public class GcsImageStorage implements ImageStorage {
             return;
         }
         try {
-            storage.delete(BlobId.of(properties.bucket(), objectKey));
+            storage().delete(BlobId.of(properties.bucket(), objectKey));
         } catch (RuntimeException e) {
             log.warn("Failed to delete bucket object {} during reconciliation: {}",
                     objectKey, e.getMessage());
