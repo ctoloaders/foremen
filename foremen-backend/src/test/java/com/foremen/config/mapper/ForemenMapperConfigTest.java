@@ -1,17 +1,14 @@
 package com.foremen.config.mapper;
 
-import org.junit.jupiter.api.Test;
-
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.classfile.Annotation;
+import java.lang.classfile.AnnotationValue;
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.ClassModel;
-import java.lang.classfile.Annotation;
-import java.lang.classfile.AnnotationElement;
-import java.lang.classfile.AnnotationValue;
-import java.lang.classfile.attribute.RuntimeInvisibleAnnotationsAttribute;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 class ForemenMapperConfigTest {
 
@@ -91,6 +88,25 @@ class ForemenMapperConfigTest {
         // nullValuePropertyMappingStrategy is an enum value
         AnnotationValue.OfEnum enumValue = annotation.elements().stream()
                 .filter(e -> e.name().equalsString("nullValuePropertyMappingStrategy"))
+                .map(e -> (AnnotationValue.OfEnum) e.value())
+                .findFirst()
+                .orElse(null);
+
+        assertThat(enumValue).isNotNull();
+        assertThat(enumValue.constantName().equalsString("IGNORE")).isTrue();
+    }
+
+    @Test
+    void shouldIgnoreUnmappedTargetProperties() throws IOException {
+        // The config sets unmappedTargetPolicy = IGNORE so the many intentional write-side target
+        // omissions (BaseEntity audit columns, i18n `name`, derived/recomputed fields) do not emit
+        // ~100 permanent "Unmapped target property" compile warnings.
+        ClassModel classModel = getClassModel();
+        Annotation annotation = findMapperConfigAnnotation(classModel);
+        assertThat(annotation).isNotNull();
+
+        AnnotationValue.OfEnum enumValue = annotation.elements().stream()
+                .filter(e -> e.name().equalsString("unmappedTargetPolicy"))
                 .map(e -> (AnnotationValue.OfEnum) e.value())
                 .findFirst()
                 .orElse(null);
