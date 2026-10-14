@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Spec notifications checklist",
+      "trigger": "UserPromptSubmit",
+      "matcher": "fs_write|str_replace|fs_append",
+      "action": {
+        "type": "agent",
+        "prompt": "Before creating or generating any spec requirements.md, clarify the NOTIFICATIONS the spec needs. 1) Which notifications? Enumerate every user-facing notification this feature must emit: for each, WHO is the recipient (which role or project member), WHAT triggers it (which domain state change or action), the notification TYPE (an i18n key, added as new types appear), the message text, and whether it carries a deep-link (a UI target the user is taken to on click; clickable only when a link is present). 2) Generic notification service. Notifications are persisted per-recipient and surfaced in the in-app bell (unread count, own-notifications-only, mark read/unread, delete). The base implementation is the in-app (DB) notification; email, SMS and Telegram delivery and the async delegating fan-out service are future work. Confirm whether this spec only EMITS via the generic notification service (recommended) rather than reimplementing delivery. 3) If notifications are unclear or unspecified, ASK the user which notifications are in scope for this spec before writing requirements. If the feature genuinely needs none, state that explicitly with a short justification. Only proceed with requirements creation after the notification set is confirmed or explicitly deemed empty."
+      },
+      "description": "Ensures the notifications a spec must emit (recipient, trigger, type i18n key, message, optional deep-link) are clarified during the requirements phase, and that specs emit via the generic notification service rather than reimplementing delivery.",
+      "enabled": true
+    }
+  ]
+}
