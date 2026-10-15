@@ -184,8 +184,9 @@ export async function getExpenseCategories(): Promise<ExpenseCategory[]> {
  *   E = Opis (description)
  *   F = Zakup Brutto (gross sum)
  *   G..J = VAT / Netto / Sprzedaż — NOT written
- *   K = Komentarz (file link)
+ *   K = Komentarz (primary file link — the PDF, or originals when PDF is off)
  *   L = Kto dodał (added by)
+ *   M = Oryginał (link to the always-saved untouched original photo(s))
  */
 export async function appendReceiptRowCentral(row: {
   date: string;
@@ -196,6 +197,7 @@ export async function appendReceiptRowCentral(row: {
   sum: number;
   fileLink: string;
   addedBy: string;
+  originalLink?: string;
   sumNote?: string;
 }): Promise<void> {
   const sheets = getSheets();
@@ -225,14 +227,22 @@ export async function appendReceiptRowCentral(row: {
     },
   });
 
-  // K..L: Komentarz (file link), Kto dodał
+  // K..M: Komentarz (primary link), Kto dodał, Oryginał (original photo link).
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `'${sheetName}'!K${insertRow}:L${insertRow}`,
+    range: `'${sheetName}'!K${insertRow}:M${insertRow}`,
     valueInputOption: "RAW",
     requestBody: {
-      values: [[row.fileLink, row.addedBy]],
+      values: [[row.fileLink, row.addedBy, row.originalLink || ""]],
     },
+  });
+
+  // Ensure the "Oryginał" header exists in M1 (idempotent — set once, harmless to re-set).
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${sheetName}'!M1`,
+    valueInputOption: "RAW",
+    requestBody: { values: [["Oryginał"]] },
   });
 
   // Note on the gross sum cell (column F = index 5) if provided.

@@ -278,16 +278,19 @@ export async function finalizeSave(ctx: Context, bot: Bot, state: ConversationSt
       files.push({ buffer, mimeType });
     }
 
-    // 2. Upload to the shared receipts folder (PDF preferred, photo fallback).
+    // 2. Upload to the shared receipts folder. Originals are ALWAYS saved; the primary artifact
+    //    is the PDF (or originals as fallback / when PDF is disabled).
     let fileLink: string;
+    let originalLink: string;
     try {
-      const links = await uploadReceiptArtifact(
+      const { links, originalLinks } = await uploadReceiptArtifact(
         state.storeName ?? "receipt",
         state.sum ?? 0,
         files,
         { telegramId },
       );
       fileLink = links.join("\n");
+      originalLink = originalLinks.join("\n");
     } catch (err: any) {
       logger.error("Drive upload failed", { telegramId, error: err.message });
       if (state.sessionId) {
@@ -327,6 +330,7 @@ export async function finalizeSave(ctx: Context, bot: Bot, state: ConversationSt
           sum: state.sum ?? 0,
           fileLink,
           addedBy,
+          originalLink,
           sumNote,
         }),
       );
