@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-01 (Requirements 1.2, 1.3, 1.6): work_report_rooms — the per-room quantity split
+        child of a WorkReport (design §3.2 / §3.4). One row per (report, room): the quantity of
+        the report's single work item performed in that room, together with the input mode used to
+        enter it and the plan-quantity snapshot captured for provenance.
+
+          report_id    : owner FK to work_reports(id), NOT NULL, ON DELETE CASCADE — deleting a
+                         report discards its room rows (R1.6). WorkReportRoomEntity maps this with
+                         @ManyToOne(optional=false) and the parent owns the collection with
+                         cascade = ALL + orphanRemoval.
+          room_id      : FK to rooms(id), NOT NULL — the room the quantity was performed in.
+                         No ON DELETE action (default RESTRICT): a room referenced by a reported
+                         row cannot be hard-deleted while the row exists.
+          quantity     : NUMERIC(19,3) NOT NULL — the resolved ABSOLUTE quantity in the work
+                         item's measurement unit. A PERCENT entry is resolved to an absolute value
+                         on save (planQuantity x percent / 100); the service enforces quantity > 0
+                         (R2.5), so no DB CHECK is added here.
+          plan_quantity: NUMERIC(19,3) NULL — the estimate's Plan_Quantity for (workItem, room)
+                         snapshotted at save for provenance (R2.6). Nullable: ABSOLUTE entry for a
+                         (workItem, room) with no plan leaves it null (R2.3).
+          input_mode   : VARCHAR(16) NOT NULL — the WorkReportInputMode enum (ABSOLUTE | PERCENT),
+                         persisted as its string name (R1.2).
+
+        UNIQUE (report_id, room_id) — a room appears at most once per report; a duplicate room in
+        one report is rejected at the service layer (R2.4) and barred at the DB level here.
+        INDEX on room_id — the reverse lookup / RESTRICT FK support on the referenced room.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + onFail="MARK_RAN", so a re-run
+        against an already-migrated database makes no schema change (R1.3). Registered LAST in
+        changelog.xml. The report_id FK references work_reports (changeset 163), which is included
+        before this one.
+    -->
+
+    <changeSet id="164-create-work-report-rooms" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_report_rooms"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_report_rooms">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: a report's room rows are discarded with the report (R1.6). -->
+            <column name="report_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The room the quantity was performed in. -->
+            <column name="room_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Resolved ABSOLUTE quantity in the work item's measurement unit (R2.2). -->
+            <column name="quantity" type="NUMERIC(19,3)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Plan_Quantity snapshot for provenance; null when no plan exists (R2.3, R2.6). -->
+            <column name="plan_quantity" type="NUMERIC(19,3)"/>
+            <!-- WorkReportInputMode enum (ABSOLUTE | PERCENT) persisted as its name (R1.2). -->
+            <column name="input_mode" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a report removes its room rows (R1.6). -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_report_rooms_report"
+            baseTableName="work_report_rooms"
+            baseColumnNames="report_id"
+            referencedTableName="work_reports"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Room FK: a room in use by a reported row cannot be hard-deleted while the row exists. -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_report_rooms_room"
+            baseTableName="work_report_rooms"
+            baseColumnNames="room_id"
+            referencedTableName="rooms"
+            referencedColumnNames="id"/>
+
+        <!-- R2.4: a room appears at most once per report. -->
+        <addUniqueConstraint
+            tableName="work_report_rooms"
+            columnNames="report_id, room_id"
+            constraintName="ux_work_report_rooms_report_room"/>
+
+        <!-- Reverse lookup / RESTRICT FK support on the referenced room. -->
+        <createIndex tableName="work_report_rooms" indexName="ix_work_report_rooms_room">
+            <column name="room_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

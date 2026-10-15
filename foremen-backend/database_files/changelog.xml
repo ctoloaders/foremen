@@ -604,4 +604,29 @@
          them to a single correctly-labelled block via idempotent REPLACE(); every token was already
          a valid resolver token, only its placement was wrong. Registered LAST, after 161. -->
     <include file="database_files/changesets/162-fix-template-token-placement.xml"/>
+    <!-- FOR-06-01 (R1.1, R1.3): work_reports — the project-scoped WorkReport persistence root (the
+         work a WORKER/FOREMAN records on an ACTIVE project). project_id FK ON DELETE CASCADE
+         (drives the project-scope filter); work_item_id / author_id / worker_id BIGINT NOT NULL FKs
+         (RESTRICT); performed_from/performed_to DATE NOT NULL; status VARCHAR(32) NOT NULL (no
+         server DRAFT); approved_by_id BIGINT NULL FK; approved_at TIMESTAMPTZ NULL; rejection_reason
+         TEXT NULL; client_unit_price NUMERIC(19,2) NOT NULL DEFAULT 0; total_quantity NUMERIC(19,3)
+         NOT NULL DEFAULT 0 (derived); revenue_value NUMERIC(19,2) NOT NULL DEFAULT 0 (derived); note
+         TEXT NULL; audit cols. Owns the revenue side only. Guarded by NOT tableExists + MARK_RAN.
+         Registered LAST. -->
+    <include file="database_files/changesets/163-create-work-reports.xml"/>
+    <!-- FOR-06-01 (R1.2, R1.3, R1.6): work_report_rooms — the per-room quantity split child of a
+         WorkReport. report_id FK ON DELETE CASCADE (R1.6); room_id FK; quantity NUMERIC(19,3) NOT
+         NULL; plan_quantity NUMERIC(19,3) NULL snapshot; input_mode VARCHAR(16) NOT NULL; UNIQUE
+         (report_id, room_id) (R2.4); audit cols. Guarded by NOT tableExists + MARK_RAN. The
+         report_id FK references work_reports (163), which is included before this one. Registered
+         LAST. -->
+    <include file="database_files/changesets/164-create-work-report-rooms.xml"/>
+    <!-- FOR-06-01 (R10.2, R10.4): seed the project-scoped WORK_REPORTS ABAC resource + per-role
+         grants (entity-creation-rules steps 1 & 2). ChangeSet A inserts the resource row; the grant
+         changeSets give ADMIN + FOREMAN full CRUD, WORKER full CRUD (row-scoped to own records in
+         WorkReportService), MANAGER READ+UPDATE+DELETE (no CREATE), and ESTIMATOR + FINANCIER READ.
+         CLIENT is deny-by-default (not seeded). Each changeSet is idempotent via onFail="MARK_RAN"
+         COUNT(*)=0 preconditions. Depends on the resources/roles/operations tables (002/003/004)
+         and the ESTIMATOR role (136). Registered LAST, after 164. -->
+    <include file="database_files/changesets/165-seed-work-reports-resource.xml"/>
 </databaseChangeLog>

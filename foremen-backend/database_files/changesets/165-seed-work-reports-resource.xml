@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-01 (R10.2, R10.4): seed the project-scoped WORK_REPORTS resource + per-role grants.
+         The resource is project-scoped; every grant below sits on top of the project-membership
+         filter. WORKER additionally carries a row-level own-records scope that the ABAC grant alone
+         cannot express — it is enforced in WorkReportService (own-records predicate), so the seed
+         simply grants WORKER full CRUD here. CLIENT is deny-by-default (no grant; see commented
+         block at the end). -->
+
+    <!-- Seed WORK_REPORTS resource into resources table -->
+    <changeSet id="165-seed-work-reports-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'WORK_REPORTS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="WORK_REPORTS"/>
+            <column name="name_ru" value="Отчёты о работах"/>
+            <column name="name_pl" value="Raporty o pracach"/>
+            <column name="description_ru" value="Отчёты о выполненных работах на активном проекте"/>
+            <column name="description_pl" value="Raporty o wykonanych pracach w aktywnym projekcie"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on WORK_REPORTS resource -->
+    <changeSet id="165-seed-work-reports-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'WORK_REPORTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_REPORTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_REPORTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN full CRUD on WORK_REPORTS resource (all workers; approver) -->
+    <changeSet id="165-seed-work-reports-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'WORK_REPORTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_REPORTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'FOREMAN' AND res.code = 'WORK_REPORTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER full CRUD on WORK_REPORTS resource. The grant is intentionally full CRUD; the
+         additional row-level restriction (a WORKER may reach only their OWN reports) cannot be
+         expressed in the ABAC matrix and is enforced in WorkReportService (own-records predicate on
+         LIST/READ/UPDATE/DELETE and self-only on CREATE). -->
+    <changeSet id="165-seed-work-reports-permissions-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'WORK_REPORTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_REPORTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'WORKER' AND res.code = 'WORK_REPORTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER READ + UPDATE + DELETE on WORK_REPORTS resource (no CREATE: oversight only,
+         a manager corrects or removes but never authors a report). -->
+    <changeSet id="165-seed-work-reports-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'WORK_REPORTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_REPORTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'MANAGER' AND res.code = 'WORK_REPORTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant ESTIMATOR READ on WORK_REPORTS resource (admin-staff read-only visibility). -->
+    <changeSet id="165-seed-work-reports-permissions-estimator" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ESTIMATOR' AND res.code = 'WORK_REPORTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'WORK_REPORTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'WORK_REPORTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER READ on WORK_REPORTS resource (admin-staff read-only visibility). -->
+    <changeSet id="165-seed-work-reports-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'WORK_REPORTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_REPORTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'WORK_REPORTS';
+        </sql>
+    </changeSet>
+
+    <!-- CLIENT is intentionally omitted (deny-by-default): a CLIENT never sees internal work
+         reporting, so no role_resources / role_resource_operations row is seeded for CLIENT +
+         WORK_REPORTS. Left as a commented placeholder so the deny-by-default decision is explicit:
+
+    <changeSet id="165-seed-work-reports-permissions-client" author="foremen">
+        ... intentionally NOT seeded: CLIENT has no access to WORK_REPORTS ...
+    </changeSet>
+    -->
+
+</databaseChangeLog>

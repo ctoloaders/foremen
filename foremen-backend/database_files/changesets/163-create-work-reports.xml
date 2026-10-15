@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-01 (Requirements 1.1, 1.3): the WorkReport persistence root — the
+        project-scoped anchor a WORKER (or a FOREMAN on their behalf) authors to record the
+        work actually performed on an ACTIVE project (design §3.1). Its per-room split lives
+        in the child table work_report_rooms (changeset 164).
+
+        This spec owns the REVENUE side only: client_unit_price (frozen EstimateLine.unitPrice
+        plus signed amendment deltas) and the derived revenue_value. The cost side
+        (worker_unit_price / cost_value / margin) is FOR-06-10/11/06 and is NOT persisted here.
+
+        Columns:
+          - id                : BIGSERIAL PK.
+          - project_id        : owner FK to projects, NOT NULL; ON DELETE CASCADE so deleting a
+                                project removes its reports. Drives the ProjectScopedService
+                                project filter (getProjectIdPath() -> "project.id", R10.2).
+          - work_item_id      : FK to work_items, NOT NULL; RESTRICT — a work item referenced by
+                                a report cannot be hard-deleted while the report exists.
+          - author_id         : user FK, NOT NULL; who CREATED the report. RESTRICT.
+          - worker_id         : user FK, NOT NULL; whose work the report records (equal to author
+                                for a WORKER self-report). RESTRICT.
+          - performed_from /
+            performed_to      : DATE NOT NULL; the [from, to] interval the work was performed in
+                                (performed_to >= performed_from enforced at the service layer).
+          - status            : VARCHAR(32) NOT NULL; the WorkReportStatus
+                                (SUBMITTED/APPROVED/REJECTED/CHANGES_REQUESTED). No server-side
+                                DRAFT — DRAFT is a client-only localStorage state (R7).
+          - approved_by_id    : user FK, NULL; the approver (set on approval / fast path). RESTRICT.
+          - approved_at       : TIMESTAMP WITH TIME ZONE, NULL; when it was approved.
+          - rejection_reason  : TEXT, NULL; required (non-empty) when status becomes REJECTED or
+                                CHANGES_REQUESTED (enforced at the service layer).
+          - client_unit_price : NUMERIC(19,2) NOT NULL DEFAULT 0; frozen revenue unit price (R6).
+          - total_quantity    : NUMERIC(19,3) NOT NULL DEFAULT 0; derived (Σ rooms.quantity, R1.4).
+          - revenue_value     : NUMERIC(19,2) NOT NULL DEFAULT 0; derived
+                                (round2(client_unit_price × total_quantity), R1.5).
+          - note              : TEXT, NULL; free-form author note.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: guarded by NOT tableExists + MARK_RAN, so a re-run against an
+        already-migrated database makes no schema change (R1.3). Registered LAST in
+        changelog.xml.
+    -->
+
+    <changeSet id="163-create-work-reports" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_reports"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="work_reports">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a project removes its reports; drives the project-scope filter. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The reported work item (R2.1); on the project's estimate (R3.4). -->
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Who created the report. -->
+            <column name="author_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Whose work the report records (== author for a WORKER self-report). -->
+            <column name="worker_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The performed-work date interval (performed_to >= performed_from at the service). -->
+            <column name="performed_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="performed_to" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <!-- WorkReportStatus (SUBMITTED/APPROVED/REJECTED/CHANGES_REQUESTED); no server DRAFT. -->
+            <column name="status" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The approver (set on approval / fast path); nullable until decided. -->
+            <column name="approved_by_id" type="BIGINT"/>
+            <!-- When it was approved; nullable until decided. -->
+            <column name="approved_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <!-- Required (non-empty) on REJECTED / CHANGES_REQUESTED, enforced at the service. -->
+            <column name="rejection_reason" type="TEXT"/>
+            <!-- Frozen revenue unit price (R6); never hand-entered beyond the derivation. -->
+            <column name="client_unit_price" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Derived Σ rooms.quantity (R1.4); never hand-entered. -->
+            <column name="total_quantity" type="NUMERIC(19,3)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Derived round2(client_unit_price × total_quantity) (R1.5); never hand-entered. -->
+            <column name="revenue_value" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Free-form author note. -->
+            <column name="note" type="TEXT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its reports (and cascades to work_report_rooms). -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_reports_project"
+            baseTableName="work_reports"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Work item FK: cannot hard-delete a work item still referenced by a report. -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_reports_work_item"
+            baseTableName="work_reports"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Author FK: cannot hard-delete a user who authored a report. -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_reports_author"
+            baseTableName="work_reports"
+            baseColumnNames="author_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Worker FK: cannot hard-delete a user whose work a report records. -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_reports_worker"
+            baseTableName="work_reports"
+            baseColumnNames="worker_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Approver FK (nullable): cannot hard-delete a user who approved a report. -->
+        <addForeignKeyConstraint
+            constraintName="fk_work_reports_approved_by"
+            baseTableName="work_reports"
+            baseColumnNames="approved_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- The project-scoped list load of a project's reports (ProjectScopedService filter). -->
+        <createIndex tableName="work_reports" indexName="ix_work_reports_project">
+            <column name="project_id"/>
+        </createIndex>
+
+        <!-- The WORKER own-records row-level scope load (list intersected with worker=caller, R10.5). -->
+        <createIndex tableName="work_reports" indexName="ix_work_reports_worker">
+            <column name="worker_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
