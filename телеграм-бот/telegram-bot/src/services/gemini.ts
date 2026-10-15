@@ -47,7 +47,9 @@ export function parseGeminiResponse(responseText: string): GeminiReceiptData | n
     return {
       description: parsed.description.trim(),
       store_name: parsed.store_name.trim(),
-      gross_amount: typeof parsed.gross_amount === "number" ? parsed.gross_amount : null,
+      // Receipt amounts are always positive. If OCR returns a negative number (e.g. the model
+      // read a minus sign or a refund line), normalize it to its absolute value.
+      gross_amount: typeof parsed.gross_amount === "number" ? Math.abs(parsed.gross_amount) : null,
     };
   } catch {
     return null;

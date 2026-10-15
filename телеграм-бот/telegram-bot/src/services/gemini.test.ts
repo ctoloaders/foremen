@@ -120,6 +120,25 @@ describe("parseGeminiResponse — Property 5: Gemini response parsing extracts v
     );
   });
 
+  it("negative gross_amount → normalized to its absolute value (receipts are always positive)", () => {
+    fc.assert(
+      fc.property(
+        nonEmptyString,
+        nonEmptyString,
+        fc.double({ min: 0.01, max: 1_000_000, noNaN: true, noDefaultInfinity: true }),
+        (description, storeName, magnitude) => {
+          const json = JSON.stringify({ description, store_name: storeName, gross_amount: -magnitude });
+          const result = parseGeminiResponse(json);
+
+          expect(result).not.toBeNull();
+          expect(result!.gross_amount).toBe(magnitude);
+          expect(result!.gross_amount).toBeGreaterThan(0);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
   it("gross_amount as string → returns null for that field", () => {
     fc.assert(
       fc.property(nonEmptyString, nonEmptyString, fc.string(), (description, storeName, amountStr) => {
