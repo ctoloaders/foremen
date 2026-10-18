@@ -304,6 +304,193 @@
         "chatSessionId": "sess_82923bcb-6de3-4820-9d02-c0b617d58b90",
         "timestamp": 1792061368560
       }
+    ],
+    "A1.1 Add the progress read projection": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386330
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080394477
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080781066
+      }
+    ],
+    "A1.2 Add the bulk create service method": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386378
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080400522
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080781645
+      }
+    ],
+    "A1.3 Backend: controller endpoints": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386419
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080786304
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792081198619
+      }
+    ],
+    "A1.4 Frontend: api client + types": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386458
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792081202958
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792081559161
+      }
+    ],
+    "A1.5 Frontend: matrix surface (replaces the builder)": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386561
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792081563879
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082215921
+      }
+    ],
+    "A1.6 Backend tests": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386591
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792081214075
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792081559969
+      }
+    ],
+    "A1.7 i18n keys (PL + RU) + backend batch messages": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386640
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082219921
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082343909
+      }
+    ],
+    "A1.8 Frontend tests": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386688
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082223272
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082231450
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082347649
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082733228
+      }
+    ],
+    "A1.9 Update test-cases.md": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386722
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082737234
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082931899
+      }
+    ],
+    "A1.10 Final verification + checkpoint (Amendment A1)": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080386757
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792082935718
+      },
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792083102945
+      }
+    ],
+    "A1. Backend: progress projection + bulk create": [
+      {
+        "executionId": "898d42f4-23e9-4985-9da5-62f1000c2b94",
+        "chatSessionId": "sess_243d1072-c95c-425b-8a7e-5b60d5c7c442",
+        "timestamp": 1792080781685
+      }
     ]
   }
 }
