@@ -1,0 +1,629 @@
+package com.foremen.service;
+
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.unit.DataSize;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.foremen.config.image.ImageStorageProperties;
+import com.foremen.dao.AdminDao;
+import com.foremen.dao.ProcurementDocumentDao;
+import com.foremen.dao.model.MatchTier;
+import com.foremen.dao.model.ProcessingStatus;
+import com.foremen.dao.model.ProcurementDocumentEntity;
+import com.foremen.dao.model.ProcurementLineEntity;
+import com.foremen.dao.model.ProjectEntity;
+import com.foremen.dao.model.ProjectStatus;
+import com.foremen.dao.model.UserEntity;
+import com.foremen.exception.ForemenApiException;
+import com.foremen.mapper.ServiceToDaoMapper;
+import com.foremen.service.audit.AuditLogDao;
+import com.foremen.service.document.pdf.InMemoryMultipartFile;
+import com.foremen.service.image.ImageStorage;
+import com.foremen.service.model.ProcurementDocumentServiceExtendedModel;
+import com.foremen.service.model.ProcurementDocumentServiceModel;
+import com.foremen.service.model.mapper.ProcurementDocumentServiceMapper;
+import com.foremen.service.ocr.OcrFailedException;
+import com.foremen.service.ocr.OcrResult;
+import com.foremen.service.ocr.OcrService;
+import com.foremen.service.ocr.OcrUnavailableException;
+import com.foremen.service.ocr.ParsedLine;
+import com.foremen.service.ocr.ProcessedPage;
+import com.foremen.service.procurement.ExtractedLine;
+import com.foremen.service.procurement.MatchEngine;
+import com.foremen.service.procurement.MatchResult;
+import com.foremen.service.procurement.PlannedMaterial;
+import com.foremen.service.procurement.PlannedMaterialCandidateProvider;
+
+import jakarta.persistence.EntityManager;
+
+/**
+ * FOR-06-03 (Requirements 2, 3, 7, 8, 1.5, 9.1, 11.1; design §5.1) — the project-scoped service
+ * behind procurement intake + automatic matching. It owns the {@code ProcurementDocument} lifecycle:
+ * the {@link #upload(Long, MultipartFile) upload} of a raw receipt/invoice through the shared
+ * {@link ImageStorage} seam (R2), the OCR + per-line parse + match {@link #process(ProcurementDocumentEntity)
+ * orchestration} that transitions a document {@code UPLOADED → PROCESSING → PARSED/FAILED} (R3), the
+ * {@link #reprocess(Long) re-process} on the already-stored raw bytes (R8), and {@link #delete(Long)}
+ * with cascade + object-key cleanup (R1.4, R11.1).
+ *
+ * <p>Following the FOR-03-04a single-contract shape (mirrors {@link WorkReportService}), it
+ * implements exactly one CRUD contract — {@link ProjectScopedService} — supplies the standard CRUD
+ * plumbing ({@link #getDao()}, {@link #getMapper()}, {@link #getEntityManager()},
+ * {@link #getDaoModelClass()}, {@link #getAuditLogDao()}), the single mandatory per-entity override
+ * {@link #getProjectIdPath()} &rarr; {@code "project.id"} (entity-creation-rules step 4, R7.2), and
+ * wires {@link #allowedProjectIds(Long)} to {@link ProjectAccessCache}.
+ *
+ * <p><b>Stage gate (R7.1).</b> {@link #upload}/{@link #reprocess} are refused unless the owning
+ * project is {@code ACTIVE} ({@link #STAGE_NOT_ACTIVE}); reads are allowed on {@code ACTIVE} and
+ * {@code COMPLETED} (the tab itself is hidden on {@code DRAFT}). <b>R1.5 invariant.</b> Each line's
+ * {@code (matchedMaterialId, tier, status)} is checked via
+ * {@link MatchEngine#satisfiesInvariant(MatchResult)} before it is persisted. <b>No notifications</b>
+ * are emitted (R9.1) — procurement intake is a synchronous authoring action with no cross-role
+ * handoff.
+ */
+@Service
+@Transactional
+public class ProcurementDocumentService
+        implements ProjectScopedService<ProcurementDocumentServiceModel,
+        ProcurementDocumentServiceExtendedModel, ProcurementDocumentEntity, Long> {
+
+    // --- Message codes (bundle wiring is task 9.1) ---
+    static final String NOT_FOUND_MESSAGE = "error.entity.not.found";
+    static final String UPLOAD_STORAGE_UNAVAILABLE = "error.procurement.upload.storageUnavailable";
+    static final String UPLOAD_UNSUPPORTED_TYPE = "error.procurement.upload.unsupportedType";
+    static final String UPLOAD_TOO_LARGE = "error.procurement.upload.tooLarge";
+    static final String STAGE_NOT_ACTIVE = "error.procurement.stage.notActive";
+
+    // --- Stable failure reason codes surfaced to the UI on FAILED (R3.4/R3.5) ---
+    static final String FAILURE_OCR_DISABLED = "procurement.ocr.disabled";
+    static final String FAILURE_OCR_NO_LINES = "procurement.ocr.noLines";
+    static final String FAILURE_OCR_FAILED = "procurement.ocr.failed";
+
+    /** The accepted upload content types (R2.2): the raster images plus PDF. */
+    static final Set<String> ACCEPTED_CONTENT_TYPES = Set.of(
+            "image/png", "image/jpeg", "image/webp", "application/pdf");
+
+    /** Fallback max upload size when {@code foremen.image-storage.max-upload-size} is unset (mirrors GcsImageStorage). */
+    private static final DataSize DEFAULT_MAX_UPLOAD_SIZE = DataSize.ofMegabytes(5);
+
+    /** Signed-download-URL TTL for the raw/processed renditions resolved on the read path. */
+    private static final long IMAGE_URL_TTL_SECONDS = 600L;
+
+    private final ProcurementDocumentDao documentDao;
+    private final ProjectAccessCache projectAccessCache;
+    private final ProcurementDocumentServiceMapper serviceMapper;
+    private final AuditLogDao auditLogDao;
+    private final EntityManager entityManager;
+    private final ImageStorage imageStorage;
+    private final OcrService ocrService;
+    private final MatchEngine matchEngine;
+    private final PlannedMaterialCandidateProvider candidateProvider;
+    private final DataSize maxUploadSize;
+
+    public ProcurementDocumentService(ProcurementDocumentDao documentDao,
+                                      ProjectAccessCache projectAccessCache,
+                                      ProcurementDocumentServiceMapper serviceMapper,
+                                      AuditLogDao auditLogDao,
+                                      EntityManager entityManager,
+                                      ImageStorage imageStorage,
+                                      OcrService ocrService,
+                                      MatchEngine matchEngine,
+                                      PlannedMaterialCandidateProvider candidateProvider,
+                                      ImageStorageProperties imageStorageProperties) {
+        this.documentDao = documentDao;
+        this.projectAccessCache = projectAccessCache;
+        this.serviceMapper = serviceMapper;
+        this.auditLogDao = auditLogDao;
+        this.entityManager = entityManager;
+        this.imageStorage = imageStorage;
+        this.ocrService = ocrService;
+        this.matchEngine = matchEngine;
+        this.candidateProvider = candidateProvider;
+        this.maxUploadSize = parseMaxUploadSize(
+                imageStorageProperties == null ? null : imageStorageProperties.maxUploadSize());
+    }
+
+    // --- CRUD plumbing (inherited via ProjectScopedService) ------------------------------------
+
+    @Override
+    public AdminDao<ProcurementDocumentEntity, Long> getDao() {
+        return documentDao;
+    }
+
+    @Override
+    public AuditLogDao getAuditLogDao() {
+        return auditLogDao;
+    }
+
+    @Override
+    public ServiceToDaoMapper<ProcurementDocumentEntity, ProcurementDocumentServiceModel,
+            ProcurementDocumentServiceExtendedModel> getMapper() {
+        return serviceMapper;
+    }
+
+    @Override
+    public EntityManager getEntityManager() {
+        return entityManager;
+    }
+
+    @Override
+    public Class<ProcurementDocumentEntity> getDaoModelClass() {
+        return ProcurementDocumentEntity.class;
+    }
+
+    // --- ProjectScopedService overrides --------------------------------------------------------
+
+    /** The single mandatory per-entity override (entity-creation-rules step 4, R7.2). */
+    @Override
+    public String getProjectIdPath() {
+        return "project.id";
+    }
+
+    @Override
+    public Set<Long> allowedProjectIds(Long userId) {
+        return projectAccessCache.get(userId);
+    }
+
+    // --- Read path (fill the mapper-left-null uploader name + image URLs + matched names) ------
+
+    /**
+     * Single-document review read (R6): the inherited project-scope access guard runs first, then
+     * the service fills the fields the mapper deliberately left {@code null} — the uploader's display
+     * name, the resolved raw + processed image URLs, and each line's matched-material localized name
+     * (from the FOR-05-05b candidate projection, {@code ru → pl → code}).
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public ProcurementDocumentServiceExtendedModel findById(Long id) {
+        assertProjectAccess(id);
+        ProcurementDocumentEntity entity = documentDao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+        ProcurementDocumentServiceExtendedModel model = serviceMapper.toServiceExtendedModel(entity);
+        resolveReadFields(model, entity);
+        return model;
+    }
+
+    // --- Upload (R2) ---------------------------------------------------------------------------
+
+    /**
+     * Uploads a primary procurement document on an {@code ACTIVE} project (R2): validates storage
+     * availability (R2.4), the content type (R2.2) and the size (R2.3) <b>before</b> storing
+     * anything, stores the raw bytes through {@link ImageStorage#storeObject} namespaced per project
+     * (R2.1), persists an {@code UPLOADED} document with {@code uploadedAt}/{@code uploadedBy}/
+     * {@code sourceMimeType}, writes a CREATE audit row (R11.1), transitions the document to
+     * {@code PROCESSING} and invokes {@link #process} (R2.5).
+     *
+     * @param projectId the owning {@code ACTIVE} project
+     * @param file      the uploaded image or PDF
+     * @return the persisted document as a read-extended model (status {@code PARSED}/{@code FAILED}/
+     *         {@code UPLOADED} depending on the OCR outcome)
+     */
+    @Transactional
+    public ProcurementDocumentServiceExtendedModel upload(Long projectId, MultipartFile file) {
+        assertProjectActive(projectId);
+
+        // R2.4 — object store not configured: reject gracefully, storing nothing, creating no document.
+        if (!imageStorage.isConfigured()) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, UPLOAD_STORAGE_UNAVAILABLE);
+        }
+        // R2.2 — content type must be an accepted image or PDF.
+        String contentType = file == null ? null : file.getContentType();
+        if (contentType == null || !ACCEPTED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, UPLOAD_UNSUPPORTED_TYPE, contentType);
+        }
+        // R2.3 — size guard (reusing the ImageStorage size rule), rejecting before storing.
+        if (file.isEmpty() || file.getSize() > maxUploadSize.toBytes()) {
+            if (file.getSize() > maxUploadSize.toBytes()) {
+                throw new ForemenApiException(HttpStatus.BAD_REQUEST, UPLOAD_TOO_LARGE,
+                        file.getSize(), maxUploadSize.toBytes());
+            }
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, UPLOAD_UNSUPPORTED_TYPE, contentType);
+        }
+
+        // R2.1 — store the raw bytes, then capture them for the inline OCR run (no re-read).
+        byte[] rawBytes = bytesOf(file);
+        String rawObjectKey = imageStorage.storeObject(file, "procurement/" + projectId + "/");
+
+        ProcurementDocumentEntity document = new ProcurementDocumentEntity();
+        document.setProject(reference(ProjectEntity.class, projectId));
+        document.setUploadedBy(requireCaller());
+        document.setRawObjectKey(rawObjectKey);
+        document.setSourceMimeType(contentType);
+        document.setStatus(ProcessingStatus.UPLOADED);
+        document.setUploadedAt(OffsetDateTime.now());
+
+        ProcurementDocumentEntity saved = documentDao.save(document);
+        entityManager.flush();
+        saveAudit(null, saved, "CREATE");
+
+        // R2.5 — transition to PROCESSING and run the OCR + parse + match orchestration inline.
+        saved.setStatus(ProcessingStatus.PROCESSING);
+        process(saved, rawBytes);
+        return findReadModel(saved);
+    }
+
+    // --- Re-process (R8) -----------------------------------------------------------------------
+
+    /**
+     * Re-runs OCR + parse + matching on an already-stored document's raw bytes (R8), only for a
+     * {@code FAILED} or {@code PARSED} document on an {@code ACTIVE} project. Reads the raw bytes back
+     * from {@link ImageStorage#readObject}, cleans up the superseded processed rendition
+     * ({@link ImageStorage#deleteIfOrphan}), replaces all lines atomically, and transitions
+     * {@code PROCESSING → PARSED/FAILED}; on failure the raw upload stays intact (R8.3). Writes an
+     * UPDATE audit row (R11.1).
+     *
+     * @param id the document to re-process
+     * @return the re-processed document as a read-extended model
+     */
+    @Transactional
+    public ProcurementDocumentServiceExtendedModel reprocess(Long id) {
+        assertProjectAccess(id);
+        ProcurementDocumentEntity document = documentDao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+
+        // R7.1 — re-process is a mutation; refuse it unless the project is ACTIVE.
+        assertProjectActive(document.getProject() == null ? null : document.getProject().getId());
+
+        // R8.1 — only FAILED or PARSED documents are re-processable.
+        if (document.getStatus() != ProcessingStatus.FAILED
+                && document.getStatus() != ProcessingStatus.PARSED) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, NOT_FOUND_MESSAGE, id);
+        }
+
+        byte[] rawBytes = imageStorage.readObject(document.getRawObjectKey());
+        document.setStatus(ProcessingStatus.PROCESSING);
+        process(document, rawBytes);
+        return findReadModel(document);
+    }
+
+    // --- Delete (R1.4, R11.1) ------------------------------------------------------------------
+
+    /**
+     * Deletes a document: the inherited project-scope access guard runs first, the owned
+     * {@code procurement_lines} are discarded by the cascade (R1.4), both stored object keys are
+     * cleaned up via {@link ImageStorage#deleteIfOrphan} (keeping a key still referenced elsewhere),
+     * and a DELETE audit row is written (R11.1).
+     */
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        assertProjectAccess(id);
+        ProcurementDocumentEntity document = documentDao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+        String rawKey = document.getRawObjectKey();
+        String processedKey = document.getProcessedObjectKey();
+
+        saveAudit(document, null, "DELETE");
+        documentDao.deleteById(id);
+        entityManager.flush();
+
+        // deleteIfOrphan re-checks the DB; the just-deleted document's row is already gone, so a key
+        // referenced ONLY by it is reclaimed, while a key shared with another document is kept.
+        imageStorage.deleteIfOrphan(processedKey);
+        imageStorage.deleteIfOrphan(rawKey);
+    }
+
+    /** Public alias for the delete endpoint (R6/R8 controller, task 6.1). */
+    @Transactional
+    public void delete(Long id) {
+        deleteById(id);
+    }
+
+    // --- OCR + parse + match orchestration (R3) ------------------------------------------------
+
+    /**
+     * The OCR + parse + match orchestration (R3). Runs the {@link OcrService} on the stored raw
+     * bytes, stores the processed white-background rendition(s) (R3.0), matches each extracted line
+     * via the {@link MatchEngine} over the project's candidate set, replaces the document's lines
+     * atomically with sequential {@code lineNo} from 1 (R3.3), sets {@code supplierName}/
+     * {@code documentTotal}/{@code parsedAt}, and transitions {@code PARSED}. On a provider failure,
+     * unparseable output or no lines it transitions {@code FAILED} with a stable {@code failureReason}
+     * while retaining the raw object + document (R3.4). When the OCR provider is disabled
+     * ({@link OcrUnavailableException}) the document is left {@code UPLOADED} (R3.5) — not {@code FAILED}.
+     * Writes an audit row for the lifecycle op (R11.1).
+     *
+     * @param document the document to process (status already {@code PROCESSING})
+     * @param rawBytes the stored raw upload bytes
+     */
+    void process(ProcurementDocumentEntity document, byte[] rawBytes) {
+        Long projectId = document.getProject() == null ? null : document.getProject().getId();
+        String keyNamespace = "procurement/" + projectId + "/processed/";
+
+        OcrResult result;
+        try {
+            result = ocrService.process(rawBytes, document.getSourceMimeType(), keyNamespace);
+        } catch (OcrUnavailableException disabled) {
+            // R3.5 — provider disabled: leave the document UPLOADED (OCR never attempted), no lines.
+            document.setStatus(ProcessingStatus.UPLOADED);
+            document.setFailureReason(FAILURE_OCR_DISABLED);
+            persistLifecycle(document, "PROCESS");
+            return;
+        } catch (OcrFailedException failed) {
+            // R3.4 — configured but this document could not be processed: FAILED, raw retained.
+            markFailed(document, FAILURE_OCR_FAILED);
+            return;
+        } catch (RuntimeException unexpected) {
+            // Any other provider/runtime error maps to the same FAILED-with-raw-retained outcome.
+            markFailed(document, FAILURE_OCR_FAILED);
+            return;
+        }
+
+        // R3.4 — a configured provider that extracted no lines is a failure (nothing to persist).
+        if (result == null || result.lines() == null || result.lines().isEmpty()) {
+            markFailed(document, FAILURE_OCR_NO_LINES);
+            return;
+        }
+
+        // R3.0 — store the processed white-background rendition(s); the FIRST page's key is kept on
+        // the document (per-page keys share the "{documentUuid}/p{n}.png" convention for the viewer).
+        String previousProcessedKey = document.getProcessedObjectKey();
+        String processedObjectKey = storeProcessedPages(result.pages(), keyNamespace);
+
+        // R5/R4 — match each extracted line against the project's planned-material candidate set.
+        List<PlannedMaterial> candidates = candidateProvider.candidatesFor(projectId);
+        List<ProcurementLineEntity> freshLines = buildLines(document, result.lines(), candidates);
+
+        // R8.2 — replace the previous lines ATOMICALLY: clear + flush the orphan deletes before the
+        // fresh inserts so the (document_id, line_no) unique constraint never fires mid-flush.
+        if (!document.getLines().isEmpty()) {
+            document.getLines().clear();
+            entityManager.flush();
+        }
+        document.getLines().addAll(freshLines);
+
+        document.setProcessedObjectKey(processedObjectKey);
+        document.setSupplierName(result.supplierName());
+        document.setDocumentTotal(result.documentTotal());
+        document.setParsedAt(OffsetDateTime.now());
+        document.setFailureReason(null);
+        document.setStatus(ProcessingStatus.PARSED);
+        persistLifecycle(document, "PROCESS");
+
+        // R8.1 — a re-process that produced a new processed rendition supersedes the old one.
+        if (previousProcessedKey != null && !previousProcessedKey.equals(processedObjectKey)) {
+            imageStorage.deleteIfOrphan(previousProcessedKey);
+        }
+    }
+
+    /**
+     * Builds the fresh {@link ProcurementLineEntity} rows from the parsed lines, assigning sequential
+     * {@code lineNo} from 1 (R3.3) and the {@link MatchEngine} proposal per line. The R1.5 invariant
+     * is asserted for each line's match result before it is attached.
+     */
+    private List<ProcurementLineEntity> buildLines(ProcurementDocumentEntity document,
+                                                   List<ParsedLine> parsed,
+                                                   List<PlannedMaterial> candidates) {
+        List<ProcurementLineEntity> lines = new ArrayList<>(parsed.size());
+        int lineNo = 1;
+        for (ParsedLine parsedLine : parsed) {
+            MatchResult match = matchEngine.match(
+                    new ExtractedLine(parsedLine.rawName(), parsedLine.manufacturerHint()),
+                    candidates);
+            // R1.5 — matchedMaterialId == null ⟺ tier == NONE, status consistent; fail fast if not.
+            if (!MatchEngine.satisfiesInvariant(match)) {
+                throw new IllegalStateException(
+                        "MatchEngine returned a result violating the R1.5 invariant: " + match);
+            }
+
+            ProcurementLineEntity line = new ProcurementLineEntity();
+            line.setDocument(document);
+            line.setLineNo(lineNo++);
+            line.setRawName(parsedLine.rawName());
+            line.setQuantity(parsedLine.quantity());
+            line.setUnitHint(parsedLine.unitHint());
+            line.setUnitPrice(parsedLine.unitPrice());
+            line.setLineTotal(parsedLine.lineTotal());
+            line.setManufacturerHint(parsedLine.manufacturerHint());
+            line.setMatchedMaterialId(match.matchedMaterialId());
+            line.setMatchTier(match.tier());
+            line.setMatchStatus(match.status());
+            lines.add(line);
+        }
+        return lines;
+    }
+
+    /**
+     * Stores the processed white-background rendition pages via {@link ImageStorage#storeObject},
+     * returning the first page's object key (kept on the document; the per-page viewer enumerates the
+     * rest). Returns {@code null} when there are no pages to store.
+     */
+    private String storeProcessedPages(List<ProcessedPage> pages, String keyNamespace) {
+        if (pages == null || pages.isEmpty()) {
+            return null;
+        }
+        String firstKey = null;
+        int pageNo = 1;
+        for (ProcessedPage page : pages) {
+            if (page == null || page.pngBytes() == null || page.pngBytes().length == 0) {
+                pageNo++;
+                continue;
+            }
+            MultipartFile pageFile = new InMemoryMultipartFile(
+                    "page", "p" + pageNo + ".png", "image/png", page.pngBytes());
+            String key = imageStorage.storeObject(pageFile, keyNamespace);
+            if (firstKey == null) {
+                firstKey = key;
+            }
+            pageNo++;
+        }
+        return firstKey;
+    }
+
+    /** Transitions the document to {@code FAILED} with a stable reason, retaining the raw object (R3.4). */
+    private void markFailed(ProcurementDocumentEntity document, String failureReason) {
+        document.setStatus(ProcessingStatus.FAILED);
+        document.setFailureReason(failureReason);
+        persistLifecycle(document, "PROCESS");
+    }
+
+    /** Saves a lifecycle transition and writes an audit row (R11.1). */
+    private void persistLifecycle(ProcurementDocumentEntity document, String operation) {
+        ProcurementDocumentEntity saved = documentDao.save(document);
+        entityManager.flush();
+        saveAudit(null, saved, operation);
+    }
+
+    // --- Read-field resolution -----------------------------------------------------------------
+
+    private ProcurementDocumentServiceExtendedModel findReadModel(ProcurementDocumentEntity entity) {
+        ProcurementDocumentServiceExtendedModel model = serviceMapper.toServiceExtendedModel(entity);
+        resolveReadFields(model, entity);
+        return model;
+    }
+
+    /**
+     * Fills the read fields the mapper deliberately left {@code null}: the uploader display name, the
+     * resolved raw + processed image URLs ({@link ImageStorage#toCdnUrl}, falling back to a signed
+     * download URL for a private bucket), and each line's matched-material localized name from the
+     * candidate projection ({@code ru → pl → code}).
+     */
+    private void resolveReadFields(ProcurementDocumentServiceExtendedModel model,
+                                   ProcurementDocumentEntity entity) {
+        if (entity.getUploadedBy() != null) {
+            model.setUploaderName(entity.getUploadedBy().getName());
+        }
+        model.setRawImageUrl(resolveImageUrl(entity.getRawObjectKey()));
+        model.setProcessedImageUrl(resolveImageUrl(entity.getProcessedObjectKey()));
+        fillMatchedMaterialNames(model, entity);
+    }
+
+    private String resolveImageUrl(String objectKey) {
+        if (objectKey == null) {
+            return null;
+        }
+        String cdnUrl = imageStorage.toCdnUrl(objectKey);
+        if (cdnUrl != null) {
+            return cdnUrl;
+        }
+        return imageStorage.signedDownloadUrl(objectKey, IMAGE_URL_TTL_SECONDS);
+    }
+
+    /**
+     * Replaces each read-line's {@code matchedMaterialName} (left {@code null} by the mapper) with the
+     * matched material's localized display name, resolved from the project's candidate projection
+     * (the same {@code ru → pl → code} source the engine matched over). An unmatched line keeps a
+     * {@code null} name.
+     */
+    private void fillMatchedMaterialNames(ProcurementDocumentServiceExtendedModel model,
+                                          ProcurementDocumentEntity entity) {
+        if (model.getLines() == null || model.getLines().isEmpty()) {
+            return;
+        }
+        Long projectId = entity.getProject() == null ? null : entity.getProject().getId();
+        Map<Long, String> namesById = matchedNamesById(projectId);
+        List<com.foremen.controller.model.ProcurementLineModel> resolved =
+                new ArrayList<>(model.getLines().size());
+        for (com.foremen.controller.model.ProcurementLineModel line : model.getLines()) {
+            String name = line.matchedMaterialId() == null
+                    ? null
+                    : namesById.get(line.matchedMaterialId());
+            resolved.add(new com.foremen.controller.model.ProcurementLineModel(
+                    line.lineNo(), line.rawName(), line.quantity(), line.unitHint(),
+                    line.unitPrice(), line.lineTotal(), line.manufacturerHint(),
+                    line.matchedMaterialId(), name, line.matchTier(), line.matchPercent(),
+                    line.matchStatus()));
+        }
+        model.setLines(resolved);
+    }
+
+    /** The candidate materials' display names keyed by material id (the engine's primary name). */
+    private Map<Long, String> matchedNamesById(Long projectId) {
+        Map<Long, String> byId = new HashMap<>();
+        if (projectId == null) {
+            return byId;
+        }
+        for (PlannedMaterial candidate : candidateProvider.candidatesFor(projectId)) {
+            if (candidate == null || candidate.materialId() == null) {
+                continue;
+            }
+            byId.put(candidate.materialId(), primaryName(candidate));
+        }
+        return byId;
+    }
+
+    /** The candidate's display name: first non-blank localized name, else {@code null}. */
+    private static String primaryName(PlannedMaterial candidate) {
+        if (candidate.names() == null) {
+            return null;
+        }
+        for (String name : candidate.names()) {
+            if (name != null && !name.isBlank()) {
+                return name;
+            }
+        }
+        return null;
+    }
+
+    // --- Stage gate + caller helpers -----------------------------------------------------------
+
+    /** Refuses a mutation (upload / re-process) unless the owning project is {@code ACTIVE} (R7.1). */
+    private void assertProjectActive(Long projectId) {
+        if (projectId == null) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, (Object) null);
+        }
+        ProjectEntity project = entityManager.find(ProjectEntity.class, projectId);
+        if (project == null) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, projectId);
+        }
+        if (project.getStatus() != ProjectStatus.ACTIVE) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, STAGE_NOT_ACTIVE);
+        }
+    }
+
+    /** The authenticated caller as a managed reference; 401 when unresolved. */
+    private UserEntity requireCaller() {
+        Long callerId = callerUserId();
+        if (callerId == null) {
+            throw new ForemenApiException(HttpStatus.UNAUTHORIZED, NOT_FOUND_MESSAGE);
+        }
+        return reference(UserEntity.class, callerId);
+    }
+
+    private static Long callerUserId() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder
+                .getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        String name = auth.getName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.valueOf(name.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** A managed JPA reference ({@code getReference}, no SELECT) for a non-null id, else {@code null}. */
+    private <T> T reference(Class<T> type, Long id) {
+        return id == null ? null : entityManager.getReference(type, id);
+    }
+
+    private static byte[] bytesOf(MultipartFile file) {
+        try {
+            return file.getBytes();
+        } catch (java.io.IOException e) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, UPLOAD_UNSUPPORTED_TYPE,
+                    file.getContentType());
+        }
+    }
+
+    private static DataSize parseMaxUploadSize(String configured) {
+        if (configured == null || configured.isBlank()) {
+            return DEFAULT_MAX_UPLOAD_SIZE;
+        }
+        return DataSize.parse(configured.strip());
+    }
+}

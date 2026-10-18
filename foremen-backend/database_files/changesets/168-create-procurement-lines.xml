@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-03 (Requirements 1.2, 1.3, 1.4): procurement_lines — the ProcurementLine child of a
+        procurement_documents row (design §4.2). One row per extracted purchased item, carrying the
+        verbatim OCR fields and the per-line proposed match + tier produced by the pure MatchEngine.
+
+        The line is owned by its document: deleting (or cascading away) a procurement_documents row
+        discards its lines (ON DELETE CASCADE, R1.4). matchedMaterialId is a SOFT FK by id to the
+        chosen Concrete_Material (R5 candidate) — NOT a JPA/DB @ManyToOne — because the matched
+        material may be a ConstructionMaterial or a FinishingMaterial projected uniformly through the
+        FOR-05-05b candidate projection, so no DB foreign key is declared on it. The R1.5 invariant
+        (matched_material_id null IFF match_tier = NONE, and otherwise on the project's estimate) is
+        enforced in ProcurementDocumentService, not by a DB constraint.
+
+        Columns:
+          - id                   : BIGSERIAL PK.
+          - document_id          : owner FK to procurement_documents, NOT NULL; ON DELETE CASCADE so
+                                   deleting a document discards its lines (R1.4).
+          - line_no              : INT NOT NULL; the sequential 1-based line position within the
+                                   document (R3.3). UNIQUE (document_id, line_no) (R1.2).
+          - raw_name             : TEXT NOT NULL; the verbatim OCR product text (R10.1), not localized.
+          - quantity             : NUMERIC(19,3) NULL; parsed quantity, CHECK >= 0 when set.
+          - unit_hint            : TEXT NULL; the verbatim OCR unit text (R10.1), not localized.
+          - unit_price           : NUMERIC(19,2) NULL; parsed per-unit price, CHECK >= 0 when set.
+          - line_total           : NUMERIC(19,2) NULL; parsed line total, CHECK >= 0 when set.
+          - manufacturer_hint    : TEXT NULL; the verbatim OCR manufacturer/brand hint (R10.1).
+          - matched_material_id  : BIGINT NULL; SOFT FK (by id) to the matched Concrete_Material;
+                                   null for every NONE-tier line (R1.5, R5.5). No DB FK (see above).
+          - match_tier           : VARCHAR(32) NOT NULL; the MatchTier enum
+                                   (EXACT/MANUFACTURER_CATEGORY/CATEGORY/NONE) persisted as its name.
+          - match_status         : VARCHAR(16) NOT NULL; the MatchStatus enum (AUTO/UNMATCHED)
+                                   persisted as its name.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + onFail="MARK_RAN", so a re-run
+        against an already-migrated database makes no schema change (R1.3). The document_id FK
+        references procurement_documents (changeset 167), which is included before this one.
+        Registered LAST in changelog.xml, after 167.
+    -->
+
+    <changeSet id="168-create-procurement-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="procurement_lines"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="procurement_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a document discards its lines (ON DELETE CASCADE, R1.4). -->
+            <column name="document_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Sequential 1-based line position within the document (R3.3). -->
+            <column name="line_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Verbatim OCR product text (R10.1); not localized. -->
+            <column name="raw_name" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Parsed quantity; nullable, CHECK >= 0 when set. -->
+            <column name="quantity" type="NUMERIC(19,3)"/>
+            <!-- Verbatim OCR unit text (R10.1); nullable, not localized. -->
+            <column name="unit_hint" type="TEXT"/>
+            <!-- Parsed per-unit price; nullable, CHECK >= 0 when set. -->
+            <column name="unit_price" type="NUMERIC(19,2)"/>
+            <!-- Parsed line total; nullable, CHECK >= 0 when set. -->
+            <column name="line_total" type="NUMERIC(19,2)"/>
+            <!-- Verbatim OCR manufacturer/brand hint (R10.1); nullable. -->
+            <column name="manufacturer_hint" type="TEXT"/>
+            <!-- SOFT FK (by id) to the matched Concrete_Material; null for NONE-tier lines (R1.5).
+                 No DB foreign key — the material may be a Construction or Finishing material. -->
+            <column name="matched_material_id" type="BIGINT"/>
+            <!-- MatchTier (EXACT/MANUFACTURER_CATEGORY/CATEGORY/NONE) persisted as its name. -->
+            <column name="match_tier" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MatchStatus (AUTO/UNMATCHED) persisted as its name. -->
+            <column name="match_status" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a document discards its lines (R1.4). -->
+        <addForeignKeyConstraint
+            constraintName="fk_procurement_lines_document"
+            baseTableName="procurement_lines"
+            baseColumnNames="document_id"
+            referencedTableName="procurement_documents"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- At most one line per (document, line_no); line numbers are sequential from 1 (R1.2). -->
+        <addUniqueConstraint
+            constraintName="uq_procurement_lines_document_line_no"
+            tableName="procurement_lines"
+            columnNames="document_id, line_no"/>
+
+        <!-- Non-negative parsed amounts when set (NULL is allowed = not parsed). -->
+        <sql>
+            ALTER TABLE procurement_lines
+                ADD CONSTRAINT ck_procurement_lines_amounts_non_negative
+                CHECK ((quantity IS NULL OR quantity >= 0)
+                   AND (unit_price IS NULL OR unit_price >= 0)
+                   AND (line_total IS NULL OR line_total >= 0));
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE procurement_lines
+                    DROP CONSTRAINT IF EXISTS ck_procurement_lines_amounts_non_negative;
+            </sql>
+        </rollback>
+
+        <!-- The ordered per-document line load (@OrderBy lineNo ASC), and the cascade-delete path. -->
+        <createIndex tableName="procurement_lines" indexName="ix_procurement_lines_document">
+            <column name="document_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

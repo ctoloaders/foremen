@@ -52,6 +52,27 @@ foremen:
       # supplied; a blank value would fail @Scheduled cron parsing, "-" disables it cleanly.
       cron: ${FOREMEN_IMAGE_STORAGE_RECONCILIATION_CRON:-}
       interval: ${FOREMEN_IMAGE_STORAGE_RECONCILIATION_INTERVAL:}
+  ocr:
+    # Backend OCR service (FOR-06-03). All values from environment; no secrets committed. When
+    # enabled is false (or absent), the DisabledOcrService fallback is wired and the application
+    # starts and runs normally without the Vision/LLM provider configured (R3.5). Credentials and
+    # the LLM model are read from here, never hardcoded (R3.6), mirroring foremen.image-storage.
+    enabled: ${FOREMEN_OCR_ENABLED:false}
+    vision:
+      credentials:
+        path: ${FOREMEN_OCR_VISION_CREDENTIALS_PATH:}
+        location: ${FOREMEN_OCR_VISION_CREDENTIALS_LOCATION:}
+    llm:
+      # The Google LLM (Gemini) model used for corner detection + per-line parse.
+      model: ${FOREMEN_OCR_LLM_MODEL:gemini-2.0-flash}
+      # Enterprise (Vertex) backend: project + location + ADC/credentials. Leave project/location
+      # blank and set api-key to use the Gemini Developer API backend instead.
+      project: ${FOREMEN_OCR_LLM_PROJECT:}
+      location: ${FOREMEN_OCR_LLM_LOCATION:}
+      api-key: ${FOREMEN_OCR_LLM_API_KEY:}
+      credentials:
+        path: ${FOREMEN_OCR_LLM_CREDENTIALS_PATH:}
+        location: ${FOREMEN_OCR_LLM_CREDENTIALS_LOCATION:}
   google-places:
     # When enabled, api-key must be set or application startup fails fast.
     enabled: ${GOOGLE_PLACES_ENABLED:false}

@@ -629,4 +629,37 @@
          COUNT(*)=0 preconditions. Depends on the resources/roles/operations tables (002/003/004)
          and the ESTIMATOR role (136). Registered LAST, after 164. -->
     <include file="database_files/changesets/165-seed-work-reports-resource.xml"/>
+    <!-- FOR-06-03 (R1.1, R1.3): procurement_documents — the project-scoped ProcurementDocument
+         persistence root (the primary procurement document uploaded on an ACTIVE project). Its
+         extracted per-line items live in the child table procurement_lines (changeset 168).
+         project_id FK ON DELETE CASCADE (drives the project-scope filter); uploaded_by_id BIGINT
+         NOT NULL FK (RESTRICT); raw_object_key VARCHAR(512) NOT NULL; processed_object_key
+         VARCHAR(512) NULL; source_mime_type VARCHAR(100) NOT NULL; supplier_name TEXT NULL;
+         document_total NUMERIC(19,2) NULL CHECK >= 0; status VARCHAR(16) NOT NULL; uploaded_at
+         TIMESTAMPTZ NOT NULL; parsed_at TIMESTAMPTZ NULL; failure_reason TEXT NULL; audit cols.
+         Guarded by NOT tableExists + MARK_RAN. Registered LAST. -->
+    <include file="database_files/changesets/167-create-procurement-documents.xml"/>
+    <!-- FOR-06-03 (R1.2, R1.3, R1.4): procurement_lines — the per-line extracted-item child of a
+         procurement_documents row (design §4.2). One row per purchased item carrying the verbatim
+         OCR fields and the proposed match. document_id FK ON DELETE CASCADE (R1.4, discards lines
+         with their document); line_no INT NOT NULL with UNIQUE (document_id, line_no) (R1.2,
+         sequential from 1); raw_name TEXT NOT NULL; quantity NUMERIC(19,3) NULL; unit_hint TEXT
+         NULL; unit_price NUMERIC(19,2) NULL; line_total NUMERIC(19,2) NULL (all three CHECK >= 0
+         when set); manufacturer_hint TEXT NULL; matched_material_id BIGINT NULL (a SOFT FK by id —
+         no DB FK, since the material may be a Construction or Finishing material); match_tier
+         VARCHAR(32) NOT NULL; match_status VARCHAR(16) NOT NULL; audit cols. The document_id FK
+         references procurement_documents (167), which is included before this one. Guarded by NOT
+         tableExists + MARK_RAN. Registered LAST, after 167. -->
+    <include file="database_files/changesets/168-create-procurement-lines.xml"/>
+    <!-- FOR-06-03 (R7.2, R7.4, R7.5; entity-creation-rules steps 1-2; design §4.5/§4.6): seed the
+         project-scoped PURCHASES ABAC resource + its per-role grants. ChangeSet A inserts the
+         resource row; the grant changeSets give ADMIN / FINANCIER / MANAGER / FOREMAN full CRUD and
+         ESTIMATOR READ. WORKER + CLIENT are deny-by-default (not seeded; explanatory XML comment in
+         the file). PURCHASES is shared with the sibling FOR-06-04 (purchases list) but seeded here
+         because this child needs it first. The upload/re-process custom actions map onto CREATE /
+         UPDATE on the document (no new operation). Each changeSet is idempotent via onFail="MARK_RAN"
+         COUNT(*)=0 preconditions (resource row / role_resources grant). Depends on the resources/
+         roles/operations tables (002/003/004) and the ESTIMATOR role (136). Registered LAST, after
+         168. -->
+    <include file="database_files/changesets/169-seed-purchases-resource.xml"/>
 </databaseChangeLog>

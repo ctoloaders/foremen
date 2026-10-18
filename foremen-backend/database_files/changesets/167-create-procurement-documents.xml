@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-03 (Requirements 1.1, 1.3): procurement_documents — the ProcurementDocument
+        persistence root (design §4.1). The project-scoped anchor an authorized user
+        (FINANCIER / MANAGER / FOREMAN) creates when uploading a primary procurement document (a
+        receipt or invoice, image or PDF) on an ACTIVE project. Its per-line extracted items live
+        in the child table procurement_lines (changeset 168).
+
+        This spec owns intake + automatic matching only. The document carries the raw upload key,
+        the processed white-background rendition key, the parse-derived supplier/total, and the
+        OCR/parse lifecycle status.
+
+        Columns:
+          - id                   : BIGSERIAL PK.
+          - project_id           : owner FK to projects, NOT NULL; ON DELETE CASCADE so deleting a
+                                   project removes its procurement documents. Drives the
+                                   ProjectScopedService project filter (getProjectIdPath() ->
+                                   "project.id", R7.2).
+          - uploaded_by_id       : user FK, NOT NULL; who uploaded the document. RESTRICT — a user
+                                   referenced by a document cannot be hard-deleted while it exists.
+          - raw_object_key       : VARCHAR(512) NOT NULL; the ImageStorage object key of the raw
+                                   upload exactly as received (R2.1).
+          - processed_object_key : VARCHAR(512) NULL; the ImageStorage object key of the
+                                   white-background rendition OCR runs on; null until cleanup runs
+                                   (R3.0). For a multi-page PDF it keys the per-page processed set.
+          - source_mime_type     : VARCHAR(100) NOT NULL; the uploaded content type (image/png,
+                                   image/jpeg, image/webp, application/pdf).
+          - supplier_name        : TEXT NULL; the document-level supplier/store name from the parse.
+          - document_total       : NUMERIC(19,2) NULL; the document-level total from the parse,
+                                   CHECK >= 0 when set.
+          - status               : VARCHAR(16) NOT NULL; the ProcessingStatus enum
+                                   (UPLOADED/PROCESSING/PARSED/FAILED) persisted as its name.
+          - uploaded_at          : TIMESTAMP WITH TIME ZONE NOT NULL; when the document was uploaded.
+          - parsed_at            : TIMESTAMP WITH TIME ZONE NULL; when the parse succeeded.
+          - failure_reason       : TEXT NULL; a stable failure code surfaced to the UI on FAILED.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + onFail="MARK_RAN", so a re-run
+        against an already-migrated database makes no schema change (R1.3). Registered LAST in
+        changelog.xml.
+    -->
+
+    <changeSet id="167-create-procurement-documents" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="procurement_documents"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="procurement_documents">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a project removes its procurement documents; drives the
+                 project-scope filter. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Who uploaded the document. -->
+            <column name="uploaded_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ImageStorage key of the raw upload exactly as received (R2.1). -->
+            <column name="raw_object_key" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ImageStorage key of the white-background rendition; null until cleanup runs (R3.0). -->
+            <column name="processed_object_key" type="VARCHAR(512)"/>
+            <!-- The uploaded content type (png/jpeg/webp/pdf). -->
+            <column name="source_mime_type" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Document-level supplier/store name from the parse; nullable. -->
+            <column name="supplier_name" type="TEXT"/>
+            <!-- Document-level total from the parse; nullable, CHECK >= 0 when set. -->
+            <column name="document_total" type="NUMERIC(19,2)"/>
+            <!-- ProcessingStatus (UPLOADED/PROCESSING/PARSED/FAILED) persisted as its name. -->
+            <column name="status" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- When the document was uploaded (R2.5). -->
+            <column name="uploaded_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <!-- When the parse succeeded; nullable until PARSED. -->
+            <column name="parsed_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <!-- A stable failure code surfaced to the UI on FAILED; nullable. -->
+            <column name="failure_reason" type="TEXT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its documents (and cascades to procurement_lines). -->
+        <addForeignKeyConstraint
+            constraintName="fk_procurement_documents_project"
+            baseTableName="procurement_documents"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Uploader FK: cannot hard-delete a user who uploaded a procurement document. -->
+        <addForeignKeyConstraint
+            constraintName="fk_procurement_documents_uploaded_by"
+            baseTableName="procurement_documents"
+            baseColumnNames="uploaded_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Non-negative document total when set (NULL is allowed = not parsed). -->
+        <sql>
+            ALTER TABLE procurement_documents
+                ADD CONSTRAINT ck_procurement_documents_total_non_negative
+                CHECK (document_total IS NULL OR document_total >= 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE procurement_documents
+                    DROP CONSTRAINT IF EXISTS ck_procurement_documents_total_non_negative;
+            </sql>
+        </rollback>
+
+        <!-- The project-scoped list load of a project's documents (ProjectScopedService filter). -->
+        <createIndex tableName="procurement_documents" indexName="ix_procurement_documents_project">
+            <column name="project_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

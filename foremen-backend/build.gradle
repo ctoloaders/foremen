@@ -77,6 +77,21 @@ dependencies {
     // import (FOR-05-08 task 10.1). Not managed by the Spring Boot BOM, so pin the version.
     implementation "org.apache.poi:poi-ooxml:${apachePoiVersion}"
 
+    // Apache PDFBox - PDF page rasterization (PDFRenderer) for the FOR-06-03 OCR pipeline
+    // (GoogleOcrService, task 4.2). Declared directly because GoogleOcrService uses PDFBox APIs
+    // directly (it is otherwise only a transitive dep of openhtmltopdf-pdfbox). Not managed by the
+    // Spring Boot BOM, so pin the version.
+    implementation "org.apache.pdfbox:pdfbox:${pdfboxVersion}"
+
+    // Google Cloud Vision - documentTextDetection OCR for the FOR-06-03 OCR pipeline
+    // (GoogleOcrService, task 4.2). Behind the DisabledOcrService fallback when foremen.ocr.enabled
+    // is false. Not managed by the Spring Boot BOM, so pin the version.
+    implementation "com.google.cloud:google-cloud-vision:${googleCloudVisionVersion}"
+
+    // Google Gen AI SDK (Gemini) - corner detection + per-line parse LLM for the FOR-06-03 OCR
+    // pipeline (GoogleOcrService, task 4.2). Not managed by the Spring Boot BOM, so pin the version.
+    implementation "com.google.genai:google-genai:${googleGenAiVersion}"
+
     // Jackson JSR310 (for JavaTimeModule in audit serialization)
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 

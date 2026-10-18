@@ -1,0 +1,203 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-03 (R7.2, R7.4, R7.5; entity-creation-rules steps 1-2; design §4.5/§4.6): seed the
+         project-scoped PURCHASES ABAC resource + its per-role grants. The resource is shared with
+         the sibling FOR-06-04 (purchases list), seeded HERE because this child (procurement intake
+         + auto-match) needs it first. It is project-scoped; every grant below sits on top of the
+         project-membership filter. The upload/re-process custom actions map onto CREATE / UPDATE on
+         the document (no new operation).
+
+         Matrix (design §4.6):
+           ADMIN     -> CREATE, READ, UPDATE, DELETE  (matrix completeness; evaluator bypasses ADMIN)
+           FINANCIER -> CREATE, READ, UPDATE, DELETE  (primary procurement role, R7.4)
+           MANAGER   -> CREATE, READ, UPDATE, DELETE  (oversight + authoring)
+           FOREMAN   -> CREATE, READ, UPDATE, DELETE  (buys materials on site)
+           ESTIMATOR -> READ                          (admin-staff read-only visibility)
+           WORKER    -> deny-by-default (no grant; see commented placeholder below)
+           CLIENT    -> deny-by-default (no grant; see commented placeholder below)
+
+         Each changeSet is idempotent via an onFail="MARK_RAN" COUNT(*)=0 precondition (resource row
+         / role_resources grant), so a re-run against an already-seeded database inserts nothing.
+         Depends on the resources/roles/operations tables (002/003/004) and the ESTIMATOR role (136).
+         Registered LAST in sequence, after 168. -->
+
+    <!-- ChangeSet A: Seed PURCHASES resource into resources table -->
+    <changeSet id="169-seed-purchases-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PURCHASES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="PURCHASES"/>
+            <column name="name_ru" value="Закупки"/>
+            <column name="name_pl" value="Zakupy"/>
+            <column name="description_ru" value="Закупочные документы проекта и их сопоставление с планом"/>
+            <column name="description_pl" value="Dokumenty zakupowe projektu i ich dopasowanie do planu"/>
+        </insert>
+    </changeSet>
+
+    <!-- ChangeSet B: Grant ADMIN full CRUD on PURCHASES resource -->
+    <changeSet id="169-seed-purchases-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'PURCHASES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'PURCHASES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'PURCHASES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet C: Grant FINANCIER full CRUD on PURCHASES resource (primary procurement role, R7.4) -->
+    <changeSet id="169-seed-purchases-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'PURCHASES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'PURCHASES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'FINANCIER' AND res.code = 'PURCHASES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet D: Grant MANAGER full CRUD on PURCHASES resource (oversight + authoring) -->
+    <changeSet id="169-seed-purchases-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'PURCHASES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'PURCHASES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'MANAGER' AND res.code = 'PURCHASES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet E: Grant FOREMAN full CRUD on PURCHASES resource (buys materials on site) -->
+    <changeSet id="169-seed-purchases-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'PURCHASES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'PURCHASES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'FOREMAN' AND res.code = 'PURCHASES';
+        </sql>
+    </changeSet>
+
+    <!-- ChangeSet F: Grant ESTIMATOR READ on PURCHASES resource (admin-staff read-only visibility) -->
+    <changeSet id="169-seed-purchases-permissions-estimator" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ESTIMATOR' AND res.code = 'PURCHASES'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'PURCHASES';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'ESTIMATOR' AND res.code = 'PURCHASES';
+        </sql>
+    </changeSet>
+
+    <!-- WORKER and CLIENT are intentionally omitted (deny-by-default): a WORKER records work but
+         does not manage procurement documents, and a CLIENT never sees internal procurement; so no
+         role_resources / role_resource_operations row is seeded for either role + PURCHASES. Left
+         as commented placeholders so the deny-by-default decision is explicit:
+
+    <changeSet id="169-seed-purchases-permissions-worker" author="foremen">
+        ... intentionally NOT seeded: WORKER has no access to PURCHASES ...
+    </changeSet>
+
+    <changeSet id="169-seed-purchases-permissions-client" author="foremen">
+        ... intentionally NOT seeded: CLIENT has no access to PURCHASES ...
+    </changeSet>
+    -->
+
+</databaseChangeLog>
