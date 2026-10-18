@@ -4,9 +4,11 @@ import com.foremen.config.security.PermissionOperation;
 import com.foremen.config.security.PermissionResource;
 import com.foremen.controller.model.schedule.AutoCreateRequest;
 import com.foremen.controller.model.schedule.AutoCreateResult;
+import com.foremen.controller.model.schedule.PlanActualView;
 import com.foremen.controller.model.schedule.SaveBarsRequest;
 import com.foremen.controller.model.schedule.ScheduleReadiness;
 import com.foremen.controller.model.schedule.ScheduleView;
+import com.foremen.service.PlanActualService;
 import com.foremen.service.ProjectScheduleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,6 +55,7 @@ public class ProjectScheduleController {
     private static final String UPDATE = "UPDATE";
 
     private final ProjectScheduleService projectScheduleService;
+    private final PlanActualService planActualService;
 
     /**
      * Reads the {@link ScheduleView} of the given project (Requirement 5): the ordered Schedule_Rows
@@ -111,5 +114,21 @@ public class ProjectScheduleController {
     @PermissionOperation(READ)
     public ResponseEntity<ScheduleReadiness> readiness(@RequestParam Long projectId) {
         return ResponseEntity.ok(projectScheduleService.readiness(projectId));
+    }
+
+    /**
+     * FOR-06-02 (Requirement 1) — reads the read-only {@link PlanActualView} overlay of the given
+     * project: per work category the planned window (from the schedule bars), the planned quantity,
+     * the confirmed (APPROVED) and pending (SUBMITTED + CHANGES_REQUESTED) reported quantity, the
+     * confirmed completion, the trajectory classification ({@code ON_TRACK}/{@code AT_RISK}/
+     * {@code OVERDUE}) with a projected finish, and a per-work-item/room drill-down. Strictly
+     * read-only: it creates/updates/deletes no row and bumps no schedule version (R1.6). Rides the
+     * existing {@code WORK_SCHEDULE} resource at READ — no new resource or grant (R6.3). Money fields
+     * are present only for a Money_Viewer (R6.5).
+     */
+    @GetMapping("/plan-actual")
+    @PermissionOperation(READ)
+    public ResponseEntity<PlanActualView> planActual(@RequestParam Long projectId) {
+        return ResponseEntity.ok(planActualService.getPlanActual(projectId));
     }
 }

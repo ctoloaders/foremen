@@ -103,6 +103,14 @@ foremen:
     # shown in the UI (R9.3). No per-project override (R9.2). Must be strictly positive or startup
     # fails fast.
     daily-output-per-worker: ${FOREMEN_SCHEDULE_DAILY_OUTPUT_PER_WORKER:2000}
+  plan-actual:
+    # FOR-06-02 (R4.3): the plan/actual overlay's at-risk tolerance. A work category is flagged
+    # AT_RISK only once its confirmed (APPROVED) completion trails its elapsed-time share by more
+    # than this. In [0, 1]; default 0.1 (10%).
+    risk-margin: ${FOREMEN_PLAN_ACTUAL_RISK_MARGIN:0.1}
+    # FOR-06-02 (R4.4): cap on the pace-extrapolated projected finish day, so a near-zero completion
+    # cannot project to an absurd horizon. Defaults to the planning-Gantt 3650-day horizon.
+    max-projected-finish-day: ${FOREMEN_PLAN_ACTUAL_MAX_PROJECTED_FINISH_DAY:3650}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
     reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/set-password}
