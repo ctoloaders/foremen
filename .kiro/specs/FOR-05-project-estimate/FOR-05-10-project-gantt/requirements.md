@@ -78,7 +78,7 @@ Out of scope:
   `PermissionAnnotationValidator`, `ProjectScopedService.getProjectIdPath()`, and the workspace
   `entity-creation-rules` checklist.
 - Global configuration pattern: `foremen.offer.escalation.*` in `application.yml` (FOR-05-07).
-- `FOR-06-project-in-progress` (folder `FOR-06-work-schedule`): FOR-06-04 and FOR-06-06 read this
+- `FOR-06-project-in-progress`: FOR-06 plan/actual Gantt (FOR-06-02) reads this
   spec's bars as their baseline.
 
 ### Baseline: existing implementation this spec builds on

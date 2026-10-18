@@ -4,12 +4,18 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -18,6 +24,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.foremen.controller.model.WorkReportProgressDto;
 import com.foremen.controller.model.WorkReportRoomModel;
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.EstimateLineDao;
@@ -26,9 +33,11 @@ import com.foremen.dao.WorkReportDao;
 import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.EstimateLineEntity;
 import com.foremen.dao.model.EstimateLineRoomQtyEntity;
+import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
@@ -37,6 +46,7 @@ import com.foremen.dao.model.WorkReportInputMode;
 import com.foremen.dao.model.WorkReportRoomEntity;
 import com.foremen.dao.model.WorkReportStatus;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.exception.WorkReportBatchItemException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.WorkReportServiceExtendedModel;
@@ -273,6 +283,76 @@ public class WorkReportService
         return serviceMapper.toServiceExtendedModel(saved);
     }
 
+    // --- Bulk create (Amendment A1, R16) ------------------------------------------------------
+
+    /**
+     * Creates a batch of work reports in <strong>one</strong> transaction (Amendment A1, R16.3/R16.4/
+     * R16.5). Each item is run through the exact single-create path ({@link #create}) so every item
+     * gets the SAME validation (Covering_Work R3.2, work-item-on-estimate R3.4, duplicate room R2.4,
+     * quantity &gt; 0 R2.5, PERCENT-with-no-plan R2.3), the SAME PERCENT&rarr;absolute resolution +
+     * Plan_Quantity snapshot (R2.2/R2.6), the SAME frozen revenue valuation (R6), the SAME FOREMAN
+     * fast path (R5), and the SAME WORKER own-records rule (R10.5) as a single create.
+     *
+     * <p><b>All-or-nothing (R16.4).</b> {@code create(...)} joins this method's transaction
+     * (propagation {@code REQUIRED}), so a {@link ForemenApiException} thrown while assembling any
+     * item rolls back the whole batch — no report from the batch is persisted. The failure is
+     * rethrown as a {@link WorkReportBatchItemException} carrying the zero-based {@code index} of the
+     * failing payload (plus its {@code workItemId} and the offending {@code roomId} when the error is
+     * room-scoped) so the controller (A1.3) can report exactly which payload failed, changing
+     * nothing.
+     *
+     * <p><b>Notifications (R16.5).</b> Each item publishes its own notification event through the same
+     * {@link #publishNotification} path as the single create. Those events are {@code AFTER_COMMIT}
+     * listeners on this single transaction, so on a successful batch commit the emitter fires one
+     * {@code submitted} per created non-FOREMAN report (to each ACTIVE FOREMAN) and emits nothing for
+     * the FOREMAN-authored fast-path items (R5) — exactly as N separate single creates would. If the
+     * batch rolls back, no event fires.
+     *
+     * @param items the author-supplied write models, each identical in shape to a single create (R16.1)
+     * @return the persisted reports as read-extended service models, in submission order
+     * @throws WorkReportBatchItemException if any item fails validation (the whole batch is rolled back)
+     */
+    @Transactional
+    public List<WorkReportServiceExtendedModel> createBatch(List<WorkReportServiceExtendedModel> items) {
+        List<WorkReportServiceExtendedModel> created = new ArrayList<>();
+        if (items == null || items.isEmpty()) {
+            return created;
+        }
+        for (int index = 0; index < items.size(); index++) {
+            WorkReportServiceExtendedModel item = items.get(index);
+            try {
+                created.add(create(item));
+            } catch (ForemenApiException e) {
+                // R16.4 — abort the whole batch; identify the failing payload by index (+ workItem /
+                // offending room). The outer @Transactional rolls back, so nothing is persisted and no
+                // AFTER_COMMIT notification event fires.
+                Long workItemId = item == null ? null : item.getWorkItemId();
+                throw new WorkReportBatchItemException(index, workItemId, offendingRoomId(e), e);
+            }
+        }
+        return created;
+    }
+
+    /**
+     * Extracts the offending room id from a per-item failure for the batch error locator (R16.4). The
+     * room-scoped validations ({@link #ROOM_DUPLICATE}, {@link #ROOM_NO_PLAN}, {@link #QUANTITY_INVALID})
+     * carry the room id as the first message param; every other failure is report-scoped and resolves
+     * to {@code null}.
+     */
+    private static Long offendingRoomId(ForemenApiException e) {
+        String code = e.getMessageCode();
+        boolean roomScoped = ROOM_DUPLICATE.equals(code) || ROOM_NO_PLAN.equals(code)
+                || QUANTITY_INVALID.equals(code);
+        if (!roomScoped) {
+            return null;
+        }
+        Object[] params = e.getMessageParams();
+        if (params != null && params.length > 0 && params[0] instanceof Long roomId) {
+            return roomId;
+        }
+        return null;
+    }
+
     // --- Update / edit (R2.6, R4.5, R6.4, R10.5) ---
 
     /**
@@ -361,6 +441,300 @@ public class WorkReportService
         saveAudit(existing, null, "DELETE");
         workReportDao.deleteById(id);
         entityManager.flush();
+    }
+
+    /**
+     * Single-report read with the WORKER own-records guard (R10.5): the project-scope access check
+     * is applied first (via the inherited {@link ProjectScopedService#findById}'s
+     * {@code assertProjectAccess}), then — when the caller is a WORKER — the report is refused unless
+     * {@code report.worker = caller} ({@link #ACCESS_NOT_OWNER}). The LIST read is already own-records
+     * filtered via {@link #addRequiredQuery()}; this closes the by-id read path so a WORKER cannot
+     * read another worker's report by guessing its id.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public WorkReportServiceExtendedModel findById(Long id) {
+        assertProjectAccess(id);
+        WorkReportEntity existing = workReportDao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+        assertCallerOwnsIfWorker(existing);
+        return serviceMapper.toServiceExtendedModel(existing);
+    }
+
+    // --- Progress matrix read projection (A1, R14) --------------------------------------------
+
+    /** The report statuses that count toward the reported quantity (R14.2); {@code REJECTED} excluded. */
+    private static final Set<WorkReportStatus> REPORTED_STATUSES = Set.of(
+            WorkReportStatus.SUBMITTED, WorkReportStatus.CHANGES_REQUESTED, WorkReportStatus.APPROVED);
+
+    private static final BigDecimal ONE_HUNDRED = BigDecimal.valueOf(100);
+
+    /**
+     * FOR-06-01 Amendment A1 (Requirement 14; design A1.1) — the progress matrix read projection for
+     * one {@code (project, worker)}: the worker's <b>Covering_Works</b> (R3.1) that appear on the
+     * project's estimate, grouped by work category (in {@code WorkCategory.orderNo} declaration
+     * order), each work-item row carrying per-room {@code planQuantity} + {@code reportedQuantity}
+     * (+ a capped {@code reportedPercent}).
+     *
+     * <p>Access (R14.6): READ is already gated {@code WORK_REPORTS}/READ by the controller; here the
+     * projection additionally enforces the project scope ({@link #assertProjectRead(Long)} — ADMIN
+     * bypass, else the project must be in the caller's accessible set) and the own-records rule — a
+     * WORKER caller may request only their own {@code workerId} ({@link #ACCESS_NOT_OWNER}); a
+     * FOREMAN/MANAGER/ADMIN may request any worker of the project.
+     *
+     * <p>Derivation:
+     * <ul>
+     *   <li>resolve the worker's project-member work categories (Covering_Works, R3.1); an empty set
+     *       yields an empty matrix (R14.5);</li>
+     *   <li>keep the estimate lines whose work-item category is a Covering_Work (R3.1/R3.4 — the
+     *       estimate is the work-item source);</li>
+     *   <li>for each kept line, read each {@code (workItem, room)} {@code planQuantity} from
+     *       {@code EstimateLineRoomQty} and look up {@code reportedQuantity} from the pre-summed map
+     *       (R14.2); {@code reportedPercent = round(reported / plan × 100)} capped at 100 when a plan
+     *       exists, else {@code null} (R14.3);</li>
+     *   <li>omit a work item whose every <b>planned</b> room is already {@code ≥ 100 %}; keep one with
+     *       any not-yet-complete planned room or any absolute-only (no-plan) room (R14.4);</li>
+     *   <li>project the room column axis as the distinct rooms referenced by the kept work items'
+     *       plans, localized ru → pl → label/code (R12.1).</li>
+     * </ul>
+     *
+     * @param projectId the project the matrix is for
+     * @param workerId  the worker the matrix is for (a WORKER caller may pass only their own id)
+     * @return the matrix source {@link WorkReportProgressDto} (empty categories/rooms when nothing
+     *         is left to report, R14.5)
+     */
+    @Transactional(readOnly = true)
+    public WorkReportProgressDto progress(Long projectId, Long workerId) {
+        assertProjectRead(projectId);
+        assertWorkerOwnIfWorker(workerId);
+
+        boolean ru = isRussianLocale();
+
+        // Covering_Works (R3.1): the worker's project-member work-category ids. Empty => empty matrix.
+        Set<Long> coveredCategoryIds = coveredCategoryIds(projectId, workerId);
+        if (coveredCategoryIds.isEmpty()) {
+            return new WorkReportProgressDto(projectId, workerId, List.of(), List.of());
+        }
+
+        // Already-reported quantity per (workItem, room) over non-REJECTED reports (R14.2).
+        Map<Long, Map<Long, BigDecimal>> reported = reportedByWorkItemRoom(projectId, workerId);
+
+        // The room column axis, insertion-ordered as first referenced across the kept rows (R14.1).
+        Map<Long, WorkReportProgressDto.RoomColumn> roomColumns = new LinkedHashMap<>();
+        // Category groups keyed by category id, each preserving its WorkItemRow list.
+        Map<Long, CategoryAccumulator> groups = new HashMap<>();
+
+        for (EstimateLineEntity line : estimateLineDao.findByProjectIdWithWorkItemCategoryAndUnit(projectId)) {
+            WorkItemEntity workItem = line.getWorkItem();
+            WorkCategoryEntity category = workItem == null ? null : workItem.getWorkCategory();
+            if (workItem == null || category == null
+                    || !coveredCategoryIds.contains(category.getId())) {
+                continue; // not a Covering_Work on the estimate — skip (R3.1).
+            }
+
+            Map<Long, BigDecimal> reportedForItem =
+                    reported.getOrDefault(workItem.getId(), Map.of());
+
+            // Build the cells for this work item across its planned rooms (R14.3).
+            List<WorkReportProgressDto.Cell> cells = new ArrayList<>();
+            boolean keep = false; // R14.4 — keep the row only if something is still reportable.
+            if (line.getRoomQtys() != null) {
+                for (EstimateLineRoomQtyEntity rq : line.getRoomQtys()) {
+                    RoomEntity room = rq.getRoom();
+                    if (room == null) {
+                        continue;
+                    }
+                    Long roomId = room.getId();
+                    BigDecimal plan = rq.getQuantity();
+                    BigDecimal reportedQty = reportedForItem.getOrDefault(roomId, BigDecimal.ZERO);
+                    Integer percent = reportedPercent(reportedQty, plan);
+                    cells.add(new WorkReportProgressDto.Cell(roomId, plan, reportedQty, percent));
+
+                    // A planned room still below 100% (or an absolute-only / no-plan room) keeps the row.
+                    if (plan == null || plan.signum() <= 0 || reportedQty.compareTo(plan) < 0) {
+                        keep = true;
+                    }
+                    roomColumns.computeIfAbsent(roomId,
+                            k -> new WorkReportProgressDto.RoomColumn(k, resolveRoomName(room, ru)));
+                }
+            }
+            // A work item with no planned rooms at all is nothing to report against — omit it (R14.4).
+            if (!keep) {
+                continue;
+            }
+
+            WorkReportProgressDto.WorkItemRow row = new WorkReportProgressDto.WorkItemRow(
+                    workItem.getId(),
+                    resolveWorkItemName(workItem, ru),
+                    unitCode(line.getUnit()),
+                    cells);
+            groups.computeIfAbsent(category.getId(), k -> new CategoryAccumulator(category, ru))
+                    .rows.add(row);
+        }
+
+        // Emit the category groups in declaration order (WorkCategory.orderNo, R17.2).
+        List<WorkReportProgressDto.CategoryGroup> categories = groups.values().stream()
+                .sorted(Comparator.comparing(CategoryAccumulator::orderNo)
+                        .thenComparing(CategoryAccumulator::categoryId))
+                .map(CategoryAccumulator::toGroup)
+                .toList();
+
+        return new WorkReportProgressDto(
+                projectId, workerId, new ArrayList<>(roomColumns.values()), categories);
+    }
+
+    /**
+     * {@code round(reportedQuantity / planQuantity × 100)} capped at 100 when a positive plan exists,
+     * else {@code null} (no plan ⇒ absolute-only cell, R14.3).
+     */
+    private static Integer reportedPercent(BigDecimal reportedQty, BigDecimal plan) {
+        if (plan == null || plan.signum() <= 0) {
+            return null;
+        }
+        BigDecimal pct = reportedQty.multiply(ONE_HUNDRED)
+                .divide(plan, 0, RoundingMode.HALF_UP);
+        int value = pct.intValue();
+        return value > 100 ? 100 : value;
+    }
+
+    /** The worker's project-member work-category ids (Covering_Works, R3.1); empty when none. */
+    private Set<Long> coveredCategoryIds(Long projectId, Long workerId) {
+        ProjectMemberEntity member = (workerId == null || projectId == null) ? null
+                : projectMemberDao.findByUserIdAndProjectId(workerId, projectId).orElse(null);
+        if (member == null || member.getWorkCategories() == null) {
+            return Set.of();
+        }
+        Set<Long> ids = new HashSet<>();
+        for (WorkCategoryEntity wc : member.getWorkCategories()) {
+            if (wc != null && wc.getId() != null) {
+                ids.add(wc.getId());
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * The already-reported quantity grouped {@code workItemId → (roomId → Σ quantity)} over the
+     * worker's non-{@code REJECTED} reports (R14.2), read from the DAO aggregate.
+     */
+    private Map<Long, Map<Long, BigDecimal>> reportedByWorkItemRoom(Long projectId, Long workerId) {
+        Map<Long, Map<Long, BigDecimal>> byItem = new HashMap<>();
+        for (Object[] row : workReportDao.sumReportedQuantityByWorkItemAndRoom(
+                projectId, workerId, REPORTED_STATUSES)) {
+            Long workItemId = (Long) row[0];
+            Long roomId = (Long) row[1];
+            BigDecimal sum = (BigDecimal) row[2];
+            byItem.computeIfAbsent(workItemId, k -> new HashMap<>())
+                    .put(roomId, sum == null ? BigDecimal.ZERO : sum);
+        }
+        return byItem;
+    }
+
+    /**
+     * Project-scope READ guard for the progress projection (R14.6): ADMIN bypasses; otherwise the
+     * {@code projectId} must be in the caller's accessible project set (the same source the LIST
+     * filter and {@code assertProjectAccess} use). Denied uniformly with a 404 so an out-of-scope
+     * project is not revealed, consistent with {@link ProjectScopedService#assertProjectAccess}.
+     */
+    private void assertProjectRead(Long projectId) {
+        if (isCallerAdmin()) {
+            return;
+        }
+        Long callerId = callerUserId();
+        if (callerId == null) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, projectId);
+        }
+        Set<Long> allowed = allowedProjectIds(callerId);
+        if (allowed == null || projectId == null || !allowed.contains(projectId)) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, projectId);
+        }
+    }
+
+    /**
+     * Own-records guard for the progress projection (R14.6/R10.5): a WORKER caller may request only
+     * their own {@code workerId} ({@link #ACCESS_NOT_OWNER}); FOREMAN/MANAGER/ADMIN may request any
+     * worker of the (already access-checked) project.
+     */
+    private void assertWorkerOwnIfWorker(Long workerId) {
+        if (!isCallerWorker()) {
+            return;
+        }
+        Long callerId = callerUserId();
+        if (callerId == null || !callerId.equals(workerId)) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, ACCESS_NOT_OWNER);
+        }
+    }
+
+    // --- Localization helpers (ru → pl → code/label, R12.1) -----------------------------------
+
+    /** Localized work-item name (ru → pl → code), mirroring the service mapper's resolution. */
+    private static String resolveWorkItemName(WorkItemEntity workItem, boolean ru) {
+        return firstNonBlank(ru ? workItem.getNameRU() : workItem.getNamePL(),
+                ru ? workItem.getNamePL() : workItem.getNameRU(),
+                workItem.getCode());
+    }
+
+    /** Localized room name (ru → pl → label/code): room label first, else the room-type name. */
+    private static String resolveRoomName(RoomEntity room, boolean ru) {
+        if (room == null) {
+            return null;
+        }
+        RoomTypeEntity type = room.getRoomType();
+        String typeName = type == null ? null
+                : firstNonBlank(ru ? type.getNameRU() : type.getNamePL(),
+                        ru ? type.getNamePL() : type.getNameRU(),
+                        type.getCode());
+        return firstNonBlank(room.getLabel(), typeName);
+    }
+
+    /** The measurement unit's code (the cell unit label), or {@code null} when the unit is absent. */
+    private static String unitCode(MeasurementUnitEntity unit) {
+        return unit == null ? null : unit.getCode();
+    }
+
+    private static String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isRussianLocale() {
+        Locale locale = LocaleContextHolder.getLocale();
+        return locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
+    }
+
+    /**
+     * Mutable accumulator for a category row group while building the matrix: holds the category's
+     * localized name + order and the work-item rows added so far, collapsed to an immutable
+     * {@link WorkReportProgressDto.CategoryGroup} at the end.
+     */
+    private static final class CategoryAccumulator {
+        private final WorkCategoryEntity category;
+        private final String name;
+        private final List<WorkReportProgressDto.WorkItemRow> rows = new ArrayList<>();
+
+        CategoryAccumulator(WorkCategoryEntity category, boolean ru) {
+            this.category = category;
+            this.name = firstNonBlank(ru ? category.getNameRU() : category.getNamePL(),
+                    ru ? category.getNamePL() : category.getNameRU(),
+                    category.getCode());
+        }
+
+        Long categoryId() {
+            return category.getId();
+        }
+
+        /** The category's declaration order; a null {@code orderNo} sorts last (R17.2). */
+        int orderNo() {
+            return category.getOrderNo() == null ? Integer.MAX_VALUE : category.getOrderNo();
+        }
+
+        WorkReportProgressDto.CategoryGroup toGroup() {
+            return new WorkReportProgressDto.CategoryGroup(category.getId(), name, rows);
+        }
     }
 
     // --- Review transitions (R4.2/R4.3/R4.4/R4.6/R4.7) ---
@@ -488,7 +862,16 @@ public class WorkReportService
      */
     private void rebuildRooms(WorkReportEntity entity, EstimateLineEntity line,
                               List<WorkReportRoomModel> rows) {
-        entity.getRooms().clear();
+        // Orphan-remove the previous rows and FLUSH the deletes before inserting the rebuilt rows.
+        // Without this, an edit/resubmit that reuses a room makes Hibernate insert the new
+        // (report, room) row in the same flush as the orphan delete; the (report_id, room_id) unique
+        // constraint can then fire mid-flush (insert-before-delete ordering) and the save fails with
+        // a data-integrity 409. Flushing the clear first guarantees the deletes land before the
+        // inserts. On create the collection is empty, so the flush is a cheap no-op.
+        if (!entity.getRooms().isEmpty()) {
+            entity.getRooms().clear();
+            entityManager.flush();
+        }
         Set<Long> seenRooms = new HashSet<>();
         for (WorkReportRoomModel row : rows) {
             Long roomId = row.roomId();

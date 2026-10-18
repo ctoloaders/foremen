@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-01 (R11.2, R11.4): the Work Reporting builder is the WORKER's primary surface — a
+         WORKER composes their own report there (pick worker=self, pick an R3-limited work item, add
+         per-room quantities). The builder loads its reference data from two project-scoped reads:
+         the ESTIMATE matrix (GET /api/estimates/project/{id}/matrix — the R3-limited work-item rows,
+         the room columns, and the per-(workItem, room) Plan_Quantity for the PERCENT toggle) and the
+         project team (GET /api/project-members?projectId= — the ACTIVE workers + their project-member
+         work categories). Until now the WORKER role held neither ESTIMATE nor PROJECT_MEMBERS, so the
+         builder's source queries 403'd and the dialog hung on "loading" — a WORKER could not compose a
+         report through the UI at all.
+
+         This changeset grants the WORKER role READ (only) on ESTIMATE and PROJECT_MEMBERS. Both are
+         project-scoped resources, so each grant sits on top of the project-membership filter: a
+         WORKER reads only the estimate/team of a project they belong to, consistent with the WORKER's
+         existing project-scoped READs (PROJECTS, ROOMS, WORK_CATALOG, WORK_PRICES, …). No write grant
+         is added. Idempotent: each grant is guarded by a role_resources precondition
+         (onFail="MARK_RAN") and the operation insert is scoped to READ, so a re-run inserts nothing.
+         Registered LAST in changelog.xml, after 165. -->
+
+    <!-- Grant WORKER READ on ESTIMATE (the reporting builder's work-item + plan-quantity source). -->
+    <changeSet id="166-grant-worker-estimate-read" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'ESTIMATE'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'ESTIMATE';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'ESTIMATE';
+        </sql>
+    </changeSet>
+
+    <!-- Grant WORKER READ on PROJECT_MEMBERS (the reporting builder's worker + work-category source). -->
+    <changeSet id="166-grant-worker-project-members-read" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'WORKER' AND res.code = 'PROJECT_MEMBERS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'PROJECT_MEMBERS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'WORKER' AND res.code = 'PROJECT_MEMBERS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on ESTIMATE. The FOREMAN also authors reports through the Work Reporting
+         builder (on a worker's behalf — the fast path, R5/R11.3), which loads the same estimate
+         matrix source; FOREMAN already holds PROJECT_MEMBERS READ but not ESTIMATE, so without this
+         the builder's matrix query 403s for a FOREMAN and the worker/work-item pickers never
+         populate. READ only, project-scoped. Idempotent via onFail="MARK_RAN". -->
+    <changeSet id="166-grant-foreman-estimate-read" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'ESTIMATE'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'ESTIMATE';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'ESTIMATE';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

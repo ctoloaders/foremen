@@ -470,6 +470,24 @@ public final class ApiHelper implements AutoCloseable {
         expectDeleted(response, "DELETE " + path);
     }
 
+    /**
+     * Transition a project to a lifecycle status via {@code PUT /api/projects/{id}}. The generic
+     * update requires {@code name} (NotBlank), so the current name must be resent. Used by the
+     * FOR-QA-AUTO-06-01 fixture to move a freshly-created project into {@code ACTIVE} so work
+     * reporting is open. Expects 2xx. Requires a prior {@link #loginAdmin()}.
+     *
+     * @param id     the project id
+     * @param name   the project's current name (NotBlank; resent unchanged)
+     * @param status the target status (e.g. {@code ACTIVE})
+     */
+    public void updateProjectStatus(long id, String name, String status) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("name", name);
+        body.put("status", status);
+        APIResponse response = request.put("/api/projects/" + id, withAuth().setData(body));
+        expectOk(response, "PUT /api/projects/" + id);
+    }
+
     // ---- Roles (project-member role resolution, FOR-QA-AUTO-05) ----
 
     /**

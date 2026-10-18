@@ -13,6 +13,8 @@ import com.foremen.controller.model.ProjectReadDto;
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.ProjectDao;
 import com.foremen.dao.RoleDao;
+import com.foremen.dao.UserDao;
+import com.foremen.service.team.TeamComposition;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectStatus;
@@ -97,6 +99,8 @@ public class ProjectService
     private final ClientRegistrationService clientRegistrationService;
     private final RoleDao roleDao;
     private final GooglePlacesService googlePlacesService;
+    private final ProjectActivationService projectActivationService;
+    private final UserDao userDao;
 
     public ProjectService(ProjectDao projectDao,
                           ProjectServiceMapper projectServiceMapper,
@@ -106,7 +110,9 @@ public class ProjectService
                           ProjectMemberService projectMemberService,
                           ClientRegistrationService clientRegistrationService,
                           RoleDao roleDao,
-                          GooglePlacesService googlePlacesService) {
+                          GooglePlacesService googlePlacesService,
+                          ProjectActivationService projectActivationService,
+                          UserDao userDao) {
         this.projectDao = projectDao;
         this.projectServiceMapper = projectServiceMapper;
         this.projectAccessCache = projectAccessCache;
@@ -116,6 +122,8 @@ public class ProjectService
         this.clientRegistrationService = clientRegistrationService;
         this.roleDao = roleDao;
         this.googlePlacesService = googlePlacesService;
+        this.projectActivationService = projectActivationService;
+        this.userDao = userDao;
     }
 
     // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---
@@ -216,6 +224,49 @@ public class ProjectService
     public void validateDateRange(LocalDate startDate, LocalDate endDate) {
         if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, DATE_RANGE_MESSAGE);
+        }
+    }
+
+    /**
+     * FOR-05-12 (Requirements 6.3, 7.1, 7.2, 7.3; design §Backend design → Changed components →
+     * ProjectService) — hardens the generic update path so a {@code pre-activation → ACTIVE} status
+     * change coming through {@code PUT /api/projects/{id}} goes through the <b>same</b> readiness gate
+     * as the dedicated activation endpoint, yielding the same {@code 409} not-ready outcome.
+     *
+     * <p>The gate runs <b>only</b> when the incoming update changes the status from a pre-activation
+     * status ({@link ProjectStatus#isPreActivation()}) to {@link ProjectStatus#ACTIVE}
+     * (Requirement 2.5, 6.3). In that one case the check is delegated to
+     * {@link ProjectActivationService#assertProjectReady(Long)} — the shared, non-force readiness
+     * check that computes project-wide readiness over <b>all</b> areas and throws
+     * {@link com.foremen.exception.ProjectNotReadyException} (409) when the project is below 100%
+     * ready, leaving the status unchanged. Reusing that method keeps one implementation of the
+     * readiness rule across both paths (Requirement 7.2) rather than duplicating it here.
+     *
+     * <p>The generic {@code PUT} carries no {@code force} flag, so this path is always the gated
+     * (non-force) outcome; an ADMIN/MANAGER who wants to force an incomplete project over to work uses
+     * the dedicated {@code POST /api/projects/{id}/activate}. Every other status change — and the
+     * automatic {@code ProjectActivationSignal.onContractSigned(...)} path, which never flows through
+     * this generic update — is untouched (Requirements 6.3, 7.3): for any transition other than
+     * pre-activation → ACTIVE this override is a no-op and the update proceeds exactly as today
+     * (including the unchanged date-range handling, which is not applied here).
+     *
+     * @param existing the managed project entity carrying the current (pre-update) status
+     * @param update   the incoming update model carrying the requested new status
+     * @throws com.foremen.exception.ProjectNotReadyException 409 when a pre-activation → ACTIVE change
+     *                                                        is requested while readiness &lt; 100%
+     */
+    @Override
+    public void validateUpdate(ProjectEntity existing, ProjectServiceExtendedModel update) {
+        if (existing == null || update == null) {
+            return;
+        }
+        ProjectStatus currentStatus = existing.getStatus();
+        ProjectStatus newStatus = update.status();
+        boolean preActivationToActive = newStatus == ProjectStatus.ACTIVE
+                && currentStatus != null
+                && currentStatus.isPreActivation();
+        if (preActivationToActive) {
+            projectActivationService.assertProjectReady(existing.getId());
         }
     }
 
@@ -322,6 +373,20 @@ public class ProjectService
                         member.userId(), projectId, member.projectRoleId(), member.workerTypeId());
                 memberSummaries.add(toSummary(assigned));
             }
+        }
+
+        // 4a. Auto-add the creator as a project member in their own Company_Role (improvement:
+        //     "the creator is automatically added as a project member in their role"). Resolved from
+        //     the security principal. Skipped when: the caller cannot be resolved; the creator is
+        //     already among the submitted members[] (avoids the duplicate 409); or the creator's
+        //     Company_Role is not an Assignable_Project_Role (e.g. ADMIN / a non-system role) — such a
+        //     caller is managed in the admin area and must not become a member, and silently skipping
+        //     keeps project creation working for an ADMIN creator. A WORKER/CLIENT creator is likewise
+        //     skipped (not admin-staff). The derived role comes from the user's Company_Role (D2), so
+        //     projectRoleId is passed null.
+        ProjectMemberSummaryDto creatorSummary = autoAddCreator(projectId, members, memberSummaries);
+        if (creatorSummary != null) {
+            memberSummaries.add(creatorSummary);
         }
 
         // 5. Process the optional client block under the server-resolved CLIENT role (Requirements
@@ -508,6 +573,98 @@ public class ProjectService
      */
     private static ProjectMemberSummaryDto firstOrNull(List<ProjectMemberSummaryDto> clients) {
         return clients == null || clients.isEmpty() ? null : clients.get(0);
+    }
+
+    /**
+     * Auto-adds the project creator as a member in their own Company_Role (improvement). Resolves the
+     * caller's user id from the security principal, then assigns via
+     * {@link ProjectMemberService#assignAtCreation} with a {@code null} projectRoleId (the role is
+     * derived from the user's Company_Role, D2). Returns the creator's member summary, or
+     * {@code null} when the creator is not auto-added.
+     *
+     * <p><b>Skip conditions</b> (return {@code null}, no assign, project creation unaffected):
+     * <ul>
+     *   <li>the caller cannot be resolved to a numeric user id (e.g. a SYSTEM / unauthenticated
+     *       context);</li>
+     *   <li>the creator's user row cannot be loaded;</li>
+     *   <li>the creator is already among the submitted {@code members[]} (prevents the duplicate
+     *       409);</li>
+     *   <li>the creator's Company_Role is not an Assignable_Project_Role — e.g. {@code ADMIN} or a
+     *       non-system role (such a user is managed in the admin area and must not become a member),
+     *       or {@code WORKER} / {@code CLIENT} (not admin staff). Only MANAGER / FOREMAN / ESTIMATOR /
+     *       FINANCIER creators are auto-added, matching the create form's admin-staff team scope.</li>
+     * </ul>
+     *
+     * @param projectId       the just-created project id
+     * @param submittedMembers the request's {@code members[]} (may be {@code null})
+     * @param alreadyAssigned  the member summaries already assigned in this transaction (unused for
+     *                         the skip decision beyond the submitted list, kept for symmetry)
+     * @return the creator's member summary, or {@code null} when skipped
+     */
+    private ProjectMemberSummaryDto autoAddCreator(Long projectId,
+                                                   List<ProjectMemberInput> submittedMembers,
+                                                   List<ProjectMemberSummaryDto> alreadyAssigned) {
+        Long creatorId = currentCallerUserId();
+        if (creatorId == null) {
+            return null; // unresolved / SYSTEM caller — nothing to auto-add.
+        }
+
+        // Already listed among members[] — the explicit entry wins, skip the auto-add (no duplicate).
+        if (submittedMembers != null
+                && submittedMembers.stream().anyMatch(m -> creatorId.equals(m.userId()))) {
+            return null;
+        }
+
+        UserEntity creator = userDao.findById(creatorId).orElse(null);
+        if (creator == null) {
+            return null; // creator row not found — skip rather than fail creation.
+        }
+
+        // Only an admin-staff (Assignable_Project_Role, non-WORKER, non-CLIENT) creator is auto-added.
+        RoleEntity role = creator.getRole();
+        String roleCode = role == null ? null : role.getCode();
+        if (!isAutoAddableCreatorRole(roleCode)) {
+            return null; // ADMIN / non-system / WORKER / CLIENT creator — not auto-added.
+        }
+
+        // Assign via the creator-specific path (derives the role from the Company_Role, D2, and
+        // skips the Accessible_Project gate the creator cannot yet satisfy on a brand-new project).
+        ProjectMemberEntity assigned = projectMemberService.assignCreator(creatorId, projectId);
+        return toSummary(assigned);
+    }
+
+    /**
+     * Whether a creator carrying {@code roleCode} should be auto-added: an Assignable_Project_Role
+     * that is NOT {@code WORKER} or {@code CLIENT} — i.e. the admin-staff roles MANAGER / FOREMAN /
+     * ESTIMATOR / FINANCIER. Case-insensitive on the trimmed code.
+     */
+    private static boolean isAutoAddableCreatorRole(String roleCode) {
+        if (!TeamComposition.isAssignableProjectRole(roleCode)) {
+            return false;
+        }
+        String code = roleCode.trim().toUpperCase(Locale.ROOT);
+        return !"WORKER".equals(code) && !"CLIENT".equals(code);
+    }
+
+    /**
+     * Resolves the authenticated caller's numeric user id from the security principal (the principal
+     * name is the user id as a string, matching {@link ProjectMemberService}), or {@code null} when
+     * there is no authenticated numeric principal (SYSTEM / unauthenticated / non-numeric name).
+     */
+    private static Long currentCallerUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return null;
+        }
+        String name = auth.getName();
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(name.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     /**

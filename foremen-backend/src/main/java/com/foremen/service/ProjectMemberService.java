@@ -770,6 +770,73 @@ public class ProjectMemberService
     }
 
     /**
+     * Assigns the <b>creator</b> of a just-created project as a member in their own Company_Role
+     * (improvement). Behaves like {@link #assignAtCreation} but OMITS the step-4 project-access gate
+     * ({@link #projectAccessCheck}): the caller is the project's creator, invoked inside the same
+     * create transaction, so the project provably exists and the caller demonstrably has access — but
+     * the caller is NOT yet a member, so the Accessible_Project gate would wrongly 404 for a non-ADMIN
+     * creator (the creator's membership is exactly what this call is about to create).
+     *
+     * <p>Every other check is retained and in the same order: mandatory fields (role.mismatch for a
+     * supplied projectRoleId ≠ Company_Role — here projectRoleId is always null so it is a no-op),
+     * lifecycle lock, duplicate pair (409), user existence, and the creation team-composition
+     * sub-order (role.not.assignable / role.not.allowed.at.creation / user.inactive /
+     * worker.type.not.allowed). The caller ({@link ProjectService#createProject}) has already ensured
+     * the creator is an admin-staff (assignable, non-WORKER, non-CLIENT) role and is not a duplicate,
+     * so in practice only the persist runs; the checklist is kept for defense in depth and identical
+     * error semantics.
+     *
+     * @param userId    the creator's user id (its Company_Role becomes the Project_Role, D2)
+     * @param projectId the just-created project id
+     * @return the persisted creator membership
+     */
+    public ProjectMemberEntity assignCreator(Long userId, Long projectId) {
+        UserHolder userHolder = new UserHolder();
+        TagHolder tagHolder = new TagHolder();
+
+        TeamRejectionContext checklist = TeamRejectionContext.builder()
+                // Step 3 — mandatory fields (no supplied role → no mismatch; no tags at creation).
+                .mandatoryFields(mandatoryFieldsCheck(userId, null, null, userHolder, tagHolder))
+                // Step 4 — project access DELIBERATELY OMITTED: the creator is not yet a member of the
+                //          just-created project, so the Accessible_Project gate would 404; access is
+                //          implied by having created the project in this transaction.
+                // Step 5 — lifecycle lock -> 409 error.project.team.locked.
+                .lifecycleLock(lifecycleLockCheck(projectId))
+                // Step 6 — duplicate pair (any status) -> 409 error.project.member.duplicate.
+                .memberExistence(() -> assertNotDuplicate(userId, projectId))
+                // Step 7 — user existence -> 404 error.entity.not.found.
+                .userExistence(() -> resolveUser(userId, userHolder))
+                // Step 8 — creation team-composition sub-order.
+                .teamComposition(creationTeamCompositionCheck(userHolder, null))
+                .build();
+
+        TeamRejectionChecklist.run(checklist);
+
+        UserEntity user = userHolder.user;
+        RoleEntity companyRole = user.getRole();
+
+        ProjectMemberEntity member = new ProjectMemberEntity();
+        member.setUser(user);
+        member.setProjectId(projectId);
+        member.setProjectRole(companyRole);
+        member.setAssignmentStatus(AssignmentStatus.ACTIVE);
+        member.setTags(new ArrayList<>());
+        copyUserWorkCategoriesOnCreate(member, companyRole, user);
+
+        ProjectMemberEntity saved = persistUnique(member, userId, projectId);
+
+        writeAudit(saved, "CREATE", null, memberSnapshot(saved));
+        projectAccessCache.invalidate(userId);
+
+        // The creator IS the acting caller, so emitTeamNotification suppresses the self-notification
+        // (R18.4) — no notification row is created for a self-assignment.
+        emitTeamNotification(userId, NOTIFICATION_MEMBER_ASSIGNED,
+                notificationBody(projectId, "role=" + (companyRole == null ? null : companyRole.getCode())),
+                workspaceDeepLink(projectId));
+        return saved;
+    }
+
+    /**
      * The step-8 team-composition check for {@link #assignAtCreation}: the assign-side composition
      * sub-order of {@link #teamCompositionCheck} re-expressed with the two creation-only restrictions
      * of Requirement 26 slotted into the Requirement 26 criterion 5 order
@@ -2115,7 +2182,15 @@ public class ProjectMemberService
             nip = null;
             workerTypeMissing = null; // Boolean -> omitted (not false) for a non-admin-staff reader
             tags = null;              // List -> omitted (not []) for a non-admin-staff reader
-            workCategories = null;    // List -> omitted for a non-admin-staff reader (FOR-05-10b R2.4)
+            // FOR-06-01 (R11.2/R3.1): a WORKER composing their own work report needs their OWN work
+            // categories so the Work Reporting builder can derive the R3-limited work items. Keep
+            // workCategories on the caller's OWN row (self-view of own assigned work types — the
+            // worker's own data); mask it on every OTHER member's row. The remaining Internal_
+            // Attributes (worker type / nip / tags) stay masked for a non-admin-staff reader even on
+            // the own row.
+            if (!isSelfOperation(userId)) {
+                workCategories = null; // List -> omitted for a non-admin-staff reader (FOR-05-10b R2.4)
+            }
         }
 
         return new TeamMemberView(

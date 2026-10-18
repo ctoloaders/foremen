@@ -84,7 +84,9 @@ class ProjectCreateStatusDefaultPropertyTest {
 
         ProjectService service = new ProjectService(
                 projectDao, mapper, accessCache, auditLogDao, entityManager,
-                memberService, clientRegistrationService, roleDao, googlePlacesService);
+                memberService, clientRegistrationService, roleDao, googlePlacesService,
+                mock(com.foremen.service.ProjectActivationService.class),
+                mock(com.foremen.dao.UserDao.class));
         return new Fixture(service, projectDao);
     }
 

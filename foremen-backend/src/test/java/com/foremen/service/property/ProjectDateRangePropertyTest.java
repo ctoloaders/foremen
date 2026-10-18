@@ -59,7 +59,9 @@ class ProjectDateRangePropertyTest {
                 mock(ProjectMemberService.class),
                 mock(ClientRegistrationService.class),
                 mock(RoleDao.class),
-                mock(GooglePlacesService.class));
+                mock(GooglePlacesService.class),
+                mock(com.foremen.service.ProjectActivationService.class),
+                mock(com.foremen.dao.UserDao.class));
     }
 
     /** Any calendar date within a broad window (jqwik-time). */

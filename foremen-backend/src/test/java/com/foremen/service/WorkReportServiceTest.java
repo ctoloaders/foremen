@@ -31,6 +31,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.foremen.controller.model.WorkReportProgressDto;
 import com.foremen.controller.model.WorkReportRoomModel;
 import com.foremen.dao.EstimateLineDao;
 import com.foremen.dao.ProjectMemberDao;
@@ -38,6 +39,7 @@ import com.foremen.dao.WorkReportDao;
 import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.EstimateLineEntity;
 import com.foremen.dao.model.EstimateLineRoomQtyEntity;
+import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.RoleEntity;
@@ -49,6 +51,7 @@ import com.foremen.dao.model.WorkReportEntity;
 import com.foremen.dao.model.WorkReportInputMode;
 import com.foremen.dao.model.WorkReportStatus;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.exception.WorkReportBatchItemException;
 import com.foremen.service.model.WorkReportServiceExtendedModel;
 import com.foremen.service.model.mapper.WorkReportServiceMapper;
 
@@ -481,6 +484,309 @@ class WorkReportServiceTest {
         }
     }
 
+    // =======================================================================
+    // Amendment A1 — progress read projection (R14)
+    // =======================================================================
+
+    @Nested
+    @DisplayName("progress projection — A1 (R14.2/R14.4/R14.6)")
+    class ProgressProjection {
+
+        @Test
+        @DisplayName("reportedQuantity sums SUBMITTED + CHANGES_REQUESTED + APPROVED and excludes REJECTED (R14.2)")
+        void reportedQuantityCountsPendingAndApprovedExcludesRejected() {
+            authenticate(1L, "ROLE_ADMIN"); // ADMIN bypasses the project-scope + own-records gates.
+            stubCoveringCategories(CATEGORY_ID);
+            stubProgressEstimate(progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                    planFor(ROOM_A, "40"), planFor(ROOM_B, "20")));
+
+            // The DAO already folds in only the {SUBMITTED, CHANGES_REQUESTED, APPROVED} statuses
+            // (REJECTED excluded) via the passed status set; its summed rows are what the service maps.
+            stubReportedSums(
+                    reportedRow(WORK_ITEM_ID, ROOM_A, "25"),   // e.g. 10 approved + 15 pending
+                    reportedRow(WORK_ITEM_ID, ROOM_B, "5"));
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            // The exclusion is enforced by the status set the service hands the DAO (R14.2).
+            assertThat(capturedReportedStatuses())
+                    .containsExactlyInAnyOrder(
+                            WorkReportStatus.SUBMITTED,
+                            WorkReportStatus.CHANGES_REQUESTED,
+                            WorkReportStatus.APPROVED)
+                    .doesNotContain(WorkReportStatus.REJECTED);
+
+            WorkReportProgressDto.Cell roomA = cell(dto, WORK_ITEM_ID, ROOM_A);
+            WorkReportProgressDto.Cell roomB = cell(dto, WORK_ITEM_ID, ROOM_B);
+            assertThat(roomA.reportedQuantity()).isEqualByComparingTo("25");
+            assertThat(roomA.planQuantity()).isEqualByComparingTo("40");
+            assertThat(roomA.reportedPercent()).isEqualTo(63); // round(25/40×100) = 62.5 → 63
+            assertThat(roomB.reportedQuantity()).isEqualByComparingTo("5");
+            assertThat(roomB.reportedPercent()).isEqualTo(25); // 5/20×100
+        }
+
+        @Test
+        @DisplayName("a (workItem, room) with no matching reports reads reportedQuantity 0 (R14.2)")
+        void unreportedCellIsZero() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(CATEGORY_ID);
+            stubProgressEstimate(progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                    planFor(ROOM_A, "40")));
+            stubReportedSums(/* nothing reported yet */);
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            WorkReportProgressDto.Cell roomA = cell(dto, WORK_ITEM_ID, ROOM_A);
+            assertThat(roomA.reportedQuantity()).isEqualByComparingTo("0");
+            assertThat(roomA.reportedPercent()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("a work item whose every planned room is ≥100% is omitted from the matrix (R14.4)")
+        void fullyReportedWorkItemOmitted() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(CATEGORY_ID);
+            // Two work items in the same covered category: one fully reported, one partial.
+            Long partialItem = 8L;
+            stubProgressEstimate(
+                    progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                            planFor(ROOM_A, "40"), planFor(ROOM_B, "20")),
+                    progressLine(partialItem, CATEGORY_ID, 20, "ORD",
+                            planFor(ROOM_A, "40")));
+            stubReportedSums(
+                    // WORK_ITEM_ID — both planned rooms at or over 100% → omitted.
+                    reportedRow(WORK_ITEM_ID, ROOM_A, "40"),
+                    reportedRow(WORK_ITEM_ID, ROOM_B, "25"),
+                    // partialItem — still below 100% → kept.
+                    reportedRow(partialItem, ROOM_A, "10"));
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(workItemIds(dto)).containsExactly(partialItem).doesNotContain(WORK_ITEM_ID);
+        }
+
+        @Test
+        @DisplayName("a work item with a not-yet-complete planned room is kept (R14.4)")
+        void partiallyReportedWorkItemKept() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(CATEGORY_ID);
+            stubProgressEstimate(progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                    planFor(ROOM_A, "40"), planFor(ROOM_B, "20")));
+            stubReportedSums(
+                    reportedRow(WORK_ITEM_ID, ROOM_A, "40"),   // 100%
+                    reportedRow(WORK_ITEM_ID, ROOM_B, "5"));   // 25% → not complete → keep the row
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(workItemIds(dto)).containsExactly(WORK_ITEM_ID);
+            assertThat(cell(dto, WORK_ITEM_ID, ROOM_A).reportedPercent()).isEqualTo(100);
+            assertThat(cell(dto, WORK_ITEM_ID, ROOM_B).reportedPercent()).isEqualTo(25);
+        }
+
+        @Test
+        @DisplayName("an over-reported room caps reportedPercent at 100 (R14.3)")
+        void reportedPercentCappedAtHundred() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(CATEGORY_ID);
+            // One over-reported planned room and one still-open room so the row is kept.
+            stubProgressEstimate(progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                    planFor(ROOM_A, "40"), planFor(ROOM_B, "20")));
+            stubReportedSums(
+                    reportedRow(WORK_ITEM_ID, ROOM_A, "60"),   // 150% → capped to 100
+                    reportedRow(WORK_ITEM_ID, ROOM_B, "0"));
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(cell(dto, WORK_ITEM_ID, ROOM_A).reportedPercent()).isEqualTo(100);
+        }
+
+        @Test
+        @DisplayName("a work item with no plan for a room exposes a null-plan absolute-only cell (R14.3)")
+        void noPlanRoomHasNullPercent() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(CATEGORY_ID);
+            stubProgressEstimate(progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                    planForNoQty(ROOM_A)));
+            stubReportedSums(reportedRow(WORK_ITEM_ID, ROOM_A, "7"));
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            WorkReportProgressDto.Cell roomA = cell(dto, WORK_ITEM_ID, ROOM_A);
+            assertThat(roomA.planQuantity()).isNull();
+            assertThat(roomA.reportedPercent()).isNull();
+            assertThat(roomA.reportedQuantity()).isEqualByComparingTo("7");
+        }
+
+        @Test
+        @DisplayName("a worker who covers no categories yields an empty matrix (R14.5)")
+        void emptyWhenWorkerCoversNothing() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(/* no covered categories */);
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(dto.categories()).isEmpty();
+            assertThat(dto.rooms()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("an estimate work item outside the worker's Covering_Works is excluded (R3.1/R14.4)")
+        void nonCoveringWorkItemExcluded() {
+            authenticate(1L, "ROLE_ADMIN");
+            stubCoveringCategories(CATEGORY_ID);
+            Long otherCategory = 9999L;
+            stubProgressEstimate(
+                    progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD", planFor(ROOM_A, "40")),
+                    progressLine(123L, otherCategory, 20, "ORD", planFor(ROOM_B, "40")));
+            stubReportedSums();
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(workItemIds(dto)).containsExactly(WORK_ITEM_ID).doesNotContain(123L);
+        }
+
+        @Test
+        @DisplayName("a WORKER caller requesting another worker's progress is refused with notOwner (R14.6/R10.5)")
+        void workerCannotRequestAnother() {
+            authenticate(WORKER_ID, "ROLE_WORKER");
+            when(projectAccessCache.get(WORKER_ID)).thenReturn(java.util.Set.of(PROJECT_ID));
+
+            assertApiError(() -> service.progress(PROJECT_ID, 999_000L),
+                    HttpStatus.FORBIDDEN, "error.workReport.access.notOwner");
+        }
+
+        @Test
+        @DisplayName("a WORKER caller may request their own progress (R14.6)")
+        void workerMayRequestOwn() {
+            authenticate(WORKER_ID, "ROLE_WORKER");
+            when(projectAccessCache.get(WORKER_ID)).thenReturn(java.util.Set.of(PROJECT_ID));
+            stubCoveringCategories(CATEGORY_ID);
+            stubProgressEstimate(progressLine(WORK_ITEM_ID, CATEGORY_ID, 10, "ORD",
+                    planFor(ROOM_A, "40")));
+            stubReportedSums(reportedRow(WORK_ITEM_ID, ROOM_A, "5"));
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(dto.workerId()).isEqualTo(WORKER_ID);
+            assertThat(workItemIds(dto)).containsExactly(WORK_ITEM_ID);
+        }
+    }
+
+    // =======================================================================
+    // Amendment A1 — bulk create (R16)
+    // =======================================================================
+
+    @Nested
+    @DisplayName("createBatch — A1 (R16.3/R16.4/R16.5)")
+    class BatchCreate {
+
+        @Test
+        @DisplayName("a batch of valid reports persists every item and emits one notification per non-FOREMAN report (R16.3/R16.5)")
+        void batchPersistsAllAndNotifiesPerReport() {
+            authenticate(WORKER_ID, "ROLE_WORKER");
+            stubWorkerMember();
+            stubEstimateLine(planFor(ROOM_A, "40"), planFor(ROOM_B, "40"));
+
+            WorkReportServiceExtendedModel first =
+                    createModel(row(ROOM_A, "3", WorkReportInputMode.ABSOLUTE));
+            WorkReportServiceExtendedModel second =
+                    createModel(row(ROOM_B, "4", WorkReportInputMode.ABSOLUTE));
+
+            List<WorkReportServiceExtendedModel> result =
+                    service.createBatch(List.of(first, second));
+
+            // Both items persisted (one save each).
+            assertThat(result).hasSize(2);
+            verify(workReportDao, org.mockito.Mockito.times(2)).save(any(WorkReportEntity.class));
+            // One submitted-notification event per non-FOREMAN report (R16.5).
+            verify(eventPublisher, org.mockito.Mockito.times(2))
+                    .publishEvent(any(WorkReportNotificationEvent.class));
+        }
+
+        @Test
+        @DisplayName("FOREMAN-authored fast-path items persist but emit no notification (R5/R16.5)")
+        void fastPathItemsEmitNoNotification() {
+            authenticate(FOREMAN_ID, "ROLE_FOREMAN");
+            stubProjectRole(FOREMAN_ID, "FOREMAN");
+            stubWorkerMember();
+            stubEstimateLine(planFor(ROOM_A, "40"), planFor(ROOM_B, "40"));
+
+            WorkReportServiceExtendedModel first =
+                    createModel(row(ROOM_A, "3", WorkReportInputMode.ABSOLUTE));
+            WorkReportServiceExtendedModel second =
+                    createModel(row(ROOM_B, "4", WorkReportInputMode.ABSOLUTE));
+
+            List<WorkReportServiceExtendedModel> result =
+                    service.createBatch(List.of(first, second));
+
+            assertThat(result).hasSize(2);
+            verify(workReportDao, org.mockito.Mockito.times(2)).save(any(WorkReportEntity.class));
+            // The fast path emits nothing for either item (R9.5).
+            verify(eventPublisher, never()).publishEvent(any());
+        }
+
+        @Test
+        @DisplayName("a single bad item rolls back the whole batch — nothing persists, no event fires (R16.4)")
+        void badItemRollsBackWholeBatch() {
+            authenticate(WORKER_ID, "ROLE_WORKER");
+            stubWorkerMember();
+            // ROOM_A has a plan; ROOM_B has none, so a PERCENT row on ROOM_B is invalid (R2.3).
+            stubEstimateLine(planFor(ROOM_A, "40"));
+
+            WorkReportServiceExtendedModel good =
+                    createModel(row(ROOM_A, "3", WorkReportInputMode.ABSOLUTE));
+            WorkReportServiceExtendedModel bad =
+                    createModel(row(ROOM_B, "50", WorkReportInputMode.PERCENT)); // no plan → noPlan
+
+            assertThatThrownBy(() -> service.createBatch(List.of(good, bad)))
+                    .isInstanceOf(WorkReportBatchItemException.class)
+                    .satisfies(ex -> {
+                        WorkReportBatchItemException batch = (WorkReportBatchItemException) ex;
+                        assertThat(batch.getIndex()).isEqualTo(1); // the second (zero-based) item
+                        assertThat(batch.getWorkItemId()).isEqualTo(WORK_ITEM_ID);
+                        assertThat(batch.getRoomId()).isEqualTo(ROOM_B); // room-scoped failure
+                        assertThat(batch.getCause().getMessageCode())
+                                .isEqualTo("error.workReport.room.noPlan");
+                    });
+
+            // The good item was assembled before the bad one failed; the outer @Transactional rolls
+            // the whole batch back, but the per-item notification events are AFTER_COMMIT, so on a
+            // rollback NO event is ever published (R16.4).
+            verify(eventPublisher, never()).publishEvent(any());
+        }
+
+        @Test
+        @DisplayName("the failing item index points to the first bad payload regardless of position (R16.4)")
+        void failingIndexIdentifiesFirstBadItem() {
+            authenticate(WORKER_ID, "ROLE_WORKER");
+            stubWorkerMember();
+            stubEstimateLine(planFor(ROOM_A, "40"));
+
+            // index 0 ok, index 1 bad (non-positive quantity, R2.5), index 2 would also be ok.
+            WorkReportServiceExtendedModel ok =
+                    createModel(row(ROOM_A, "3", WorkReportInputMode.ABSOLUTE));
+            WorkReportServiceExtendedModel bad =
+                    createModel(row(ROOM_A, "0", WorkReportInputMode.ABSOLUTE));
+            WorkReportServiceExtendedModel alsoOk =
+                    createModel(row(ROOM_A, "2", WorkReportInputMode.ABSOLUTE));
+
+            assertThatThrownBy(() -> service.createBatch(List.of(ok, bad, alsoOk)))
+                    .isInstanceOf(WorkReportBatchItemException.class)
+                    .satisfies(ex -> assertThat(((WorkReportBatchItemException) ex).getIndex())
+                            .isEqualTo(1));
+        }
+
+        @Test
+        @DisplayName("an empty batch persists nothing and returns an empty list (R16.3)")
+        void emptyBatchIsNoOp() {
+            authenticate(WORKER_ID, "ROLE_WORKER");
+
+            assertThat(service.createBatch(List.of())).isEmpty();
+            verify(workReportDao, never()).save(any());
+            verify(eventPublisher, never()).publishEvent(any());
+        }
+    }
+
     // ========================================================================
     // test-data builders / stubs
     // ========================================================================
@@ -611,6 +917,114 @@ class WorkReportServiceTest {
         lenient().when(entityManager.createQuery(cq)).thenReturn(typed);
         lenient().when(typed.setMaxResults(1)).thenReturn(typed);
         lenient().when(typed.getResultList()).thenReturn(List.of(projectId));
+    }
+
+    // --- progress-projection builders / stubs (A1) ---
+
+    /** Stubs the worker's project membership to cover exactly the given category ids (Covering_Works R3.1). */
+    private void stubCoveringCategories(Long... categoryIds) {
+        ProjectMemberEntity member = new ProjectMemberEntity();
+        member.setUser(referenceStub(UserEntity.class, WORKER_ID));
+        member.setProjectId(PROJECT_ID);
+        member.setAssignmentStatus(AssignmentStatus.ACTIVE);
+        List<WorkCategoryEntity> covered = new ArrayList<>();
+        for (Long id : categoryIds) {
+            covered.add(categoryWithOrder(id, 1, "CAT-" + id));
+        }
+        member.setWorkCategories(covered);
+        when(projectMemberDao.findByUserIdAndProjectId(WORKER_ID, PROJECT_ID))
+                .thenReturn(Optional.of(member));
+    }
+
+    /** Stubs the project's estimate lines (the progress projection's work-item source). */
+    private void stubProgressEstimate(EstimateLineEntity... lines) {
+        when(estimateLineDao.findByProjectIdWithWorkItemCategoryAndUnit(PROJECT_ID))
+                .thenReturn(List.of(lines));
+    }
+
+    /** An estimate line for a named work item in a category (with orderNo), carrying the given room plans. */
+    private EstimateLineEntity progressLine(Long workItemId, Long categoryId, int orderNo,
+                                            String unitCode, EstimateLineRoomQtyEntity... plans) {
+        WorkItemEntity wi = new WorkItemEntity();
+        wi.setId(workItemId);
+        wi.setNameRU("WI-RU-" + workItemId);
+        wi.setNamePL("WI-PL-" + workItemId);
+        wi.setCode("WI-" + workItemId);
+        wi.setWorkCategory(categoryWithOrder(categoryId, orderNo, "CAT-" + categoryId));
+
+        MeasurementUnitEntity unit = new MeasurementUnitEntity();
+        unit.setCode(unitCode);
+
+        EstimateLineEntity line = new EstimateLineEntity();
+        line.setWorkItem(wi);
+        line.setUnit(unit);
+        line.setUnitPrice(UNIT_PRICE);
+        line.setRoomQtys(new ArrayList<>(List.of(plans)));
+        return line;
+    }
+
+    private static WorkCategoryEntity categoryWithOrder(Long id, int orderNo, String code) {
+        WorkCategoryEntity c = new WorkCategoryEntity();
+        c.setId(id);
+        c.setOrderNo(orderNo);
+        c.setCode(code);
+        c.setNameRU("CAT-RU-" + id);
+        c.setNamePL("CAT-PL-" + id);
+        return c;
+    }
+
+    /** Stubs the reported-quantity aggregate the progress projection reads (DAO rows). */
+    private void stubReportedSums(Object[]... rows) {
+        when(workReportDao.sumReportedQuantityByWorkItemAndRoom(
+                org.mockito.ArgumentMatchers.eq(PROJECT_ID),
+                org.mockito.ArgumentMatchers.eq(WORKER_ID),
+                org.mockito.ArgumentMatchers.anyCollection()))
+                .thenReturn(List.of(rows));
+    }
+
+    /** A room-qty row with a null plan quantity (the no-plan / absolute-only cell case, R14.3). */
+    private EstimateLineRoomQtyEntity planForNoQty(Long roomId) {
+        EstimateLineRoomQtyEntity rq = new EstimateLineRoomQtyEntity();
+        rq.setRoom(referenceStub(RoomEntity.class, roomId));
+        rq.setQuantity(null);
+        return rq;
+    }
+
+    /** One {@code [workItemId, roomId, reportedQuantity]} aggregate row. */
+    private static Object[] reportedRow(Long workItemId, Long roomId, String quantity) {
+        return new Object[] {workItemId, roomId, new BigDecimal(quantity)};
+    }
+
+    /** Captures the status set handed to the reported-sum DAO query (asserts REJECTED is excluded). */
+    @SuppressWarnings("unchecked")
+    private java.util.Collection<WorkReportStatus> capturedReportedStatuses() {
+        ArgumentCaptor<java.util.Collection<WorkReportStatus>> captor =
+                ArgumentCaptor.forClass(java.util.Collection.class);
+        verify(workReportDao).sumReportedQuantityByWorkItemAndRoom(
+                org.mockito.ArgumentMatchers.eq(PROJECT_ID),
+                org.mockito.ArgumentMatchers.eq(WORKER_ID),
+                captor.capture());
+        return captor.getValue();
+    }
+
+    /** All work-item ids present in the projection, flattened across its category groups. */
+    private static List<Long> workItemIds(WorkReportProgressDto dto) {
+        return dto.categories().stream()
+                .flatMap(g -> g.workItems().stream())
+                .map(WorkReportProgressDto.WorkItemRow::workItemId)
+                .toList();
+    }
+
+    /** The cell for a given {@code (workItem, room)} in the projection; fails if absent. */
+    private static WorkReportProgressDto.Cell cell(WorkReportProgressDto dto, Long workItemId, Long roomId) {
+        return dto.categories().stream()
+                .flatMap(g -> g.workItems().stream())
+                .filter(w -> workItemId.equals(w.workItemId()))
+                .flatMap(w -> w.cells().stream())
+                .filter(c -> roomId.equals(c.roomId()))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError(
+                        "no cell for workItem=" + workItemId + " room=" + roomId));
     }
 
     private WorkReportEntity capturedSave() {

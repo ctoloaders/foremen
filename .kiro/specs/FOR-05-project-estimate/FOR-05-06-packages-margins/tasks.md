@@ -159,7 +159,7 @@
     125–127 migrations). Written in Russian.
   - _Requirements: 1.x, 2.x, 3.x, 4.x, 5.x, 6.x, 7.x_
 
-- [-] 14. Final checkpoint — full verification and per-repo commits
+- [x] 14. Final checkpoint — full verification and per-repo commits
   - Backend: `getDiagnostics` + compile, then run only the affected test classes with `--tests` (temp
     log; verify via JUnit XML). Frontend: type-check + property/component/locale tests (single-run).
   - Commit per the two-repo rule: backend (WorkerType entity/CRUD, migrations 125–127, material

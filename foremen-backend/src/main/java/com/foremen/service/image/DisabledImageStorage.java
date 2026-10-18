@@ -55,6 +55,12 @@ public class DisabledImageStorage implements ImageStorage {
     }
 
     @Override
+    public byte[] readObject(String objectKey) {
+        // No storage configured: there is no bucket to read stored bytes from.
+        return null;
+    }
+
+    @Override
     public boolean isConfigured() {
         return false;
     }

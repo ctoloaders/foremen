@@ -45,4 +45,41 @@ public class WorkReportServiceExtendedModel {
 
     /** Media references attached while composing/editing (R8.1); the service binds them (design §6). */
     private List<String> mediaRefs = new ArrayList<>();
+
+    // --- Read-side projection (FOR-06-01 detail view) ---
+    //
+    // The extended model is the single-read / review-response projection as well as the write input.
+    // On the WRITE path these stay null (the service derives/sets them); on the READ path the service
+    // mapper populates them so GET /{id} and approve/reject/request-changes return the status, the
+    // decision trail, the frozen revenue valuation, and the localized names a reviewer needs. The
+    // write-path DAO mappers never read these fields, so adding them does not affect create/update.
+
+    /** Localized work-item display name (ru -> pl -> code); read path only. */
+    private String workItemName;
+    /** The worker's display name; read path only. */
+    private String workerName;
+    /** The author's user id and display name; read path only. */
+    private Long authorId;
+    private String authorName;
+
+    /** The {@code WorkReportStatus} name; read path only. */
+    private com.foremen.dao.model.WorkReportStatus status;
+
+    /** The approver's user id / name and the approval timestamp; read path only (null until decided). */
+    private Long approvedById;
+    private String approvedByName;
+    private java.time.OffsetDateTime approvedAt;
+    /** The rejection / change reason; read path only (null until decided). */
+    private String rejectionReason;
+
+    /** Frozen revenue unit price (R6); read path only. */
+    private java.math.BigDecimal clientUnitPrice;
+    /** Derived total quantity (R1.4); read path only. */
+    private java.math.BigDecimal totalQuantity;
+    /** Derived revenue value (R1.5); read path only. */
+    private java.math.BigDecimal revenueValue;
+
+    /** Forward-compat cost placeholders — always null (cost side is FOR-06-10/11, R6.5). */
+    private java.math.BigDecimal costValue;
+    private java.math.BigDecimal margin;
 }

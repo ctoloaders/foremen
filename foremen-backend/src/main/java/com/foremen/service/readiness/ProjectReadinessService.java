@@ -135,6 +135,54 @@ public class ProjectReadinessService {
     }
 
     /**
+     * Computes the <b>project-wide</b> readiness of a project over <b>every</b>
+     * {@link ProjectReadinessContributor}, independent of the caller's per-area READ permissions
+     * (FOR-05-12 Requirement 2.3, Decision D2). This is the authoritative activation gate's view of
+     * "100% ready": unlike {@link #getReadiness(Long)}, which scopes areas to the caller's READ
+     * permission and therefore yields a per-caller percentage, this variant includes all areas so
+     * the percentage is a project fact.
+     *
+     * <p>Everything else is identical to {@link #getReadiness(Long)}: the same ADMIN-bypass access
+     * gate (missing or inaccessible project → {@code 404 error.entity.not.found}, Requirements 3.2,
+     * 3.3), the same per-contributor containment (a thrower is logged and omitted), the same
+     * {@link ProjectReadinessContributor#order()} ordering, and the same {@link ReadinessMath}
+     * composition. Only the per-area READ filter is skipped.
+     *
+     * <p>Intended for internal use by the activation gate only; it is not exposed through the
+     * caller-scoped {@code Readiness_API}.
+     *
+     * @param projectId the project whose project-wide readiness is computed
+     * @return the aggregated readiness result over all areas (never {@code null})
+     * @throws ForemenApiException 404 {@code error.entity.not.found} when the project is missing or
+     *                             not an Accessible_Project of the caller
+     */
+    @Transactional(readOnly = true)
+    public ProjectReadinessResult getReadinessAllAreas(Long projectId) {
+        loadAccessibleProject(projectId);                             // 1 — 404 (unchanged access gate)
+
+        // 2 + 3 + 4 — include EVERY contributor (no per-area READ filter), contribute (contain a
+        // thrower), order by order(). This is the only difference from getReadiness (Decision D2).
+        List<ProjectReadinessContributor> included = contributors.stream()
+                .sorted(Comparator.comparingInt(ProjectReadinessContributor::order))
+                .toList();
+
+        List<AreaContribution> areas = new ArrayList<>(included.size());
+        for (ProjectReadinessContributor contributor : included) {
+            try {
+                areas.add(contributor.contribute(projectId));
+            } catch (RuntimeException e) {
+                LOG.warn("Readiness contributor '{}' failed for project {}; omitting its area",
+                        contributor.areaKey(), projectId, e);
+            }
+        }
+
+        // 5 — compose the equal-weight overall percentage and the state roll-up.
+        int overallPercentage = ReadinessMath.overallPercentage(areas);
+        ReadinessState overallState = ReadinessMath.overallState(areas);
+        return new ProjectReadinessResult(projectId, overallPercentage, overallState, List.copyOf(areas));
+    }
+
+    /**
      * Whether the caller may READ the contributor's area resource (Requirement 6.1). ADMIN is
      * bypassed by {@link ForemenPermissionEvaluator}; an unresolved role is treated as not readable
      * (the area is omitted).

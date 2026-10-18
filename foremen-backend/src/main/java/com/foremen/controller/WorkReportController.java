@@ -1,18 +1,25 @@
 package com.foremen.controller;
 
+import java.util.List;
+
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
+import com.foremen.controller.model.WorkReportBatchRequest;
+import com.foremen.controller.model.WorkReportBatchResponse;
 import com.foremen.controller.model.WorkReportCreateRequest;
 import com.foremen.controller.model.WorkReportCreateResponse;
 import com.foremen.controller.model.WorkReportDtoExtendedModel;
 import com.foremen.controller.model.WorkReportDtoModel;
+import com.foremen.controller.model.WorkReportProgressDto;
 import com.foremen.controller.model.WorkReportReviewReasonRequest;
 import com.foremen.controller.model.WorkReportUpdateRequest;
 import com.foremen.controller.model.WorkReportUpdateResponse;
@@ -58,6 +65,15 @@ import lombok.RequiredArgsConstructor;
  * {@code POST /{id}/reject}, {@code POST /{id}/request-changes} (the last two carry a mandatory
  * reason). Each review handler returns the refreshed single-report projection
  * ({@link WorkReportDtoExtendedModel}) so the client sees the new status and decision trail.
+ *
+ * <p><b>Amendment A1 (matrix batch authoring).</b> Two further handlers back the matrix surface:
+ * {@code GET /progress?projectId=&workerId=} ({@code WORK_REPORTS}/{@code READ}) returns the
+ * {@link WorkReportProgressDto} matrix source, and {@code POST /batch}
+ * ({@code WORK_REPORTS}/{@code CREATE}) bulk-creates a batch of single-report payloads in one
+ * all-or-nothing transaction (a failing item yields a {@code 400} carrying its index / ids /
+ * message, mapped in {@code ForemenControllerAdvice}). Both carry a method-level
+ * {@link RequiresPermission @RequiresPermission}, so they are fully annotated for the
+ * {@code PermissionAnnotationValidator} startup check.
  */
 @RestController
 @RequestMapping("/api/work-reports")
@@ -76,6 +92,8 @@ public class WorkReportController implements AdminController<
         WorkReportUpdateResponse> {
 
     private static final String RESOURCE = "WORK_REPORTS";
+    private static final String READ = "READ";
+    private static final String CREATE = "CREATE";
     private static final String UPDATE = "UPDATE";
 
     private final WorkReportService service;
@@ -153,5 +171,52 @@ public class WorkReportController implements AdminController<
             @Valid @RequestBody WorkReportReviewReasonRequest request) {
         WorkReportServiceExtendedModel updated = service.requestChanges(id, request.reason());
         return ResponseEntity.ok(controllerMapper.toExtendedDto(updated));
+    }
+
+    /**
+     * FOR-06-01 Amendment A1 (Requirements 14.6, 16.1; design A1.1) — the matrix read projection
+     * behind the batch authoring surface: for a {@code (project, worker)} it returns the worker's
+     * not-yet-fully-reported Covering_Work rows grouped by category × room columns, each cell
+     * carrying the planned and already-reported quantity (R14). Resolves to
+     * {@code WORK_REPORTS}/{@code READ}; the service applies the project-scope gate and the WORKER
+     * own-records guard (a WORKER requesting another {@code workerId} is rejected).
+     *
+     * @param projectId the project whose matrix source to read
+     * @param workerId  the worker the matrix is for
+     * @return the {@link WorkReportProgressDto} matrix source
+     */
+    @GetMapping("/progress")
+    @RequiresPermission(resource = RESOURCE, operation = READ)
+    public ResponseEntity<WorkReportProgressDto> progress(
+            @RequestParam Long projectId,
+            @RequestParam Long workerId) {
+        return ResponseEntity.ok(service.progress(projectId, workerId));
+    }
+
+    /**
+     * FOR-06-01 Amendment A1 (Requirements 16.1, 16.6; design A1.2) — bulk create / submit: persists
+     * a non-empty batch of single-report payloads as one all-or-nothing transaction (R16.4). On full
+     * success returns the persisted ids in submission order; a single failing item aborts (rolls
+     * back) the whole batch and surfaces as a {@code 400} {@code WorkReportBatchItemError} carrying
+     * the failing item's index / {@code workItemId} / optional {@code roomId} and localized message
+     * (handled in {@code ForemenControllerAdvice}). Per-report notification events fire on commit
+     * exactly as the single create path (R16.5). Resolves to {@code WORK_REPORTS}/{@code CREATE};
+     * the service applies the project-scope gate and the own-records guard per item.
+     *
+     * @param request the batch payload ({@code reports[]})
+     * @return the ids of the persisted reports
+     */
+    @PostMapping("/batch")
+    @RequiresPermission(resource = RESOURCE, operation = CREATE)
+    public ResponseEntity<WorkReportBatchResponse> createBatch(
+            @Valid @RequestBody WorkReportBatchRequest request) {
+        List<WorkReportServiceExtendedModel> models = request.reports().stream()
+                .map(controllerMapper::toServiceExtendedModel)
+                .toList();
+        List<WorkReportServiceExtendedModel> created = service.createBatch(models);
+        List<Long> ids = created.stream()
+                .map(WorkReportServiceExtendedModel::getId)
+                .toList();
+        return ResponseEntity.ok(new WorkReportBatchResponse(ids));
     }
 }

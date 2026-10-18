@@ -129,9 +129,61 @@ public abstract class WorkReportServiceMapper
     @Mapping(target = "projectId", source = "project.id")
     @Mapping(target = "workItemId", source = "workItem.id")
     @Mapping(target = "workerId", source = "worker.id")
+    @Mapping(target = "authorId", source = "author.id")
+    @Mapping(target = "approvedById", source = "approvedBy.id")
+    @Mapping(target = "workItemName", ignore = true)
+    @Mapping(target = "workerName", ignore = true)
+    @Mapping(target = "authorName", ignore = true)
+    @Mapping(target = "approvedByName", ignore = true)
+    @Mapping(target = "costValue", ignore = true)
+    @Mapping(target = "margin", ignore = true)
     @Mapping(target = "rooms", ignore = true)
     @Mapping(target = "mediaRefs", ignore = true)
     public abstract WorkReportServiceExtendedModel toServiceExtendedModel(WorkReportEntity source);
+
+    /**
+     * FOR-06-01 single-read / review-response projection: resolve the extended model's localized
+     * names and per-room split so {@code GET /{id}} and approve/reject/request-changes carry the
+     * status, decision trail, frozen revenue, and names (not just the author-supplied inputs). The
+     * scalar read fields (status, clientUnitPrice, totalQuantity, revenueValue, rejectionReason,
+     * approvedAt) auto-map by name from the entity; this fills the resolved names + rooms.
+     */
+    @AfterMapping
+    protected void resolveExtendedReadModel(@MappingTarget WorkReportServiceExtendedModel target,
+                                            WorkReportEntity source) {
+        boolean ru = isRussianLocale();
+
+        WorkItemEntity workItem = source.getWorkItem();
+        if (workItem != null) {
+            target.setWorkItemName(
+                    firstNonBlank(ru ? workItem.getNameRU() : workItem.getNamePL(),
+                            ru ? workItem.getNamePL() : workItem.getNameRU(),
+                            workItem.getCode()));
+        }
+        if (source.getWorker() != null) {
+            target.setWorkerName(source.getWorker().getName());
+        }
+        if (source.getAuthor() != null) {
+            target.setAuthorName(source.getAuthor().getName());
+        }
+        if (source.getApprovedBy() != null) {
+            target.setApprovedByName(source.getApprovedBy().getName());
+        }
+
+        List<WorkReportRoomModel> rows = new ArrayList<>();
+        if (source.getRooms() != null) {
+            for (WorkReportRoomEntity row : source.getRooms()) {
+                rows.add(new WorkReportRoomModel(
+                        row.getId(),
+                        row.getRoom() == null ? null : row.getRoom().getId(),
+                        resolveRoomName(row.getRoom(), ru),
+                        row.getQuantity(),
+                        row.getPlanQuantity(),
+                        row.getInputMode()));
+            }
+        }
+        target.setRooms(rows);
+    }
 
     /**
      * Resolves the referenced display names with the per-request locale rule (RU when the request

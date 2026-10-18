@@ -118,11 +118,12 @@ public class ProjectActivationSignal {
      * Whether a project in {@code current} status may still be activated. Only the pre-activation
      * stages ({@code DRAFT}/{@code READY_TO_OFFER}/{@code OFFERED}/{@code APPROVED}) are eligible;
      * {@code ACTIVE} and every later/terminal status is a no-op so re-signalling is idempotent (R10.4).
+     *
+     * <p>Delegates to the shared {@link ProjectStatus#PRE_ACTIVATION_STATUSES} single source of truth
+     * (via {@link ProjectStatus#isPreActivation()}) so this signal and the FOR-05-12 activation gate
+     * agree on exactly which statuses are eligible; behaviour is unchanged.
      */
     private boolean isEligibleForActivation(ProjectStatus current) {
-        return current == ProjectStatus.DRAFT
-                || current == ProjectStatus.READY_TO_OFFER
-                || current == ProjectStatus.OFFERED
-                || current == ProjectStatus.APPROVED;
+        return current != null && current.isPreActivation();
     }
 }

@@ -93,6 +93,21 @@ public interface ImageStorage {
     boolean isConfigured();
 
     /**
+     * Read the stored bytes of a previously stored object back into memory. Used by callers that
+     * must re-process an already-stored upload without a re-upload — e.g. the FOR-06-03 procurement
+     * re-process, which re-runs OCR + matching on the originally stored raw bytes (R8.1).
+     *
+     * <p>Returns {@code null} when the object key is {@code null}/blank or when storage is not
+     * configured (the disabled fallback has no bucket to read from). Implementations throw a
+     * client-error when a configured bucket has no object under the given key.
+     *
+     * @param objectKey the stored bucket-relative object key, or {@code null}
+     * @return the stored object bytes, or {@code null} when the key is {@code null}/blank or storage
+     *         is not configured
+     */
+    byte[] readObject(String objectKey);
+
+    /**
      * Build a short-lived, one-time V4 signed download URL for a PRIVATE object (FOR-05-08: the
      * signing artifacts live in a private bucket and are served only via time-boxed signed URLs,
      * never a public CDN link).

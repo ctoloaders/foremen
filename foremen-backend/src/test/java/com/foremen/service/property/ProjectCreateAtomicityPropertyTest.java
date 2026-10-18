@@ -241,6 +241,7 @@ class ProjectCreateAtomicityPropertyTest {
         final ClientRegistrationService clientRegistrationService = Mockito.mock(ClientRegistrationService.class);
         final RoleDao roleDao = Mockito.mock(RoleDao.class);
         final GooglePlacesService googlePlacesService = Mockito.mock(GooglePlacesService.class);
+        final com.foremen.dao.UserDao userDao = Mockito.mock(com.foremen.dao.UserDao.class);
         final RoleEntity clientRole = clientRole();
         final ProjectService service;
 
@@ -264,7 +265,9 @@ class ProjectCreateAtomicityPropertyTest {
 
             service = new ProjectService(
                     projectDao, mapper, projectAccessCache, auditLogDao, entityManager,
-                    projectMemberService, clientRegistrationService, roleDao, googlePlacesService);
+                    projectMemberService, clientRegistrationService, roleDao, googlePlacesService,
+                    org.mockito.Mockito.mock(com.foremen.service.ProjectActivationService.class),
+                    userDao);
         }
     }
 

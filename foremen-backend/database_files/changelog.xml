@@ -629,6 +629,12 @@
          COUNT(*)=0 preconditions. Depends on the resources/roles/operations tables (002/003/004)
          and the ESTIMATOR role (136). Registered LAST, after 164. -->
     <include file="database_files/changesets/165-seed-work-reports-resource.xml"/>
+    <!-- FOR-06-01 (R11.2, R11.4): grant the WORKER role project-scoped READ on ESTIMATE and
+         PROJECT_MEMBERS so the Work Reporting builder's reference-data queries (estimate matrix +
+         team members) succeed for a WORKER composing their own report, instead of 403-ing and
+         hanging the builder. READ only, on top of the project-membership filter. Idempotent via
+         onFail="MARK_RAN". Registered LAST, after 165. -->
+    <include file="database_files/changesets/166-grant-worker-reporting-builder-reads.xml"/>
     <!-- FOR-06-03 (R1.1, R1.3): procurement_documents — the project-scoped ProcurementDocument
          persistence root (the primary procurement document uploaded on an ACTIVE project). Its
          extracted per-line items live in the child table procurement_lines (changeset 168).

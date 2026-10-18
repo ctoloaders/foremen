@@ -2,6 +2,7 @@ package com.foremen.controller;
 
 import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
+import com.foremen.controller.model.ActivateProjectRequest;
 import com.foremen.controller.model.CreateProjectRequest;
 import com.foremen.controller.model.ProjectCreateResponse;
 import com.foremen.controller.model.ProjectListDto;
@@ -12,6 +13,7 @@ import com.foremen.controller.model.mapper.ProjectControllerMapper;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
+import com.foremen.service.ProjectActivationService;
 import com.foremen.service.ProjectService;
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.service.model.ProjectServiceExtendedModel;
@@ -65,6 +67,7 @@ public class ProjectController implements AdminController<
         ProjectUpdateResponse> {
 
     private final ProjectService service;
+    private final ProjectActivationService projectActivationService;
     private final ProjectControllerMapper controllerMapper;
     private final AuditServiceMapper auditServiceMapper;
     private final com.foremen.service.document.ProjectTemplateViewService projectTemplateViewService;
@@ -157,6 +160,38 @@ public class ProjectController implements AdminController<
     @GetMapping("/{id}")
     @PermissionOperation("READ")
     public ResponseEntity<ProjectReadDto> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.findByIdProjected(id));
+    }
+
+    /**
+     * FOR-05-12 (Requirements 1.5, 3; design §Backend design → Changed components → ProjectController)
+     * — the explicit, readiness-gated project-activation endpoint ({@code pre-activation → ACTIVE}).
+     * Delegates to the single server-side gate {@link ProjectActivationService#activate(Long,
+     * boolean)} (task 2.1), then returns the rich read projection via
+     * {@link ProjectService#findByIdProjected(Long)} — the same shape {@link #findById(Long)} returns
+     * and the frontend already consumes (the projection re-reads + projects after the committed
+     * activation).
+     *
+     * <p>The optional {@link ActivateProjectRequest} body carries {@code force}; when the body is
+     * omitted it is treated as {@code force = false} (a normal gated activation). Force is honored
+     * only for an ADMIN/MANAGER caller and bypasses only the readiness gate (the service enforces the
+     * access/permission gates regardless).
+     *
+     * <p>Guarded with a method-level {@link RequiresPermission}{@code (PROJECTS, UPDATE)}; combined
+     * with the controller's class-level {@link PermissionResource}{@code ("PROJECTS")} this makes the
+     * endpoint fully annotated so {@code PermissionAnnotationValidator} passes at startup.
+     *
+     * @param id      the project to activate
+     * @param request the optional activation body ({@code force}); may be {@code null} when omitted
+     * @return HTTP 200 with the updated project read DTO
+     */
+    @PostMapping("/{id}/activate")
+    @RequiresPermission(resource = "PROJECTS", operation = "UPDATE")
+    public ResponseEntity<ProjectReadDto> activate(
+            @PathVariable Long id,
+            @RequestBody(required = false) ActivateProjectRequest request) {
+        boolean force = request != null && request.forceOrFalse();
+        projectActivationService.activate(id, force);
         return ResponseEntity.ok(service.findByIdProjected(id));
     }
 

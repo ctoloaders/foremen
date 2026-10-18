@@ -81,7 +81,9 @@ class ProjectServicePreservationTest {
 
         ProjectService service = new ProjectService(
                 projectDao, mapper, accessCache, auditLogDao, entityManager,
-                memberService, clientRegistrationService, roleDao, googlePlacesService);
+                memberService, clientRegistrationService, roleDao, googlePlacesService,
+                mock(ProjectActivationService.class),
+                mock(com.foremen.dao.UserDao.class));
         return new Fixture(service, projectDao, mapper, auditLogDao, googlePlacesService);
     }
 

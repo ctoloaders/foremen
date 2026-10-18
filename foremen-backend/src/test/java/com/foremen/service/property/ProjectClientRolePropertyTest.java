@@ -139,7 +139,9 @@ class ProjectClientRolePropertyTest {
 
         ProjectService service = new ProjectService(
                 projectDao, mapper, projectAccessCache, auditLogDao, entityManager,
-                projectMemberService, clientRegistrationService, roleDao, googlePlacesService);
+                projectMemberService, clientRegistrationService, roleDao, googlePlacesService,
+                mock(com.foremen.service.ProjectActivationService.class),
+                mock(com.foremen.dao.UserDao.class));
         return new Fixture(service, projectMemberService, clientRegistrationService, roleDao);
     }
 

@@ -40,7 +40,7 @@ The ten lifecycle stages the workspace must surface as tabs/areas:
 7. **Team selection** — assign foreman + workers to the project.
 8. **Work schedule** — the design-stage **planning Gantt** (FOR-05-10); the execution
    plan/actual Gantt and its updates belong to **FOR-06**.
-9. **Procurement & delivery tracking** — execution stage (**FOR-06**, backed by FOR-07 data).
+9. **Procurement & delivery tracking** — execution stage (**FOR-06**, former FOR-07 scope).
 10. **Work reporting** — completed-work reporting from both foreman and worker sides
     (execution stage, **FOR-06**).
 
@@ -209,16 +209,13 @@ ownership boundary and how the specs connect.
 | Spec | Owns | Surfaced in the FOR-05 workspace as |
 |------|------|-------------------------------------|
 | **FOR-05** project-estimate (design stage, `DRAFT`) | Workspace shell + tabs, rooms & dimensions, estimate + BoM + list of materials, packages/cost/margins, offer preparation + approval (server side), document & contract signing, team selection, planning Gantt, project readiness | The workspace itself (design-stage tabs) |
-| **FOR-06** project-in-progress (execution stage) | Everything after the contract is signed: amendments + amendment signing, work reporting (`WorkReport`), plan/actual Gantt updates, procurement tracking, execution-stage tabs | Execution-stage tabs (owned by FOR-06) |
-| **FOR-07** procurement-tracking | Purchase/delivery orders, delivery statuses, receiving | "Procurement" tab (embedded) |
+| **FOR-06** project-in-progress (execution stage) | Umbrella for everything after the contract is signed: work reporting (`WorkReport`), plan/actual Gantt, procurement OCR + purchases list + materials matrix, works-margin matrix, client payment plan/actual (mass-collect/przelewy24, bank reconciliation), amendments + amendment signing, **worker cost rates** (`WorkerServiceRate`, §4.7) + payroll, client communication (admin side). Former FOR-07/FOR-10/FOR-11 are folded in here. | Execution-stage tabs (owned by FOR-06) |
 | **FOR-08** ai-estimate | AI orchestrator + tools + per-project chat to *assist* building the estimate | An "AI assist" panel inside the Works/Estimate tabs |
-| **FOR-09** client-portal | Read-only client views + client-side communication (approval, discounts, package choice, delivery variant choice) | The **client-facing** rendering of the Offer/Approval tab |
-| **FOR-10** financial-accounting | Primary docs, bank transactions, cost allocation, **worker cost rates** (`WorkerServiceRate`, §4.7) | "Finances" surfaced from procurement/estimate cost data |
-| **FOR-11** payroll | **Worker payout computation** built on worker cost rates + approved FOR-06 `WorkReport`s | consumes the FOR-06 `WorkReport` cost side |
+| **FOR-09** client-portal | Read-only client views + client-side communication and payment surface (approval, discounts, package choice, delivery variant choice, viewing the payment schedule and paying online). Stays a **separate** spec (its own small client UI). | The **client-facing** rendering of the Offer/Approval tab |
 
 **Ownership rule of thumb:** FOR-05 owns *the offer/estimate domain and the workspace that
-frames the project* in the design stage; the execution stage (FOR-06), procurement data
-(FOR-07), AI (FOR-08), client portal (FOR-09) and finance/payroll (FOR-10/FOR-11) own their
+frames the project* in the design stage; the execution stage (FOR-06, which now also owns the
+former procurement/finance/payroll scope), AI (FOR-08) and the client portal (FOR-09) own their
 data and their pages, and the workspace embeds a thin "tab host" that lazy-loads their
 feature module. If a sibling spec is not yet built, its tab renders a graceful "coming soon /
 not configured" placeholder.
@@ -226,13 +223,13 @@ not configured" placeholder.
 **Cost boundary.** In the design stage FOR-05 computes cost and margin from the
 **`WorkerType` tiers** (hiring-type rate as a % of the offer price) and the materialized
 material cost, delivered by **FOR-05-06-packages-margins**. Per-worker cost rates
-(`WorkerServiceRate`) and payouts are a **FOR-10 (finance) / FOR-11 (payroll)** concern
-(§4.7); FOR-05 does not define or read them.
+(`WorkerServiceRate`) and payouts are a **FOR-06 (execution stage)** concern (§4.7, former
+FOR-10/FOR-11); FOR-05 does not define or read them.
 
 **Execution-stage tabs (owned by FOR-06).** After the contract is signed the workspace
 switches to the execution-stage tab set (procurement, source/primary documents, plan/actual
 Gantt, payroll, amendment signing). Those tabs, their data, and the integrations behind them
-(FOR-07 procurement data, FOR-10 primary documents, FOR-11 payroll) are owned by **FOR-06
+(procurement data, primary documents, payroll — formerly FOR-07/FOR-10/FOR-11) are owned by **FOR-06
 "Project in progress"**; FOR-05 only provides the tab-host contract and the stage resolver
 (§6.10). The **design-stage planning Gantt** (tab `scheduleDesign`) is owned by
 **FOR-05-10-project-gantt** and becomes read-only once the project is `ACTIVE`; it is the
@@ -290,10 +287,10 @@ graph TD
 
     SIG ==>|contract signed| F06[FOR-06 project-in-progress]
     GANTT ==>|planning baseline| F06
-    EST -->|BoM feeds purchase orders| F07[FOR-07 procurement-tracking]
+    EST -->|BoM feeds procurement| F06
     WK  -->|AI assists composition| F08[FOR-08 ai-estimate]
     APR -->|client reads + approves| F09[FOR-09 client-portal]
-    EST -->|cost lines| F10[FOR-10 financial-accounting]
+    EST -->|cost lines| F06
 
     WS -.execution tabs.-> F06
     WS -.client view.-> F09
@@ -304,9 +301,9 @@ catalog/prices/packages. Within FOR-05, works composition feeds the estimate; th
 feeds offer approval, which gates document/contract signing; the estimate and the team feed
 the planning Gantt; all design-stage gates roll up into project readiness. The signed
 contract and the planning Gantt hand the project over to FOR-06 (execution stage). The
-estimate is also the *upstream source* for siblings: FOR-07 orders the BoM materials, FOR-09
-shows and approves the offer, FOR-10 books the cost lines. The dotted edges are the
-*embed* relationships (workspace hosts sibling tabs).
+estimate is also the *upstream source* for siblings: FOR-06 procures the BoM materials and
+books cost lines (former FOR-07/FOR-10 scope), and FOR-09 shows and approves the offer. The
+dotted edges are the *embed* relationships (workspace hosts sibling tabs).
 
 ---
 
@@ -500,15 +497,15 @@ worker's completed work over an interval:
   (`AmendmentLine.extraUnitPrice`) that apply to it. Both the amendments and this valuation
   are owned by FOR-06.
 - **Cost side (outgoing — what the WORKER is paid):** `workerUnitPrice` comes from the worker
-  cost rates owned by FOR-10/FOR-11 (§4.7).
+  cost rates owned by FOR-06 (execution stage, former FOR-10/FOR-11) (§4.7).
 - **Derived value fields:** `revenueValue = clientUnitPrice × totalQuantity`;
   `costValue = workerUnitPrice × totalQuantity`; `margin = revenueValue − costValue`.
 - **Approval:** an approve action sets `approvedBy` + moves `status` to `APPROVED`.
 
-### 4.7 Worker cost rates — FOR-10/FOR-11 concern
+### 4.7 Worker cost rates — FOR-06 (execution stage) concern
 
-Per-worker cost/payout rates (`WorkerServiceRate`) are owned by **FOR-10 (finance) / FOR-11
-(payroll)** and are not part of the FOR-05 model. FOR-05 cost and margin in the design stage
+Per-worker cost/payout rates (`WorkerServiceRate`) are owned by **FOR-06 (execution stage,
+former FOR-10 finance / FOR-11 payroll)** and are not part of the FOR-05 model. FOR-05 cost and margin in the design stage
 use the **`WorkerType` tiers** (rate as a % of the offer price) and the materialized material
 cost delivered by **FOR-05-06-packages-margins**.
 
@@ -654,7 +651,7 @@ READ + UPDATE, mirroring FOREMAN; every schedule write resolves to UPDATE. `WORK
 (FOR-05-06) is ADMIN-managed with READ for the roles that can view margins; its exact grants
 live in FOR-05-06. `WORK_REPORTS` belongs to the execution stage (FOR-06): WORKER reports own
 completed work (CU own) and FOREMAN approves work reports (sets `approvedBy`/`status`, §4.4).
-Worker cost rates (§4.7) are gated by their owning finance/payroll specs (FOR-10/FOR-11).
+Worker cost rates (§4.7) are gated by FOR-06 (execution stage, former FOR-10/FOR-11).
 
 ---
 
@@ -785,7 +782,7 @@ BEGIN
 END
 ```
 
-### 6.4 Bill-of-materials aggregation (procurement handoff to FOR-07)
+### 6.4 Bill-of-materials aggregation (procurement handoff to FOR-06)
 
 ```pascal
 ALGORITHM aggregateBom(estimate)
@@ -799,7 +796,7 @@ BEGIN
       agg[key] <- agg[key] + mr.quantity            // mr.quantity already = consumption * lineQty
     END FOR
   END FOR
-  RETURN agg           // consumed by FOR-07 to draft purchase orders
+  RETURN agg           // consumed by FOR-06 (former FOR-07) to draft purchase orders
 END
 ```
 
@@ -935,8 +932,8 @@ signed amendment deltas that apply to it (§4.3a, §4.4). Enforced by FOR-06.
 ### Property 8: WorkReport cost derivation (execution stage, FOR-06)
 
 `WorkReport.costValue == workerUnitPrice × Σ WorkReportRoom.quantity`, where
-`workerUnitPrice` is the worker cost rate supplied by FOR-10/FOR-11 (§4.4, §4.7). Enforced by
-FOR-06.
+`workerUnitPrice` is the worker cost rate supplied by FOR-06 (execution stage, former
+FOR-10/FOR-11) (§4.4, §4.7). Enforced by FOR-06.
 
 ### Property 9: WorkReport margin identity (execution stage, FOR-06)
 
@@ -1374,9 +1371,9 @@ rooms, volume, date — §4.4). Its columns, filters, and labels are specified i
 
 ### 8.5 Role-specific views (worker earnings; foreman metrics) — client-call decision
 
-- **Worker view (execution stage, FOR-06 with FOR-11).** A worker sees their **full assigned
+- **Worker view (execution stage, FOR-06, former FOR-11).** A worker sees their **full assigned
   work scope** and **how much they can earn** = Σ `WorkReport.costValue` over their
-  assigned/completed work, using the worker cost rates owned by FOR-10/FOR-11 (§4.4/§4.7).
+  assigned/completed work, using the worker cost rates owned by FOR-06 (former FOR-10/FOR-11) (§4.4/§4.7).
   Label: **Twój zakres i zarobek / Твой объём и заработок**. (The revenue side and margin stay
   manager/finance-facing; the worker sees their own payout.)
 - **Foreman view.** There is **no separate foreman dashboard**; a foreman's cross-project

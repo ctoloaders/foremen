@@ -249,6 +249,19 @@ public class GcsImageStorage implements ImageStorage {
     }
 
     @Override
+    public byte[] readObject(String objectKey) {
+        if (objectKey == null || objectKey.isBlank()) {
+            return null;
+        }
+        Blob blob = storage().get(BlobId.of(properties.bucket(), objectKey));
+        if (blob == null || !blob.exists()) {
+            // A configured bucket with no object under the key is a client-visible error.
+            throw new ForemenValidationException("error.image.not.found", objectKey);
+        }
+        return blob.getContent();
+    }
+
+    @Override
     public boolean isConfigured() {
         return properties.isConfigured();
     }

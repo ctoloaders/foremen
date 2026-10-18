@@ -280,6 +280,47 @@ class ProjectReadinessServiceTest {
                 });
     }
 
+    // =======================================================================
+    // FOR-05-12 — getReadinessAllAreas ignores per-area READ scoping while
+    // getReadiness still scopes (Decision D2, Requirement 2.3)
+    // =======================================================================
+
+    @Test
+    @DisplayName("getReadinessAllAreas includes a non-readable area while getReadiness omits it (FOR-05-12 R2.3)")
+    void getReadinessAllAreasIgnoresPerAreaReadScoping() {
+        // A non-ADMIN caller readable on every area EXCEPT one (the first, ROOMS).
+        authenticateRole("MANAGER");
+        AreaSpec unreadableSpec = AREA_SPECS.get(0);
+
+        List<AreaContribution> source = AREA_SPECS.stream()
+                .map(spec -> contribution(spec.key(), ReadinessState.PARTIAL, 50))
+                .toList();
+        List<ProjectReadinessContributor> contributors = contributorsReturning(source);
+
+        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
+        for (AreaSpec spec : AREA_SPECS) {
+            // Every area readable except the one unreadable area.
+            when(evaluator.isAllowed("MANAGER", spec.resource(), "READ"))
+                    .thenReturn(!spec.equals(unreadableSpec));
+        }
+        ProjectReadinessService service = new ProjectReadinessService(
+                contributors, evaluator, accessibleProjectCache(), projectDaoFound());
+
+        List<String> allKeys = AREA_SPECS.stream().map(AreaSpec::key).toList();
+
+        // getReadiness scopes: the unreadable area is omitted.
+        ProjectReadinessResult scoped = service.getReadiness(PROJECT_ID);
+        List<String> scopedKeys = scoped.areas().stream().map(AreaContribution::key).toList();
+        assertThat(scopedKeys).doesNotContain(unreadableSpec.key());
+        assertThat(scopedKeys).hasSize(AREA_SPECS.size() - 1);
+
+        // getReadinessAllAreas bypasses the per-area READ filter: EVERY area is included.
+        ProjectReadinessResult all = service.getReadinessAllAreas(PROJECT_ID);
+        List<String> allAreaKeys = all.areas().stream().map(AreaContribution::key).toList();
+        assertThat(allAreaKeys).containsExactlyInAnyOrderElementsOf(allKeys);
+        assertThat(allAreaKeys).contains(unreadableSpec.key());
+    }
+
     // --- service / collaborator builders ------------------------------------
 
     /** A service whose ADMIN caller reads every area; the project row exists. */

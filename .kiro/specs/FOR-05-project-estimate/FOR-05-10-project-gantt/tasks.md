@@ -275,7 +275,7 @@ under `foremen-backend/build/test-results/test/`. Use `./gradlew compileJava` /
   - [x] 13.1 Update OVERVIEW, PROGRESS, and FOR-06 OVERVIEW
     - `FOR-05-project-estimate/OVERVIEW.md`: row `10 | FOR-05-10-project-gantt | full-stack`,
       remove row 15, update the dependency graph and the FOR-05 → FOR-06 transition table, add the
-      renumbering note. `PROGRESS.md`: the FOR-05 child row. `FOR-06-work-schedule/OVERVIEW.md`:
+      renumbering note. `PROGRESS.md`: the FOR-05 child row. `FOR-06-project-in-progress/OVERVIEW.md`:
       replace the planning-Gantt references `FOR-05-16` with `FOR-05-10`.
     - _Requirements: 18.1_
 

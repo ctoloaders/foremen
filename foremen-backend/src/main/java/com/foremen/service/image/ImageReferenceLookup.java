@@ -39,7 +39,12 @@ public class ImageReferenceLookup {
     private static final List<ImageColumn> IMAGE_COLUMNS = List.of(
             new ImageColumn("construction_materials", "image"),
             new ImageColumn("material_producers", "image"),
-            new ImageColumn("finishing_materials", "photo"));
+            new ImageColumn("finishing_materials", "photo"),
+            // FOR-06-03: a procurement document stores its raw upload and its processed
+            // white-background rendition in the same bucket, so both keys must count as referenced
+            // — otherwise deleteIfOrphan on a re-process/delete could reclaim a key still in use.
+            new ImageColumn("procurement_documents", "raw_object_key"),
+            new ImageColumn("procurement_documents", "processed_object_key"));
 
     @PersistenceContext
     private EntityManager entityManager;
