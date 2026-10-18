@@ -210,3 +210,128 @@ to `/tmp/for-06-01-test.log`, and read the log / JUnit XML under
   ]
 }
 ```
+
+---
+
+## Amendment A1 — Matrix batch authoring (tasks)
+
+Replaces the single-report `WorkReportBuilder` with a matrix batch authoring surface and adds the
+progress read projection + bulk create endpoint it needs. No schema change, no new entity, no new
+ABAC resource, no new notification type (requirements R14–R19, design Amendment A1). Backend lands in
+the root repo; frontend in `foremen-frontend/`. Same test-run policy (affected classes only).
+
+### Parallel execution plan (waves) — Amendment A1
+
+- **Wave A0 (parallel):** A1.1 (progress DTO + service projection), A1.2 (bulk service method) —
+  both are additive service/DTO work on existing classes; keep them in separate files/methods so
+  they are independently committable.
+- **Wave A1:** A1.3 (controller endpoints) — needs the two service methods.
+- **Wave A2 (parallel):** A1.4 (api client + types), A1.6 (backend tests) — the client needs the
+  endpoints live; the tests need the service methods.
+- **Wave A3:** A1.5 (matrix surface + cell popup + draft panel, replacing the builder) — needs the
+  api client + types.
+- **Wave A4 (parallel):** A1.7 (i18n keys PL+RU + backend batch messages), A1.8 (frontend tests) —
+  both need the surface built.
+- **Wave A5:** A1.9 (update test-cases.md) — needs the full amendment.
+- **Wave A6:** A1.10 (final verification + checkpoint) — depends on everything in A1.
+
+### Tasks — Amendment A1
+
+- [x] A1. Backend: progress projection + bulk create
+  - [x] A1.1 Add the progress read projection
+    - Add `WorkReportProgressDto` (+ nested room/category/workItem/cell records) and
+      `WorkReportService.progress(projectId, workerId)` returning the matrix source: the worker's
+      Covering_Works ∩ estimate work items, grouped by work category, each cell carrying
+      `planQuantity` (from `EstimateLineRoomQty`) and `reportedQuantity` (Σ over reports in
+      {SUBMITTED, CHANGES_REQUESTED, APPROVED}; REJECTED excluded) + `reportedPercent`; omit a work
+      item whose every planned room is ≥100%; own-records guard (WORKER may request only own
+      `workerId`). Localized names ru→pl→code.
+    - _Requirements: 14.1, 14.2, 14.3, 14.4, 14.5, 14.6_
+    - _Depends on: none_
+  - [x] A1.2 Add the bulk create service method
+    - `WorkReportService.createBatch(List<WorkReportServiceExtendedModel>)` in one `@Transactional`:
+      iterate items through the existing create assembly (validation + PERCENT→absolute + revenue
+      freeze + fast-path status + own-records), all-or-nothing (any item failure rolls back the
+      whole batch and reports the failing item index); publish the per-report notification events on
+      commit exactly as the single create.
+    - _Requirements: 16.1, 16.2, 16.3, 16.4, 16.5, 16.6_
+    - _Depends on: none_
+
+- [x] A1.3 Backend: controller endpoints
+  - Add `GET /api/work-reports/progress` (`@RequiresPermission WORK_REPORTS/READ`) → `progress(...)`,
+    and `POST /api/work-reports/batch` (`@RequiresPermission WORK_REPORTS/CREATE`) →
+    `createBatch(...)` with `WorkReportBatchRequest`/`WorkReportBatchResponse` DTOs + the controller
+    mapper wiring. App starts clean (`PermissionAnnotationValidator`).
+  - _Requirements: 14.6, 16.1, 16.6_
+  - _Depends on: A1.1, A1.2_
+
+- [x] A1.4 Frontend: api client + types
+  - Add `fetchProgress(projectId, workerId)` and `batchCreate(payloads)` to `work-reports-api.ts`;
+    add `WorkReportProgressDto`, batch request/response, and matrix/draft types.
+  - _Requirements: 14.1, 16.1_
+  - _Depends on: A1.3_
+
+- [x] A1.5 Frontend: matrix surface (replaces the builder)
+  - Build `WorkReportMatrix.tsx` (worker picker for non-WORKER callers; category-grouped rows × room
+    columns; cell plan+percent with staged overlay; ≥100% cell disabled; empty state),
+    `WorkReportCellPopup.tsx` (percent|absolute toggle + unit label + period from/to default
+    today/today with day −/+ steppers + no-plan block), `WorkReportDraftPanel.tsx` (staged
+    `work · room · volume` lines, count, edit/remove, Save; collapsible drawer with right-edge
+    reveal + count on mobile), `lib/matrix-draft.ts` (draft model + localStorage R7 +
+    `toBatchPayloads()` grouping by `(workItem, from, to)`) and `lib/progress.ts`. Swap the panel's
+    "new report" action to open the matrix; remove the old `WorkReportBuilder` entry point.
+  - _Requirements: 15.1, 15.2, 15.3, 15.4, 15.5, 15.6, 17.1, 17.2, 17.3, 17.4, 18.1, 18.2, 18.3_
+  - _Depends on: A1.4_
+
+- [x] A1.6 Backend tests
+  - `progress` (reportedQuantity counts pending+approved, excludes REJECTED; ≥100% work item
+    omitted; own-records guard) and `createBatch` (all-or-nothing rollback on a bad item;
+    per-report notifications on success; fast-path items emit none). Run only the affected classes
+    with `--tests`, verify via JUnit XML.
+  - _Requirements: 14.2, 14.4, 14.6, 16.3, 16.4, 16.5_
+  - _Depends on: A1.1, A1.2_
+
+- [x] A1.7 i18n keys (PL + RU) + backend batch messages
+  - Add the new `workReporting.*` matrix/cell/draft/toast keys (design A1.4) to both `pl.json` and
+    `ru.json`, mirrored; add any new `error.workReport.*` batch code PL+RU to the backend bundle.
+    Run the locale-parity test.
+  - _Requirements: 19.1, 19.2_
+  - _Depends on: A1.5_
+
+- [x] A1.8 Frontend tests
+  - Matrix mapping + staged-overlay math, cell popup percent/absolute + period stepper, draft
+    grouping into batch payloads, mobile collapsible draft, locale parity.
+  - _Requirements: 15.1, 15.2, 15.4, 16.2, 18.2_
+  - _Depends on: A1.5, A1.7_
+
+- [x] A1.9 Update test-cases.md
+  - Append a matrix-flow TC group to `test-cases.md`: API (progress projection; bulk batch
+    all-or-nothing + success) and UI (worker pick → cell entry → draft accumulate → bulk save →
+    progress reflects; mobile collapsible draft), following the `.kiro/steering/test-cases.md`
+    standard (RU, repeatability, MD-report tables).
+  - _Requirements: 14.1, 15.1, 16.1, 17.1, 18.2_
+  - _Depends on: A1.3, A1.5, A1.7_
+
+- [x] A1.10 Final verification + checkpoint (Amendment A1)
+  - Compile backend + run the affected test classes; type-check + unit-test the frontend; locale
+    parity green; app starts clean. Confirm the matrix surface replaces the old builder and the
+    cell → draft → bulk-save → progress-refresh flow works end-to-end on an ACTIVE project. Commit
+    per repo (two commits) only if the user asks.
+  - _Requirements: all of A1_
+  - _Depends on: A1.1, A1.2, A1.3, A1.4, A1.5, A1.6, A1.7, A1.8, A1.9_
+
+### Amendment A1 — Task Dependency Graph
+
+```json
+{
+  "waves": [
+    { "id": "A0", "tasks": ["A1.1", "A1.2"] },
+    { "id": "A1", "tasks": ["A1.3"] },
+    { "id": "A2", "tasks": ["A1.4", "A1.6"] },
+    { "id": "A3", "tasks": ["A1.5"] },
+    { "id": "A4", "tasks": ["A1.7", "A1.8"] },
+    { "id": "A5", "tasks": ["A1.9"] },
+    { "id": "A6", "tasks": ["A1.10"] }
+  ]
+}
+```

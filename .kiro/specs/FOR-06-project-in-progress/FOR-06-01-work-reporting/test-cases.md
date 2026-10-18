@@ -576,3 +576,350 @@ _Покрывает:_ R12.2, R12.3, R12.4.
 **Итог:** X пройдено / Y провалено / Z пропущено / W ⚠️ (open question).
 Run-id: `<timestamp/uuid>`. Стратегия повторяемости: `генератор run-id + teardown (DELETE под ADMIN)`.
 Открытые вопросы: `R9.1 — resubmit-нотификация (TC-API-RESUBMIT-NOTIFY)`.
+
+---
+
+# Amendment A1 — Матричное пакетное внесение (matrix batch authoring)
+
+Amendment A1 заменяет одиночный `WorkReportBuilder` матричной поверхностью пакетного внесения и
+добавляет два бэкенд-эндпоинта: прогресс-проекцию чтения (`GET /api/work-reports/progress`) и
+массовое создание (`POST /api/work-reports/batch`). Новых сущностей, схемы, ABAC-ресурсов и типов
+нотификаций **нет** — переиспользуются `WorkReport` / `WorkReportRoom`, ресурс `WORK_REPORTS`,
+статус-машина, оценка выручки, fast-path бригадира и четыре типа `notification.workReport.*`.
+
+Эта группа тест-кейсов **дополняет** набор выше и опирается на те же `Setup`-данные части A (проект
+`ACTIVE`, подписанная смета с планами `EstimateLineRoomQty`, роли с проектными членствами, воркер с
+покрывающей категорией). Как и основной набор, она состоит из двух частей:
+
+- **Часть A1-API** — HTTP-тесты против docker-стека (`http://localhost:8080`): прогресс-проекция и
+  пакетное создание (all-or-nothing + успех).
+- **Часть A1-UI** — браузерные сценарии (`http://localhost:3000`), исполняются браузерным движком:
+  выбор воркера → ввод в ячейку → накопление черновика → массовое сохранение → отражение в прогрессе;
+  мобильный схлопываемый черновик.
+
+### Покрытие требований (Amendment A1)
+
+Тест-кейсы покрывают R14.1 (прогресс-проекция как источник матрицы), R15.1 (ввод в ячейку и
+клиентский черновик), R16.1 (пакетное сохранение), R17.1 (выбор воркера и матричная поверхность),
+R18.2 (мобильный схлопываемый черновик). Сопутствующе затрагиваются R14.2/R14.4 (подсчёт
+`reportedQuantity`, скрытие 100%-work item), R15.3 (PERCENT-без-плана), R16.2/R16.4/R16.5
+(группировка в payloads, all-or-nothing, нотификации на коммите), R17.2/R17.3 (disabled-ячейка,
+редактируемые строки черновика). Соответствие «кейс ↔ требование» указано строкой `_Покрывает:_`.
+
+## Общая стратегия повторяемости (Amendment A1)
+
+**Комбинированная: тот же генератор `run-id` + teardown**, что и в основном наборе. Пакетно
+создаваемые отчёты помечаются заметкой `batch {run-id}` (поле `note` каждого элемента), чтобы их
+можно было найти и вычистить. Teardown в конце группы: `DELETE /api/work-reports/{id}` под ADMIN для
+всех созданных пакетом отчётов (не-терминальные `SUBMITTED`/`CHANGES_REQUESTED` — обычным флоу,
+`APPROVED` fast-path бригадира — DELETE под ADMIN). UI-черновики (localStorage, ключ
+`workReport:draft:{projectId}:{userId}`) чистятся кнопкой «discard» / успешным сохранением в самом
+сценарии. Прогресс-проекция только читается. Сид (роли, ресурс `WORK_REPORTS`, гранты) неизменяем.
+
+> **Доменная предзависимость.** Для содержательной матрицы у воркера (`WORKER_USER_ID`) должна быть
+> покрывающая work-категория по `WORK_ITEM_ID`, а у work item — планы `EstimateLineRoomQty` по
+> `ROOM_A`/`ROOM_B` (`PLAN_A`/`PLAN_B`) и хотя бы одно помещение без плана (`ROOM_NOPLAN`). Эти
+> данные готовит группа `Setup` части A (TC-SETUP-02/03) — она является предусловием всех кейсов
+> ниже.
+
+---
+
+# Часть A1-API. Прогресс-проекция и пакетное создание (docker-стек)
+
+## Фича A1-1. Прогресс-проекция матрицы (R14.1, R14.2, R14.4, R14.6)
+
+**Повторяемость:** проекция только читается; созданные для проверки подсчёта отчёты помечены
+`batch {run-id}` и чистятся общим teardown.
+
+### TC-API-PROGRESS-01 — Проекция возвращает оси и ячейки для воркера с покрывающей категорией
+**Предусловия:** TOKEN_WORKER, PROJECT_ID, WORKER_USER_ID (есть покрывающая категория по
+`WORK_ITEM_ID`); планы `PLAN_A`/`PLAN_B` по `ROOM_A`/`ROOM_B`; отчётов по этому воркеру ещё нет.
+1. `GET /api/work-reports/progress?projectId=PROJECT_ID&workerId=WORKER_USER_ID` (Bearer WORKER) →
+   **200**; тело — `WorkReportProgressDto` c `projectId`, `workerId`, непустым `rooms[]` (ось
+   столбцов, содержит `ROOM_A`/`ROOM_B`) и `categories[]` → `workItems[]` → `cells[]`.
+2. Проверить: `WORK_ITEM_ID` присутствует в соответствующей `WorkCategory`-группе (входит в
+   пересечение Covering_Works ∩ work items сметы, R14.1); имена локализованы ru→pl→code, у work item
+   задан `unitCode`.
+3. Для ячеек `(WORK_ITEM_ID, ROOM_A)` и `(…, ROOM_B)`: `planQuantity = PLAN_A` / `PLAN_B`,
+   `reportedQuantity = 0`, `reportedPercent = 0`. Для `(…, ROOM_NOPLAN)` (если возвращается):
+   `planQuantity = null`, `reportedPercent = null`.
+
+_Покрывает:_ R14.1, R14.3.
+
+### TC-API-PROGRESS-02 — `reportedQuantity` суммирует SUBMITTED + CHANGES_REQUESTED + APPROVED, исключает REJECTED
+**Предусловия:** TOKEN_WORKER; свежая проекция (reportedQuantity = 0 по `ROOM_A`).
+1. Создать по `(WORK_ITEM_ID, ROOM_A)` три отчёта в разных статусах: `R_SUB` (остаётся `SUBMITTED`,
+   `quantity = q1`), `R_CHG` (перевести в `CHANGES_REQUESTED` через request-changes, `quantity =
+   q2`), `R_APP` (approve → `APPROVED`, `quantity = q3`); и один `R_REJ` (reject → `REJECTED`,
+   `quantity = q4`). Все с `note="batch {run-id}"`.
+2. `GET /api/work-reports/progress?projectId=PROJECT_ID&workerId=WORKER_USER_ID` → для ячейки
+   `(WORK_ITEM_ID, ROOM_A)` `reportedQuantity = q1 + q2 + q3` (REJECTED `q4` **исключён**, R14.2),
+   `reportedPercent = round(reportedQuantity / PLAN_A × 100)`.
+
+_Покрывает:_ R14.2.
+
+### TC-API-PROGRESS-03 — Work item со всеми планами ≥100% скрывается из проекции
+**Предусловия:** TOKEN_WORKER; у `WORK_ITEM_ID` все плановые помещения (`ROOM_A`, `ROOM_B`) имеют
+планы; `ROOM_NOPLAN` по этому work item отсутствует (все помещения плановые).
+1. Создать и довести до учитываемого статуса отчёты, доводящие `reportedQuantity` по **каждому**
+   плановому помещению до `≥ planQuantity` (≥100%).
+2. `GET /api/work-reports/progress?projectId=PROJECT_ID&workerId=WORKER_USER_ID` → `WORK_ITEM_ID`
+   **отсутствует** в проекции (все плановые ячейки ≥100%, R14.4).
+3. Контроль: work item, у которого хотя бы одно плановое помещение < 100% ИЛИ есть беcплановое
+   (absolute-only) помещение, **остаётся** в проекции.
+
+_Покрывает:_ R14.4.
+
+### TC-API-PROGRESS-04 — Own-records guard: WORKER не может запросить чужой `workerId`
+**Предусловия:** TOKEN_WORKER, WORKER2_USER_ID (другой воркер).
+1. `GET /api/work-reports/progress?projectId=PROJECT_ID&workerId=WORKER2_USER_ID` (Bearer WORKER) →
+   **403/404**; код `error.workReport.access.notOwner`.
+2. `GET …&workerId=WORKER_USER_ID` (свой) → **200**.
+3. Тот же запрос по чужому `workerId` под TOKEN_FOREMAN → **200** (бригадир может по любому воркеру
+   проекта, R14.6); под TOKEN_CLIENT (нет READ-гранта) → **403**.
+
+_Покрывает:_ R14.6, R10.5.
+
+---
+
+## Фича A1-2. Пакетное создание — all-or-nothing + успех (R16.1, R16.2, R16.3, R16.4, R16.5)
+
+**Повторяемость:** успешно созданные пакетом отчёты помечены `batch {run-id}`, чистятся teardown;
+откатившиеся пакеты ничего не создают — чистки не требуют.
+
+### TC-API-BATCH-01 — Успешный пакет создаёт все отчёты, группировка по `(workItem, from, to)`
+**Предусловия:** TOKEN_WORKER; `WORK_ITEM_ID` покрыт; планы по `ROOM_A`/`ROOM_B`.
+1. `POST /api/work-reports/batch` (Bearer WORKER) с телом
+   `{reports:[ {workItemId:WORK_ITEM_ID, workerId:WORKER_USER_ID, performedFrom:D, performedTo:D,
+   rooms:[{roomId:ROOM_A_ID, quantity:Q_A, inputMode:ABSOLUTE}], note:"batch {run-id}"},
+   {workItemId:WORK_ITEM_ID, workerId:WORKER_USER_ID, performedFrom:D, performedTo:D,
+   rooms:[{roomId:ROOM_B_ID, quantity:Q_B, inputMode:ABSOLUTE}], note:"batch {run-id}"} ]}`. →
+   **200/201**; тело `WorkReportBatchResponse { created:[id,…] }` с ожидаемым числом созданных
+   отчётов, каждый `status = SUBMITTED`.
+2. `GET /api/work-reports?projectId=PROJECT_ID` (Bearer WORKER) → все созданные отчёты видимы; у
+   каждого верные деривации (`totalQuantity`, `revenueValue`) как в одиночном создании.
+3. _(Клиентская группировка R16.2)_: при подаче нескольких ячеек одного `(workItemId, from, to)`
+   фронт объединяет их в один payload с несколькими room-строками — проверяется в части A1-UI
+   (TC-UI-BATCH-01). На уровне API принимается тот список payloads, что прислан.
+
+_Покрывает:_ R16.1, R16.5.
+
+### TC-API-BATCH-02 — Один плохой элемент откатывает весь пакет (all-or-nothing)
+**Предусловия:** TOKEN_WORKER; валидный `WORK_ITEM_ID`; известный источник ошибки (например,
+`ROOM_NOPLAN_ID` в режиме `PERCENT` → `error.workReport.room.noPlan`, либо `quantity:0` →
+`quantity.invalid`).
+1. Запомнить текущее число отчётов воркера: `GET /api/work-reports?projectId=PROJECT_ID` → `N0`.
+2. `POST /api/work-reports/batch` (Bearer WORKER) с телом из трёх элементов: `[0]` валиден, `[1]`
+   валиден, `[2]` невалиден (`{roomId:ROOM_NOPLAN_ID, quantity:30, inputMode:PERCENT}`). →
+   **400/422**; тело содержит `{index:2, workItemId:…, roomId:ROOM_NOPLAN_ID?, message}` с кодом
+   `error.workReport.room.noPlan` (первый сбойный элемент, R16.4).
+3. `GET /api/work-reports?projectId=PROJECT_ID` → число отчётов снова `N0` (валидные `[0]`,`[1]`
+   **не** сохранились — весь пакет откатился, R16.4).
+
+_Покрывает:_ R16.4.
+
+### TC-API-BATCH-03 — Пакет fast-path бригадира: все элементы сразу APPROVED, без submit-нотификаций
+**Предусловия:** TOKEN_FOREMAN; FOREMAN покрыт по `WORK_ITEM_ID`.
+1. `POST /api/work-reports/batch` (Bearer FOREMAN) с 2 элементами `workerId=FOREMAN_USER_ID`
+   (самоотчёты). → **200/201**; каждый созданный отчёт `status = APPROVED` сразу (R5.1).
+2. Прочитать Bell FOREMAN и автора → по этим отчётам **нет** ни submit-, ни approve-нотификаций
+   (fast-path эмитит ничего, R16.5 + R5).
+
+_Покрывает:_ R16.5, R5.1.
+
+### TC-API-BATCH-04 — Пакет не-бригадира эмитит одну `submitted` на каждый созданный отчёт
+**Предусловия:** TOKEN_WORKER (не бригадир); FOREMAN — ACTIVE member.
+1. `POST /api/work-reports/batch` (Bearer WORKER) с 2 валидными элементами. → **200/201**; оба
+   `SUBMITTED`; `created` содержит 2 id.
+2. Прочитать Bell FOREMAN → присутствуют **две** записи `notification.workReport.submitted` (по
+   одной на созданный отчёт, R16.5 / R9.1), у каждой deep-link
+   `/projects/{PROJECT_ID}/workReporting?report={id}`.
+
+_Покрывает:_ R16.5.
+
+### TC-API-BATCH-05 — Пакетное создание гейтировано `WORK_REPORTS`/CREATE и own-records
+**Предусловия:** TOKEN_MANAGER (нет CREATE), TOKEN_WORKER, WORKER2_USER_ID.
+1. `POST /api/work-reports/batch` (Bearer MANAGER) → **403** (нет CREATE-гранта, R16.6).
+2. `POST /api/work-reports/batch` (Bearer WORKER) с элементом `workerId=WORKER2_USER_ID` (чужой
+   воркер) → **400/403**; код `error.workReport.worker.notSelf`; ничего не создано (own-records).
+3. `POST /api/work-reports/batch` без `Authorization` → **401**.
+
+_Покрывает:_ R16.6, R10.5.
+
+---
+
+# Часть A1-UI. Матричная поверхность (frontend)
+
+Экран: вкладка `workReporting` воркспейса `ACTIVE`-проекта → действие «новый отчёт» открывает
+**матрицу** `WorkReportMatrix` (не старый `WorkReportBuilder`). Компоненты: матрица (строки —
+work items, сгруппированные по категориям; столбцы — помещения; в ячейке план + reported%),
+попап ячейки `WorkReportCellPopup` (percent|absolute-переключатель, единица, период from/to с
+day −/+ степперами, блок no-plan), боковая панель черновика `WorkReportDraftPanel` (накопленные
+строки `work · room · volume`, счётчик, edit/remove, Save; на мобиле — схлопываемый ящик).
+
+**Повторяемость:** UI создаёт отчёты пакетом с заметкой `batch {run-id}`; teardown — те же DELETE
+под ADMIN, что и в API. Черновик (localStorage) очищается «discard»/успешным сохранением внутри
+сценариев.
+
+### TC-UI-MATRIX-01 — «Новый отчёт» открывает матрицу; выбор воркера (не-WORKER) грузит проекцию
+**Предусловия:** логин FOREMAN; проект `ACTIVE`; у `WORKER_USER_ID` есть покрывающая категория.
+1. Открыть вкладку `workReporting` → «новый отчёт» → открывается матрица (`matrix.title`), **не**
+   одиночный билдер (R17.4).
+2. Для FOREMAN отображается пикер воркера (`matrix.pickWorker`); выбрать `Worker {run-id}` → матрица
+   (пере)загружается из `GET /api/work-reports/progress` для выбранного воркера (R17.1).
+3. Матрица рендерит группы категорий → строки work items (с единицей) × столбцы помещений; в каждой
+   ячейке — план (`matrix.cell.plan`) и reported% (`matrix.cell.percent`). Пустая проекция → пустое
+   состояние (`matrix.empty`).
+
+_Покрывает:_ R17.1, R17.4, R14.5.
+
+### TC-UI-MATRIX-02 — WORKER видит матрицу по себе без пикера; ячейка ≥100% заблокирована
+**Предусловия:** логин WORKER; есть ячейка `(WORK_ITEM_ID, ROOM_A)` с reported% < 100 и, при
+возможности, ячейка со 100%.
+1. Открыть матрицу → пикера воркера **нет** (грузится self, R17.1); отображается прогресс воркера.
+2. Ячейка с reported% ≥ 100 визуально **disabled** — клик не открывает попап (R17.2); ячейка < 100%
+   кликается.
+
+_Покрывает:_ R17.1, R17.2.
+
+### TC-UI-CELL-01 — Попап ячейки: percent|absolute, единица, период с day-степперами, no-plan
+**Предусловия:** логин WORKER; матрица открыта; `ROOM_A` имеет план, `ROOM_NOPLAN` — нет.
+1. Клик по ячейке `(WORK_ITEM_ID, ROOM_A)` → попап (`cell.title`) с переключателем
+   percent|absolute (`cell.modeToggle.*`), меткой единицы (`cell.unit`, из `unitCode`), полями
+   периода `cell.periodFrom`/`cell.periodTo` (по умолчанию сегодня/сегодня) и степперами
+   `cell.dayPrev`/`cell.dayNext` (−/+ один день).
+2. Переключить на `PERCENT`, ввести `50` → подтвердить (`cell.confirm`) → ячейка показывает
+   staged-бейдж (`matrix.cell.staged`) с резолвом `PLAN_A × 50 / 100` (R15.6).
+3. Клик по ячейке `(WORK_ITEM_ID, ROOM_NOPLAN)` → в режиме `PERCENT` отображается блок no-plan
+   (`cell.noPlan`), подтверждение percent заблокировано (R15.3); режим `ABSOLUTE` разрешён.
+
+_Покрывает:_ R15.1, R15.3, R15.6.
+
+### TC-UI-DRAFT-A1-01 — Накопление черновика: строки, счётчик, edit/remove, повтор ячейки заменяет строку
+**Предусловия:** логин WORKER; матрица открыта.
+1. Внести ячейки `(WORK_ITEM_ID, ROOM_A)` и `(WORK_ITEM_ID, ROOM_B)` → в панели черновика
+   (`draft.title`) появляются две строки `work · room · volume` (`draft.line`), счётчик
+   (`draft.count`) = 2.
+2. Повторно открыть ячейку `(WORK_ITEM_ID, ROOM_A)`, изменить количество, подтвердить → в черновике
+   по-прежнему **две** строки (строка этой ячейки заменена, не добавлена — одна staged-строка на
+   ячейку, R15.4); значение обновилось.
+3. На строке черновика «edit» (`draft.edit`) → переоткрывает соответствующую ячейку; «remove»
+   (`draft.remove`) → строка удаляется, счётчик уменьшается (R17.3).
+
+_Покрывает:_ R15.4, R17.3.
+
+### TC-UI-DRAFT-A1-02 — Черновик переживает навигацию (continue/discard) и чистится после сохранения
+**Предусловия:** логин WORKER; в черновике ≥1 staged-строка (не сохранён).
+1. Уйти с вкладки и вернуться → предложение восстановить черновик (continue/discard, R7/R15.5);
+   «continue» → staged-строки восстановлены, ячейки снова показывают staged-бейджи.
+2. После успешного bulk-сохранения (см. TC-UI-BATCH-01) черновик **пуст**, ключ
+   `workReport:draft:{projectId}:{userId}` очищен (R15.5).
+
+_Покрывает:_ R15.1, R15.5.
+
+### TC-UI-BATCH-01 — Bulk save: группировка в payloads, прогресс обновляется, тост успеха
+**Предусловия:** логин WORKER; в черновике staged-строки по `ROOM_A` и `ROOM_B` одного
+`WORK_ITEM_ID` с одинаковым периодом (`from=to=сегодня`), плюс строка по другому периоду.
+1. Нажать Save (`draft.save`) → клиент группирует строки в payloads по `(workItemId, from, to)`
+   (две ячейки одного периода → один payload с двумя room-строками; другой период → отдельный
+   payload) и шлёт один `POST /api/work-reports/batch` (R16.2).
+2. Успех → тост `toast.batchSaved`; черновик очищается; матрица рефетчит `GET …/progress` —
+   `reportedQuantity`/reported% по затронутым ячейкам возрастают, staged-бейджи исчезают (R16.5).
+3. Созданные отчёты видны в списке панели со статусом `SUBMITTED` и заметкой `batch {run-id}`.
+
+_Покрывает:_ R16.1, R16.2, R15.1.
+
+### TC-UI-BATCH-02 — Ошибка пакета показывается inline, прогресс не меняется
+**Предусловия:** логин WORKER; в черновик добавлена заведомо сбойная ячейка (например,
+`ROOM_NOPLAN` в режиме PERCENT, если клиент пропускает её до сервера).
+1. Save → бэкенд отвечает **400** с указанием сбойного элемента; UI показывает локализованное
+   сообщение (`toast.batchError` + inline на соответствующей ячейке/строке черновика, R16.4).
+2. Матрица **не** обновляет прогресс (пакет откатился целиком); черновик сохранён — автор правит
+   сбойную ячейку и повторяет Save.
+
+_Покрывает:_ R16.4.
+
+### TC-UI-MOBILE-01 — Мобильный схлопываемый черновик с счётчиком на reveal-контроле
+**Предусловия:** логин WORKER; мобильный вьюпорт (эмуляция узкого экрана, например 390×844); в
+черновике ≥2 staged-строки.
+1. На мобиле панель черновика **скрыта** по умолчанию; у правого края виден reveal-контрол
+   (`draft.reveal`) со счётчиком staged-строк (`draft.count`), не перекрывающий матрицу (R18.2/18.3).
+2. Тап по reveal → выезжает ящик со staged-строками и кнопкой Save (`draft.collapse` сворачивает
+   обратно); матрица остаётся прокручиваемой по горизонтали (R18.1).
+3. Свернуть → матрица снова не перекрыта; счётчик на reveal-контроле актуален.
+
+_Покрывает:_ R18.2, R18.3, R18.1.
+
+---
+
+# Регрессия (Amendment A1)
+
+**Повторяемость:** регрессионные кейсы читают неизменяемый сид и системные флоу; созданные сущности
+чистятся общим teardown.
+
+### REG-A1-01 — Старый одиночный билдер больше не является точкой входа
+1. Действие «новый отчёт» на вкладке `workReporting` открывает матрицу `WorkReportMatrix`, а **не**
+   `WorkReportBuilder`; старый per-report диалог как точка входа отсутствует (R17.4).
+
+_Покрывает:_ R17.4.
+
+### REG-A1-02 — Ревью-цикл и список не затронуты амендментом
+1. Созданные пакетом `SUBMITTED`-отчёты проходят обычный ревью-цикл (approve / reject /
+   request-changes) из части A/части B без изменений; список и статус-бейджи работают как прежде.
+
+_Покрывает:_ R4.x, R11.3 (неизменность ревью при переходе на матрицу).
+
+### REG-A1-03 — Нет новых сущностей / ресурсов / типов нотификаций
+1. Пакетный флоу не вводит новых таблиц, ресурса ABAC или типа нотификации: `batch` эмитит те же
+   четыре `notification.workReport.*`; приложение стартует без ошибки `PermissionAnnotationValidator`
+   с новыми эндпоинтами `/progress` и `/batch` (гейты READ и CREATE).
+
+_Покрывает:_ R16.6 (гейтирование), R9.6.
+
+### REG-A1-04 — Локаль-паритет PL/RU для новых ключей матрицы
+1. `pl.json` и `ru.json` содержат идентичный набор новых ключей `workReporting.matrix.*`,
+   `workReporting.cell.*`, `workReporting.draft.*`, `workReporting.toast.batch*` с реальными PL и RU
+   значениями; locale-parity тест зелёный (R19.1, R19.2).
+
+_Покрывает:_ R19.1, R19.2.
+
+---
+
+# Шаблон MD-репорта прогона (Amendment A1)
+
+Заполняется по итогам прогона матричного флоу (отдельные таблицы для части A1-API и части A1-UI).
+
+## Репорт прогона — Часть A1-API (прогресс + batch)
+
+| # | Тест-кейс | Шаг | Запрос/Действие | Ожидание | Факт | Статус |
+|---|-----------|-----|-----------------|----------|------|--------|
+| 1 | TC-API-PROGRESS-01 | 1 | GET /api/work-reports/progress | 200 + rooms[]/categories[]/cells[] | | |
+| 2 | TC-API-PROGRESS-02 | 2 | GET …/progress после 4 отчётов | reportedQuantity=q1+q2+q3 (REJECTED искл.) | | |
+| 3 | TC-API-PROGRESS-03 | 2 | GET …/progress при всех ≥100% | work item отсутствует | | |
+| 4 | TC-API-PROGRESS-04 | 1 | GET …/progress чужой workerId (WORKER) | 403/404 access.notOwner | | |
+| 5 | TC-API-BATCH-01 | 1 | POST /api/work-reports/batch (валидный) | 200/201 + created[] | | |
+| 6 | TC-API-BATCH-02 | 2 | POST /batch c 1 плохим элементом | 400 {index:2,…} room.noPlan | | |
+| 7 | TC-API-BATCH-02 | 3 | GET список после отката | число отчётов = N0 (ничего не создано) | | |
+| 8 | TC-API-BATCH-03 | 2 | Bell FOREMAN после batch (self) | нет нотификаций (fast path) | | |
+| 9 | TC-API-BATCH-04 | 2 | Bell FOREMAN после batch (2 non-FOREMAN) | 2× .submitted + deep-links | | |
+| 10 | TC-API-BATCH-05 | 1 | POST /batch as MANAGER | 403 (нет CREATE) | | |
+
+## Репорт прогона — Часть A1-UI (матрица → черновик → bulk save)
+
+| # | Тест-кейс | Шаг | Действие в браузере | Ожидание | Факт | Статус |
+|---|-----------|-----|---------------------|----------|------|--------|
+| 1 | TC-UI-MATRIX-01 | 1 | «новый отчёт» | открывается матрица (не билдер) | | |
+| 2 | TC-UI-MATRIX-01 | 2 | выбрать воркера (FOREMAN) | матрица грузится из /progress | | |
+| 3 | TC-UI-MATRIX-02 | 2 | ячейка ≥100% | disabled, клик не открывает попап | | |
+| 4 | TC-UI-CELL-01 | 2 | PERCENT 50 → confirm | staged-бейдж, резолв PLAN×0.5 | | |
+| 5 | TC-UI-CELL-01 | 3 | PERCENT на ROOM_NOPLAN | блок no-plan, confirm заблокирован | | |
+| 6 | TC-UI-DRAFT-A1-01 | 2 | повтор ячейки | строка заменена (не добавлена) | | |
+| 7 | TC-UI-DRAFT-A1-02 | 1 | вернуться на вкладку | continue/discard, строки восстановлены | | |
+| 8 | TC-UI-BATCH-01 | 1 | Save | группировка по (workItem,from,to), один POST /batch | | |
+| 9 | TC-UI-BATCH-01 | 2 | после успеха | тост batchSaved, прогресс вырос, черновик пуст | | |
+| 10 | TC-UI-BATCH-02 | 1 | Save со сбойной ячейкой | 400, inline-ошибка, прогресс не изменился | | |
+| 11 | TC-UI-MOBILE-01 | 1 | мобильный вьюпорт | черновик скрыт, reveal справа + счётчик | | |
+| 12 | TC-UI-MOBILE-01 | 2 | тап reveal | выезжает ящик со строками + Save | | |
+
+**Итог:** X пройдено / Y провалено / Z пропущено.
+Run-id: `<timestamp/uuid>`. Стратегия повторяемости: `генератор run-id (note="batch {run-id}") + teardown (DELETE под ADMIN)`.

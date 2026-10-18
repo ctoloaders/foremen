@@ -363,3 +363,141 @@ reporting domain does not hard-depend on a particular FOR-12 shape.
   `--tests`, redirect to `/tmp/for-06-01-test.log`, and verify via the JUnit result XML. Do not run
   the full suite.
 - **API-level `test-cases.md`** scenarios run against the Dockerized app (see `test-cases.md`).
+
+---
+
+## Amendment A1 — Matrix batch authoring (design)
+
+Amendment A1 replaces the single-report `WorkReportBuilder` with a matrix batch authoring surface
+and adds the two backend endpoints it needs (a progress read projection + a bulk create). It
+introduces **no new entity, no schema change, no new ABAC resource, and no new notification type** —
+it reuses `WorkReport` / `WorkReportRoom`, the `WORK_REPORTS` resource, the status machine, the
+revenue valuation, the FOREMAN fast path, and the four `notification.workReport.*` types unchanged.
+
+### A1.1 Backend — progress read projection (Requirement 14)
+
+New read endpoint on the existing controller:
+
+| Endpoint | Op | Guard |
+|----------|-----|------|
+| `GET /api/work-reports/progress?projectId=&workerId=` | read matrix source | `WORK_REPORTS` READ + project scope; WORKER may request only own `workerId` |
+
+Returns a `WorkReportProgressDto`:
+
+```
+WorkReportProgressDto {
+  projectId: Long,
+  workerId: Long,
+  rooms: [ { roomId, roomName } ],                     // the column axis (localized ru→pl→code)
+  categories: [ {
+    workCategoryId, workCategoryName,                   // the row group (localized)
+    workItems: [ {
+      workItemId, workItemName, unitCode,               // the row (localized name + unit)
+      cells: [ { roomId, planQuantity|null, reportedQuantity, reportedPercent|null } ]
+    } ]
+  } ]
+}
+```
+
+Service (`WorkReportService.progress(projectId, workerId)`):
+- resolve the worker's Covering_Works (R3.1) via `project_member_work_categories` ∩ the project's
+  estimate work items (same source the old builder used; now computed server-side so a WORKER no
+  longer needs the raw ESTIMATE matrix client-side);
+- for each `(workItem, room)`, read `planQuantity` from `EstimateLineRoomQty` and
+  `reportedQuantity = Σ WorkReportRoom.quantity` over reports of that `(worker, workItem, room)` whose
+  status ∈ {`SUBMITTED`, `CHANGES_REQUESTED`, `APPROVED`} (R14.2; `REJECTED` excluded);
+- `reportedPercent = round(reportedQuantity / planQuantity × 100)` when a plan exists, else null;
+- **omit** a work item whose every planned room is ≥ 100% (R14.4); keep one with any
+  not-complete planned room or any absolute-only (no-plan) room;
+- own-records guard: a WORKER caller requesting another `workerId` → `error.workReport.access.notOwner`.
+
+This projection replaces the client-side reliance on the raw estimate matrix + team work-categories
+(the Amendment-pre builder read `GET /estimates/project/{id}/matrix` + `project-members`); the
+matrix now gets exactly its source from one project-scoped, own-records-safe endpoint, so the
+WORKER's broad `ESTIMATE`/`PROJECT_MEMBERS` reads granted earlier are no longer required by the
+reporting surface (they are left in place; narrowing them is out of scope here).
+
+### A1.2 Backend — bulk create (Requirement 16)
+
+| Endpoint | Op | Guard |
+|----------|-----|------|
+| `POST /api/work-reports/batch` | bulk create / submit | `WORK_REPORTS` CREATE + project scope + own-records |
+
+Request `WorkReportBatchRequest { reports: [ WorkReportCreateRequest ] }` — each item is the existing
+single `WorkReportCreateRequest` (R2.1 shape). Response `WorkReportBatchResponse { created: [id] }`
+on success, or a `400` carrying `{ index, workItemId, roomId?, message }` for the first failing item.
+
+`WorkReportService.createBatch(List<model>)` runs in **one `@Transactional`** (R16.4, all-or-nothing):
+it iterates the items through the SAME internal create assembly (`assembleReport` → validation +
+PERCENT→absolute + revenue freeze + fast-path status) used by the single create, collecting the
+persisted entities; any `ForemenApiException` aborts the whole transaction (nothing persists) and is
+returned with the failing item's index. On commit, the AFTER_COMMIT notification events are published
+per report exactly as the single path (R16.5) — N non-FOREMAN `SUBMITTED` reports ⇒ N `submitted`
+events to each ACTIVE FOREMAN; FOREMAN-authored items fast-path to `APPROVED` and emit none (R5).
+
+Controller: `POST /{base}/batch` with `@RequiresPermission(resource="WORK_REPORTS", operation="CREATE")`.
+
+### A1.3 Frontend — matrix authoring surface (Requirements 15, 17, 18)
+
+The `work-reporting` feature folder's authoring entry point is swapped from `WorkReportBuilder` (the
+single-report dialog) to a new matrix surface. The former review path (`WorkReportReview`), the list
+panel, the API client, and the status badges are unchanged.
+
+```
+features/project-execution/work-reporting/
+  WorkReportingPanel.tsx            // list + review unchanged; "new report" now opens the matrix
+  components/
+    WorkReportMatrix.tsx            // NEW — the matrix surface (replaces WorkReportBuilder)
+    WorkReportCellPopup.tsx         // NEW — the per-cell entry popup (percent|unit + period + day step)
+    WorkReportDraftPanel.tsx        // NEW — the accumulated-draft side panel (collapsible on mobile)
+    WorkReportReview.tsx            // unchanged
+  api/work-reports-api.ts           // + fetchProgress(projectId, workerId), + batchCreate(payloads)
+  schemas/                          // + cell-entry zod (percent (0,100] | positive absolute; period)
+  lib/
+    matrix-draft.ts                 // NEW — the client-side draft model + grouping into batch payloads
+    progress.ts                     // NEW — map WorkReportProgressDto → rows/cols; staged-overlay math
+  types/                            // + WorkReportProgressDto, batch request/response, draft types
+```
+
+- **WorkReportMatrix** — loads `fetchProgress`; for a FOREMAN/MANAGER/ADMIN caller shows a worker
+  picker (ACTIVE WORKER members) and (re)loads on pick; for a WORKER loads self with no picker
+  (R17.1). Renders category group headers → work-item rows → room columns; each cell shows
+  `planQuantity` + `reportedPercent`, overlaid with any staged entry (R15.6); a ≥100% cell is
+  disabled (R17.2). Empty state when the projection is empty (R14.5).
+- **WorkReportCellPopup** — opens on cell click (R15.1): a percent|absolute toggle (reusing the
+  existing input-mode resolution), the unit label from `unitCode`, the period (`from`,`to`) default
+  today/today with day −/+ steppers (R15.2), the no-plan block for PERCENT-without-plan (R15.3).
+  Confirm stages/updates the cell's line in the draft (R15.4).
+- **WorkReportDraftPanel** — lists staged lines `work · room · volume` with a running count; each
+  line is editable (re-opens its cell) / removable (R17.3); holds the **Save** (bulk) action. On
+  mobile it is a collapsible drawer, hidden by default, with a right-edge reveal control showing the
+  staged count (R18.2/18.3).
+- **Draft state** (`matrix-draft.ts`) — the staged lines live in React state + the existing
+  per-project/per-author `localStorage` key (R7), restored with the continue/discard prompt and
+  cleared on successful save (R15.5). `toBatchPayloads()` groups staged lines by
+  `(workItemId, from, to)` into `WorkReportCreateRequest[]` for the bulk POST (R16.2).
+- **Save** → `batchCreate(payloads)`; on success clear the draft + refetch progress (R16.5) + success
+  toast; on a `400` surface the failing item's localized message inline on its cell/line (R16.4).
+
+### A1.4 i18n keys (amendment delta, Requirement 19)
+
+New `workReporting.*` keys (PL + RU mirrored): `matrix.title`, `matrix.pickWorker`,
+`matrix.empty`, `matrix.categoryGroup`, `matrix.cell.plan`, `matrix.cell.percent`,
+`matrix.cell.staged`; `cell.title`, `cell.modeToggle.percent`, `cell.modeToggle.absolute`,
+`cell.unit`, `cell.periodFrom`, `cell.periodTo`, `cell.dayPrev`, `cell.dayNext`, `cell.confirm`,
+`cell.noPlan`; `draft.title`, `draft.line`, `draft.count`, `draft.reveal`, `draft.collapse`,
+`draft.remove`, `draft.edit`, `draft.save`, `draft.empty`; `toast.batchSaved`, `toast.batchError`.
+The `workspace.tab.workReporting` label and the four `notification.workReport.*` titles are reused
+unchanged. Any new `error.workReport.*` batch message is added PL + RU in the backend bundle.
+
+### A1.5 Testing (amendment delta)
+
+- **Backend.** `progress` projection (reportedQuantity counts SUBMITTED+CHANGES_REQUESTED+APPROVED,
+  excludes REJECTED; ≥100% work item omitted; own-records guard) and `createBatch` (all-or-nothing
+  rollback on a bad item; per-report notifications on success; fast-path items emit none) — unit
+  tests on the service + a controller slice; run only the affected classes per
+  `.kiro/steering/test-execution-rules.md`.
+- **Frontend.** matrix mapping + staged-overlay math, cell popup percent/absolute + period stepper,
+  draft grouping into batch payloads, collapsible draft on mobile, locale parity.
+- **test-cases.md.** New TC group for the matrix flow (API: progress + batch; UI: cell entry →
+  draft → bulk save → progress reflects; mobile collapsible), appended to the existing document.

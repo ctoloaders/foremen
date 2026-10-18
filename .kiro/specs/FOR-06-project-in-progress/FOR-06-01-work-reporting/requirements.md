@@ -436,3 +436,152 @@ create reports and (as a foreman) review them.
    work-matching, ABAC matrix, seed idempotency), frontend unit tests (builder, percent/absolute
    resolution, draft persistence, resolver fixtures), and an API-level `test-cases.md` run against
    the Dockerized app.
+
+---
+
+## Amendment A1 — Matrix batch authoring (replaces the single-report builder)
+
+### Introduction
+
+Amendment A1 simplifies report creation. The one-report-at-a-time dialog
+(`WorkReportBuilder`, R11.2) is **replaced** by a matrix batch authoring surface: a WORKER (or a
+FOREMAN after picking a worker) sees their assigned, not-yet-fully-reported works as a matrix (rows =
+work items grouped by work category, columns = rooms), enters progress cell by cell into a
+client-side draft, and submits the whole draft in one bulk save. The report domain, the status
+machine, the revenue valuation, the FOREMAN fast path, the ABAC matrix, and the notifications are all
+**unchanged** — this amendment changes only *how* the author composes and submits reports and adds
+the read projection + bulk endpoint the matrix needs.
+
+**No new entities, no new persisted i18n columns, no new notification types.** Each staged cell
+contributes to a `WorkReport` created through the existing create path, so the existing four
+`notification.workReport.*` types fire unchanged (R9); a bulk save that creates N non-FOREMAN reports
+emits one `submitted` notification **per created report** (R9.1) to each ACTIVE FOREMAN.
+
+### Requirement 14 — Reporting progress matrix (read projection)
+
+**User Story:** As a worker (or a foreman acting for a worker), I want to see at a glance which of my
+assigned works still need reporting and how much is already done, so I can record progress without
+hunting through forms.
+
+#### Acceptance Criteria
+
+1. THE SYSTEM SHALL expose a read projection `GET /api/work-reports/progress?projectId=&workerId=`
+   returning, for the given `(project, worker)`, the matrix source: the worker's **Covering_Works**
+   (R3.1) that appear on the project's estimate, each with its `WorkCategory` (for grouping), its
+   measurement unit, and per **room** the `planQuantity` (from `EstimateLineRoomQty`) and the
+   `reportedQuantity` (the sum already reported for that `(worker, workItem, room)`).
+2. THE `reportedQuantity` SHALL count every `WorkReportRoom.quantity` of a report whose status is
+   `SUBMITTED`, `CHANGES_REQUESTED`, or `APPROVED` for that `(worker, workItem, room)` — i.e. pending
+   and approved both count; a `REJECTED` report SHALL NOT count.
+3. THE per-cell **reported percent** SHALL be `round(reportedQuantity / planQuantity × 100)` when a
+   plan exists, capped for display at 100; WHERE no plan exists for a `(workItem, room)` the cell
+   SHALL carry a null `planQuantity` and no percent (absolute-only entry, R2.3).
+4. THE projection SHALL omit a work item row entirely WHEN every room with a plan for that work item
+   is already at **≥ 100%** reported (the "not-yet-fully-reported" filter); a work item with at least
+   one not-yet-complete planned room (or any absolute-only room) SHALL be included.
+5. WHEN the worker has no assigned work categories (R3.3) or no not-yet-complete Covering_Work THEN
+   the projection SHALL return an empty matrix and the UI SHALL explain there is nothing to report.
+6. THE projection SHALL be project-scoped and own-records-aware: a WORKER caller MAY request only
+   their own `workerId` (else `error.workReport.access.notOwner`); a FOREMAN/MANAGER/ADMIN MAY request
+   any worker of the project; READ is gated by `WORK_REPORTS`/READ.
+
+### Requirement 15 — Cell entry and client-side draft
+
+**User Story:** As an author, I want to click a cell and quickly record how much of that work I did in
+that room, accumulating entries before submitting, so recording is fast and batched.
+
+#### Acceptance Criteria
+
+1. WHEN the author clicks a matrix cell THEN a cell-entry popup SHALL open for that
+   `(workItem, room)` showing the room's plan quantity and current reported percent, and SHALL accept
+   EITHER a **percent** of completion in `(0, 100]` OR an **absolute quantity** in the work item's
+   measurement unit (m²/mp/…), mirroring the existing `ABSOLUTE`/`PERCENT` input modes (R2.2).
+2. THE popup SHALL carry a **performed period** (`from`, `to`) defaulting to `from = to = today`, with
+   quick controls to step the period one day left / right; `to` SHALL be ≥ `from` (R1.1).
+3. WHEN a PERCENT entry is made against a cell with no plan THEN the popup SHALL block it with the
+   localized `error.workReport.room.noPlan` message; an ABSOLUTE entry SHALL always be allowed.
+4. WHEN the author confirms a cell entry THEN it SHALL be added to a **client-side draft** (held in
+   frontend state only, no server write) as a staged line `(workItem, room, quantity, inputMode,
+   from, to)`; re-confirming the same `(workItem, room)` SHALL replace that cell's staged line (one
+   staged line per cell).
+5. THE draft SHALL survive navigation within the reporting surface using the existing per-project /
+   per-author `localStorage` persistence (R7), restored with a continue/discard prompt; it SHALL be
+   cleared after a successful bulk save (R16).
+6. THE matrix cell SHALL reflect a staged (not-yet-saved) entry visually (e.g. a staged badge /
+   adjusted percent) so the author sees pending edits before saving.
+
+### Requirement 16 — Bulk save
+
+**User Story:** As an author, I want to submit all my staged entries at once, so I record a batch of
+work in a single action.
+
+#### Acceptance Criteria
+
+1. THE SYSTEM SHALL expose a bulk create `POST /api/work-reports/batch` accepting an array of report
+   payloads, each identical in shape to the single create (R2.1): `workItemId`, `workerId`,
+   `performedFrom`, `performedTo`, and the per-room rows.
+2. WHEN the author saves the draft THEN the client SHALL group its staged lines into one payload per
+   `(workItemId, performedFrom, performedTo)` with the cells merged into that payload's room rows,
+   and POST them all in one bulk request.
+3. THE bulk endpoint SHALL create each report through the existing service create path, enforcing the
+   SAME validation (Covering_Work R3.2, work-item-on-estimate R3.4, duplicate room R2.4, quantity > 0
+   R2.5, PERCENT-with-no-plan R2.3), the SAME revenue valuation (R6), the SAME FOREMAN fast path (R5),
+   and the SAME own-records rule (R10.5: a WORKER may batch only their own `worker`).
+4. THE bulk operation SHALL be **all-or-nothing within one transaction**: if any payload fails
+   validation THEN no report SHALL be created and the response SHALL identify the failing payload
+   (by index / `(workItem, room)`) with its localized error, changing nothing.
+5. WHEN the bulk save succeeds THEN the server SHALL emit the per-report notifications exactly as the
+   single create (R9.1 — one `submitted` to each ACTIVE FOREMAN per created non-FOREMAN report; a
+   FOREMAN-authored report is fast-pathed and emits none, R5), the client SHALL clear the draft
+   (R15.5) and refresh the progress matrix (R14) so the saved progress is reflected.
+6. THE matrix authoring surface SHALL be available only on an `ACTIVE` project (read-only on
+   `COMPLETED`, absent on `DRAFT`, R10.1); the bulk endpoint SHALL be gated `WORK_REPORTS`/CREATE.
+
+### Requirement 17 — Worker selection and matrix surface
+
+**User Story:** As a foreman, I want to pick a worker and then report on their behalf through the same
+matrix, so I can record work for the crew.
+
+#### Acceptance Criteria
+
+1. WHERE the caller is a WORKER THE matrix SHALL load for the caller themselves with no worker picker
+   (own-records, R10.5); WHERE the caller is a FOREMAN/MANAGER/ADMIN THE surface SHALL present a
+   worker picker (the project's ACTIVE WORKER members) and load the matrix for the picked worker.
+2. THE matrix SHALL render rows as work items **grouped by work category** (category group headers in
+   declaration order) and columns as the project's rooms, each cell showing the plan quantity and the
+   reported percent (R14.3); a 100%-reported cell SHALL be visually disabled (no further entry).
+3. THE accumulated draft SHALL be shown as a side panel listing each staged line as
+   `work · room · volume`, with a running count; a line SHALL be editable (re-open its cell) and
+   removable before save.
+4. THE surface SHALL replace the former single-report `WorkReportBuilder` entry point (R11.2): the
+   panel's "new report" action SHALL open the matrix authoring surface, not the old per-report dialog.
+
+### Requirement 18 — Mobile layout
+
+**User Story:** As an author on a phone, I want the matrix usable on a small screen with the running
+draft tucked away, so I can report from the field.
+
+#### Acceptance Criteria
+
+1. THE matrix SHALL fit a mobile viewport (horizontal scroll / responsive cell sizing) so rows and
+   room columns remain usable on a phone.
+2. ON a mobile viewport THE accumulated-draft panel SHALL be a **collapsible** area, hidden by
+   default, with a visible reveal control on the right edge; opening it SHALL show the staged lines
+   and the Save action, and it SHALL not obscure the matrix when collapsed.
+3. THE collapsible draft SHALL show the staged-line count on its reveal control so the author sees
+   there are pending entries without expanding it.
+
+### Requirement 19 — i18n (amendment delta)
+
+#### Acceptance Criteria
+
+1. THE amendment SHALL add every new user-facing string — matrix header / category group labels /
+   cell plan+percent text, the cell-entry popup (percent vs unit toggle, the unit label, the period
+   from/to, the day −/+ steppers, the no-plan message), the accumulated-draft panel (title, the
+   `work · room · volume` line, the reveal/collapse control + count, remove/edit actions), the bulk
+   Save action, and the bulk success/error toasts — to BOTH `pl.json` and `ru.json` with real PL and
+   RU values, and the locale-parity test SHALL pass.
+2. ANY new `error.workReport.*` code introduced by the bulk endpoint (e.g. a batch-item failure
+   locator message) SHALL have PL + RU messages in the backend bundle. No new backend entity i18n
+   column is introduced (the matrix reads existing localized work-item / work-category / room names
+   via the `ru → pl → code` fallback, R12.1).
