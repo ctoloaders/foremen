@@ -65,6 +65,23 @@ services:
       FOREMEN_ADMIN_PASSWORD: ${FOREMEN_ADMIN_PASSWORD}
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
       GOOGLE_PLACES_ENABLED: ${GOOGLE_PLACES_ENABLED:-false}
+      # --- FOR-05-08 / FOR-06-03 object storage (dev VM) --------------------
+      # Private GCS dev bucket for all media (procurement uploads, signable
+      # documents). The VM has an attached service account
+      # (foremen-dev-vm@starry-tracker-505110-s3), so the Google client resolves
+      # Application Default Credentials off the GCE metadata server — NO key file
+      # and NO ADC mount are needed here (unlike local dev's override, which
+      # mounts ./.secrets/adc.json because a laptop has no attached SA). That SA
+      # already holds storage.objectAdmin on the bucket and
+      # iam.serviceAccountTokenCreator on itself (keyless V4 signBlob), so reads,
+      # writes and short-lived signed download URLs all work.
+      # cdn-base only satisfies the "configured" gate; the document download path
+      # serves bytes via short-lived V4 SIGNED URLs, not the public URL.
+      FOREMEN_IMAGE_STORAGE_BUCKET: ${FOREMEN_IMAGE_STORAGE_BUCKET:-foremen-dev-media-42938}
+      FOREMEN_IMAGE_STORAGE_CDN_BASE: ${FOREMEN_IMAGE_STORAGE_CDN_BASE:-https://storage.googleapis.com/foremen-dev-media-42938}
+      FOREMEN_IMAGE_STORAGE_SIGNER_SERVICE_ACCOUNT: ${FOREMEN_IMAGE_STORAGE_SIGNER_SERVICE_ACCOUNT:-foremen-dev-vm@starry-tracker-505110-s3.iam.gserviceaccount.com}
+      FOREMEN_IMAGE_STORAGE_SIGNED_URL_TTL_SECONDS: ${FOREMEN_IMAGE_STORAGE_SIGNED_URL_TTL_SECONDS:-600}
+      GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-starry-tracker-505110-s3}
     depends_on:
       postgres:
         condition: service_healthy
