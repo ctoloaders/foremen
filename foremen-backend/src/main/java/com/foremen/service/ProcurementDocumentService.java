@@ -706,13 +706,19 @@ public class ProcurementDocumentService
         fillMatchedMaterialNames(model, entity);
     }
 
+    /**
+     * Resolves a procurement image (raw / processed rendition) to a short-lived, one-time V4 signed
+     * download URL. The procurement media bucket is PRIVATE (it holds receipts/invoices, served the
+     * same way as the FOR-05-08 signable documents, not public CDN assets) — the configured
+     * {@code cdn-base} exists only to satisfy the ImageStorage "configured" gate, NOT to serve bytes.
+     * Returning the public {@code toCdnUrl} here made the viewer load a public
+     * {@code storage.googleapis.com/...} link that an anonymous caller cannot read (403 AccessDenied)
+     * against the private bucket. We therefore ALWAYS sign the download (keyless IAM signBlob),
+     * mirroring {@code SignableDocumentService}. A {@code null} key yields a {@code null} URL.
+     */
     private String resolveImageUrl(String objectKey) {
-        if (objectKey == null) {
+        if (objectKey == null || objectKey.isBlank()) {
             return null;
-        }
-        String cdnUrl = imageStorage.toCdnUrl(objectKey);
-        if (cdnUrl != null) {
-            return cdnUrl;
         }
         return imageStorage.signedDownloadUrl(objectKey, IMAGE_URL_TTL_SECONDS);
     }
