@@ -110,7 +110,9 @@ public class GoogleOcrService implements OcrService {
     }
 
     @Override
-    public OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace) {
+    public OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace,
+                             OcrStageListener listener) {
+        OcrStageListener progress = listener == null ? OcrStageListener.NOOP : listener;
         if (rawBytes == null || rawBytes.length == 0) {
             throw new OcrFailedException("empty document bytes");
         }
@@ -121,15 +123,22 @@ public class GoogleOcrService implements OcrService {
                 throw new OcrFailedException("no pages rendered from the document");
             }
 
-            // 2. White-background cleanup per page → ProcessedPage (PNG) + keep the cleaned image
-            //    in memory for 3. Vision OCR.
+            // 2. White-background cleanup per page → ProcessedPage (PNG), interleaved with 3. Vision
+            //    OCR per cleaned page. Report CLEANING then OCR_TEXT once for the whole page loop.
+            notifyStage(progress, OcrStageListener.OcrStage.CLEANING);
             List<ProcessedPage> processedPages = new ArrayList<>(pages.size());
-            List<String> pageTexts = new ArrayList<>(pages.size());
+            List<byte[]> cleanedPngs = new ArrayList<>(pages.size());
             for (BufferedImage page : pages) {
                 CleanedPage cleaned = cleanupPage(page);
                 processedPages.add(new ProcessedPage(cleaned.pngBytes(), cleaned.whitenedBackground()));
-                // 3. Vision documentTextDetection on the cleaned PNG bytes.
-                pageTexts.add(detectText(cleaned.pngBytes()));
+                cleanedPngs.add(cleaned.pngBytes());
+            }
+
+            // 3. Vision documentTextDetection on each cleaned PNG.
+            notifyStage(progress, OcrStageListener.OcrStage.OCR_TEXT);
+            List<String> pageTexts = new ArrayList<>(cleanedPngs.size());
+            for (byte[] cleanedPng : cleanedPngs) {
+                pageTexts.add(detectText(cleanedPng));
             }
 
             // 3b. Concatenate the per-page OCR texts (pure helper).
@@ -139,6 +148,7 @@ public class GoogleOcrService implements OcrService {
             }
 
             // 4. LLM per-line parse (pure helper over the model response).
+            notifyStage(progress, OcrStageListener.OcrStage.PARSING);
             String parseResponse = generateText(
                     OcrHelpers.PER_LINE_PARSE_PROMPT + "\n\nOCR TEXT:\n" + concatenated);
             OcrParse parse = OcrHelpers.parsePerLineResponse(parseResponse);
@@ -152,6 +162,15 @@ public class GoogleOcrService implements OcrService {
             throw e;
         } catch (RuntimeException e) {
             throw new OcrFailedException("OCR processing failed: " + e.getMessage(), e);
+        }
+    }
+
+    /** Invokes the stage listener defensively — a listener failure must never abort OCR (A1 R15.2). */
+    private void notifyStage(OcrStageListener listener, OcrStageListener.OcrStage stage) {
+        try {
+            listener.onStage(stage);
+        } catch (RuntimeException e) {
+            log.warn("OCR stage listener failed for stage {} (ignored): {}", stage, e.getMessage());
         }
     }
 

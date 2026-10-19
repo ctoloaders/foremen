@@ -25,7 +25,8 @@ public class DisabledOcrService implements OcrService {
     }
 
     @Override
-    public OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace) {
+    public OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace,
+                             OcrStageListener listener) {
         throw new OcrUnavailableException(
                 "OCR provider is not configured (foremen.ocr.enabled is false or absent)");
     }

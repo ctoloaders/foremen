@@ -48,5 +48,27 @@ public interface OcrService {
      *                                 processed: a provider error, unparseable output, or no lines
      *                                 extracted (R3.4)
      */
-    OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace);
+    default OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace) {
+        return process(rawBytes, mimeType, keyNamespace, OcrStageListener.NOOP);
+    }
+
+    /**
+     * Amendment A1 (R15.2) — same as {@link #process(byte[], String, String)} but reports internal
+     * stage transitions ({@code CLEANING}/{@code OCR_TEXT}/{@code PARSING}) to the supplied
+     * {@link OcrStageListener}, so the asynchronous worker can persist the document's fine-grained
+     * processing stage as the pipeline advances. The listener is best-effort; a listener failure
+     * MUST NOT abort OCR.
+     *
+     * @param rawBytes     the stored raw upload bytes (an image or a PDF)
+     * @param mimeType     the source MIME type
+     * @param keyNamespace an opaque per-document key namespace hint
+     * @param listener     the stage-progress callback (never {@code null}; use
+     *                     {@link OcrStageListener#NOOP} to ignore progress)
+     * @return the complete OCR result
+     * @throws OcrUnavailableException when the provider is not configured (disabled fallback, R3.5)
+     * @throws OcrFailedException      when the provider is configured but this document could not be
+     *                                 processed (R3.4)
+     */
+    OcrResult process(byte[] rawBytes, String mimeType, String keyNamespace,
+                      OcrStageListener listener);
 }

@@ -20,6 +20,7 @@ import com.foremen.controller.model.ProcurementDocumentDtoExtendedModel;
 import com.foremen.controller.model.ProcurementDocumentDtoModel;
 import com.foremen.controller.model.ProcurementDocumentImagesResponse;
 import com.foremen.controller.model.ProcurementDocumentReprocessResponse;
+import com.foremen.controller.model.ProcurementDocumentStatusResponse;
 import com.foremen.controller.model.ProcurementDocumentUploadResponse;
 import com.foremen.controller.model.mapper.ProcurementDocumentControllerMapper;
 import com.foremen.service.ProcurementDocumentService;
@@ -139,6 +140,26 @@ public class ProcurementDocumentController {
     public ResponseEntity<ProcurementDocumentDtoExtendedModel> findById(@PathVariable Long id) {
         ProcurementDocumentServiceExtendedModel model = service.findById(id);
         return ResponseEntity.ok(controllerMapper.toExtendedDto(model));
+    }
+
+    /**
+     * Amendment A1 (R16.1) — the lightweight status poll endpoint. Returns ONLY
+     * {@code {id, status, stage, failureReason}} (no lines, no signed image URLs, no derived names)
+     * so the client can cheaply poll an in-progress document (and poll many in-progress list rows)
+     * until it reaches a terminal state, then fetch the full projection via {@link #findById}
+     * (the "status then full dto" contract). Same project-scope access guard as the other reads — an
+     * out-of-scope document is indistinguishable from a missing one. Resolves to
+     * {@code PURCHASES}/{@code READ}.
+     *
+     * @param id the document id
+     * @return the lightweight lifecycle status projection
+     */
+    @GetMapping("/{id}/status")
+    @RequiresPermission(resource = RESOURCE, operation = READ)
+    public ResponseEntity<ProcurementDocumentStatusResponse> status(@PathVariable Long id) {
+        ProcurementDocumentService.StatusView view = service.status(id);
+        return ResponseEntity.ok(ProcurementDocumentStatusResponse.of(
+                view.id(), view.status(), view.failureReason()));
     }
 
     /**

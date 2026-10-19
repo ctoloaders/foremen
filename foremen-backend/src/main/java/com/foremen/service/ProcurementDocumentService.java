@@ -9,8 +9,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.unit.DataSize;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,7 +45,9 @@ import com.foremen.service.procurement.ExtractedLine;
 import com.foremen.service.procurement.MatchEngine;
 import com.foremen.service.procurement.MatchResult;
 import com.foremen.service.procurement.PlannedMaterial;
+import com.foremen.service.ocr.OcrStageListener;
 import com.foremen.service.procurement.PlannedMaterialCandidateProvider;
+import com.foremen.service.procurement.ProcurementOcrRequested;
 import com.foremen.service.procurement.ReprocessLinePartitioner;
 
 import jakarta.persistence.EntityManager;
@@ -85,10 +89,16 @@ public class ProcurementDocumentService
     static final String UPLOAD_TOO_LARGE = "error.procurement.upload.tooLarge";
     static final String STAGE_NOT_ACTIVE = "error.procurement.stage.notActive";
 
-    // --- Stable failure reason codes surfaced to the UI on FAILED (R3.4/R3.5) ---
+    // --- Stable failure reason codes surfaced to the UI on FAILED (R3.4/R3.5; A1 R18.1) ---
     static final String FAILURE_OCR_DISABLED = "procurement.ocr.disabled";
     static final String FAILURE_OCR_NO_LINES = "procurement.ocr.noLines";
     static final String FAILURE_OCR_FAILED = "procurement.ocr.failed";
+    /** A1 R18.1 — stage-specific failure codes so the UI renders a descriptive reason. */
+    static final String FAILURE_OCR_RASTERIZE = "procurement.ocr.failed.rasterize";
+    static final String FAILURE_OCR_VISION = "procurement.ocr.failed.vision";
+    static final String FAILURE_OCR_NO_TEXT = "procurement.ocr.failed.noText";
+    static final String FAILURE_OCR_PARSE = "procurement.ocr.failed.parse";
+    static final String FAILURE_OCR_STORAGE = "procurement.ocr.failed.storage";
 
     /** The accepted upload content types (R2.2): the raster images plus PDF. */
     static final Set<String> ACCEPTED_CONTENT_TYPES = Set.of(
@@ -118,6 +128,7 @@ public class ProcurementDocumentService
     private final MatchEngine matchEngine;
     private final PlannedMaterialCandidateProvider candidateProvider;
     private final ReprocessLinePartitioner reprocessLinePartitioner;
+    private final ApplicationEventPublisher eventPublisher;
     private final DataSize maxUploadSize;
 
     public ProcurementDocumentService(ProcurementDocumentDao documentDao,
@@ -130,6 +141,7 @@ public class ProcurementDocumentService
                                       MatchEngine matchEngine,
                                       PlannedMaterialCandidateProvider candidateProvider,
                                       ReprocessLinePartitioner reprocessLinePartitioner,
+                                      ApplicationEventPublisher eventPublisher,
                                       ImageStorageProperties imageStorageProperties) {
         this.documentDao = documentDao;
         this.projectAccessCache = projectAccessCache;
@@ -141,6 +153,7 @@ public class ProcurementDocumentService
         this.matchEngine = matchEngine;
         this.candidateProvider = candidateProvider;
         this.reprocessLinePartitioner = reprocessLinePartitioner;
+        this.eventPublisher = eventPublisher;
         this.maxUploadSize = parseMaxUploadSize(
                 imageStorageProperties == null ? null : imageStorageProperties.maxUploadSize());
     }
@@ -205,6 +218,48 @@ public class ProcurementDocumentService
         return model;
     }
 
+    /**
+     * Amendment A1 (R16.1) — the lightweight status read the client polls while a document is
+     * processing. Resolves ONLY the lifecycle fields ({@code status} + {@code failureReason}) under
+     * the same project-scope access guard as {@link #findById}, without building the heavy read model
+     * (no image-URL signing, no matched-material name resolution, no lines). Returns the resolved
+     * pair so the controller can project it into the cheap {@code ProcurementDocumentStatusResponse}.
+     *
+     * @param id the document id
+     * @return the document's current status + failure reason
+     */
+    @Transactional(readOnly = true)
+    public StatusView status(Long id) {
+        assertProjectAccess(id);
+        ProcurementDocumentEntity entity = documentDao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+        return new StatusView(entity.getId(), entity.getStatus(), entity.getFailureReason());
+    }
+
+    /** Lightweight lifecycle projection for the poll endpoint (A1 R16.1). */
+    public record StatusView(Long id, ProcessingStatus status, String failureReason) {
+    }
+
+    /**
+     * A1 R17 — the uploader + project + failure-reason context the OCR worker needs to emit the
+     * terminal notification, read in its own {@code REQUIRES_NEW} transaction after the terminal
+     * commit. Returns {@code null} when the document no longer exists.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public NotificationContext notificationContext(Long id) {
+        ProcurementDocumentEntity document = documentDao.findById(id).orElse(null);
+        if (document == null) {
+            return null;
+        }
+        Long uploaderId = document.getUploadedBy() == null ? null : document.getUploadedBy().getId();
+        Long projectId = document.getProject() == null ? null : document.getProject().getId();
+        return new NotificationContext(uploaderId, projectId, document.getFailureReason());
+    }
+
+    /** Notification context for the terminal-state emit (A1 R17). */
+    public record NotificationContext(Long uploaderId, Long projectId, String failureReason) {
+    }
+
     // --- Upload (R2) ---------------------------------------------------------------------------
 
     /**
@@ -212,13 +267,16 @@ public class ProcurementDocumentService
      * availability (R2.4), the content type (R2.2) and the size (R2.3) <b>before</b> storing
      * anything, stores the raw bytes through {@link ImageStorage#storeObject} namespaced per project
      * (R2.1), persists an {@code UPLOADED} document with {@code uploadedAt}/{@code uploadedBy}/
-     * {@code sourceMimeType}, writes a CREATE audit row (R11.1), transitions the document to
-     * {@code PROCESSING} and invokes {@link #process} (R2.5).
+     * {@code sourceMimeType}, writes a CREATE audit row (R11.1), and — Amendment A1 (R14) — commits
+     * the document as {@code QUEUED} and publishes a {@link ProcurementOcrRequested} event so the
+     * asynchronous {@code ProcurementOcrWorker} runs the OCR pipeline AFTER this transaction commits.
+     * The id is returned immediately, never blocking the request on OCR (A1 R14.1/R14.3). When the
+     * OCR provider is disabled the document rests {@code UPLOADED} and is NOT enqueued (A1 R14.4).
      *
      * @param projectId the owning {@code ACTIVE} project
      * @param file      the uploaded image or PDF
-     * @return the persisted document as a read-extended model (status {@code PARSED}/{@code FAILED}/
-     *         {@code UPLOADED} depending on the OCR outcome)
+     * @return the persisted document as a read-extended model (status {@code QUEUED}, or
+     *         {@code UPLOADED} when the OCR provider is disabled)
      */
     @Transactional
     public ProcurementDocumentServiceExtendedModel upload(Long projectId, MultipartFile file) {
@@ -242,25 +300,30 @@ public class ProcurementDocumentService
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, UPLOAD_UNSUPPORTED_TYPE, contentType);
         }
 
-        // R2.1 — store the raw bytes, then capture them for the inline OCR run (no re-read).
-        byte[] rawBytes = bytesOf(file);
+        // R2.1 — store the raw bytes.
         String rawObjectKey = imageStorage.storeObject(file, "procurement/" + projectId + "/");
 
+        // A1 R14.4 — when the OCR provider is disabled the document rests UPLOADED and is not enqueued.
+        boolean ocrEnabled = ocrService.isEnabled();
         ProcurementDocumentEntity document = new ProcurementDocumentEntity();
         document.setProject(reference(ProjectEntity.class, projectId));
         document.setUploadedBy(requireCaller());
         document.setRawObjectKey(rawObjectKey);
         document.setSourceMimeType(contentType);
-        document.setStatus(ProcessingStatus.UPLOADED);
+        document.setStatus(ocrEnabled ? ProcessingStatus.QUEUED : ProcessingStatus.UPLOADED);
+        if (!ocrEnabled) {
+            document.setFailureReason(FAILURE_OCR_DISABLED);
+        }
         document.setUploadedAt(OffsetDateTime.now());
 
         ProcurementDocumentEntity saved = documentDao.save(document);
         entityManager.flush();
         saveAudit(null, saved, "CREATE");
 
-        // R2.5 — transition to PROCESSING and run the OCR + parse + match orchestration inline.
-        saved.setStatus(ProcessingStatus.PROCESSING);
-        process(saved, rawBytes);
+        // A1 R14.3 — hand off to the async worker AFTER this transaction commits (never inline).
+        if (ocrEnabled) {
+            eventPublisher.publishEvent(new ProcurementOcrRequested(saved.getId()));
+        }
         return findReadModel(saved);
     }
 
@@ -292,10 +355,69 @@ public class ProcurementDocumentService
             throw new ForemenApiException(HttpStatus.CONFLICT, NOT_FOUND_MESSAGE, id);
         }
 
-        byte[] rawBytes = imageStorage.readObject(document.getRawObjectKey());
-        document.setStatus(ProcessingStatus.PROCESSING);
-        process(document, rawBytes);
-        return findReadModel(document);
+        // A1 R18.3 — retry is asynchronous exactly like upload: re-enqueue (QUEUED), commit, and let
+        // the async worker re-run the pipeline AFTER this transaction commits. Clear any prior
+        // failure reason so the row reads as freshly queued.
+        document.setStatus(ProcessingStatus.QUEUED);
+        document.setFailureReason(null);
+        ProcurementDocumentEntity saved = documentDao.save(document);
+        entityManager.flush();
+        saveAudit(null, saved, "REPROCESS");
+        eventPublisher.publishEvent(new ProcurementOcrRequested(saved.getId()));
+        return findReadModel(saved);
+    }
+
+    // --- Async processing entry points (Amendment A1) ------------------------------------------
+
+    /**
+     * Amendment A1 (R15.2) — commits a single stage transition in its own {@code REQUIRES_NEW}
+     * transaction so a poller observes the progression while the worker runs off-thread. Safe to call
+     * from the OCR worker thread (no ambient transaction required). Writes a lifecycle audit row.
+     *
+     * @param id    the document being processed
+     * @param stage the processing stage to record (a non-terminal {@code ProcessingStatus})
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markStage(Long id, ProcessingStatus stage) {
+        ProcurementDocumentEntity document = documentDao.findById(id).orElse(null);
+        if (document == null) {
+            return;
+        }
+        document.setStatus(stage);
+        documentDao.save(document);
+        entityManager.flush();
+    }
+
+    /**
+     * Amendment A1 (R14.3, R15, R18.1) — the asynchronous OCR orchestration the worker invokes on the
+     * {@code ocrTaskExecutor} thread, in its OWN {@code REQUIRES_NEW} transaction (it runs outside any
+     * request transaction). Reads the stored raw bytes, runs the OCR pipeline reporting
+     * CLEANING/OCR_TEXT/PARSING stages via the {@code stageSink}, stores the processed renditions,
+     * matches + persists lines atomically, and transitions the document to the terminal
+     * {@code PARSED}/{@code FAILED} (raw retained on failure, A1 R18.1). Returns the terminal status so
+     * the worker can emit the matching notification.
+     *
+     * @param id        the {@code QUEUED} document to process
+     * @param stageSink invoked (committed via {@link #markStage}) as the OCR pipeline enters a stage
+     * @return the terminal status reached ({@code PARSED} or {@code FAILED}), or {@code UPLOADED} when
+     *         the provider turned out disabled; {@code null} when the document no longer exists
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ProcessingStatus processQueued(Long id, java.util.function.Consumer<ProcessingStatus> stageSink) {
+        ProcurementDocumentEntity document = documentDao.findById(id).orElse(null);
+        if (document == null) {
+            return null;
+        }
+        byte[] rawBytes;
+        try {
+            stageSink.accept(ProcessingStatus.RASTERIZING);
+            rawBytes = imageStorage.readObject(document.getRawObjectKey());
+        } catch (RuntimeException e) {
+            markFailed(document, FAILURE_OCR_RASTERIZE);
+            return ProcessingStatus.FAILED;
+        }
+        process(document, rawBytes, stageSink);
+        return document.getStatus();
     }
 
     // --- Delete (R1.4, R11.1) ------------------------------------------------------------------
@@ -347,13 +469,21 @@ public class ProcurementDocumentService
      * @param document the document to process (status already {@code PROCESSING})
      * @param rawBytes the stored raw upload bytes
      */
-    void process(ProcurementDocumentEntity document, byte[] rawBytes) {
+    void process(ProcurementDocumentEntity document, byte[] rawBytes,
+                 java.util.function.Consumer<ProcessingStatus> stageSink) {
         Long projectId = document.getProject() == null ? null : document.getProject().getId();
         String keyNamespace = "procurement/" + projectId + "/processed/";
 
+        // Map the OCR layer's internal phases onto the persisted processing stages (A1 R15).
+        OcrStageListener listener = phase -> stageSink.accept(switch (phase) {
+            case CLEANING -> ProcessingStatus.CLEANING;
+            case OCR_TEXT -> ProcessingStatus.OCR_TEXT;
+            case PARSING -> ProcessingStatus.PARSING;
+        });
+
         OcrResult result;
         try {
-            result = ocrService.process(rawBytes, document.getSourceMimeType(), keyNamespace);
+            result = ocrService.process(rawBytes, document.getSourceMimeType(), keyNamespace, listener);
         } catch (OcrUnavailableException disabled) {
             // R3.5 — provider disabled: leave the document UPLOADED (OCR never attempted), no lines.
             document.setStatus(ProcessingStatus.UPLOADED);
@@ -361,11 +491,12 @@ public class ProcurementDocumentService
             persistLifecycle(document, "PROCESS");
             return;
         } catch (OcrFailedException failed) {
-            // R3.4 — configured but this document could not be processed: FAILED, raw retained.
-            markFailed(document, FAILURE_OCR_FAILED);
+            // R3.4 / A1 R18.1 — configured but this document could not be processed: FAILED, raw
+            // retained, with a stage-specific reason classified from the failure message.
+            markFailed(document, classifyFailure(failed));
             return;
         } catch (RuntimeException unexpected) {
-            // Any other provider/runtime error maps to the same FAILED-with-raw-retained outcome.
+            // Any other provider/runtime error maps to the generic FAILED-with-raw-retained outcome.
             markFailed(document, FAILURE_OCR_FAILED);
             return;
         }
@@ -376,10 +507,20 @@ public class ProcurementDocumentService
             return;
         }
 
+        // A1 R15 — entering the match + persist stage.
+        stageSink.accept(ProcessingStatus.MATCHING);
+
         // R3.0 — store the processed white-background rendition(s); the FIRST page's key is kept on
         // the document (per-page keys share the "{documentUuid}/p{n}.png" convention for the viewer).
         String previousProcessedKey = document.getProcessedObjectKey();
-        String processedObjectKey = storeProcessedPages(result.pages(), keyNamespace);
+        String processedObjectKey;
+        try {
+            processedObjectKey = storeProcessedPages(result.pages(), keyNamespace);
+        } catch (RuntimeException storageFailure) {
+            // A1 R18.1 — storing the processed rendition failed; FAILED, raw retained.
+            markFailed(document, FAILURE_OCR_STORAGE);
+            return;
+        }
 
         // R5/R4 — match each extracted line against the project's planned-material candidate set.
         List<PlannedMaterial> candidates = candidateProvider.candidatesFor(projectId);
@@ -500,6 +641,31 @@ public class ProcurementDocumentService
             pageNo++;
         }
         return firstKey;
+    }
+
+    /**
+     * A1 R18.1 — classify an {@link OcrFailedException} into a stage-specific failure code from its
+     * message, so the UI can render a descriptive reason. Falls back to the generic code.
+     */
+    private static String classifyFailure(OcrFailedException failed) {
+        String message = failed.getMessage() == null ? "" : failed.getMessage().toLowerCase();
+        if (message.contains("rasteriz") || message.contains("no pages") || message.contains("unreadable")
+                || message.contains("render")) {
+            return FAILURE_OCR_RASTERIZE;
+        }
+        if (message.contains("vision")) {
+            return FAILURE_OCR_VISION;
+        }
+        if (message.contains("no text") || message.contains("produced no text")) {
+            return FAILURE_OCR_NO_TEXT;
+        }
+        if (message.contains("no lines")) {
+            return FAILURE_OCR_NO_LINES;
+        }
+        if (message.contains("parse")) {
+            return FAILURE_OCR_PARSE;
+        }
+        return FAILURE_OCR_FAILED;
     }
 
     /** Transitions the document to {@code FAILED} with a stable reason, retaining the raw object (R3.4). */

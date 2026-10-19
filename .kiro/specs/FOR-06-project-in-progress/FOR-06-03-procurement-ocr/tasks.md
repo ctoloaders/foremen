@@ -377,3 +377,151 @@ iterations each, tagged `Feature: FOR-06-03-procurement-ocr, Property {n}: ...`)
   ]
 }
 ```
+
+---
+
+## Amendment A1 — Asynchronous OCR tasks
+
+Implements Requirements 14–19 (design Amendment A1). Supersedes the synchronous `upload → process`
+path. **Spans two repos** (per `.kiro/steering/git-repo-structure.md`): backend/spec in the root
+repo, the Procurement panel + locale files in `foremen-frontend/`.
+
+### Parallel execution plan (waves) — Amendment A1
+
+- **Wave A1-0:** A1.1 — extend `ProcessingStatus` enum + the stage-documenting changeset.
+- **Wave A1-1 (parallel):** A1.2 (OCR executor bean + `OcrStageListener` seam), A1.3 (status DTO +
+  `GET /{id}/status` endpoint) — independent; A1.2 touches OCR config, A1.3 touches controller/DTO.
+- **Wave A1-2:** A1.4 (`ProcurementDocumentService` async: upload/reprocess publish event, worker
+  `ProcurementOcrWorker` with per-stage commits + failure mapping) — needs the enum (A1.1), the
+  executor (A1.2), and consumes the stage listener.
+- **Wave A1-3 (parallel):** A1.5 (terminal-state `ProcurementOcrNotificationEmitter`), A1.6
+  (crash-recovery sweep) — both depend on the worker/service (A1.2/A1.4) but are independent of each
+  other.
+- **Wave A1-4:** A1.7 (frontend: status polling client/hook + upload spinner + per-row spinner + retry
+  + stage/failure rendering) — needs the backend status endpoint (A1.3) and async upload (A1.4) live.
+- **Wave A1-5 (parallel):** A1.8 (i18n PL+RU: status/stage enum labels, failure messages, processing
+  UX, notification type keys + backend message codes), A1.9 (backend tests), A1.10 (frontend tests) —
+  independent.
+- **Wave A1-6:** A1.11 (update `test-cases.md` for async: poll-for-terminal instead of asserting on
+  upload) — needs the slice.
+- **Wave A1-7:** A1.12 (final verification + deploy to dev + checkpoint) — depends on everything.
+
+### Tasks — Amendment A1
+
+- [x] A1.1 Extend the status model + stage changeset
+  - Extend `ProcessingStatus` to `QUEUED, RASTERIZING, CLEANING, OCR_TEXT, PARSING, MATCHING, PARSED,
+    FAILED, UPLOADED` (design A1.1). Confirm `VARCHAR(16)` still fits (`RASTERIZING` = 11). Add a
+    comment-only / no-op changeset `NNN-procurement-status-stages.xml` documenting the extended
+    lifecycle (guarded + `MARK_RAN`, registered last in `changelog.xml`); no column widening.
+  - _Requirements: 15.1, 15.3_
+  - _Depends on: none_
+- [x] A1.2 OCR executor + stage-listener seam
+  - Add `@Bean("ocrTaskExecutor") ThreadPoolTaskExecutor` (corePoolSize 1–2, bounded queue,
+    `CallerRunsPolicy`, prefix `ocr-`) in the OCR config (mirrors `MailConfig`). Define the
+    `OcrStageListener` callback interface and thread it through `OcrService.process(..., listener)`;
+    `GoogleOcrService` invokes it as it enters CLEANING / OCR_TEXT / PARSING; `DisabledOcrService`
+    ignores it. Keep the no-listener overload for existing callers/tests.
+  - _Requirements: 14.3, 15.1, 15.2_
+  - _Depends on: none_
+- [x] A1.3 Status endpoint + DTO
+  - Add `ProcurementDocumentStatusResponse { id, status, stage, failureReason }` and
+    `GET /api/procurement-documents/{id}/status` (`@RequiresPermission(PURCHASES, READ)`, same
+    project-scope guard as `findById`). Add the derived `stage` field to the list + extended DTOs and
+    their mappers (stage == status while non-terminal, else null).
+  - _Requirements: 16.1, 16.4_
+  - _Depends on: none_
+- [x] A1.4 Make upload/reprocess async + the worker
+  - Rework `ProcurementDocumentService.upload` to the fast transactional part only (validate → store
+    raw → persist `QUEUED` → audit → commit → return), publishing `ProcurementOcrRequested(id)`.
+    Rework `reprocess` to guard → `QUEUED` → commit → publish the same event (no inline OCR). Add
+    `ProcurementOcrWorker` (`@Async("ocrTaskExecutor") @TransactionalEventListener(AFTER_COMMIT)`)
+    that re-loads by id and drives the six stages with per-stage commits, maps failures to the
+    stage-specific `failureReason` codes (design A1.3/R18.1), retains the raw on failure, and sets the
+    terminal state. Remove the old inline `process` call from the request path.
+  - _Requirements: 14.1, 14.2, 14.3, 14.4, 15.1, 15.2, 18.1, 18.3_
+  - _Depends on: A1.1, A1.2_
+- [x] A1.5 Terminal-state notifications
+  - Add `ProcurementOcrNotificationEmitter` invoked by the worker after the terminal commit: on
+    `PARSED` → `notification.procurement.ocr.parsed`, on `FAILED` →
+    `notification.procurement.ocr.failed`, recipient `document.uploadedBy`, deep-link
+    `/projects/{projectId}/procurement?doc={id}`, via `NotificationService.create(...)` in try/catch
+    (log-and-swallow). No notification for the OCR-disabled resting case.
+  - _Requirements: 17.1, 17.2, 17.3, 17.4_
+  - _Depends on: A1.4_
+- [x] A1.6 Crash-recovery sweep
+  - Add a `@Scheduled` + `@SchedulerLock` sweep (mirror `OverdueSweepService`; cron default `-`,
+    enabled per profile) + a startup pass that re-enqueues (or fails as retryable) every document left
+    in a non-terminal stage beyond a staleness window, with a small attempt budget. Idempotent,
+    single-flighted.
+  - _Requirements: 18.4_
+  - _Depends on: A1.4_
+- [x] A1.7 Frontend async UX
+  - `procurement-api.ts`: add `fetchProcurementDocumentStatus(id)`. Add
+    `useProcurementDocumentStatus` (React Query `refetchInterval` active only while non-terminal,
+    capped backoff, stop on terminal/unmount; invalidate the full-document query on terminal).
+    `DocumentUpload`: spinner + localized processing text + stage label from the polled status.
+    `ProcurementPanel` / `DocumentStatusBadge`: per-row spinner + stage label for non-terminal rows,
+    poll only those; `FAILED` rows show the localized failure reason + a Retry (reprocess) button,
+    hidden for READ-only + non-ACTIVE.
+  - _Requirements: 16.2, 16.3, 19.1, 19.2, 19.3, 19.4_
+  - _Depends on: A1.3, A1.4_
+- [x] A1.8 i18n (PL + RU) incl. enum keys + notification keys
+  - Add to both `pl.json` and `ru.json` (real PL + RU, no English fallback): `procurement.status.*`
+    (queued/rasterizing/cleaning/ocrText/parsing/matching/parsed/failed/uploaded),
+    `procurement.failure.*` (rasterize/vision/noText/parse/noLines/storage/generic/disabled),
+    `procurement.processing.*` (inProgress/retry/retrying/toasts), and the notification type keys
+    `notification.procurement.ocr.parsed` / `.failed`. Add any new `error.procurement.*` upload codes
+    to the backend PL + RU bundles. Run the locale-parity test; no raw key may render (R10.4/R19.5).
+  - _Requirements: 15.4, 17.5, 18.2, 19.5_
+  - _Depends on: A1.4, A1.5, A1.7_
+- [x] A1.9 Backend tests
+  - Unit/integration for: upload returns `QUEUED` and runs no inline OCR (event published); worker
+    drives QUEUED→…→PARSED with per-stage commits (observable via repeated reads) using a stubbed
+    `OcrService` with a stage listener; failure mapping per stage sets the right `failureReason` and
+    retains the raw; reprocess re-enqueues; the terminal notification is emitted to the uploader with
+    the deep-link (stubbed `NotificationService`, assert type + recipient); the sweep re-enqueues a
+    stale non-terminal doc. Run only affected classes with `--tests` → `/tmp/for-06-03-async-test.log`;
+    verify via JUnit XML.
+  - _Requirements: 14.1, 14.3, 15.2, 17.1, 17.2, 18.1, 18.4_
+  - _Depends on: A1.4, A1.5, A1.6_
+- [x] A1.10 Frontend tests (Vitest + fast-check)
+  - Upload shows spinner + stage label and polls until terminal then fetches the full doc; list renders
+    per-row spinners only for non-terminal rows and polls only those; `FAILED` row shows the localized
+    reason + Retry (hidden for READ-only / non-ACTIVE); polling stops on terminal/unmount and backs
+    off. Locale-parity over the new keys.
+  - _Requirements: 16.2, 16.3, 19.1, 19.2, 19.3, 19.4, 19.5_
+  - _Depends on: A1.7, A1.8_
+- [x] A1.11 Update test-cases.md for async
+  - Update `test-cases.md`: the upload API scenario asserts `status = QUEUED` on the upload response,
+    then **polls** `GET /{id}/status` until a terminal state (PARSED/FAILED) rather than asserting the
+    terminal state on upload; add the retry (reprocess → QUEUED → poll) scenario, the terminal-
+    notification scenario (uploader receives the bell notification), and the per-row-spinner UI
+    scenario. Keep the repeatability (run-id / teardown) and MD-report template. Russian.
+  - _Requirements: 14.1, 16.2, 17.1, 18.3, 19.2_
+  - _Depends on: A1.4, A1.5, A1.7, A1.8, A1.9, A1.10_
+- [ ] A1.12 Final verification + deploy + checkpoint
+  - Compile backend (`./gradlew compileJava compileTestJava`), run only affected classes with
+    `--tests`; type-check + unit-test the frontend; locale-parity passes. Deploy to dev (both repos
+    push → Cloud Build), confirm an upload returns `QUEUED` immediately (no 504), the stage chain is
+    observable via `GET /{id}/status`, a real receipt reaches `PARSED` with a bell notification to the
+    uploader, and a forced failure shows a descriptive reason + working Retry. Clean up test docs.
+    Commit per repo only if the user asks.
+  - _Requirements: all A1_
+  - _Depends on: A1.1, A1.2, A1.3, A1.4, A1.5, A1.6, A1.7, A1.8, A1.9, A1.10, A1.11_
+
+### Task Dependency Graph — Amendment A1
+
+```json
+{
+  "waves": [
+    { "id": "A1-0", "tasks": ["A1.1"] },
+    { "id": "A1-1", "tasks": ["A1.2", "A1.3"] },
+    { "id": "A1-2", "tasks": ["A1.4"] },
+    { "id": "A1-3", "tasks": ["A1.5", "A1.6"] },
+    { "id": "A1-4", "tasks": ["A1.7"] },
+    { "id": "A1-5", "tasks": ["A1.8", "A1.9", "A1.10"] },
+    { "id": "A1-6", "tasks": ["A1.11"] },
+    { "id": "A1-7", "tasks": ["A1.12"] }
+  ]
+}
+```

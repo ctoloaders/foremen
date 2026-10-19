@@ -412,3 +412,159 @@ an improved plan does not force me to re-upload.
    per-line parse tolerance, the upload type/size rules, dual-rendition storage, the ABAC matrix, seed
    idempotency), frontend unit tests (upload flow, status rendering, tier badges, image-viewer,
    resolver fixtures), and an API-level `test-cases.md` run against the Dockerized app.
+
+---
+
+## Amendment A1 — Asynchronous OCR (upload → poll → notify → retry)
+
+> **Status:** This amendment **supersedes** the synchronous-processing behaviour of the original
+> Requirement 2.5 and Requirement 3, and **overrides Requirement 9 ("No notifications")** for the two
+> terminal-state OCR notifications defined below. Everything else in Requirements 1–11 (upload
+> validation rules, the match engine, ABAC, stage gating, the read-only review, i18n completeness,
+> audit) remains in force. Where this amendment conflicts with the original text, this amendment wins.
+>
+> **Motivation.** OCR runs Cloud Vision + two Gemini round-trips + a PDF render inline inside the
+> upload request's single transaction, holding the request thread and the DB transaction open for
+> 20–60s+. On the dev stack this crossed the reverse-proxy's 60s read timeout and surfaced as a
+> **504 Gateway Timeout** even though the backend kept working. The durable fix is to make OCR
+> asynchronous: the upload request returns immediately once the file is stored and the row is
+> committed, a background worker runs the pipeline, and the client polls for progress.
+
+### Requirement 14 — Asynchronous upload (return the id immediately)
+
+**User story:** As a user uploading a procurement document, I want the upload request to return
+immediately with the document id once my file is safely stored, so the request never times out
+waiting for OCR.
+
+#### Acceptance Criteria
+
+1. WHEN a user uploads a valid document on an ACTIVE project THEN the system SHALL, within the upload
+   request: validate the upload (storage configured, content type, size — per R2.2/R2.3/R2.4), store
+   the raw bytes to object storage, persist a new `procurement_documents` row with
+   `status = QUEUED`, write the CREATE audit row, **commit the transaction**, and return the created
+   document's id and status to the caller — WITHOUT running any OCR on the request thread.
+2. THE upload response SHALL carry the persisted id and the current `status` (`QUEUED`) so the client
+   can begin polling; the id SHALL be returned ONLY after the raw file was stored and the entity row
+   was committed (an upload that fails validation or storage returns an error and creates no row).
+3. WHEN the upload transaction commits THEN the system SHALL hand the document off to a background
+   OCR worker (an in-process async executor), so the pipeline runs on a worker thread after commit,
+   never on the request thread and never inside the upload transaction.
+4. IF the OCR provider is disabled (`foremen.ocr.enabled=false`) THEN the uploaded document SHALL
+   rest at `status = UPLOADED` with `failureReason = procurement.ocr.disabled` (unchanged from R3.5)
+   and SHALL NOT be enqueued for processing; no spinner or progress is implied.
+
+### Requirement 15 — Staged processing status
+
+**User story:** As a user watching a document process, I want to see which stage of OCR it is in, so
+I understand the progress rather than staring at an opaque spinner.
+
+#### Acceptance Criteria
+
+1. THE `ProcessingStatus` lifecycle SHALL be extended so a processing document reports its current
+   **stage**. The stages, in order, SHALL be: `QUEUED` → `RASTERIZING` → `CLEANING` → `OCR_TEXT` →
+   `PARSING` → `MATCHING` → terminal (`PARSED` or `FAILED`). These stage codes map 1:1 to the real
+   pipeline (page split; per-page white-background cleanup/corner-detect; Vision text detection;
+   Gemini per-line parse; match-engine + line persistence).
+2. WHILE a document is being processed THE background worker SHALL advance and persist the document's
+   stage as it enters each stage, each stage transition committed in its own short transaction so a
+   poller observes the progression.
+3. THE in-progress stages (`QUEUED`, `RASTERIZING`, `CLEANING`, `OCR_TEXT`, `PARSING`, `MATCHING`)
+   SHALL be non-terminal; `PARSED` and `FAILED` SHALL be the only terminal states. The legacy
+   `UPLOADED` state is retained ONLY for the OCR-disabled resting case (R14.4).
+4. EACH stage code SHALL have a localized label in both `pl.json` and `ru.json` (the enum-key i18n
+   requirement of Amendment A1, see R18), so the UI renders human-readable stage text.
+
+### Requirement 16 — Status polling endpoint + full read
+
+**User story:** As the client UI, I want a cheap status endpoint to poll, and the full document only
+when I need the detail, so row/upload polling stays lightweight.
+
+#### Acceptance Criteria
+
+1. THE system SHALL expose a lightweight `GET /api/procurement-documents/{id}/status` endpoint that
+   returns ONLY `{ id, status, stage, failureReason }` (no lines, no signed image URLs, no derived
+   names) — resolving to `PURCHASES`/`READ` with the same project-scope access guard as the other
+   reads (an out-of-scope document is indistinguishable from a missing one).
+2. WHEN a client polls the status endpoint AND the document is still in a non-terminal state THEN the
+   response SHALL reflect the current stage; WHEN it reaches a terminal state THEN the response SHALL
+   carry the terminal `status` (`PARSED`/`FAILED`) and, on `FAILED`, the descriptive `failureReason`.
+3. AFTER a document reaches a terminal state THE client SHALL fetch the full document via the existing
+   `GET /api/procurement-documents/{id}` (lines, supplier, total, image URLs). The status endpoint is
+   for polling; the full DTO is fetched once on completion (the "status then full dto" contract).
+4. THE existing list endpoint (`GET /?projectId=`) SHALL continue to carry each row's `status`,
+   `stage`, and `failureReason` so the table can decide which rows to poll after a page load.
+
+### Requirement 17 — Terminal-state notifications
+
+**User story:** As the user who uploaded a document, I want an in-app notification when its OCR
+finishes or fails, so I don't have to keep the tab open to learn the outcome.
+
+#### Acceptance Criteria
+
+1. WHEN a document reaches `PARSED` THEN the system SHALL emit exactly one in-app notification to the
+   **uploader** (`document.uploadedBy`) of type `notification.procurement.ocr.parsed`, carrying a
+   deep-link to the Procurement tab for that document
+   (`/projects/{projectId}/procurement?doc={documentId}`).
+2. WHEN a document reaches `FAILED` THEN the system SHALL emit exactly one in-app notification to the
+   uploader of type `notification.procurement.ocr.failed`, with the same deep-link; the notification
+   body MAY carry the descriptive failure reason.
+3. THE notifications SHALL be emitted via the generic per-recipient `NotificationService`
+   (`create(recipientUserId, type, body, deepLink)`, FOR-05-07 Requirement 13) — never a bespoke
+   delivery mechanism. Emission SHALL be best-effort: a notification failure SHALL be logged and
+   swallowed and SHALL NEVER change the document's terminal state (mirrors the existing
+   `WorkReportNotificationEmitter` try/catch pattern).
+4. THE OCR-disabled resting case (R14.4) SHALL emit **no** notification (it is not a processing
+   outcome). A retry that re-reaches a terminal state SHALL emit the corresponding terminal
+   notification again (one per terminal transition).
+5. EACH new notification type key (`notification.procurement.ocr.parsed`,
+   `notification.procurement.ocr.failed`) SHALL have PL + RU values under the top-level
+   `"notification"` object in both locale files (no backend message-bundle entry is required — types
+   are frontend-resolved, per the FOR-05-07 notification convention).
+
+### Requirement 18 — Descriptive failure + retry
+
+**User story:** As a user whose document failed OCR, I want a clear reason and a one-click retry, so I
+can recover without re-uploading the file.
+
+#### Acceptance Criteria
+
+1. WHEN processing fails THE worker SHALL set a **stage-specific** `failureReason` code identifying
+   where it failed, from the set: `procurement.ocr.failed.rasterize` (page split/render),
+   `procurement.ocr.failed.vision` (Vision text detection), `procurement.ocr.failed.noText` (OCR
+   produced no text), `procurement.ocr.failed.parse` (LLM parse unusable), `procurement.ocr.noLines`
+   (parsed zero lines), `procurement.ocr.failed.storage` (processed-rendition store failed), and the
+   generic `procurement.ocr.failed` fallback for any uncategorized error. The raw upload and the
+   document row SHALL be retained on failure (unchanged from R3.4).
+2. EACH `failureReason` code SHALL have a localized, descriptive message in both `pl.json` and
+   `ru.json` so the UI renders a human-readable reason (not a raw code).
+3. THE retry action SHALL reuse the existing `POST /api/procurement-documents/{id}/reprocess`
+   endpoint (`PURCHASES`/`UPDATE`), allowed on a `FAILED` (or `PARSED`) document on an ACTIVE project
+   (unchanged guard from R8.1); retry SHALL run **asynchronously** exactly like upload — it re-enqueues
+   the document (`status → QUEUED`), returns immediately, and the client polls again.
+4. IF the backend restarts while a document is in a non-terminal processing stage THEN a startup/
+   scheduled **sweep** SHALL re-enqueue (or fail with `procurement.ocr.failed` so it is retryable)
+   every document left in a non-terminal stage, so no document is ever permanently stuck
+   mid-processing. The sweep SHALL be idempotent and single-flighted (reuse the existing ShedLock
+   pattern used by the scheduled jobs).
+
+### Requirement 19 — Frontend async UX
+
+**User story:** As a user, I want the upload and the list to show live processing state with a
+spinner and stage text, and failed rows to show the reason with a retry button.
+
+#### Acceptance Criteria
+
+1. WHEN an upload returns an id THEN the UI SHALL immediately show a processing indicator (spinner) +
+   a "document is being processed" text with the current stage label, and SHALL poll
+   `GET /{id}/status` on an interval until a terminal state, then fetch the full document once.
+2. WHEN the document list page is read THEN the UI SHALL render a per-row spinner (+ stage label) for
+   every row whose status is non-terminal, and SHALL poll `GET /{id}/status` for exactly those rows,
+   stopping each row's polling when it reaches a terminal state and then refreshing that row's data.
+3. WHEN a document is `FAILED` THEN its row/detail SHALL show the descriptive localized failure
+   reason and a **Retry** control (hidden for a READ-only caller and on a non-ACTIVE project, matching
+   the existing re-process visibility rule).
+4. THE polling SHALL stop when a document reaches a terminal state, when the panel unmounts, and SHALL
+   back off / cap so an always-failing backend does not produce an unbounded poll loop.
+5. ALL new user-facing strings (stage labels, the processing text, failure-reason messages, the retry
+   button, polling toasts) and the two notification type keys SHALL be added to both `pl.json` and
+   `ru.json` with real PL + RU values; no raw key SHALL ever be shown (extends R10).

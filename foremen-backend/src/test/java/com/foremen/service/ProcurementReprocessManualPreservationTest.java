@@ -91,6 +91,7 @@ class ProcurementReprocessManualPreservationTest {
     @Mock private OcrService ocrService;
     @Mock private MatchEngine matchEngine;
     @Mock private PlannedMaterialCandidateProvider candidateProvider;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     private ProcurementDocumentService service;
     private ProcurementDocumentEntity document;
@@ -104,6 +105,7 @@ class ProcurementReprocessManualPreservationTest {
         service = new ProcurementDocumentService(
                 documentDao, projectAccessCache, serviceMapper, auditLogDao, entityManager,
                 imageStorage, ocrService, matchEngine, candidateProvider, partitioner,
+                eventPublisher,
                 new ImageStorageProperties(null, null, null, null, null, null, null));
 
         // ADMIN caller -> the inherited project-access guard is a bypass.
@@ -156,7 +158,7 @@ class ProcurementReprocessManualPreservationTest {
         ParsedLine fresh = new ParsedLine(
                 "Грунтовка 5л (свежая)", new BigDecimal("1"), "шт",
                 new BigDecimal("45.00"), new BigDecimal("45.00"), null);
-        lenient().when(ocrService.process(any(), any(), any()))
+        lenient().when(ocrService.process(any(), any(), any(), any()))
                 .thenReturn(new OcrResult(List.of(), List.of(fresh), "ООО Поставщик", new BigDecimal("45.00")));
 
         // The engine returns UNMATCHED for the fresh line (no candidate match).
@@ -179,7 +181,10 @@ class ProcurementReprocessManualPreservationTest {
     @DisplayName("re-process keeps the MANUAL_MATCHED line (material + tier intact), drops the AUTO "
             + "line, appends the fresh line, and renumbers preserved-first (R5.1)")
     void reprocessPreservesManualLineAndReplacesAuto() {
-        service.reprocess(DOCUMENT_ID);
+        // Amendment A1: the preservation/match wiring now runs inside the async processQueued(...)
+        // entry point (the worker drives it); the preserved manual line + renumber behaviour is
+        // unchanged. Drive it directly with a no-op stage sink.
+        service.processQueued(DOCUMENT_ID, stage -> { });
 
         // The preserved manual line is still attached, byte-for-byte on its reconciliation fields.
         assertThat(document.getLines())
@@ -222,7 +227,7 @@ class ProcurementReprocessManualPreservationTest {
         // Make both prior lines automatic: nothing to preserve -> replace-all (FOR-06-03 behaviour).
         manualLine.setMatchStatus(MatchStatus.AUTO);
 
-        service.reprocess(DOCUMENT_ID);
+        service.processQueued(DOCUMENT_ID, stage -> { });
 
         assertThat(document.getLines())
                 .as("no manual line -> every prior line is replaced by the fresh set")

@@ -733,4 +733,10 @@
          NOT EXISTS. Follows the 017/134 two-changeSet resource+grant pattern. Registered LAST,
          after 174. -->
     <include file="database_files/changesets/175-seed-payments-resource.xml"/>
+    <!-- FOR-06-03 Amendment A1 (R15): asynchronous OCR extends the procurement_documents status
+         lifecycle to QUEUED / RASTERIZING / CLEANING / OCR_TEXT / PARSING / MATCHING (+ terminal
+         PARSED/FAILED, + UPLOADED resting). Data-only + idempotent: reconciles any legacy PROCESSING
+         row to a retryable FAILED; no column/type change (VARCHAR(16) already fits). Registered LAST,
+         after 175. -->
+    <include file="database_files/changesets/176-procurement-status-stages.xml"/>
 </databaseChangeLog>

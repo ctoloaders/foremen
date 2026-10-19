@@ -47,7 +47,13 @@ class ProcurementMessagesParityTest {
             "error.procurement.stage.notActive",
             "procurement.ocr.disabled",
             "procurement.ocr.noLines",
-            "procurement.ocr.failed"
+            "procurement.ocr.failed",
+            // Amendment A1 (R18.1/R18.2) — stage-specific async-OCR failure reasons.
+            "procurement.ocr.failed.rasterize",
+            "procurement.ocr.failed.vision",
+            "procurement.ocr.failed.noText",
+            "procurement.ocr.failed.parse",
+            "procurement.ocr.failed.storage"
     };
 
     @ParameterizedTest
@@ -58,7 +64,12 @@ class ProcurementMessagesParityTest {
             "error.procurement.stage.notActive",
             "procurement.ocr.disabled",
             "procurement.ocr.noLines",
-            "procurement.ocr.failed"
+            "procurement.ocr.failed",
+            "procurement.ocr.failed.rasterize",
+            "procurement.ocr.failed.vision",
+            "procurement.ocr.failed.noText",
+            "procurement.ocr.failed.parse",
+            "procurement.ocr.failed.storage"
     })
     @DisplayName("every FOR-06-03 message key has a non-blank PL entry that is not the raw key")
     void keyHasNonBlankPlEntry(String code) throws IOException {
@@ -79,7 +90,12 @@ class ProcurementMessagesParityTest {
             "error.procurement.stage.notActive",
             "procurement.ocr.disabled",
             "procurement.ocr.noLines",
-            "procurement.ocr.failed"
+            "procurement.ocr.failed",
+            "procurement.ocr.failed.rasterize",
+            "procurement.ocr.failed.vision",
+            "procurement.ocr.failed.noText",
+            "procurement.ocr.failed.parse",
+            "procurement.ocr.failed.storage"
     })
     @DisplayName("every FOR-06-03 message key has a non-blank RU entry that is not the raw key")
     void keyHasNonBlankRuEntry(String code) throws IOException {

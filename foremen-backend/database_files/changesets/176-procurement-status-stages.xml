@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-03 Amendment A1 (R15.1, R15.3): asynchronous OCR introduces a fine-grained processing
+         lifecycle. The procurement_documents.status column (VARCHAR(16), NOT NULL, created by 167)
+         now stores one of UPLOADED / QUEUED / RASTERIZING / CLEANING / OCR_TEXT / PARSING / MATCHING
+         / PARSED / FAILED (the former single PROCESSING value is replaced by the six processing
+         stages). The longest value, RASTERIZING, is 11 characters, so the existing VARCHAR(16) width
+         already accommodates every value — NO column alteration is required.
+
+         This changeset is intentionally DATA-ONLY + idempotent: it reconciles any legacy row left in
+         the obsolete non-terminal PROCESSING state (there should be none in practice — the former
+         synchronous path never committed PROCESSING) to FAILED with a retryable failure_reason, so
+         the crash-recovery sweep / retry action (A1 R18.4) can pick it up rather than it resting in a
+         value the extended enum no longer defines. Guarded by a sqlCheck so a database with no such
+         row runs nothing (MARK_RAN). Registered LAST in changelog.xml, after 175.
+
+         No schema (column/type/constraint) change is made here; the extended lifecycle is enforced by
+         the application (ProcessingStatus enum) and documented by this changeset. -->
+    <changeSet id="176-procurement-status-stages-reconcile" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM procurement_documents WHERE status = 'PROCESSING'
+                ) THEN 1 ELSE 0 END
+            </sqlCheck>
+        </preConditions>
+        <update tableName="procurement_documents">
+            <column name="status" value="FAILED"/>
+            <column name="failure_reason" value="procurement.ocr.failed"/>
+            <where>status = 'PROCESSING'</where>
+        </update>
+    </changeSet>
+
+</databaseChangeLog>

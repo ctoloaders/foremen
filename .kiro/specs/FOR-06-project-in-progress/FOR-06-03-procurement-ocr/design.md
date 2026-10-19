@@ -798,3 +798,158 @@ Dockerized app (`http://localhost:8080`, auth under `/api/auth`), with a run-id 
 repeatability and MD report tables. Where the OCR provider is not configured in the Docker stack, the
 OCR-dependent scenarios assert the disabled-fallback behavior (`UPLOADED` / `FAILED`, no lines) and the
 deterministic match-engine scenarios are driven through seeded lines.
+
+---
+
+## Amendment A1 — Asynchronous OCR design
+
+> Supersedes the synchronous `upload → process` design (§5.1) and the "no notifications" choice for
+> the two terminal OCR notifications. Implements Requirements 14–19.
+
+### A1.1 Status model change
+
+`ProcessingStatus` is extended from `{UPLOADED, PROCESSING, PARSED, FAILED}` to:
+
+```
+QUEUED, RASTERIZING, CLEANING, OCR_TEXT, PARSING, MATCHING,   // non-terminal (processing)
+PARSED, FAILED,                                               // terminal
+UPLOADED                                                      // legacy resting state, OCR-disabled only
+```
+
+- `PROCESSING` is **replaced** by the six fine-grained stages. Any legacy row written as `PROCESSING`
+  (there are none in practice — the old code never committed `PROCESSING`) would be treated as a
+  non-terminal stage by the sweep (R18.4).
+- The DB column `procurement_documents.status` is `VARCHAR(16)`; the longest new value `RASTERIZING`
+  is 11 chars, so **no column widening is required**. A new changeset is still added to document the
+  stage semantics (comment-only / no-op data migration) and to keep the changelog self-describing —
+  but the column type is unchanged.
+- `stage` is **modeled as the `status` value itself** while non-terminal (status == stage during
+  processing), avoiding a second column. The status endpoint returns both `status` and `stage` fields
+  for client clarity, where `stage == status` for the six processing values and `stage == null` on a
+  terminal/legacy state. (Decision: reuse `status` as the stage carrier — simplest, no schema churn;
+  the DTO exposes `stage` as a derived convenience.)
+
+### A1.2 Async orchestration
+
+- **Executor.** Add a dedicated `@Bean("ocrTaskExecutor") ThreadPoolTaskExecutor` (corePoolSize 1–2,
+  a small bounded queue, `CallerRunsPolicy` reject policy, thread prefix `ocr-`) in the OCR config,
+  mirroring `MailConfig.mailTaskExecutor`. `@EnableAsync` is already active app-wide (MailConfig).
+  Rationale for a small pool: OCR is memory- and CPU-heavy on the small dev VM; bounding concurrency
+  protects the heap (the OOM history) — processing is effectively serialized, which is acceptable.
+- **Hand-off after commit.** `upload(projectId, file)` keeps only the fast, transactional part:
+  validate → `storeObject` raw → persist row `status = QUEUED` → audit CREATE → return the read model.
+  The method publishes a `ProcurementOcrRequested(documentId)` application event; a
+  `@TransactionalEventListener(phase = AFTER_COMMIT)` + `@Async("ocrTaskExecutor")` listener
+  (`ProcurementOcrWorker`) picks it up on a worker thread **after** the upload transaction commits —
+  the exact pattern `InvitationEmailDispatcher` uses. This guarantees R14.1/R14.3: the id is returned
+  from the committed row, and no OCR runs on the request thread or in the upload transaction.
+- **reprocess(id)** (retry) becomes: guard (FAILED/PARSED, ACTIVE) → set `status = QUEUED` → commit →
+  publish the same event. It no longer runs OCR inline. Returns immediately with the `QUEUED` model.
+
+### A1.3 The worker: staged processing with per-stage commits
+
+`ProcurementOcrWorker.process(documentId)` runs off-thread and owns the pipeline, committing each
+stage transition in its own short transaction (so a poller sees progression — R15.2). It re-loads the
+document by id at the start of each step (it holds no entity across transactions). Stage sequence:
+
+1. `QUEUED → RASTERIZING` (commit): mark, then read raw bytes (`imageStorage.readObject`).
+2. `RASTERIZING → CLEANING` (commit): PDF/image page split done; entering per-page cleanup.
+3. `CLEANING → OCR_TEXT` (commit): white-background cleanup + corner-detect done; entering Vision.
+4. `OCR_TEXT → PARSING` (commit): Vision text extracted + concatenated; entering the LLM parse.
+5. `PARSING → MATCHING` (commit): parsed lines obtained; entering match-engine + line persistence.
+6. `MATCHING → PARSED` (commit): processed renditions stored, lines matched + persisted atomically
+   (reusing the existing `ReprocessLinePartitioner` preserve/replace logic from FOR-06-04),
+   supplier/total/parsedAt set, `failureReason = null`.
+
+Because `OcrService.process(...)` is a single synchronous call today, the worker drives the stages at
+the orchestration boundary (around the service call), not inside `GoogleOcrService`. To report
+`CLEANING`/`OCR_TEXT`/`PARSING` distinctly, `OcrService` gains an optional progress callback
+(`OcrStageListener`) the worker passes in; `GoogleOcrService` invokes it as it enters each internal
+phase. The callback updates+commits the document stage. If a finer callback is deemed out of scope,
+the fallback is to commit `RASTERIZING` before the OCR call and `MATCHING` after it returns, so at
+least `QUEUED → RASTERIZING → MATCHING → terminal` is observable — but the chosen design wires the
+full six-stage callback (R15.1).
+
+- **Failure mapping (R18.1).** The worker catches the OCR exceptions and maps to a stage-specific
+  `failureReason`: `OcrUnavailableException` → leave `UPLOADED` + `procurement.ocr.disabled` (no
+  notification); `OcrFailedException` is categorized by the current stage/message into
+  `…failed.rasterize | …failed.vision | …failed.noText | …failed.parse | ocr.noLines | …failed.storage`;
+  any other `RuntimeException` → `procurement.ocr.failed`. Status → `FAILED`, raw retained.
+- **Terminal notification (R17).** On `PARSED` or `FAILED`, after the terminal commit, the worker
+  calls a `ProcurementOcrNotificationEmitter` that invokes
+  `notificationService.create(document.getUploadedBy().getId(), TYPE, body, deepLink)` in try/catch
+  (log-and-swallow). `NotificationService.create` is `REQUIRES_NEW`, so it is safe to call from the
+  worker thread outside any ambient transaction. Deep-link:
+  `/projects/{projectId}/procurement?doc={documentId}`. Types: `notification.procurement.ocr.parsed`
+  / `notification.procurement.ocr.failed` (frontend-resolved i18n keys).
+
+### A1.4 Crash-recovery sweep (R18.4)
+
+A `@Scheduled` + `@SchedulerLock` sweep (mirroring `OverdueSweepService`) runs on a short cron
+(default disabled via the `-` sentinel, enabled in the dev/prod profile) and at startup: it finds
+every document in a non-terminal stage (`QUEUED/RASTERIZING/CLEANING/OCR_TEXT/PARSING/MATCHING`) that
+has not advanced within a staleness window and re-publishes the OCR-requested event (or marks it
+`FAILED` with `procurement.ocr.failed` if it has exhausted a small attempt budget). This guarantees no
+document is permanently stuck after a restart. The sweep is idempotent (re-enqueue is harmless) and
+single-flighted via ShedLock on the single VM.
+
+### A1.5 Endpoints
+
+- **NEW** `GET /api/procurement-documents/{id}/status` → `PURCHASES`/`READ`. Returns a new
+  `ProcurementDocumentStatusResponse { Long id, ProcessingStatus status, ProcessingStatus stage,
+  String failureReason }`. Project-scope access guard identical to `findById`. No lines, no signed
+  URLs — cheap enough to poll per row.
+- `POST /api/procurement-documents` (upload) → now returns the `QUEUED` document immediately
+  (same `ProcurementDocumentUploadResponse` shape; `status = QUEUED`).
+- `POST /api/procurement-documents/{id}/reprocess` (retry) → now returns the `QUEUED` document
+  immediately (same `ProcurementDocumentReprocessResponse` shape).
+- `GET /api/procurement-documents/{id}` and `GET /?projectId=` — unchanged shapes; the list row DTO
+  (`ProcurementDocumentDtoModel`) already carries `status` + `failureReason`; a derived `stage` is
+  added to it and to the extended DTO.
+
+### A1.6 Frontend
+
+- **API client** (`procurement-api.ts`): add `fetchProcurementDocumentStatus(id)` →
+  `GET /{id}/status`. `uploadProcurementDocument` / `reprocessProcurementDocument` already return the
+  document; they now return it in `QUEUED`.
+- **Polling hook** (`useProcurementDocumentStatus`): React Query with a `refetchInterval` that is
+  active only while the status is non-terminal, with a capped backoff and `enabled` gated on the row
+  being in-progress; stops on terminal / unmount (R19.4). On transition to terminal it invalidates the
+  full-document query so the detail refreshes once (the "status then full dto" contract).
+- **DocumentUpload**: after upload, show a spinner + localized "processing" text + the stage label
+  from the polled status (R19.1).
+- **ProcurementPanel list / DocumentStatusBadge**: render a per-row spinner + stage label for
+  non-terminal rows and poll only those (R19.2); `FAILED` rows show the localized failure reason + a
+  **Retry** button (reprocess), hidden for READ-only callers and on non-ACTIVE projects (R19.3).
+- **NotificationBell**: no component change — it already renders `t(type)` + navigates `deepLink`.
+  Only the two new i18n keys are added.
+
+### A1.7 i18n (enum keys included — R15.4/R18.2/R19.5)
+
+Add to **both** `pl.json` and `ru.json`, real PL + RU values:
+
+- **Stage/status enum labels** under `procurement.status.*`: `queued`, `rasterizing`, `cleaning`,
+  `ocrText`, `parsing`, `matching`, `parsed`, `failed`, `uploaded`.
+- **Failure-reason messages** under `procurement.failure.*`: `rasterize`, `vision`, `noText`, `parse`,
+  `noLines`, `storage`, `generic`, `disabled` (maps the `procurement.ocr.*` / `procurement.ocr.failed.*`
+  codes to descriptive text).
+- **Processing UX** under `procurement.processing.*`: `inProgress` ("document is being processed"),
+  `retry`, `retrying`, poll toasts.
+- **Notification type keys** under the top-level `notification.procurement.ocr.*`: `parsed`, `failed`.
+
+Backend adds the new `error.procurement.*` / `procurement.ocr.failed.*` codes to the PL + RU message
+bundles only where a code is surfaced as a 4xx (the upload validation codes); the per-stage
+`failureReason` codes are frontend-resolved strings on the document (like notification types), so they
+need frontend i18n but not necessarily a backend bundle entry — the design adds them to the frontend
+`procurement.failure.*` block.
+
+### A1.8 Backward-compatibility & ADR notes
+
+- The upload/reprocess response shapes are unchanged (adding a derived `stage` is additive); the only
+  behavioural change clients observe is that the returned `status` is now `QUEUED` instead of a
+  terminal state. The automate-spec QA slice and `test-cases.md` for FOR-06-03 must be updated to
+  poll for the terminal state instead of asserting it on the upload response.
+- The nginx `proxy_read_timeout` bump (already deployed) remains valid as defense-in-depth but is no
+  longer load-bearing, since the upload request now returns in well under a second.
+- Concurrency is intentionally bounded (small pool) to protect the heap on the small VM; this is the
+  async-processing counterpart to the still-open OOM-hardening item.
