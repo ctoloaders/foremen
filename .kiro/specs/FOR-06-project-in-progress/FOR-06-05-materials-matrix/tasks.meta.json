@@ -1,0 +1,244 @@
+{
+  "pbtResults": {
+    "1.1a Write property tests for the assembler (jqwik)": {
+      "status": "passed",
+      "lastRunTimestamp": 1792402542987
+    }
+  },
+  "executionHistory": {
+    "1. Backend: pure assembler + read-model DTOs": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400088394
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792403226360
+      }
+    ],
+    "1.1 Implement `MaterialsMatrixAssembler` + DTOs": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400088619
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400109362
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400383680
+      }
+    ],
+    "2.1 Add `MaterialsMatrixService`": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400088696
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400389364
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400574434
+      }
+    ],
+    "3.1 Add `MaterialsMatrixController`": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400088769
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400578701
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400706242
+      }
+    ],
+    "4.1 Swap the `materials` tab panel": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400088897
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400110469
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400382794
+      }
+    ],
+    "5.1 Build the `materials-matrix` feature folder": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400088997
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400710079
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401252393
+      }
+    ],
+    "6.1 Add i18n keys (PL + RU, mirrored)": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400089304
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401257527
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401664831
+      }
+    ],
+    "6.2 Backend example / integration / smoke tests": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400089418
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401258466
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401663989
+      }
+    ],
+    "6.3 Frontend unit tests (Vitest + fast-check)": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400089564
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401259559
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401265900
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401669491
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792402110480
+      }
+    ],
+    "7. Author test-cases.md": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400089684
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792402115048
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792402352628
+      }
+    ],
+    "8. Final verification + checkpoint": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400089742
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792402356543
+      },
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792403213617
+      }
+    ],
+    "4. Frontend: tab wiring": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400383071
+      }
+    ],
+    "1.1a Write property tests for the assembler (jqwik)": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400383741
+      }
+    ],
+    "2. Backend: matrix service": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400574537
+      }
+    ],
+    "3. Backend: controller": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792400706325
+      }
+    ],
+    "5. Frontend: materials-matrix panel": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792401252497
+      }
+    ],
+    "6. i18n + tests": [
+      {
+        "executionId": "28c9c1c9-1eaa-4ab0-93bc-1025ff0013e9",
+        "chatSessionId": "sess_c6fe3609-4afb-4dce-a43a-8ff6bc931b24",
+        "timestamp": 1792402110526
+      }
+    ]
+  }
+}
