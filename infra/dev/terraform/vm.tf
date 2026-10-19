@@ -76,6 +76,7 @@ resource "google_compute_instance" "vm" {
     secret-jwt               = "foremen-dev-jwt-secret"
     secret-admin-password    = "foremen-dev-admin-password"
     secret-google-places-key = "foremen-dev-google-places-key"
+    secret-ocr-gemini-key    = "foremen-dev-ocr-gemini-key"
     # Startup script as a metadata entry (key "startup-script") — matches how the
     # VM was created, so Terraform doesn't try to null it out.
     startup-script = file("${path.module}/../vm-startup.sh")

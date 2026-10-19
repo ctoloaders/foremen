@@ -45,6 +45,7 @@ SECRET_DB_PASSWORD="$(md secret-db-password)"
 SECRET_JWT="$(md secret-jwt)"
 SECRET_ADMIN_PASSWORD="$(md secret-admin-password)"
 SECRET_GOOGLE_PLACES_KEY="$(md secret-google-places-key || true)"
+SECRET_OCR_GEMINI_KEY="$(md secret-ocr-gemini-key || true)"
 
 # --- docker auth to Artifact Registry (via VM service account) ---
 gcloud auth configure-docker "${AR_HOST}" --quiet
@@ -61,6 +62,17 @@ if [ -n "${SECRET_GOOGLE_PLACES_KEY}" ] && gcloud secrets describe "${SECRET_GOO
   GOOGLE_PLACES_API_KEY="$(sm "${SECRET_GOOGLE_PLACES_KEY}")"
   [ -n "${GOOGLE_PLACES_API_KEY}" ] && GOOGLE_PLACES_ENABLED="true"
 fi
+# Optional: backend OCR Gemini Developer-API key (FOR-06-03). When present, OCR is
+# enabled and uploaded procurement documents are parsed (corner-detect + per-line).
+# The Vision client uses the VM's attached-SA ADC (no key file); only the Gemini
+# Developer-API key is a secret, so only it comes from Secret Manager.
+FOREMEN_OCR_ENABLED="false"
+FOREMEN_OCR_LLM_API_KEY=""
+FOREMEN_OCR_LLM_MODEL="gemini-2.0-flash"
+if [ -n "${SECRET_OCR_GEMINI_KEY}" ] && gcloud secrets describe "${SECRET_OCR_GEMINI_KEY}" >/dev/null 2>&1; then
+  FOREMEN_OCR_LLM_API_KEY="$(sm "${SECRET_OCR_GEMINI_KEY}")"
+  [ -n "${FOREMEN_OCR_LLM_API_KEY}" ] && FOREMEN_OCR_ENABLED="true"
+fi
 
 # --- write .env for compose ---
 cat > "${APP_DIR}/.env" <<EOF
@@ -74,6 +86,9 @@ FOREMEN_ADMIN_EMAIL=${ADMIN_EMAIL}
 FOREMEN_ADMIN_PASSWORD=${ADMIN_PASSWORD}
 GOOGLE_PLACES_API_KEY=${GOOGLE_PLACES_API_KEY}
 GOOGLE_PLACES_ENABLED=${GOOGLE_PLACES_ENABLED}
+FOREMEN_OCR_ENABLED=${FOREMEN_OCR_ENABLED}
+FOREMEN_OCR_LLM_API_KEY=${FOREMEN_OCR_LLM_API_KEY}
+FOREMEN_OCR_LLM_MODEL=${FOREMEN_OCR_LLM_MODEL}
 EOF
 chmod 600 "${APP_DIR}/.env"
 

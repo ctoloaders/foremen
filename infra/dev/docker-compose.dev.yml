@@ -82,6 +82,15 @@ services:
       FOREMEN_IMAGE_STORAGE_SIGNER_SERVICE_ACCOUNT: ${FOREMEN_IMAGE_STORAGE_SIGNER_SERVICE_ACCOUNT:-foremen-dev-vm@starry-tracker-505110-s3.iam.gserviceaccount.com}
       FOREMEN_IMAGE_STORAGE_SIGNED_URL_TTL_SECONDS: ${FOREMEN_IMAGE_STORAGE_SIGNED_URL_TTL_SECONDS:-600}
       GOOGLE_CLOUD_PROJECT: ${GOOGLE_CLOUD_PROJECT:-starry-tracker-505110-s3}
+      # --- FOR-06-03 OCR (Vision + Gemini) ---------------------------------
+      # OCR parse of uploaded procurement documents. The Gemini Developer-API key
+      # is a secret, pulled from Secret Manager into .env at VM boot
+      # (secret foremen-dev-ocr-gemini-key); when present, FOREMEN_OCR_ENABLED is
+      # "true". The Vision client needs no key file — it uses the VM's attached-SA
+      # ADC off the metadata server (same as object storage above).
+      FOREMEN_OCR_ENABLED: ${FOREMEN_OCR_ENABLED:-false}
+      FOREMEN_OCR_LLM_API_KEY: ${FOREMEN_OCR_LLM_API_KEY:-}
+      FOREMEN_OCR_LLM_MODEL: ${FOREMEN_OCR_LLM_MODEL:-gemini-2.0-flash}
     depends_on:
       postgres:
         condition: service_healthy
