@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-07 (Requirements 5.4, 5.7, 6.2): tranche_allocations — the Tranche_Allocation
+        settlement link recording how much of a PaymentTransaction was applied to a given
+        PaymentTranche (design §Data Models). A transaction may span several tranches on an
+        overpayment carry-over (R5.4), and a tranche accumulates allocations across transactions on
+        an underpayment; this many-to-one join is the fully auditable, reproducible record of each
+        tranche's settlement (R5.7). Re-plan treats PAID tranches and their allocation rows as
+        immutable (R6.2) — the rows are append-only at the service layer.
+
+        Columns:
+          - id             : BIGSERIAL PK.
+          - transaction_id : owner FK to payment_transactions, NOT NULL; ON DELETE CASCADE so
+                             deleting a transaction discards its allocation rows (the allocation has
+                             no meaning without its transaction). TrancheAllocationEntity maps this
+                             with @ManyToOne(optional=false).
+          - tranche_id     : FK to payment_tranches, NOT NULL. No ON DELETE action (default
+                             RESTRICT): a tranche with recorded allocations cannot be hard-deleted
+                             while they exist — tranche lifecycle is governed by the schedule's
+                             cascade from payment_schedules, not by discarding settled tranches
+                             (R6.2 immutability).
+          - amount         : NUMERIC(19,2) NOT NULL; the gross amount of the transaction applied to
+                             this tranche. CHECK > 0 — an allocation row always records a positive
+                             applied amount (a zero/negative application is never persisted; the pure
+                             ReconciliationEngine only emits strictly-positive per-tranche
+                             allocations, R5.4/R5.7).
+        Plus the four BaseEntity audit columns.
+
+        Indexes: ix_tranche_allocations_transaction supports the cascade-delete path and the
+        per-transaction allocation load; ix_tranche_allocations_tranche supports the reverse lookup
+        (a tranche's accumulated allocations) and the RESTRICT FK on the referenced tranche.
+
+        Idempotent: the createTable is guarded by NOT tableExists + onFail="MARK_RAN", so a re-run
+        against an already-migrated database makes no schema change. The transaction_id FK references
+        payment_transactions (changeset 173) and the tranche_id FK references payment_tranches
+        (changeset 172), both of which are included before this one. Registered LAST in
+        changelog.xml, after 173.
+    -->
+
+    <changeSet id="174-create-tranche-allocations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="tranche_allocations"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="tranche_allocations">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a transaction discards its allocation rows (ON DELETE CASCADE). -->
+            <column name="transaction_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The tranche this portion of the transaction settles; RESTRICT (no ON DELETE). -->
+            <column name="tranche_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Gross amount of the transaction applied to this tranche; always strictly positive. -->
+            <column name="amount" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: an allocation is discarded with its transaction (ON DELETE CASCADE, R5.7). -->
+        <addForeignKeyConstraint
+            constraintName="fk_tranche_allocations_transaction"
+            baseTableName="tranche_allocations"
+            baseColumnNames="transaction_id"
+            referencedTableName="payment_transactions"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Tranche FK: a tranche with recorded allocations cannot be hard-deleted (default RESTRICT). -->
+        <addForeignKeyConstraint
+            constraintName="fk_tranche_allocations_tranche"
+            baseTableName="tranche_allocations"
+            baseColumnNames="tranche_id"
+            referencedTableName="payment_tranches"
+            referencedColumnNames="id"/>
+
+        <!-- A persisted allocation always records a strictly-positive applied amount (R5.4, R5.7). -->
+        <sql>
+            ALTER TABLE tranche_allocations
+                ADD CONSTRAINT ck_tranche_allocations_amount_positive
+                CHECK (amount &gt; 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE tranche_allocations
+                    DROP CONSTRAINT IF EXISTS ck_tranche_allocations_amount_positive;
+            </sql>
+        </rollback>
+
+        <!-- Cascade-delete path + per-transaction allocation load. -->
+        <createIndex tableName="tranche_allocations" indexName="ix_tranche_allocations_transaction">
+            <column name="transaction_id"/>
+        </createIndex>
+
+        <!-- Reverse lookup (a tranche's accumulated allocations) + RESTRICT FK support. -->
+        <createIndex tableName="tranche_allocations" indexName="ix_tranche_allocations_tranche">
+            <column name="tranche_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

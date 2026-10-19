@@ -1,0 +1,627 @@
+{
+  "pbtResults": {
+    "2.4 Write property test for `ReconciliationEngine`": {
+      "status": "passed",
+      "lastRunTimestamp": 1792411403957
+    },
+    "8.1 Backend unit tests (services)": {
+      "status": "passed",
+      "lastRunTimestamp": 1792415766268
+    },
+    "8.2 Backend integration + ABAC/startup tests (Dockerized-scoped classes)": {
+      "status": "passed",
+      "lastRunTimestamp": 1792416803206
+    }
+  },
+  "executionHistory": {
+    "1.1 Create the `payment_schedules` table changeset": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410435866
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410462744
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410722002
+      }
+    ],
+    "1.2 Create the `payment_tranches` table changeset": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410436412
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410464193
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410723718
+      }
+    ],
+    "1.3 Create the `payment_transactions` table changeset": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410436709
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410465652
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410724506
+      }
+    ],
+    "1.4 Create the `tranche_allocations` table changeset": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410436873
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410466985
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410725645
+      }
+    ],
+    "2.1 Implement `TrancheGenerator` (pure)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410437131
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410467758
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410720912
+      }
+    ],
+    "2.2 Write property test for `TrancheGenerator`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410437734
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410938659
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411475340
+      }
+    ],
+    "2.3 Implement `ReconciliationEngine` (pure allocation planner)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410437964
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410731557
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410933444
+      }
+    ],
+    "2.4 Write property test for `ReconciliationEngine`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410438168
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410940191
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411476615
+      }
+    ],
+    "2.5 Implement `TrancheStatusDeriver` (pure)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410438366
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410732576
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410934495
+      }
+    ],
+    "2.6 Write property tests for `TrancheStatusDeriver`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410438807
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410941414
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411477363
+      }
+    ],
+    "3.1 Add the JPA entities + enums": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410438969
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411482551
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411818080
+      }
+    ],
+    "3.2 Add the DTOs + mappers": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410439269
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411821663
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412184289
+      }
+    ],
+    "4.1 Add `OnlinePaymentProvider` / `BankFeedProvider` ports + No-Op defaults": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410439838
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412189285
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412430802
+      }
+    ],
+    "4.2 Write unit tests for the No-Op providers": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410440479
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413317394
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413507005
+      }
+    ],
+    "5.1 Implement `PaymentScheduleService` (project-scoped)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410441465
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412437430
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412991698
+      }
+    ],
+    "5.2 Implement `ManualSchedulerService`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410441860
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412996255
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413301216
+      }
+    ],
+    "5.3 Implement `ReconciliationService`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410442231
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412997753
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413302594
+      }
+    ],
+    "5.4 Implement `PaymentTransactionService`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410442483
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412998679
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413303605
+      }
+    ],
+    "5.5 Implement `OverdueSweepService` (scheduled)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410442800
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413318329
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413507983
+      }
+    ],
+    "5.6 Implement `PaymentNotificationEmitter` (best-effort)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410443196
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413513510
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414174363
+      }
+    ],
+    "6.1 Add `PaymentScheduleController`": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410443515
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413514808
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414175730
+      }
+    ],
+    "6.2 Add `PaymentWebhookController` (public)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410443760
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413515665
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414176768
+      }
+    ],
+    "6.3 Add `BankFeedIngestController` (internal)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410444012
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413517235
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414177595
+      }
+    ],
+    "7.1 Seed the `PAYMENTS` resource + role matrix": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410444277
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414182645
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414304539
+      }
+    ],
+    "8.1 Backend unit tests (services)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410444692
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415047591
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415802242
+      }
+    ],
+    "8.2 Backend integration + ABAC/startup tests (Dockerized-scoped classes)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410444934
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415048987
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417133638
+      }
+    ],
+    "9.1 Swap the `payments` tab panel": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410445248
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412190392
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412430641
+      }
+    ],
+    "9.2 Build the `features/project-payments/` module": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410445494
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414310254
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415043000
+      }
+    ],
+    "10.1 Add i18n keys (PL + RU, mirrored) + backend messages": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410445693
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415050015
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415802565
+      }
+    ],
+    "10.2 Frontend unit tests": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410445771
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417141210
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417759112
+      }
+    ],
+    "11. Author test-cases.md": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410445921
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417139803
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417757495
+      }
+    ],
+    "12. Final verification + checkpoint": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410446006
+      },
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417766745
+      }
+    ],
+    "1. Backend: table changesets": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792410726268
+      }
+    ],
+    "2. Backend: pure collaborators + their property tests": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792411477579
+      }
+    ],
+    "3. Backend: entities + DTOs": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792412185016
+      }
+    ],
+    "4. Backend: provider ports + No-Op stubs": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792413507172
+      }
+    ],
+    "5. Backend: services": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414175204
+      }
+    ],
+    "6. Backend: controllers (ABAC-wired)": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414177712
+      }
+    ],
+    "7. Backend: ABAC seed": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792414305002
+      }
+    ],
+    "9. Frontend: tab wiring + payments panel": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792415043271
+      }
+    ],
+    "8. Backend: unit + integration + property-dependent tests": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417134530
+      }
+    ],
+    "10. i18n + frontend tests": [
+      {
+        "executionId": "75a2ff21-7146-4f1c-b6c3-1deba51e3757",
+        "chatSessionId": "sess_291fc4a2-011e-44f9-aed4-2fd3acde2174",
+        "timestamp": 1792417759616
+      }
+    ]
+  }
+}

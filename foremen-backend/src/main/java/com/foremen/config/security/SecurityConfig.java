@@ -84,6 +84,17 @@ public class SecurityConfig {
                         // layer. Admitted here so an unauthenticated provider request reaches the
                         // controller rather than being rejected with 401 by the catch-all below.
                         .requestMatchers(HttpMethod.POST, "/api/signatures/callback").permitAll()
+                        // FOR-06-07 (7.3, 7.5): the przelewy24 online-payment webhook
+                        // POST /api/payments/webhook/online is an unauthenticated external provider
+                        // webhook (or, under the NoOpOnlinePaymentProvider, nothing at all), like the
+                        // /api/auth/** and /api/signatures/callback endpoints. The
+                        // PaymentWebhookController carries none of the three permission annotations;
+                        // its authenticity is enforced inside the controller by
+                        // OnlinePaymentProvider.verifySignature (reject 401
+                        // error.payment.webhook.unverified) + a known externalRef, not by the security
+                        // layer. Admitted here so an unauthenticated provider request reaches the
+                        // controller rather than being rejected with 401 by the catch-all below.
+                        .requestMatchers(HttpMethod.POST, "/api/payments/webhook/**").permitAll()
                         // FOR-04-13 (5.6): the standalone Google Places proxy AddressController is
                         // cross-cutting and intentionally NOT tied to the PROJECTS ABAC resource. It
                         // carries none of the three permission annotations (authenticated-any-user),

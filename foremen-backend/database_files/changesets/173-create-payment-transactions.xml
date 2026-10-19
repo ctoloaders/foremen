@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-07 (Requirements 5.8, 7.4, 8.4, 5.10): the PaymentTransaction — one recorded
+        incoming payment against a project's payment schedule, from one of three channels
+        (BANK_TRANSFER mass-collect feed, ONLINE przelewy24, MANUAL operator record).
+
+        Columns mirror PaymentTransactionEntity (design §Data Models):
+          - schedule_id   : FK to payment_schedules, NULLABLE. NULL = an ingested bank
+                            transaction that could NOT be correlated to any schedule
+                            (recorded "unmatched" and surfaced for manual correlation,
+                            without failing ingest — R8.4). ON DELETE SET NULL so removing a
+                            schedule leaves the transaction row as an audit record.
+          - channel       : VARCHAR(16) NOT NULL; Payment_Channel enum { BANK_TRANSFER,
+                            ONLINE, MANUAL }.
+          - external_ref  : VARCHAR(255) NULLABLE; the bank / przelewy24 reference used for
+                            idempotency (R5.8). NULL for a MANUAL record that carries none.
+          - amount_gross  : NUMERIC(19,2) NOT NULL CHECK >= 0; the received amount.
+          - fee_gross     : NUMERIC(19,2) NOT NULL DEFAULT 0; the commission under the
+                            Payer_Borne_Fee model — recorded for reporting, NEVER deducted
+                            from the amount allocated to tranches (R7.4).
+          - received_at   : TIMESTAMPTZ NOT NULL; when the funds were received.
+          - status        : VARCHAR(16) NOT NULL; Transaction_Status enum { PENDING,
+                            CONFIRMED, FAILED, REFUNDED }.
+          - note          : TEXT NULLABLE; optional free-text on a MANUAL record / mark-paid
+                            (R5.10).
+          - recorded_by_id: FK to users, NULLABLE; the acting operator for a MANUAL
+                            settlement (R5.10). ON DELETE SET NULL (keep the audit row if the
+                            user is removed).
+        Plus the four BaseEntity audit columns.
+
+        A PARTIAL UNIQUE INDEX enforces reconciliation idempotency (R5.8): a re-delivered
+        webhook / re-polled bank line with the same (schedule, channel, external_ref) cannot
+        create a second transaction. The index is partial on external_ref IS NOT NULL so the
+        unique constraint applies only to externally-referenced transactions (MANUAL records
+        with no external_ref are unconstrained):
+        UNIQUE (schedule_id, channel, external_ref) WHERE external_ref IS NOT NULL.
+
+        Idempotent via NOT tableExists + MARK_RAN: a re-run against an existing table makes
+        no schema change.
+    -->
+
+    <changeSet id="173-create-payment-transactions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment_transactions"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="payment_transactions">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- NULL schedule_id = an unmatched/uncorrelated ingested transaction (R8.4). -->
+            <column name="schedule_id" type="BIGINT"/>
+            <column name="channel" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_ref" type="VARCHAR(255)"/>
+            <column name="amount_gross" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="fee_gross" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="received_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="TEXT"/>
+            <column name="recorded_by_id" type="BIGINT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Non-negative received amount. -->
+        <sql>
+            ALTER TABLE payment_transactions
+                ADD CONSTRAINT chk_payment_transactions_amount_gross_non_negative
+                CHECK (amount_gross &gt;= 0);
+        </sql>
+
+        <!-- Non-negative payer-borne fee. -->
+        <sql>
+            ALTER TABLE payment_transactions
+                ADD CONSTRAINT chk_payment_transactions_fee_gross_non_negative
+                CHECK (fee_gross &gt;= 0);
+        </sql>
+
+        <!-- Schedule link: NULL for an unmatched ingest; keep the audit row if the schedule
+             is removed. -->
+        <addForeignKeyConstraint
+            constraintName="fk_payment_transactions_schedule"
+            baseTableName="payment_transactions"
+            baseColumnNames="schedule_id"
+            referencedTableName="payment_schedules"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- Acting operator for a MANUAL settlement; keep the audit row if the user is removed. -->
+        <addForeignKeyConstraint
+            constraintName="fk_payment_transactions_recorded_by"
+            baseTableName="payment_transactions"
+            baseColumnNames="recorded_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+
+        <!-- R5.8: reconciliation idempotency. A re-delivered webhook / re-polled bank line
+             with the same (schedule, channel, external_ref) is rejected by this partial
+             unique index. Partial on external_ref IS NOT NULL so MANUAL records that carry
+             no external reference are not constrained. -->
+        <sql>
+            CREATE UNIQUE INDEX ux_payment_transactions_external_ref
+                ON payment_transactions (schedule_id, channel, external_ref)
+                WHERE external_ref IS NOT NULL;
+        </sql>
+        <rollback>
+            <sql>
+                DROP INDEX IF EXISTS ux_payment_transactions_external_ref;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

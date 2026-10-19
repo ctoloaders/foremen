@@ -103,6 +103,15 @@ foremen:
     # shown in the UI (R9.3). No per-project override (R9.2). Must be strictly positive or startup
     # fails fast.
     daily-output-per-worker: ${FOREMEN_SCHEDULE_DAILY_OUTPUT_PER_WORKER:2000}
+  payments:
+    # FOR-06-07 (R9.3, R10.2): cron for the periodic overdue sweep (OverdueSweepService) that
+    # re-derives tranche statuses across PUBLISHED schedules and fires the one-shot trancheOverdue
+    # notification on each tranche's first crossing into OVERDUE. Defaults to "-"
+    # (Scheduled.CRON_DISABLED) so the task is registered but never fires until a schedule is
+    # supplied; a blank value would fail @Scheduled cron parsing, "-" disables it cleanly. Overdue
+    # state is also re-derived on read, so the domain stays correct even with the sweep disabled.
+    overdue-sweep:
+      cron: ${FOREMEN_PAYMENTS_OVERDUE_SWEEP_CRON:-}
   plan-actual:
     # FOR-06-02 (R4.3): the plan/actual overlay's at-risk tolerance. A work category is flagged
     # AT_RISK only once its confirmed (APPROVED) completion trails its elapsed-time share by more

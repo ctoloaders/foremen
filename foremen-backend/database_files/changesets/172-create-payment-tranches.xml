@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-07 (Requirements 2.1, 3.2, 3.6, 5.2, 9.3, 10.1, 10.3): payment_tranches — one
+        installment of a PaymentSchedule (design §Data Models / PaymentTrancheEntity). One row
+        per (schedule, seqNo): the amount due on a date, its running settled total, and the
+        materialized cache of its derived Tranche_Status.
+
+          id                 : BIGSERIAL PK.
+          schedule_id        : owner FK to payment_schedules(id), NOT NULL, ON DELETE CASCADE —
+                               deleting a schedule discards its tranches. Scope path
+                               schedule.project.id. PaymentTrancheEntity maps this with
+                               @ManyToOne(optional=false) and the parent owns the collection.
+          seq_no             : INT NOT NULL — the contiguous 1..N ordering by dueDate (R2.1,
+                               R3.2). Re-derived after every structural mutation; drives the
+                               nearest-open-tranche cascade (R5). UNIQUE (schedule_id, seq_no)
+                               bars a duplicate ordinal within a schedule.
+          due_date           : DATE NOT NULL — drives overdue detection + status derivation
+                               (R10.1). An absent due date is rejected at the service (R3.6).
+          amount_gross       : NUMERIC(19,2) NOT NULL, CHECK (amount_gross > 0) — a tranche's
+                               due amount is strictly positive; a negative/zero add is rejected
+                               both at the service (R3.6) and here at the DB level.
+          paid_gross         : NUMERIC(19,2) NOT NULL DEFAULT 0, CHECK (paid_gross >= 0) — the
+                               running settled total accumulated across Tranche_Allocation rows
+                               (R5.2). Never negative.
+          status             : VARCHAR(16) NOT NULL DEFAULT 'PENDING' — the materialized cache of
+                               the derived Tranche_Status (PENDING/DUE/PARTIALLY_PAID/PAID/
+                               OVERDUE). Written ONLY by TrancheStatusDeriver; never hand-set
+                               (R10.1, R10.3).
+          overdue_notified_at: TIMESTAMP WITH TIME ZONE, NULL — the first-crossing marker so the
+                               overdue notification fires exactly once per tranche (R9.3, R10.2).
+                               NULL until the tranche first crosses into OVERDUE.
+        Plus the four BaseEntity audit columns.
+
+        UNIQUE (schedule_id, seq_no) — a sequence ordinal appears at most once per schedule
+        (R3.2). INDEX on schedule_id — the per-schedule tranche load and the ON DELETE CASCADE
+        FK support.
+
+        Idempotent: the createTable is guarded by NOT tableExists + onFail="MARK_RAN", so a
+        re-run against an already-migrated database makes no schema change. Registered LAST in
+        changelog.xml. The schedule_id FK references payment_schedules (changeset 171), which is
+        included before this one.
+    -->
+
+    <changeSet id="172-create-payment-tranches" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment_tranches"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="payment_tranches">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: a schedule's tranches are discarded with the schedule. -->
+            <column name="schedule_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Contiguous 1..N ordering by due_date; drives the nearest-open-tranche cascade (R2.1, R3.2). -->
+            <column name="seq_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Drives overdue detection + status derivation (R10.1). -->
+            <column name="due_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The due amount; strictly positive (R3.6, CHECK below). -->
+            <column name="amount_gross" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Running settled total accumulated across allocations (R5.2); non-negative (CHECK below). -->
+            <column name="paid_gross" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Materialized cache of the derived Tranche_Status; written only by the deriver (R10.1, R10.3). -->
+            <column name="status" type="VARCHAR(16)" defaultValue="PENDING">
+                <constraints nullable="false"/>
+            </column>
+            <!-- First-crossing marker so the overdue notification fires exactly once (R9.3, R10.2). -->
+            <column name="overdue_notified_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a schedule removes its tranches (scope schedule.project.id). -->
+        <addForeignKeyConstraint
+            constraintName="fk_payment_tranches_schedule"
+            baseTableName="payment_tranches"
+            baseColumnNames="schedule_id"
+            referencedTableName="payment_schedules"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- R3.2: a sequence ordinal appears at most once per schedule. -->
+        <addUniqueConstraint
+            tableName="payment_tranches"
+            columnNames="schedule_id, seq_no"
+            constraintName="ux_payment_tranches_schedule_seq"/>
+
+        <!-- Per-schedule tranche load + ON DELETE CASCADE FK support. -->
+        <createIndex tableName="payment_tranches" indexName="ix_payment_tranches_schedule">
+            <column name="schedule_id"/>
+        </createIndex>
+
+        <!-- R3.6: a tranche's due amount is strictly positive; the running settled total is non-negative (R5.2). -->
+        <sql>
+            ALTER TABLE payment_tranches
+                ADD CONSTRAINT ck_payment_tranches_amount_gross_positive CHECK (amount_gross &gt; 0);
+            ALTER TABLE payment_tranches
+                ADD CONSTRAINT ck_payment_tranches_paid_gross_non_negative CHECK (paid_gross &gt;= 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE payment_tranches
+                    DROP CONSTRAINT IF EXISTS ck_payment_tranches_amount_gross_positive;
+                ALTER TABLE payment_tranches
+                    DROP CONSTRAINT IF EXISTS ck_payment_tranches_paid_gross_non_negative;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -677,4 +677,60 @@
          reconciliation rides the existing PURCHASES resource (169). Idempotent via NOT columnExists +
          MARK_RAN. Registered LAST, after 169. -->
     <include file="database_files/changesets/170-add-procurement-line-unplanned-category.xml"/>
+    <!-- FOR-06-07 (R1.1, R1.2, R1.6, R5.5): payment_schedules — the per-project PaymentSchedule
+         aggregate root (the client payment plan). project_id FK -> projects ON DELETE CASCADE +
+         UNIQUE (at most one schedule per project, R1.1; getProjectIdPath = "project.id"); currency
+         VARCHAR(3) NOT NULL (seeded from the project); basis_gross NUMERIC(19,2) NOT NULL CHECK >= 0
+         (the scheduled total seeded from the APPROVED offer / OFFER_BASE, R1.2); source VARCHAR(16)
+         NOT NULL (ScheduleSource GENERATED/MANUAL); status VARCHAR(16) NOT NULL DEFAULT 'DRAFT'
+         (ScheduleStatus DRAFT/PUBLISHED/SETTLED; SETTLED derived, R1.6); unallocated_credit
+         NUMERIC(19,2) NOT NULL DEFAULT 0 (held overpayment surplus, R5.5); BaseEntity audit cols.
+         Guarded by NOT tableExists + MARK_RAN. Registered LAST, after 170. -->
+    <include file="database_files/changesets/171-create-payment-schedules.xml"/>
+    <!-- FOR-06-07 (R2.1, R3.2, R3.6, R5.2, R9.3, R10.1, R10.3): payment_tranches — one installment
+         of a PaymentSchedule. schedule_id FK -> payment_schedules (171) ON DELETE CASCADE (scope
+         schedule.project.id); seq_no INT NOT NULL (contiguous 1..N by due_date, R2.1/R3.2); due_date
+         DATE NOT NULL (drives overdue detection, R10.1); amount_gross NUMERIC(19,2) NOT NULL CHECK > 0
+         (R3.6); paid_gross NUMERIC(19,2) NOT NULL DEFAULT 0 CHECK >= 0 (running settled total, R5.2);
+         status VARCHAR(16) NOT NULL DEFAULT 'PENDING' (materialized cache of the derived Tranche_Status,
+         written only by the deriver, R10.1/R10.3); overdue_notified_at TIMESTAMPTZ NULL (first-crossing
+         one-shot overdue marker, R9.3/R10.2); UNIQUE (schedule_id, seq_no); index on schedule_id;
+         BaseEntity audit cols. Guarded by NOT tableExists + MARK_RAN. The schedule_id FK references
+         payment_schedules (171), which is included before this one. Registered LAST, after 171. -->
+    <include file="database_files/changesets/172-create-payment-tranches.xml"/>
+    <!-- FOR-06-07 (R5.8, R7.4, R8.4, R5.10): payment_transactions — one recorded incoming payment
+         against a schedule, from a Payment_Channel { BANK_TRANSFER, ONLINE, MANUAL }. schedule_id FK
+         -> payment_schedules (171) NULLABLE ON DELETE SET NULL (NULL = an ingested bank line not
+         correlated to any schedule, "unmatched", R8.4); channel VARCHAR(16) NOT NULL; external_ref
+         VARCHAR(255) NULL (bank/przelewy24 reference for idempotency, R5.8); amount_gross
+         NUMERIC(19,2) NOT NULL CHECK >= 0; fee_gross NUMERIC(19,2) NOT NULL DEFAULT 0 (payer-borne
+         commission, recorded not deducted, R7.4); received_at TIMESTAMPTZ NOT NULL; status
+         VARCHAR(16) NOT NULL (Transaction_Status PENDING/CONFIRMED/FAILED/REFUNDED); note TEXT NULL +
+         recorded_by_id FK -> users NULL ON DELETE SET NULL (MANUAL settlement attribution + optional
+         note, R5.10); BaseEntity audit cols. PLUS the partial unique index UNIQUE (schedule_id,
+         channel, external_ref) WHERE external_ref IS NOT NULL enforcing reconciliation idempotency
+         (R5.8). FK target payment_schedules (171) is included before this one. Guarded by
+         NOT tableExists + MARK_RAN. Registered LAST, after 172. -->
+    <include file="database_files/changesets/173-create-payment-transactions.xml"/>
+    <!-- FOR-06-07 (R5.4, R5.7, R6.2): tranche_allocations — the Tranche_Allocation settlement link
+         recording how much of a PaymentTransaction was applied to a given PaymentTranche. A
+         transaction may span tranches on an overpayment carry-over (R5.4); a tranche accumulates
+         allocations across transactions on underpayment; the row set is the auditable, reproducible
+         record of each tranche's settlement (R5.7) and is immutable under re-plan (R6.2).
+         transaction_id FK -> payment_transactions (173) NOT NULL ON DELETE CASCADE (an allocation is
+         discarded with its transaction); tranche_id FK -> payment_tranches (172) NOT NULL, default
+         RESTRICT (a tranche with allocations cannot be hard-deleted); amount NUMERIC(19,2) NOT NULL
+         CHECK > 0 (a persisted allocation is always strictly positive); indexes on transaction_id
+         and tranche_id; BaseEntity audit cols. Both FK targets (172, 173) are included before this
+         one. Guarded by NOT tableExists + MARK_RAN. Registered LAST, after 173. -->
+    <include file="database_files/changesets/174-create-tranche-allocations.xml"/>
+    <!-- FOR-06-07 (R11.1, R11.2; entity-creation-rules steps 1-2): the project-scoped PAYMENTS ABAC
+         resource + its role matrix. ChangeSet A inserts the PAYMENTS resource row (name/description
+         RU+PL); ChangeSet B grants ADMIN / MANAGER / FINANCIER full CRUD and FOREMAN / CLIENT READ
+         only. The (own) scoping (MANAGER/FINANCIER CRUD(own), FOREMAN/CLIENT R(own)) is enforced
+         server-side by ProjectScopedService (getProjectIdPath() = "project.id"), not in the matrix;
+         WORKER + ESTIMATOR are deny-by-default (no grant). Idempotent via sqlCheck/MARK_RAN + per-row
+         NOT EXISTS. Follows the 017/134 two-changeSet resource+grant pattern. Registered LAST,
+         after 174. -->
+    <include file="database_files/changesets/175-seed-payments-resource.xml"/>
 </databaseChangeLog>

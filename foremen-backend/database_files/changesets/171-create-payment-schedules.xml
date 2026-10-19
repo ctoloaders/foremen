@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-07 (Requirements 1.1, 1.2, 1.6, 5.5): the PaymentSchedule aggregate root —
+        the per-project client payment plan (design §Data Models).
+
+        payment_schedules — one row per project:
+          - project_id         : owner FK to projects, NOT NULL and UNIQUE — AT MOST ONE
+                                 schedule per project (R1.1). ON DELETE CASCADE so deleting a
+                                 project removes its schedule (and, transitively, its tranches
+                                 via the payment_tranches cascade). The UNIQUE constraint makes
+                                 a second create collide; the loser is mapped to a 409 at the
+                                 service layer. getProjectIdPath = "project.id" (R11.1).
+          - currency           : VARCHAR(3) NOT NULL; the schedule currency seeded from the
+                                 project (R1.2).
+          - basis_gross        : NUMERIC(19,2) NOT NULL, CHECK >= 0 — the total being scheduled,
+                                 seeded from the project's APPROVED offer total / OFFER_BASE
+                                 (R1.2). Raised by a manual add-tranche and recomputed by a
+                                 re-plan; never negative.
+          - source             : VARCHAR(16) NOT NULL; ScheduleSource enum { GENERATED, MANUAL }
+                                 per the chosen creation path (R1.2).
+          - status             : VARCHAR(16) NOT NULL DEFAULT 'DRAFT'; ScheduleStatus enum
+                                 { DRAFT, PUBLISHED, SETTLED }. SETTLED is DERIVED (iff every
+                                 tranche is PAID) and written only by the derivation routine,
+                                 never hand-set (R1.6).
+          - unallocated_credit : NUMERIC(19,2) NOT NULL DEFAULT 0; the held surplus carried past
+                                 the last open tranche on overpayment, surfaced in the schedule
+                                 view (R5.5, R1.4).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN, so a re-run
+        against an already-migrated database makes no schema change. Registered LAST in
+        changelog.xml, after 170.
+    -->
+
+    <changeSet id="171-create-payment-schedules" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="payment_schedules"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="payment_schedules">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: one schedule per project; UNIQUE enforces the per-project aggregate. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false" unique="true" uniqueConstraintName="ux_payment_schedules_project"/>
+            </column>
+            <!-- Schedule currency seeded from the project (R1.2). -->
+            <column name="currency" type="VARCHAR(3)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The total being scheduled, seeded from the APPROVED offer / OFFER_BASE; CHECK >= 0 below (R1.2). -->
+            <column name="basis_gross" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ScheduleSource enum { GENERATED, MANUAL } (R1.2). -->
+            <column name="source" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ScheduleStatus enum { DRAFT, PUBLISHED, SETTLED }; SETTLED derived (R1.6). -->
+            <column name="status" type="VARCHAR(16)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Held surplus carried past the last open tranche on overpayment (R5.5, R1.4). -->
+            <column name="unallocated_credit" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its schedule (and cascades to its tranches). -->
+        <addForeignKeyConstraint
+            constraintName="fk_payment_schedules_project"
+            baseTableName="payment_schedules"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- R1.2 / R5.5: basis_gross and unallocated_credit are non-negative at the DB level. -->
+        <sql>
+            ALTER TABLE payment_schedules
+                ADD CONSTRAINT ck_payment_schedules_basis_gross_nonneg CHECK (basis_gross >= 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE payment_schedules
+                    DROP CONSTRAINT IF EXISTS ck_payment_schedules_basis_gross_nonneg;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
