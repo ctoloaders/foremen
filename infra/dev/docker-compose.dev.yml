@@ -90,7 +90,7 @@ services:
       # ADC off the metadata server (same as object storage above).
       FOREMEN_OCR_ENABLED: ${FOREMEN_OCR_ENABLED:-false}
       FOREMEN_OCR_LLM_API_KEY: ${FOREMEN_OCR_LLM_API_KEY:-}
-      FOREMEN_OCR_LLM_MODEL: ${FOREMEN_OCR_LLM_MODEL:-gemini-2.0-flash}
+      FOREMEN_OCR_LLM_MODEL: ${FOREMEN_OCR_LLM_MODEL:-gemini-3.8-flash}
     depends_on:
       postgres:
         condition: service_healthy

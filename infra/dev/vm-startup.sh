@@ -68,7 +68,7 @@ fi
 # Developer-API key is a secret, so only it comes from Secret Manager.
 FOREMEN_OCR_ENABLED="false"
 FOREMEN_OCR_LLM_API_KEY=""
-FOREMEN_OCR_LLM_MODEL="gemini-2.0-flash"
+FOREMEN_OCR_LLM_MODEL="gemini-3.8-flash"
 if [ -n "${SECRET_OCR_GEMINI_KEY}" ] && gcloud secrets describe "${SECRET_OCR_GEMINI_KEY}" >/dev/null 2>&1; then
   FOREMEN_OCR_LLM_API_KEY="$(sm "${SECRET_OCR_GEMINI_KEY}")"
   [ -n "${FOREMEN_OCR_LLM_API_KEY}" ] && FOREMEN_OCR_ENABLED="true"

@@ -24,7 +24,7 @@ import org.springframework.validation.annotation.Validated;
  *       explicit service-account JSON key {@code path}, or a resource {@code location} /
  *       {@code application-default} sentinel), mirroring the image-storage credentials shape.</li>
  *   <li>{@code llm.model} — the Google LLM (Gemini) model id used for corner detection + per-line
- *       parse (e.g. {@code gemini-2.0-flash}).</li>
+ *       parse (e.g. {@code gemini-3.8-flash}).</li>
  *   <li>{@code llm.credentials} — credentials for the LLM client, same shape as the vision
  *       credentials.</li>
  *   <li>{@code llm.project} / {@code llm.location} — the Google Cloud project + location used when
@@ -85,7 +85,7 @@ public record OcrProperties(
     /**
      * Google LLM (Gemini) configuration for corner detection + per-line parse.
      *
-     * @param model       the Gemini model id (e.g. {@code gemini-2.0-flash})
+     * @param model       the Gemini model id (e.g. {@code gemini-3.8-flash})
      * @param credentials the LLM client credentials source
      * @param project     the Google Cloud project id (enterprise / Vertex backend), or {@code null}
      * @param location    the Google Cloud location (enterprise / Vertex backend), or {@code null}
