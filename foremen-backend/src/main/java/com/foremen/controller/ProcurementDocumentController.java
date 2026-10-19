@@ -122,7 +122,7 @@ public class ProcurementDocumentController {
             @RequestParam("projectId") Long projectId,
             Pageable pageable) {
         Page<ProcurementDocumentServiceModel> page =
-                service.find(pageable, "projectId==" + projectId);
+                service.find(pageable, "project.id==" + projectId);
         return ResponseEntity.ok(page.map(controllerMapper::toDto));
     }
 
