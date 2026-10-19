@@ -371,7 +371,7 @@ changeset follows the `017-seed-users-resource.xml` two-changeSet resource+grant
   - _Requirements: 1.2, 2.2, 3.3, 4.1, 5.1, 5.8, 5.9, 6.1, 7.3, 8.3, 9.3, 11.2, 12.2, 13.2_
   - _Depends on: 6.1, 6.2, 6.3, 7.1, 9.2, 10.1_
 
-- [-] 12. Final verification + checkpoint
+- [x] 12. Final verification + checkpoint
   - Compile backend (`./gradlew compileJava compileTestJava` → temp log) and run only the affected
     test classes with `--tests`; type-check + unit-test the frontend; confirm the locale-parity test
     passes and the app starts (no `PermissionAnnotationValidator` failure). Confirm the `payments` tab
