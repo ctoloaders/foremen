@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-04 (Requirements 1.1, 1.3): extend the FOR-06-03 procurement_lines table (changeset
+        168) with the unplanned-expense classification FK, the single additive migration for the
+        reconciliation spec (design §4.1, §4.5).
+
+        Adds a nullable unplanned_category_id BIGINT to procurement_lines with an FK ->
+        unplanned_expense_categories(id) (FOR-06-00, changeset 157) ON DELETE SET NULL: deleting a
+        dictionary row clears the classification on any referencing line rather than cascading to
+        (deleting) the line (R1.3). The column is nullable — a line is classified only when a user
+        deliberately tags a MANUAL_UNMATCHED/UNMATCHED line as an unplanned expense (R1.3); every
+        existing and matched line stays NULL.
+
+        No schema change is needed for the MatchStatus enum broadening ({AUTO, UNMATCHED} ->
+        {AUTO, UNMATCHED, MANUAL_MATCHED, MANUAL_UNMATCHED}, R1.2): match_status is a VARCHAR column
+        storing the enum name (changeset 168), so existing rows keep their AUTO/UNMATCHED value.
+
+        NO resource seed: reconciliation rides the existing PURCHASES ABAC resource (FOR-06-03,
+        changeset 169); this spec defines no new managed entity, resource, or dictionary.
+
+        Idempotent via NOT columnExists + onFail="MARK_RAN" (mirrors the add-column + FK style of
+        changeset 110), so a re-run against an already-migrated database makes no schema change
+        (R1.1). Registered LAST in changelog.xml, after 169.
+    -->
+
+    <changeSet id="170-add-procurement-line-unplanned-category" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="procurement_lines" columnName="unplanned_category_id"/>
+            </not>
+        </preConditions>
+
+        <addColumn tableName="procurement_lines">
+            <column name="unplanned_category_id" type="BIGINT"/>
+        </addColumn>
+
+        <!-- Unplanned-expense classification FK: nullable, ON DELETE SET NULL (R1.3) — deleting a
+             dictionary row clears the line's classification rather than cascading to the line. -->
+        <addForeignKeyConstraint
+            constraintName="fk_procurement_lines_unplanned_category"
+            baseTableName="procurement_lines"
+            baseColumnNames="unplanned_category_id"
+            referencedTableName="unplanned_expense_categories"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

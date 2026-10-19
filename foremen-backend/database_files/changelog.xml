@@ -668,4 +668,13 @@
          roles/operations tables (002/003/004) and the ESTIMATOR role (136). Registered LAST, after
          168. -->
     <include file="database_files/changesets/169-seed-purchases-resource.xml"/>
+    <!-- FOR-06-04 (R1.1, R1.3; design §4.1/§4.5): extend the FOR-06-03 procurement_lines table (168)
+         with the unplanned-expense classification FK. Adds a nullable unplanned_category_id BIGINT +
+         an FK -> unplanned_expense_categories(id) (FOR-06-00, 157) ON DELETE SET NULL, so deleting a
+         dictionary row clears the line's classification rather than cascading to the line (R1.3). The
+         MatchStatus enum broadening ({AUTO, UNMATCHED} -> add MANUAL_MATCHED/MANUAL_UNMATCHED, R1.2)
+         needs no schema change (match_status is a VARCHAR enum-name column). NO resource seed —
+         reconciliation rides the existing PURCHASES resource (169). Idempotent via NOT columnExists +
+         MARK_RAN. Registered LAST, after 169. -->
+    <include file="database_files/changesets/170-add-procurement-line-unplanned-category.xml"/>
 </databaseChangeLog>

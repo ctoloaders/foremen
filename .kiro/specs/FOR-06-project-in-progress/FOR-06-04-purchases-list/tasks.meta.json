@@ -1,0 +1,321 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Add the `procurement_lines.unplanned_category_id` changeset": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674603
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360682026
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360844743
+      }
+    ],
+    "2.1 Extend `ProcurementLineEntity` + broaden `MatchStatus`": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674651
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360850210
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361012386
+      }
+    ],
+    "2.2 Add the reconciled-list read model + request DTOs + mappers": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674687
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361020209
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361299532
+      }
+    ],
+    "3. Backend: pure re-process partitioner": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674721
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792364321384
+      }
+    ],
+    "3.1 Implement `ReprocessLinePartitioner`": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674765
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360851487
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361013613
+      }
+    ],
+    "4. Backend: reconciliation service": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674872
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792364322184
+      }
+    ],
+    "4.1 Add `PurchaseLineReconciliationService`": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674921
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361303030
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361711411
+      }
+    ],
+    "5.1 Add `PurchasesController`": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674957
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361716421
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361894116
+      }
+    ],
+    "6.1 Swap the `purchases` tab panel": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360674990
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360852307
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361014655
+      }
+    ],
+    "7.1 Build the `purchases` feature folder": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360675034
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362381567
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362899677
+      }
+    ],
+    "8.1 Add i18n keys (PL + RU, mirrored) + backend messages": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360675073
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362904342
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792363435289
+      }
+    ],
+    "8.2 Backend example / integration / smoke tests": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360675124
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362905419
+      }
+    ],
+    "8.3 Frontend unit tests (Vitest + fast-check)": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360675187
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362906619
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792363880726
+      }
+    ],
+    "9. Author test-cases.md": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360675236
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792363885234
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792364141552
+      }
+    ],
+    "10. Final verification + checkpoint": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360675343
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792364145339
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792364312000
+      }
+    ],
+    "1. Backend: additive migration": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792360844795
+      }
+    ],
+    "3.1a Write property tests for the partitioner (jqwik)": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361013863
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361889138
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362376842
+      }
+    ],
+    "6. Frontend: tab wiring": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361014752
+      }
+    ],
+    "2. Backend: entity extension + DTOs": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361299581
+      }
+    ],
+    "4.1a Write property/unit tests for the service (jqwik + stubbed seams)": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361711595
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361889601
+      },
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362377838
+      }
+    ],
+    "5. Backend: controller": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792361894190
+      }
+    ],
+    "7. Frontend: purchases panel": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792362899744
+      }
+    ],
+    "8. i18n + tests": [
+      {
+        "executionId": "99416d14-586b-4391-89b7-1fb0870a4f27",
+        "chatSessionId": "sess_a15f5634-c49b-40fb-abc9-4ba5eb92ccaf",
+        "timestamp": 1792363880773
+      }
+    ]
+  }
+}

@@ -79,8 +79,18 @@ public class ProcurementLineEntity extends BaseEntity {
     @Column(name = "match_tier", nullable = false, length = 32)
     private MatchTier matchTier;
 
-    /** The {@link MatchStatus} ({@code AUTO}/{@code UNMATCHED}). */
+    /** The {@link MatchStatus} ({@code AUTO}/{@code UNMATCHED}/{@code MANUAL_MATCHED}/{@code MANUAL_UNMATCHED}). */
     @Enumerated(EnumType.STRING)
     @Column(name = "match_status", nullable = false, length = 16)
     private MatchStatus matchStatus;
+
+    /**
+     * FOR-06-04 (Requirement 1.1, design §4.1) — the line's optional unplanned-expense classification.
+     * Nullable FK to the FOR-06-00 {@link UnplannedExpenseCategoryEntity} dictionary; settable only on
+     * an {@code UNMATCHED}/{@code MANUAL_UNMATCHED} line (R1.3). Backed by {@code unplanned_category_id}
+     * (changeset {@code 170-add-procurement-line-unplanned-category.xml}, {@code ON DELETE SET NULL}).
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "unplanned_category_id")
+    private UnplannedExpenseCategoryEntity unplannedCategory;
 }

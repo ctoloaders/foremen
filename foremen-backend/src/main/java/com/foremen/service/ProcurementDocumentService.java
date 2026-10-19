@@ -44,6 +44,7 @@ import com.foremen.service.procurement.MatchEngine;
 import com.foremen.service.procurement.MatchResult;
 import com.foremen.service.procurement.PlannedMaterial;
 import com.foremen.service.procurement.PlannedMaterialCandidateProvider;
+import com.foremen.service.procurement.ReprocessLinePartitioner;
 
 import jakarta.persistence.EntityManager;
 
@@ -99,6 +100,14 @@ public class ProcurementDocumentService
     /** Signed-download-URL TTL for the raw/processed renditions resolved on the read path. */
     private static final long IMAGE_URL_TTL_SECONDS = 600L;
 
+    /**
+     * FOR-06-04 R5.1 — a disjoint temporary {@code line_no} band used while re-numbering a re-processed
+     * document's preserved manual lines, so shifting them to their final contiguous positions never
+     * transiently collides with an as-yet-unmoved sibling under the {@code (document_id, line_no)}
+     * unique constraint. Far above any realistic per-document line count.
+     */
+    private static final int LINE_NO_RENUMBER_OFFSET = 1_000_000;
+
     private final ProcurementDocumentDao documentDao;
     private final ProjectAccessCache projectAccessCache;
     private final ProcurementDocumentServiceMapper serviceMapper;
@@ -108,6 +117,7 @@ public class ProcurementDocumentService
     private final OcrService ocrService;
     private final MatchEngine matchEngine;
     private final PlannedMaterialCandidateProvider candidateProvider;
+    private final ReprocessLinePartitioner reprocessLinePartitioner;
     private final DataSize maxUploadSize;
 
     public ProcurementDocumentService(ProcurementDocumentDao documentDao,
@@ -119,6 +129,7 @@ public class ProcurementDocumentService
                                       OcrService ocrService,
                                       MatchEngine matchEngine,
                                       PlannedMaterialCandidateProvider candidateProvider,
+                                      ReprocessLinePartitioner reprocessLinePartitioner,
                                       ImageStorageProperties imageStorageProperties) {
         this.documentDao = documentDao;
         this.projectAccessCache = projectAccessCache;
@@ -129,6 +140,7 @@ public class ProcurementDocumentService
         this.ocrService = ocrService;
         this.matchEngine = matchEngine;
         this.candidateProvider = candidateProvider;
+        this.reprocessLinePartitioner = reprocessLinePartitioner;
         this.maxUploadSize = parseMaxUploadSize(
                 imageStorageProperties == null ? null : imageStorageProperties.maxUploadSize());
     }
@@ -373,13 +385,44 @@ public class ProcurementDocumentService
         List<PlannedMaterial> candidates = candidateProvider.candidatesFor(projectId);
         List<ProcurementLineEntity> freshLines = buildLines(document, result.lines(), candidates);
 
-        // R8.2 — replace the previous lines ATOMICALLY: clear + flush the orphan deletes before the
-        // fresh inserts so the (document_id, line_no) unique constraint never fires mid-flush.
-        if (!document.getLines().isEmpty()) {
-            document.getLines().clear();
+        // FOR-06-04 R5.1 — preserve the manually reconciled lines, replace only the automatic ones.
+        // The pure ReprocessLinePartitioner splits the document's prior lines into preserve
+        // (MANUAL_MATCHED/MANUAL_UNMATCHED, kept with matchedMaterialId/unplannedCategory intact) and
+        // replace (AUTO/UNMATCHED, dropped). When no prior line is manual the preserve part is empty
+        // and this is byte-for-byte the FOR-06-03 replace-all behaviour (R5.2). On a fresh upload the
+        // prior-line list is empty, so the partition is empty/empty and all fresh lines are inserted.
+        List<ProcurementLineEntity> priorLines = new ArrayList<>(document.getLines());
+        ReprocessLinePartitioner.Partition partition = reprocessLinePartitioner.partition(priorLines);
+        List<ProcurementLineEntity> preserved = partition.preserve();
+
+        // R8.2 / R5.1 — replace ATOMICALLY: remove only the automatic lines (orphan-delete), then
+        // flush so their rows are gone before any renumber can reuse a freed (document_id, line_no).
+        if (!partition.replace().isEmpty()) {
+            document.getLines().removeAll(partition.replace());
             entityManager.flush();
         }
-        document.getLines().addAll(freshLines);
+
+        // Renumber so preserved manual lines come first (1..k) then the fresh lines (k+1..), keeping
+        // the (document_id, line_no) unique constraint. Preserved lines currently hold their old
+        // line_no, which may collide with the target sequence, so first shift every surviving line to
+        // a disjoint temporary band and flush before assigning the final contiguous numbering.
+        if (!preserved.isEmpty()) {
+            int temp = LINE_NO_RENUMBER_OFFSET;
+            for (ProcurementLineEntity line : preserved) {
+                line.setLineNo(temp++);
+            }
+            entityManager.flush();
+            int lineNo = 1;
+            for (ProcurementLineEntity line : preserved) {
+                line.setLineNo(lineNo++);
+            }
+            for (ProcurementLineEntity line : freshLines) {
+                line.setLineNo(lineNo++);
+            }
+            document.getLines().addAll(freshLines);
+        } else {
+            document.getLines().addAll(freshLines);
+        }
 
         document.setProcessedObjectKey(processedObjectKey);
         document.setSupplierName(result.supplierName());
