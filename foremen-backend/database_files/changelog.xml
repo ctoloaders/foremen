@@ -739,4 +739,33 @@
          row to a retryable FAILED; no column/type change (VARCHAR(16) already fits). Registered LAST,
          after 175. -->
     <include file="database_files/changesets/176-procurement-status-stages.xml"/>
+    <!-- FOR-06-08 (R2.1, R7.4): the EstimateAmendment aggregate root — the per-project amendment
+         (aneks) accumulating execution-stage deltas on top of the signed/frozen estimate without
+         mutating it. Creates estimate_amendments (project FK NOT NULL ON DELETE CASCADE; seq_no INT;
+         status VARCHAR(32) DEFAULT 'OPEN'; nullable effective_date / signable_document_id (set only
+         by FOR-06-09) / note; BaseEntity cols), with UNIQUE (project_id, seq_no) and the partial
+         unique index ux_amendment_open_per_project ON (project_id) WHERE status = 'OPEN' enforcing
+         at most one open amendment per project. Idempotent via NOT tableExists + MARK_RAN.
+         Registered LAST, after 176. -->
+    <include file="database_files/changesets/177-create-estimate-amendments.xml"/>
+    <!-- FOR-06-08 (R7.1, R7.2): amendment_lines — the AmendmentLine child of an estimate_amendments
+         row. One polymorphic delta per row discriminated by change_type (SCHEDULE_CHANGE /
+         ADDITIONAL_WORK / VOLUME_CHANGE): amendment_id FK NOT NULL ON DELETE CASCADE (lines are
+         discarded with their amendment); nullable work_item_id / room_id / work_category_id FKs;
+         delta_quantity NUMERIC(12,4); extra_unit_price NUMERIC(12,2) (the dormant Effective_Date_Seam
+         field, R7.2); schedule_delta_half_days INT; description VARCHAR(1024); BaseEntity cols. Each
+         line stores a DELTA against the signed baseline, never an absolute (R7.1); per-subject
+         uniqueness is enforced in AmendmentService, not the DB. Idempotent via NOT tableExists +
+         MARK_RAN. The amendment_id FK references estimate_amendments (177). Registered LAST,
+         after 177. -->
+    <include file="database_files/changesets/178-create-amendment-lines.xml"/>
+    <!-- FOR-06-08 (R9.1, R9.2, R9.3): seed the project-scoped AMENDMENTS ABAC resource + role matrix.
+         Two-changeSet resource+grant pattern per 165-seed-work-reports-resource.xml: insert the
+         resources row AMENDMENTS (name_ru «Анексы», name_pl «Aneksy», descriptions) guarded by
+         MARK_RAN, then per-role role_resources + role_resource_operations grants — ADMIN CRUD;
+         MANAGER CRUD; FINANCIER CRUD; FOREMAN READ. CLIENT + WORKER deny-by-default (commented,
+         not seeded). Each changeSet idempotent (SELECT COUNT(*) ... = 0 + MARK_RAN) so re-runs
+         against an already-seeded database insert nothing. Project-scope is enforced in
+         AmendmentService (getProjectIdPath() -> "project.id"). Registered LAST, after 178. -->
+    <include file="database_files/changesets/179-seed-amendments-resource.xml"/>
 </databaseChangeLog>

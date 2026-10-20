@@ -1,0 +1,398 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create the `estimate_amendments` table changeset": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066102
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506073225
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506302374
+      }
+    ],
+    "1.2 Create the `amendment_lines` table changeset": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066162
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506074600
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506303706
+      }
+    ],
+    "2.1 Add `AmendmentStatus` + `ChangeType` enums": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066212
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506076081
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506304666
+      }
+    ],
+    "3.1 Implement `AmendmentMergeResolver` (persistence-free)": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066242
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506077028
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506305943
+      }
+    ],
+    "3.2 Property-test the merge resolver (jqwik)": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066269
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506310163
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506487557
+      }
+    ],
+    "4.1 Add the JPA entities": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066302
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506491228
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506603120
+      }
+    ],
+    "4.2 Add DTOs + mappers": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066336
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506606769
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506955319
+      }
+    ],
+    "5.1 Implement `AmendmentService` (`ProjectScopedService`)": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066373
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506959343
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507274509
+      }
+    ],
+    "5.2 Service tests": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066400
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507693466
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507958981
+      }
+    ],
+    "6.1 Add `AmendmentController`": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066429
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507279106
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507685985
+      }
+    ],
+    "7.1 Wire `resolveClientUnitPrice` + DAO sum query": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066461
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507280023
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507686710
+      }
+    ],
+    "7.2 Seam test": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066491
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507692671
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507957027
+      }
+    ],
+    "8.1 Seed the `AMENDMENTS` resource + grants": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066516
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507691499
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507957899
+      }
+    ],
+    "8.2 ABAC matrix property test": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066545
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507964698
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792508527621
+      }
+    ],
+    "9.1 Panel + tab swap scaffold": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066578
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507963978
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792508526714
+      }
+    ],
+    "9.2 Wizard + merge chooser + delete dialogs": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066612
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792508531937
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509371016
+      }
+    ],
+    "10.1 Add `amendments.*` + `error.amendment.*` keys (PL + RU)": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066645
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509375614
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509734308
+      }
+    ],
+    "11. Author test-cases.md": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066677
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509741097
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509950140
+      }
+    ],
+    "12. Final verification + checkpoint": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506066708
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509954475
+      },
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792510169993
+      }
+    ],
+    "1. Backend: schema": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506303731
+      }
+    ],
+    "2. Backend: enums": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506304699
+      }
+    ],
+    "3. Backend: pure merge resolver": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506487613
+      }
+    ],
+    "4. Backend: entities + DTOs": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792506955362
+      }
+    ],
+    "6. Backend: controller": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507686171
+      }
+    ],
+    "7. Backend: dormant revenue seam": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507957071
+      }
+    ],
+    "5. Backend: service": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792507959015
+      }
+    ],
+    "8. Backend: ABAC seed + matrix test": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792508527686
+      }
+    ],
+    "9. Frontend: Aneksy panel": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509371096
+      }
+    ],
+    "10. i18n": [
+      {
+        "executionId": "ce2ddbec-f1e8-46c3-8d59-19ae4afa67f1",
+        "chatSessionId": "sess_8683e5d2-1175-4e77-9d51-d49b73c95e0e",
+        "timestamp": 1792509734344
+      }
+    ]
+  }
+}

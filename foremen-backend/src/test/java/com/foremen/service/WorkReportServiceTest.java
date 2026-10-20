@@ -33,6 +33,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.foremen.controller.model.WorkReportProgressDto;
 import com.foremen.controller.model.WorkReportRoomModel;
+import com.foremen.dao.AmendmentLineDao;
 import com.foremen.dao.EstimateLineDao;
 import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.WorkReportDao;
@@ -102,6 +103,8 @@ class WorkReportServiceTest {
     @Mock
     private EstimateLineDao estimateLineDao;
     @Mock
+    private AmendmentLineDao amendmentLineDao;
+    @Mock
     private ProjectAccessCache projectAccessCache;
     @Mock
     private WorkReportServiceMapper serviceMapper;
@@ -117,11 +120,15 @@ class WorkReportServiceTest {
     @BeforeEach
     void setUp() {
         service = new WorkReportService(
-                workReportDao, projectMemberDao, estimateLineDao, projectAccessCache,
+                workReportDao, projectMemberDao, estimateLineDao, amendmentLineDao, projectAccessCache,
                 serviceMapper, auditLogDao, entityManager, eventPublisher);
         // save() echoes its argument so the committed entity is the one under test.
         lenient().when(workReportDao.save(any(WorkReportEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
+        // FOR-06-08 seam: no EFFECTIVE amendment exists in this build, so the extra-unit-price sum is
+        // zero and the resolved client unit price stays the line's frozen unitPrice (R8.2).
+        lenient().when(amendmentLineDao.sumExtraUnitPriceForEffectiveWorkItem(any(), any()))
+                .thenReturn(BigDecimal.ZERO);
         // getReference(type, id) returns a lightweight stub carrying only its id.
         lenient().when(entityManager.getReference(any(), any()))
                 .thenAnswer(inv -> referenceStub(inv.getArgument(0), (Long) inv.getArgument(1)));

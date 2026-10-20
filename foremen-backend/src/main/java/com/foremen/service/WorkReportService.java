@@ -2,6 +2,7 @@ package com.foremen.service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.foremen.controller.model.WorkReportProgressDto;
 import com.foremen.controller.model.WorkReportRoomModel;
 import com.foremen.dao.AdminDao;
+import com.foremen.dao.AmendmentLineDao;
 import com.foremen.dao.EstimateLineDao;
 import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.WorkReportDao;
@@ -120,6 +122,7 @@ public class WorkReportService
     private final WorkReportDao workReportDao;
     private final ProjectMemberDao projectMemberDao;
     private final EstimateLineDao estimateLineDao;
+    private final AmendmentLineDao amendmentLineDao;
     private final ProjectAccessCache projectAccessCache;
     private final WorkReportServiceMapper serviceMapper;
     private final AuditLogDao auditLogDao;
@@ -129,6 +132,7 @@ public class WorkReportService
     public WorkReportService(WorkReportDao workReportDao,
                              ProjectMemberDao projectMemberDao,
                              EstimateLineDao estimateLineDao,
+                             AmendmentLineDao amendmentLineDao,
                              ProjectAccessCache projectAccessCache,
                              WorkReportServiceMapper serviceMapper,
                              AuditLogDao auditLogDao,
@@ -137,6 +141,7 @@ public class WorkReportService
         this.workReportDao = workReportDao;
         this.projectMemberDao = projectMemberDao;
         this.estimateLineDao = estimateLineDao;
+        this.amendmentLineDao = amendmentLineDao;
         this.projectAccessCache = projectAccessCache;
         this.serviceMapper = serviceMapper;
         this.auditLogDao = auditLogDao;
@@ -843,7 +848,7 @@ public class WorkReportService
         rebuildRooms(entity, line, rows);
 
         // R1.4/R1.5/R6 — derive and freeze the revenue valuation.
-        BigDecimal clientUnitPrice = resolveClientUnitPrice(line);
+        BigDecimal clientUnitPrice = resolveClientUnitPrice(line, entity.getPerformedTo());
         BigDecimal totalQuantity = BigDecimal.ZERO;
         for (WorkReportRoomEntity room : entity.getRooms()) {
             totalQuantity = totalQuantity.add(room.getQuantity());
@@ -914,15 +919,32 @@ public class WorkReportService
     }
 
     /**
-     * The frozen revenue unit price (R6.1/R6.2): the estimate line's frozen {@code unitPrice} plus the
-     * sum of approved amendment deltas ({@code AmendmentLine.extraUnitPrice}, FOR-06-08). FOR-06-08 is
-     * not present in this build, so the amendment delta is treated as zero (R6.2) and the result is
-     * simply the line's frozen {@code unitPrice}.
+     * The frozen revenue unit price (R6.1/R6.2; FOR-06-08 Requirement 8): the estimate line's frozen
+     * {@code unitPrice} plus the sum of effective amendment deltas
+     * ({@code AmendmentLine.extraUnitPrice}) that target the line's {@code workItem} and belong to an
+     * amendment that is both {@code EFFECTIVE} and already in force at {@code reportDate}
+     * ({@code effectiveDate <= reportDate}) — resolved via
+     * {@link AmendmentLineDao#sumExtraUnitPriceForEffectiveWorkItem(Long, LocalDate)}.
+     *
+     * <p>This is the single dormant Effective_Date_Seam (FOR-06-08 §Effective_Date_Seam): because no
+     * amendment can reach {@code EFFECTIVE} in this build (that transition is owned by FOR-06-09), the
+     * DAO sum is always zero, so the result is simply the line's frozen {@code unitPrice} and existing
+     * work-reporting revenue is unchanged (R8.2). FOR-06-09 switches the delta on with no change to
+     * this contract.
+     *
+     * @param line       the estimate line being valued (its frozen {@code unitPrice} is the baseline)
+     * @param reportDate the applicable report date (the end of the performed interval); amendments not
+     *                   yet in force on this date do not contribute
      */
-    private BigDecimal resolveClientUnitPrice(EstimateLineEntity line) {
+    private BigDecimal resolveClientUnitPrice(EstimateLineEntity line, LocalDate reportDate) {
         BigDecimal unitPrice = line.getUnitPrice() == null ? BigDecimal.ZERO : line.getUnitPrice();
-        // FOR-06-08 amendment deltas are read here when present; absent → zero (R6.2).
-        BigDecimal amendmentDelta = BigDecimal.ZERO;
+        // FOR-06-08 Effective_Date_Seam — sum effective amendment extra-unit-price deltas for this
+        // work item at the report date. Zero in this build (no EFFECTIVE amendment can exist, R8.2).
+        BigDecimal amendmentDelta = amendmentLineDao
+                .sumExtraUnitPriceForEffectiveWorkItem(line.getWorkItem().getId(), reportDate);
+        if (amendmentDelta == null) {
+            amendmentDelta = BigDecimal.ZERO;
+        }
         return unitPrice.add(amendmentDelta);
     }
 

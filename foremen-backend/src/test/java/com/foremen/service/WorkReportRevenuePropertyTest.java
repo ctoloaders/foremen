@@ -21,6 +21,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.foremen.controller.model.WorkReportRoomModel;
+import com.foremen.dao.AmendmentLineDao;
 import com.foremen.dao.EstimateLineDao;
 import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.WorkReportDao;
@@ -80,6 +81,7 @@ class WorkReportRevenuePropertyTest {
     private final WorkReportDao workReportDao = mock(WorkReportDao.class);
     private final ProjectMemberDao projectMemberDao = mock(ProjectMemberDao.class);
     private final EstimateLineDao estimateLineDao = mock(EstimateLineDao.class);
+    private final AmendmentLineDao amendmentLineDao = mock(AmendmentLineDao.class);
     private final ProjectAccessCache projectAccessCache = mock(ProjectAccessCache.class);
     private final WorkReportServiceMapper serviceMapper = mock(WorkReportServiceMapper.class);
     private final AuditLogDao auditLogDao = mock(AuditLogDao.class);
@@ -87,11 +89,15 @@ class WorkReportRevenuePropertyTest {
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
 
     private final WorkReportService service = new WorkReportService(
-            workReportDao, projectMemberDao, estimateLineDao, projectAccessCache,
+            workReportDao, projectMemberDao, estimateLineDao, amendmentLineDao, projectAccessCache,
             serviceMapper, auditLogDao, entityManager, eventPublisher);
 
     {
         when(workReportDao.save(any(WorkReportEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+        // FOR-06-08 seam: no EFFECTIVE amendment exists in this build, so the extra-unit-price sum is
+        // zero and the resolved client unit price stays the line's frozen unitPrice (R8.2).
+        when(amendmentLineDao.sumExtraUnitPriceForEffectiveWorkItem(any(), any()))
+                .thenReturn(BigDecimal.ZERO);
         when(entityManager.getReference(any(), any()))
                 .thenAnswer(inv -> referenceStub(inv.getArgument(0), (Long) inv.getArgument(1)));
         when(serviceMapper.toServiceExtendedModel(any()))

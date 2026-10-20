@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-08 (R9.1, R9.2, R9.3): seed the project-scoped AMENDMENTS resource + per-role grants.
+         The resource is project-scoped; every grant below sits on top of the project-membership
+         filter enforced in AmendmentService (ProjectScopedService.getProjectIdPath() -> "project.id").
+         Role matrix: ADMIN CRUD; MANAGER CRUD; FINANCIER CRUD; FOREMAN READ. CLIENT and WORKER are
+         deny-by-default (no grant; see commented blocks at the end) — a CLIENT reaches the aneks only
+         through the FOR-06-09 / FOR-09 signing surface, and a WORKER never sees amendments. -->
+
+    <!-- Seed AMENDMENTS resource into resources table -->
+    <changeSet id="179-seed-amendments-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'AMENDMENTS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="AMENDMENTS"/>
+            <column name="name_ru" value="Анексы"/>
+            <column name="name_pl" value="Aneksy"/>
+            <column name="description_ru" value="Анексы (дополнения) к подписанной смете активного проекта"/>
+            <column name="description_pl" value="Aneksy (zmiany) do podpisanego kosztorysu aktywnego projektu"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on AMENDMENTS resource -->
+    <changeSet id="179-seed-amendments-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'AMENDMENTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'AMENDMENTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'AMENDMENTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant MANAGER full CRUD on AMENDMENTS resource (authors and manages amendments) -->
+    <changeSet id="179-seed-amendments-permissions-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'MANAGER' AND res.code = 'AMENDMENTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'AMENDMENTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'MANAGER' AND res.code = 'AMENDMENTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FINANCIER full CRUD on AMENDMENTS resource (authors and manages amendments) -->
+    <changeSet id="179-seed-amendments-permissions-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FINANCIER' AND res.code = 'AMENDMENTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'AMENDMENTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'FINANCIER' AND res.code = 'AMENDMENTS';
+        </sql>
+    </changeSet>
+
+    <!-- Grant FOREMAN READ on AMENDMENTS resource (read-only visibility of amendments) -->
+    <changeSet id="179-seed-amendments-permissions-foreman" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'AMENDMENTS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'AMENDMENTS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN' AND res.code = 'AMENDMENTS';
+        </sql>
+    </changeSet>
+
+    <!-- CLIENT and WORKER are intentionally omitted (deny-by-default): a CLIENT reaches the aneks only
+         through the FOR-06-09 / FOR-09 signing surface (not through AMENDMENTS), and a WORKER never
+         sees amendments. No role_resources / role_resource_operations row is seeded for either role.
+         Left as commented placeholders so the deny-by-default decision is explicit:
+
+    <changeSet id="179-seed-amendments-permissions-client" author="foremen">
+        ... intentionally NOT seeded: CLIENT has no AMENDMENTS grant in this spec ...
+    </changeSet>
+
+    <changeSet id="179-seed-amendments-permissions-worker" author="foremen">
+        ... intentionally NOT seeded: WORKER has no access to AMENDMENTS ...
+    </changeSet>
+    -->
+
+</databaseChangeLog>

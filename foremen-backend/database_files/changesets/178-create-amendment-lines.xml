@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-08 (Requirements 7.1, 7.2): amendment_lines — the AmendmentLine child of an
+        estimate_amendments row (design §"Data model 2"). One polymorphic row per delta within an
+        amendment, discriminated by change_type (Change_Type), carrying only the fields relevant to
+        its type:
+          - SCHEDULE_CHANGE  populates schedule_delta_half_days (+ optional work_category_id target).
+          - ADDITIONAL_WORK  populates work_item_id, room_id, delta_quantity, extra_unit_price.
+          - VOLUME_CHANGE    populates work_item_id, room_id, delta_quantity, extra_unit_price.
+
+        The line stores a DELTA against the signed baseline, never an absolute value (R7.1), and
+        carries extra_unit_price so the dormant Effective_Date_Seam in WorkReportService can read it
+        per work item (R7.2). No DB-level per-subject uniqueness is declared here: the subject is
+        type-dependent ((change_type, work_item_id, room_id) for cost lines, (SCHEDULE_CHANGE,
+        work_category_id) incl. the NULL-category whole-project subject for schedule lines), so the
+        one-line-per-subject invariant is enforced authoritatively in AmendmentService +
+        AmendmentMergeResolver (design §"Data model 2").
+
+        Columns:
+          - id                       : BIGSERIAL PK (BaseEntity).
+          - amendment_id             : owner FK to estimate_amendments, NOT NULL; ON DELETE CASCADE so
+                                       deleting an amendment discards its lines. The parent maps this
+                                       with @OneToMany(cascade = ALL, orphanRemoval = true).
+          - change_type              : VARCHAR(32) NOT NULL; the Change_Type discriminator
+                                       (SCHEDULE_CHANGE / ADDITIONAL_WORK / VOLUME_CHANGE) persisted
+                                       as its enum name.
+          - work_item_id             : BIGINT NULL FK -> work_items; set for ADDITIONAL_WORK /
+                                       VOLUME_CHANGE, null for SCHEDULE_CHANGE.
+          - room_id                  : BIGINT NULL FK -> rooms; set for ADDITIONAL_WORK /
+                                       VOLUME_CHANGE, null for SCHEDULE_CHANGE.
+          - work_category_id         : BIGINT NULL FK -> work_categories; the SCHEDULE_CHANGE target
+                                       (null = whole-project schedule shift).
+          - delta_quantity           : NUMERIC(12,4) NULL; signed volume delta (volume/additional-work).
+          - extra_unit_price         : NUMERIC(12,2) NULL; the new unit price (the seam field, R7.2).
+          - schedule_delta_half_days : INT NULL; signed half-days (SCHEDULE_CHANGE).
+          - description              : VARCHAR(1024) NULL; free text, untranslated.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + onFail="MARK_RAN", so a re-run
+        against an already-migrated database makes no schema change. The amendment_id FK references
+        estimate_amendments (changeset 177); the work_item_id / room_id / work_category_id FKs
+        reference existing baseline tables. Registered LAST in changelog.xml, after 177.
+    -->
+
+    <changeSet id="178-create-amendment-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="amendment_lines"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="amendment_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: an amendment's lines are discarded with the amendment (ON DELETE CASCADE). -->
+            <column name="amendment_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Change_Type discriminator persisted as its enum name. -->
+            <column name="change_type" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- ADDITIONAL_WORK / VOLUME_CHANGE target work item; null for SCHEDULE_CHANGE. -->
+            <column name="work_item_id" type="BIGINT"/>
+            <!-- ADDITIONAL_WORK / VOLUME_CHANGE target room; null for SCHEDULE_CHANGE. -->
+            <column name="room_id" type="BIGINT"/>
+            <!-- SCHEDULE_CHANGE target category; null = whole-project schedule shift. -->
+            <column name="work_category_id" type="BIGINT"/>
+            <!-- Signed volume delta (volume/additional-work); null for SCHEDULE_CHANGE. -->
+            <column name="delta_quantity" type="NUMERIC(12,4)"/>
+            <!-- The new unit price (the Effective_Date_Seam field, R7.2); null for SCHEDULE_CHANGE. -->
+            <column name="extra_unit_price" type="NUMERIC(12,2)"/>
+            <!-- Signed half-day schedule delta (SCHEDULE_CHANGE); null for cost lines. -->
+            <column name="schedule_delta_half_days" type="INT"/>
+            <!-- Free text, untranslated. -->
+            <column name="description" type="VARCHAR(1024)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting an amendment removes its lines (ON DELETE CASCADE). -->
+        <addForeignKeyConstraint
+            constraintName="fk_amendment_lines_amendment"
+            baseTableName="amendment_lines"
+            baseColumnNames="amendment_id"
+            referencedTableName="estimate_amendments"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Work item reference: a work item in use by a line cannot be hard-deleted while it exists. -->
+        <addForeignKeyConstraint
+            constraintName="fk_amendment_lines_work_item"
+            baseTableName="amendment_lines"
+            baseColumnNames="work_item_id"
+            referencedTableName="work_items"
+            referencedColumnNames="id"/>
+
+        <!-- Room reference: a room in use by a line cannot be hard-deleted while it exists. -->
+        <addForeignKeyConstraint
+            constraintName="fk_amendment_lines_room"
+            baseTableName="amendment_lines"
+            baseColumnNames="room_id"
+            referencedTableName="rooms"
+            referencedColumnNames="id"/>
+
+        <!-- Work category reference (SCHEDULE_CHANGE target). -->
+        <addForeignKeyConstraint
+            constraintName="fk_amendment_lines_work_category"
+            baseTableName="amendment_lines"
+            baseColumnNames="work_category_id"
+            referencedTableName="work_categories"
+            referencedColumnNames="id"/>
+
+        <!-- The ordered per-amendment line load and the cascade-delete path. -->
+        <createIndex tableName="amendment_lines" indexName="ix_amendment_lines_amendment">
+            <column name="amendment_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>
