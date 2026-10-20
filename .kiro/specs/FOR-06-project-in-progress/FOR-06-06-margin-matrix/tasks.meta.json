@@ -1,0 +1,229 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Backend: pure assembler + read-model DTOs": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152543
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492460175
+      }
+    ],
+    "1.1 Implement `MarginMatrixAssembler` + DTOs": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152590
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490161009
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490465867
+      }
+    ],
+    "2.1 Add `MarginMatrixService`": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152661
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490471683
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490913132
+      }
+    ],
+    "3.1 Add `MarginMatrixController`": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152693
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490916739
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491033060
+      }
+    ],
+    "4.1 Swap the `margin` tab panel": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152725
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490161768
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490466731
+      }
+    ],
+    "5.1 Build the `margin-matrix` feature folder": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152751
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491054942
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491456497
+      }
+    ],
+    "6.1 Add i18n keys (PL + RU, mirrored)": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152828
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491461007
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492056822
+      }
+    ],
+    "6.2 Backend example / integration / smoke tests": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152857
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491461924
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492058105
+      }
+    ],
+    "6.3 Frontend unit tests (Vitest + fast-check)": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152883
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491463383
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492059020
+      }
+    ],
+    "7. Author test-cases.md": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152924
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492062474
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492270831
+      }
+    ],
+    "8. Final verification + checkpoint": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490152949
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492285881
+      },
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492449078
+      }
+    ],
+    "1.1a Write property tests for the assembler (jqwik)": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490466007
+      }
+    ],
+    "4. Frontend: tab wiring": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490466791
+      }
+    ],
+    "2. Backend: matrix service": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792490913251
+      }
+    ],
+    "3. Backend: controller": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491033091
+      }
+    ],
+    "5. Frontend: margin-matrix panel": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792491456627
+      }
+    ],
+    "6. i18n + tests": [
+      {
+        "executionId": "cfb2f7f8-b85f-4405-b271-484ee4931570",
+        "chatSessionId": "sess_53d40fdd-f81b-474f-9794-5bd2d10c13d0",
+        "timestamp": 1792492059049
+      }
+    ]
+  }
+}

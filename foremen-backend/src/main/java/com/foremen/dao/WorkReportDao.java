@@ -108,4 +108,22 @@ public interface WorkReportDao extends AdminDao<WorkReportEntity, Long> {
             + "ORDER BY r.workItem.id, rr.room.id, w.id, r.id")
     List<Object[]> findOwnReportRefsByProject(@Param("projectId") Long projectId,
                                               @Param("workerId") Long workerId);
+
+    /**
+     * FOR-06-06 (R1.3, design §B2) — the project's APPROVED work reports, the labour-fact side of the
+     * margin matrix, with each report's {@link WorkReportEntity#getWorkItem() work item} and
+     * {@link WorkReportEntity#getWorker() worker} fetch-joined so the margin-matrix service maps each
+     * report (and resolves its worker's tier) without an N+1 over the LAZY associations. Only
+     * {@code APPROVED} reports contribute to the fact side (R1.3); pending / rejected / change-requested
+     * reports are excluded. Ordered by {@code (workItem, report id)} for a stable per-row detail.
+     *
+     * @param projectId the owning project id
+     * @return the project's APPROVED reports with work item + worker fetched, empty when none
+     */
+    @Query("SELECT r FROM WorkReportEntity r "
+            + "JOIN FETCH r.workItem "
+            + "JOIN FETCH r.worker "
+            + "WHERE r.project.id = :projectId AND r.status = com.foremen.dao.model.WorkReportStatus.APPROVED "
+            + "ORDER BY r.workItem.id, r.id")
+    List<WorkReportEntity> findApprovedByProjectWithWorkItemAndWorker(@Param("projectId") Long projectId);
 }
