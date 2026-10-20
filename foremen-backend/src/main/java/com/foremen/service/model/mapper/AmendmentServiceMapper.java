@@ -19,12 +19,16 @@ import com.foremen.dao.model.EstimateAmendmentEntity;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
+import com.foremen.dao.model.SignableDocumentEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
+import com.foremen.service.document.SignableDocumentService;
+import com.foremen.service.document.SigningProgressDto;
 import com.foremen.service.model.AmendmentLineServiceModel;
 import com.foremen.service.model.AmendmentServiceExtendedModel;
 import com.foremen.service.model.AmendmentServiceModel;
+import com.foremen.service.model.AmendmentSigningProgressModel;
 
 import jakarta.persistence.EntityManager;
 
@@ -57,6 +61,14 @@ public abstract class AmendmentServiceMapper
 
     @Autowired
     protected EntityManager entityManager;
+
+    /**
+     * FOR-06-09 (R2.5, R6.2) — the FOR-05-08 signing engine, consulted to read the linked document's
+     * signing progress <b>through</b> {@link SignableDocumentService#progress(Long)} (never stored).
+     * Injected on the read path only; left unused on the write path.
+     */
+    @Autowired
+    protected SignableDocumentService signableDocumentService;
 
     protected ProjectEntity projectRef(Long id) {
         return id == null ? null : entityManager.getReference(ProjectEntity.class, id);
@@ -99,6 +111,8 @@ public abstract class AmendmentServiceMapper
 
     @Override
     @Mapping(target = "projectId", source = "project.id")
+    @Mapping(target = "signableDocumentId", source = "signableDocument.id")
+    @Mapping(target = "signingProgress", ignore = true)
     @Mapping(target = "lines", ignore = true)
     @Mapping(target = "totalAddedValue", ignore = true)
     public abstract AmendmentServiceExtendedModel toServiceExtendedModel(EstimateAmendmentEntity source);
@@ -134,6 +148,32 @@ public abstract class AmendmentServiceMapper
         }
         target.setLines(rows);
         target.setTotalAddedValue(totalAddedValue);
+
+        // FOR-06-09 (R2.5, R6.2): when the amendment is linked to an AMENDMENT document, read its
+        // signing progress THROUGH the FOR-05-08 engine (never stored). No link ⇒ null progress.
+        target.setSigningProgress(resolveSigningProgress(source.getSignableDocument()));
+    }
+
+    /**
+     * FOR-06-09 (R2.5, R6.2): the read-through signing progress of the amendment's linked
+     * {@code AMENDMENT} document, projected from the FOR-05-08 {@link SigningProgressDto}; {@code null}
+     * when the amendment has no linked document. The linked document is the single source of truth for
+     * signing progress (R2.1) — this is a read, never a stored copy.
+     */
+    protected AmendmentSigningProgressModel resolveSigningProgress(SignableDocumentEntity document) {
+        if (document == null || document.getId() == null) {
+            return null;
+        }
+        SigningProgressDto progress = signableDocumentService.progress(document.getId());
+        List<AmendmentSigningProgressModel.OutstandingSigner> outstanding = new ArrayList<>();
+        if (progress.outstanding() != null) {
+            for (SigningProgressDto.SignerRefDto ref : progress.outstanding()) {
+                outstanding.add(new AmendmentSigningProgressModel.OutstandingSigner(
+                        ref.signerUserId(), ref.signerRole()));
+            }
+        }
+        return new AmendmentSigningProgressModel(
+                progress.signedCount(), progress.totalCount(), outstanding);
     }
 
     /** Projects one line entity into its service model with the referenced names resolved. */

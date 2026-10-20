@@ -49,7 +49,24 @@ public class AmendmentServiceExtendedModel {
 
     private AmendmentStatus status;
 
-    /** Unset in this spec; set only by FOR-06-09 on/after signing (R7.4). */
+    /**
+     * FOR-06-09 (R2.5) — the id of the linked {@code AMENDMENT} {@code SignableDocument} once the
+     * amendment is sent for signing ({@code amendment.signableDocument.id}); {@code null} while
+     * {@code OPEN} / after a reopen. Read path only.
+     */
+    private Long signableDocumentId;
+
+    /**
+     * FOR-06-09 (R2.5, R6.2) — the read-through signing progress of the linked document
+     * ({@code SignableDocumentService.progress(signableDocumentId)}): signed/total + outstanding
+     * signers. {@code null} when the amendment has no linked document; never stored (R2.1). Read path
+     * only.
+     */
+    private AmendmentSigningProgressModel signingProgress;
+
+    /**
+     * The all-parties-signed date; unset in FOR-06-08, written by FOR-06-09 on signing (R3.1, R7.4).
+     */
     private LocalDate effectiveDate;
 
     /** Free text, untranslated (R11.3). */

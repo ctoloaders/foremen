@@ -24,6 +24,8 @@ import com.foremen.dao.model.EstimateAmendmentEntity;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.execution.amendment.AmendmentService;
+import com.foremen.service.execution.amendment.AmendmentSigningService;
+import com.foremen.service.execution.amendment.SendForSigningOptions;
 import com.foremen.service.model.AmendmentServiceExtendedModel;
 import com.foremen.service.model.AmendmentServiceModel;
 import com.foremen.service.model.mapper.AuditServiceMapper;
@@ -86,6 +88,7 @@ public class AmendmentController implements AdminController<
     private static final String DELETE = "DELETE";
 
     private final AmendmentService service;
+    private final AmendmentSigningService signingService;
     private final AmendmentControllerMapper controllerMapper;
     private final AuditServiceMapper auditServiceMapper;
 
@@ -185,5 +188,37 @@ public class AmendmentController implements AdminController<
     public ResponseEntity<Void> deleteById(@PathVariable Long id) {
         service.deleteAmendment(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * FOR-06-09 (Requirements 1.6, 8.1, 8.2, 8.4) — sends the project's {@code OPEN} amendment for
+     * signing: turns it into a signable {@code AMENDMENT} document through the FOR-05-08 engine,
+     * links the document back onto the amendment, and transitions it {@code OPEN →
+     * SENT_FOR_SIGNING}. The optional {@link SendForSigningOptions} body lets the Aneksy send dialog
+     * override the signing {@code method} / {@code level}; an empty body means "send with the engine
+     * defaults" ({@link SendForSigningOptions#defaults()}). The service enforces the {@code OPEN}
+     * ({@code error.amendment.notOpen}) and non-empty ({@code error.amendment.emptyNotSignable})
+     * guards and the project-scope gate.
+     *
+     * <p>No new ABAC resource is introduced (R8.1): the action rides on the existing
+     * {@code AMENDMENTS} resource via the method-level
+     * {@link RequiresPermission @RequiresPermission(AMENDMENTS, UPDATE)} (R8.2), which keeps the
+     * controller fully annotated for the {@code PermissionAnnotationValidator} startup check (R8.4);
+     * the nested {@code SignableDocumentService} calls self-enforce the {@code SIGNABLE_DOCUMENTS}
+     * CREATE/UPDATE grant.
+     *
+     * @param id      the amendment to send for signing
+     * @param options the optional per-send method/level overrides ({@code null}/empty = defaults)
+     * @return the refreshed amendment extended projection (now {@code SENT_FOR_SIGNING} with its
+     *         linked document id and read-through signing progress)
+     */
+    @PostMapping("/{id}/send-for-signing")
+    @RequiresPermission(resource = RESOURCE, operation = UPDATE)
+    public ResponseEntity<AmendmentDtoExtendedModel> sendForSigning(
+            @PathVariable Long id,
+            @RequestBody(required = false) SendForSigningOptions options) {
+        SendForSigningOptions effectiveOptions = options != null ? options : SendForSigningOptions.defaults();
+        AmendmentServiceExtendedModel sent = signingService.sendForSigning(id, effectiveOptions);
+        return ResponseEntity.ok(controllerMapper.toExtendedDto(sent));
     }
 }

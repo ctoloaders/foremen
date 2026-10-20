@@ -62,4 +62,16 @@ public interface EstimateAmendmentDao extends AdminDao<EstimateAmendmentEntity, 
      */
     @Query("SELECT MAX(a.seqNo) FROM EstimateAmendmentEntity a WHERE a.project.id = :projectId")
     Integer findMaxSeqNoByProjectId(@Param("projectId") Long projectId);
+
+    /**
+     * FOR-06-09 (Requirements 2.2, 2.3, 3): the amendment whose linked signing document is
+     * {@code documentId}, if any — the reverse lookup the after-commit reaction needs to map a
+     * document's terminal transition back onto its amendment. At most one amendment ever links a given
+     * document (the link is set once on send-for-signing and cleared on reopen), so the result is an
+     * {@link Optional}.
+     *
+     * @param documentId the linked {@code SignableDocument} id
+     * @return the amendment linked to that document, or empty
+     */
+    Optional<EstimateAmendmentEntity> findBySignableDocumentId(Long documentId);
 }

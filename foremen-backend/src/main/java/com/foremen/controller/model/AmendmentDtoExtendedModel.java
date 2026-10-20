@@ -17,20 +17,29 @@ import com.foremen.dao.model.AmendmentStatus;
  * <p>The {@code status} ({@code Amendment_Status}) is labeled on the frontend (R11.1); the aggregate
  * is informational and is NOT applied to any downstream data in this spec.
  *
- * @param id               the amendment id
- * @param projectId        the owning project FK
- * @param seqNo            1..N per project
- * @param status           the {@code Amendment_Status} (labeled on the frontend)
- * @param effectiveDate    unset in this spec; set only by FOR-06-09 (R7.4)
- * @param note             free text, untranslated
- * @param lines            the resolved change lines (R1.4)
- * @param totalAddedValue  informational {@code Σ deltaQuantity × extraUnitPrice} (R4.3)
+ * <p>FOR-06-09 (R2.5, R6.3) extends the read model with the linked {@code AMENDMENT} document id
+ * ({@code signableDocumentId}), the read-through signing progress ({@code signingProgress}:
+ * signed/total + outstanding signers, never stored), and surfaces the {@code effectiveDate} once set
+ * — so the Aneksy tab renders the signing surface without a second lifecycle.
+ *
+ * @param id                 the amendment id
+ * @param projectId          the owning project FK
+ * @param seqNo              1..N per project
+ * @param status             the {@code Amendment_Status} (labeled on the frontend)
+ * @param signableDocumentId the linked {@code AMENDMENT} document id once sent for signing, else {@code null} (FOR-06-09 R2.5)
+ * @param signingProgress    the read-through signing progress of the linked document, else {@code null} (FOR-06-09 R2.5, R6.2)
+ * @param effectiveDate      the all-parties-signed date; set by FOR-06-09 on signing (R3.1, R7.4)
+ * @param note               free text, untranslated
+ * @param lines              the resolved change lines (R1.4)
+ * @param totalAddedValue    informational {@code Σ deltaQuantity × extraUnitPrice} (R4.3)
  */
 public record AmendmentDtoExtendedModel(
         Long id,
         Long projectId,
         Integer seqNo,
         AmendmentStatus status,
+        Long signableDocumentId,
+        AmendmentSigningProgressDto signingProgress,
         LocalDate effectiveDate,
         String note,
         List<AmendmentLineDto> lines,

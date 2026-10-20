@@ -1,0 +1,432 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Implement `AllPartiesSignedDateResolver`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514730899
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514739302
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514888528
+      }
+    ],
+    "1.2 Implement `ScheduleDeltaCalculator`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514730973
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514740741
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514889965
+      }
+    ],
+    "1.3 Write property tests for the pure calculators": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731000
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514897031
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515115038
+      }
+    ],
+    "2.1 Implement `AmendmentNotificationEmitter`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731031
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514898237
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515116040
+      }
+    ],
+    "3.1 Define `AmendmentLifecycleEvent`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731073
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514741797
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514890978
+      }
+    ],
+    "3.2 Write unit test for `AmendmentNotificationEmitter`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731123
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515505450
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515950446
+      }
+    ],
+    "4.1 Implement `AmendmentSigningService`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731149
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515123583
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515498221
+      }
+    ],
+    "4.2 Write property tests for the service effect logic": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731172
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515506785
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515951719
+      }
+    ],
+    "4.3 Write unit / example tests for `AmendmentSigningService`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731199
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515959847
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516447496
+      }
+    ],
+    "5.1 Implement `AmendmentSigningReaction`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731224
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515508022
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515948966
+      }
+    ],
+    "5.2 Write after-commit reaction integration test (Dockerized app)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731255
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516454818
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519072218
+      }
+    ],
+    "6.1 Add `POST /api/amendments/{id}/send-for-signing`": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731286
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515509467
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515953114
+      }
+    ],
+    "6.2 Write controller / ABAC-startup test": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731330
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515961348
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516448741
+      }
+    ],
+    "7.1 Extend the amendment extended model": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731366
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515510360
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515954060
+      }
+    ],
+    "7.2 Write mapper/read-model test": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731400
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515962148
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516449753
+      }
+    ],
+    "8.1 Write the price-seam integration test (Dockerized app)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731425
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516455819
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519073396
+      }
+    ],
+    "9.1 Wire the send-for-signing surface into the Aneksy panel": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731458
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519077311
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519456184
+      }
+    ],
+    "9.2 Write frontend component tests": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731487
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519461933
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519705268
+      }
+    ],
+    "10.1 Add the i18n keys and the locale-parity assertion": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731517
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519461090
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519704254
+      }
+    ],
+    "11. Author test-cases.md": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731548
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519711485
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519927279
+      }
+    ],
+    "12. Final checkpoint — ensure all tests pass": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792514731581
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519931913
+      },
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792520136014
+      }
+    ],
+    "1. Backend: pure collaborators (persistence-free, property-testable)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515115087
+      }
+    ],
+    "2. Backend: amendment lifecycle notifications": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515116076
+      }
+    ],
+    "3. Backend: lifecycle-event record + emitter tests": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792515950503
+      }
+    ],
+    "4. Backend: `AmendmentSigningService` (orchestration + effect application)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516447571
+      }
+    ],
+    "6. Backend: controller endpoint + ABAC startup": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516448788
+      }
+    ],
+    "7. Backend: amendment read-model additions (DTO only, no schema)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792516449935
+      }
+    ],
+    "5. Backend: after-commit observer + its integration test": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519072318
+      }
+    ],
+    "8. Backend: price-seam integration (make the dormant seam go live)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519073430
+      }
+    ],
+    "10. Frontend: internationalization (PL + RU)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519704400
+      }
+    ],
+    "9. Frontend: Aneksy signing surface (`foremen-frontend/`)": [
+      {
+        "executionId": "9aff28e7-1154-40c3-a371-a737ba94f3de",
+        "chatSessionId": "sess_24bda512-801d-484e-92d2-3b05ea366a19",
+        "timestamp": 1792519705303
+      }
+    ]
+  }
+}
