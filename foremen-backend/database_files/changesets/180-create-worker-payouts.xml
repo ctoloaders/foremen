@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-11 (Requirements 1.1, 1.3, 4.5): the WorkerPayout persistence root — the
+        project-scoped record a FINANCIER / MANAGER / ADMIN issues to pay a worker for the work
+        performed (or, for an advance, to be performed) on an ACTIVE / COMPLETED project
+        (design §Data Models). It is the money-OUT counterpart of the FOR-06-07 client payment.
+
+        A regular payout aggregates the worker's cost (Σ Cost_Value over the worker's unpaid
+        APPROVED report lines in the period) via FOR-06-10 WorkerCostService verbatim; this table
+        adds NO cost arithmetic. Which report lines a regular payout paid is recorded by the
+        nullable work_report_rooms.paid_by_payout_id FK (changeset 181), not a copy table.
+
+        Columns:
+          - id                : BIGSERIAL PK (BaseEntity).
+          - project_id        : owner FK to projects, NOT NULL; ON DELETE CASCADE so deleting a
+                                project removes its payouts. Drives the ProjectScopedService
+                                project filter (getProjectIdPath() -> "project.id", R10.2).
+          - worker_id         : user FK, NOT NULL; the worker being paid. RESTRICT — a user whose
+                                payout exists cannot be hard-deleted.
+          - period_from /
+            period_to         : DATE NOT NULL; the [from, to] interval the payout covers. The
+                                period_to >= period_from invariant is enforced both at the service
+                                (error.workerPayout.period.invalid, R4.5) and here at the DB level.
+          - amount            : NUMERIC(19,2) NOT NULL, CHECK >= 0; the cash amount actually paid.
+                                Defaults to suggested_amount and may be overridden by the issuer
+                                (R1.4, R4.4). Non-negative.
+          - suggested_amount  : NUMERIC(19,2) NOT NULL, CHECK >= 0; the computed suggested value
+                                snapshot captured at creation, never changed afterwards (R1.4).
+          - advance_applied   : NUMERIC(19,2) NOT NULL DEFAULT 0, CHECK >= 0; the advance credit
+                                offset applied on a regular payout (0 for an advance, R5.5/R5.6).
+          - payment_channel   : VARCHAR(16) NOT NULL; the Payment_Channel enum
+                                { BANK_TRANSFER, CASH } (R2.1).
+          - status            : VARCHAR(16) NOT NULL DEFAULT 'PLANNED'; the Payout_Status enum
+                                { PLANNED, PAID }. PAID is terminal (R7).
+          - is_advance        : BOOLEAN NOT NULL; derived true WHEN period_to is after the payout's
+                                creation date (R5.3) — persisted as the classification snapshot.
+          - paid_at           : TIMESTAMP WITH TIME ZONE, NULL; set on mark-paid (R7.1).
+          - note              : TEXT, NULL; free-form issuer note.
+        Plus the four BaseEntity audit columns. No name_ru / name_pl i18n columns — a payout is
+        transactional, not a dictionary (R8.1).
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN, so a re-run against
+        an already-migrated database makes no schema change (R1.3). Registered LAST in
+        changelog.xml, after 179.
+    -->
+
+    <changeSet id="180-create-worker-payouts" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="worker_payouts"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="worker_payouts">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a project removes its payouts; drives the project-scope filter. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The worker being paid. -->
+            <column name="worker_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The payout period [from, to] (period_to >= period_from enforced below + service). -->
+            <column name="period_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="period_to" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The cash amount paid; defaults to suggested_amount, overridable (R1.4, R4.4). -->
+            <column name="amount" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Computed suggested value snapshot at creation; never changes (R1.4). -->
+            <column name="suggested_amount" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Advance credit offset applied on a regular payout; 0 for an advance (R5.5/R5.6). -->
+            <column name="advance_applied" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Payment_Channel enum { BANK_TRANSFER, CASH } (R2.1). -->
+            <column name="payment_channel" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Payout_Status enum { PLANNED, PAID }; PLANNED by default, PAID terminal (R7). -->
+            <column name="status" type="VARCHAR(16)" defaultValue="PLANNED">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Derived true WHEN period_to is after the creation date (R5.3); persisted snapshot. -->
+            <column name="is_advance" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Set on mark-paid (R7.1); nullable until paid. -->
+            <column name="paid_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <!-- Free-form issuer note. -->
+            <column name="note" type="TEXT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its payouts; drives the project-scope filter. -->
+        <addForeignKeyConstraint
+            constraintName="fk_worker_payouts_project"
+            baseTableName="worker_payouts"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Worker FK: cannot hard-delete a user who has a payout. -->
+        <addForeignKeyConstraint
+            constraintName="fk_worker_payouts_worker"
+            baseTableName="worker_payouts"
+            baseColumnNames="worker_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- The project-scoped list load of a project's payouts (ProjectScopedService filter). -->
+        <createIndex tableName="worker_payouts" indexName="ix_worker_payouts_project">
+            <column name="project_id"/>
+        </createIndex>
+
+        <!-- The per-worker remaining-advance-credit / since-last-payout reads (R5.1, R5.8, R11.1). -->
+        <createIndex tableName="worker_payouts" indexName="ix_worker_payouts_worker">
+            <column name="worker_id"/>
+        </createIndex>
+
+        <!-- Amount invariants (R1.1, R4.4) + period invariant (R1.1, R4.5), enforced at the DB
+             level in addition to the service. amount / suggested_amount / advance_applied are
+             non-negative; period_to must not precede period_from. -->
+        <sql>
+            ALTER TABLE worker_payouts
+                ADD CONSTRAINT ck_worker_payouts_amount_non_negative CHECK (amount &gt;= 0);
+            ALTER TABLE worker_payouts
+                ADD CONSTRAINT ck_worker_payouts_suggested_amount_non_negative CHECK (suggested_amount &gt;= 0);
+            ALTER TABLE worker_payouts
+                ADD CONSTRAINT ck_worker_payouts_advance_applied_non_negative CHECK (advance_applied &gt;= 0);
+            ALTER TABLE worker_payouts
+                ADD CONSTRAINT ck_worker_payouts_period_order CHECK (period_to &gt;= period_from);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE worker_payouts DROP CONSTRAINT IF EXISTS ck_worker_payouts_amount_non_negative;
+                ALTER TABLE worker_payouts DROP CONSTRAINT IF EXISTS ck_worker_payouts_suggested_amount_non_negative;
+                ALTER TABLE worker_payouts DROP CONSTRAINT IF EXISTS ck_worker_payouts_advance_applied_non_negative;
+                ALTER TABLE worker_payouts DROP CONSTRAINT IF EXISTS ck_worker_payouts_period_order;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

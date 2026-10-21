@@ -768,4 +768,38 @@
          against an already-seeded database insert nothing. Project-scope is enforced in
          AmendmentService (getProjectIdPath() -> "project.id"). Registered LAST, after 178. -->
     <include file="database_files/changesets/179-seed-amendments-resource.xml"/>
+    <!-- FOR-06-11 (R1.1, R1.3, R4.5): worker_payouts — the project-scoped WorkerPayout persistence
+         root (the money-OUT record a FINANCIER/MANAGER/ADMIN issues to pay a worker for the work
+         performed/to-be-performed on an ACTIVE/COMPLETED project; the counterpart of the FOR-06-07
+         client payment). project_id FK -> projects ON DELETE CASCADE (drives the project-scope
+         filter, getProjectIdPath = "project.id"); worker_id BIGINT NOT NULL FK -> users (RESTRICT);
+         period_from/period_to DATE NOT NULL with CHECK period_to >= period_from (R4.5); amount /
+         suggested_amount NUMERIC(19,2) NOT NULL CHECK >= 0 (suggested_amount a creation snapshot,
+         amount its overridable value, R1.4/R4.4); advance_applied NUMERIC(19,2) NOT NULL DEFAULT 0
+         CHECK >= 0 (the credit offset on a regular payout, 0 for an advance, R5.5/R5.6);
+         payment_channel VARCHAR(16) NOT NULL (Payment_Channel BANK_TRANSFER/CASH, R2.1); status
+         VARCHAR(16) NOT NULL DEFAULT 'PLANNED' (Payout_Status PLANNED/PAID, PAID terminal, R7);
+         is_advance BOOLEAN NOT NULL (derived from period_to vs creation date, R5.3); paid_at
+         TIMESTAMPTZ NULL (set on mark-paid, R7.1); note TEXT NULL; audit cols. No name_ru/name_pl
+         (transactional, R8.1). Consumes FOR-06-10 WorkerCostService verbatim — no cost arithmetic
+         of its own. Guarded by NOT tableExists + MARK_RAN. Registered LAST, after 179. -->
+    <include file="database_files/changesets/180-create-worker-payouts.xml"/>
+    <!-- FOR-06-11 (R1.3, R6.1): the paid-by marker on the FOR-06-01 work_report_rooms report line
+         (changeset 164). Adds a nullable paid_by_payout_id BIGINT + FK -> worker_payouts(id)
+         (changeset 180) ON DELETE SET NULL — a line is PAID iff the FK is set, PAYABLE iff null.
+         The FK is set on every covered unpaid APPROVED line within a regular payout's create
+         transaction and cleared when that PLANNED payout is deleted; ON DELETE SET NULL is a DB-level
+         safety net (R6.3). No new WorkReport status, no FOR-06-01 state-machine change (R6.1). No
+         backfill (every existing line stays NULL). Idempotent via NOT columnExists + MARK_RAN.
+         Registered LAST, after 180 (the FK target table). -->
+    <include file="database_files/changesets/181-add-work-report-room-paid-by-payout.xml"/>
+    <!-- FOR-06-11 (R10.1, R10.3, R10.4; entity-creation-rules steps 1-2): seed the project-scoped
+         PAYROLL ABAC resource + its per-role matrix. ChangeSet A inserts the PAYROLL resource row
+         (name/description PL+RU); ChangeSet B grants ADMIN / MANAGER / FINANCIER full CRUD and FOREMAN
+         READ only — CLIENT and WORKER are deny-by-default (no grant). Follows the
+         017-seed-users-resource.xml / 175-seed-payments-resource.xml two-changeSet resource+grant
+         pattern; both changeSets idempotent via onFail="MARK_RAN" COUNT(*)=0 preconditions + per-row
+         NOT EXISTS self-guards. The @PermissionResource("PAYROLL") WorkerPayoutController is verified
+         against this seed by PermissionAnnotationValidator at startup. Registered LAST, after 181. -->
+    <include file="database_files/changesets/182-seed-payroll-resource.xml"/>
 </databaseChangeLog>

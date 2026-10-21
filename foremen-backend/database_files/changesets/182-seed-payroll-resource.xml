@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-11 (R10.1, R10.3, R10.4; entity-creation-rules steps 1-2; design §Security/ABAC seed):
+         seed the project-scoped PAYROLL ABAC resource + its per-role grants. The resource is
+         project-scoped; the controller carries @PermissionResource("PAYROLL") and WorkerPayoutService
+         implements ProjectScopedService with getProjectIdPath() = "project.id", so LIST reads are
+         automatically project-filtered. The (own)-style scoping in the matrix below is NOT expressed
+         in the ABAC matrix itself — every grant sits on top of the project-membership filter enforced
+         server-side by ProjectScopedService, so the seed grants the full operation set per role and
+         ownership restricts the reachable rows to the caller's projects (R10.5).
+
+         Matrix (R10.4):
+           ADMIN     -> CREATE, READ, UPDATE, DELETE  (matrix completeness; evaluator bypasses ADMIN)
+           MANAGER   -> CREATE, READ, UPDATE, DELETE  (issue, mark paid = UPDATE, delete-planned = DELETE)
+           FINANCIER -> CREATE, READ, UPDATE, DELETE  (issue, mark paid = UPDATE, delete-planned = DELETE)
+           FOREMAN   -> READ                          (visibility into the project's payouts; no issuing)
+           CLIENT    -> deny-by-default (no grant; see commented placeholder below)
+           WORKER    -> deny-by-default (no grant; see commented placeholder below)
+
+         Follows the 017-seed-users-resource.xml / 175-seed-payments-resource.xml two-changeSet
+         resource+grant pattern. Every changeSet is idempotent via an onFail="MARK_RAN" COUNT(*)=0
+         precondition AND a per-row NOT EXISTS self-guard, so a re-run against an already-seeded
+         database inserts nothing new. Depends on the resources/roles/operations tables (002/003/004).
+         Registered LAST in changelog.xml, after 181. -->
+
+    <!-- ChangeSet A: Seed PAYROLL resource into resources table -->
+    <changeSet id="182-seed-payroll-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PAYROLL'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="PAYROLL"/>
+            <column name="name_ru" value="Расчёт ЗП"/>
+            <column name="name_pl" value="Rozliczenie wynagrodzeń"/>
+            <column name="description_ru" value="Выплаты работникам по проекту: расчёт, авансы и отметка об оплате"/>
+            <column name="description_pl" value="Wypłaty dla pracowników w projekcie: rozliczenie, zaliczki i oznaczanie jako opłacone"/>
+        </insert>
+    </changeSet>
+
+    <!-- ChangeSet B: Seed the PAYROLL role matrix. ADMIN / MANAGER / FINANCIER -> full CRUD;
+         FOREMAN -> READ only. Role-resource rows and operation rows are both self-guarded by a
+         per-row NOT EXISTS so the changeSet is safe to re-run. -->
+    <changeSet id="182-seed-payroll-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE res.code = 'PAYROLL'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- role_resources rows for every granted role on PAYROLL (self-guarded) -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'FINANCIER', 'FOREMAN')
+              AND res.code = 'PAYROLL'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  WHERE rr.role_id = r.id AND rr.resource_id = res.id
+              );
+        </sql>
+
+        <!-- ADMIN / MANAGER / FINANCIER: full CRUD on PAYROLL (self-guarded) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'FINANCIER')
+              AND res.code = 'PAYROLL'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FOREMAN: READ only on PAYROLL (self-guarded) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FOREMAN'
+              AND res.code = 'PAYROLL'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+    <!-- CLIENT and WORKER are intentionally omitted (deny-by-default): payroll is internal admin
+         bookkeeping performed by FINANCIER / MANAGER / ADMIN with no cross-role handoff (R9.1), so a
+         CLIENT never sees worker payouts and a WORKER never issues or views them. No role_resources /
+         role_resource_operations row is seeded for either role + PAYROLL. Left as commented
+         placeholders so the deny-by-default decision is explicit:
+
+    <changeSet id="182-seed-payroll-permissions-client" author="foremen">
+        ... intentionally NOT seeded: CLIENT has no PAYROLL grant in this spec ...
+    </changeSet>
+
+    <changeSet id="182-seed-payroll-permissions-worker" author="foremen">
+        ... intentionally NOT seeded: WORKER has no access to PAYROLL ...
+    </changeSet>
+    -->
+
+</databaseChangeLog>

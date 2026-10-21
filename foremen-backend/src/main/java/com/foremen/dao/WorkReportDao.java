@@ -126,4 +126,43 @@ public interface WorkReportDao extends AdminDao<WorkReportEntity, Long> {
             + "WHERE r.project.id = :projectId AND r.status = com.foremen.dao.model.WorkReportStatus.APPROVED "
             + "ORDER BY r.workItem.id, r.id")
     List<WorkReportEntity> findApprovedByProjectWithWorkItemAndWorker(@Param("projectId") Long projectId);
+
+    /**
+     * FOR-06-11 (R3.1, R6.2, design §PayoutSuggestionService) — the one worker's {@code APPROVED}
+     * work reports on a project whose performed interval {@code [performedFrom, performedTo]}
+     * overlaps the payout period {@code [from, to]}, with the report's {@link WorkReportEntity#getWorkItem()
+     * work item}, {@link WorkReportEntity#getWorker() worker}, and each of its
+     * {@link WorkReportEntity#getRooms() room lines} (plus each line's {@code room} and
+     * {@code paidByPayout}) fetch-joined, so the payout-suggestion builder folds the per-line
+     * {@code Cost_Value} and reads each line's paid-by FK without an N+1 over the LAZY associations.
+     *
+     * <p>Only {@code APPROVED} reports are returned (payroll never pays an unapproved line). A line
+     * is <b>unpaid</b> iff its {@code paidByPayout} FK is null — the caller filters the fetched room
+     * lines on that FK (the fetch keeps the whole report graph, so the filter is in memory and the
+     * query stays a single round-trip). The standard half-open overlap predicate
+     * {@code performedFrom <= to AND performedTo >= from} selects every report touching the window.
+     * {@code DISTINCT} collapses the row multiplication from the {@code rooms} fetch join. Ordered by
+     * {@code (workItem, report id)} for a stable breakdown.
+     *
+     * @param projectId the owning project id
+     * @param workerId  the worker whose approved reports are returned
+     * @param from      the payout period start (inclusive)
+     * @param to        the payout period end (inclusive)
+     * @return the worker's APPROVED, in-period reports with the graph fetched, empty when none
+     */
+    @Query("SELECT DISTINCT r FROM WorkReportEntity r "
+            + "JOIN FETCH r.workItem "
+            + "JOIN FETCH r.worker "
+            + "LEFT JOIN FETCH r.rooms rr "
+            + "LEFT JOIN FETCH rr.room "
+            + "LEFT JOIN FETCH rr.paidByPayout "
+            + "WHERE r.project.id = :projectId "
+            + "AND r.worker.id = :workerId "
+            + "AND r.status = com.foremen.dao.model.WorkReportStatus.APPROVED "
+            + "AND r.performedFrom <= :to AND r.performedTo >= :from "
+            + "ORDER BY r.workItem.id, r.id")
+    List<WorkReportEntity> findApprovedInPeriodWithRooms(@Param("projectId") Long projectId,
+                                                         @Param("workerId") Long workerId,
+                                                         @Param("from") java.time.LocalDate from,
+                                                         @Param("to") java.time.LocalDate to);
 }

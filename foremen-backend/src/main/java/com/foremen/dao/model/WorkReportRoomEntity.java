@@ -58,4 +58,16 @@ public class WorkReportRoomEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "input_mode", nullable = false)
     private WorkReportInputMode inputMode;
+
+    /**
+     * FOR-06-11 (R6.1): the regular {@link WorkerPayoutEntity} that paid this report line, or
+     * {@code null} when payable. A line is <b>paid</b> iff this FK is set and <b>payable</b> iff it
+     * is null. Set/cleared <b>only</b> by payout create/delete (R6.5) — never mutated through the
+     * FOR-06-01 work-reporting surface. No new {@code WorkReport} status is introduced and the
+     * FOR-06-01 status machine is unchanged. Maps {@code work_report_rooms.paid_by_payout_id}
+     * (changeset {@code 181}); {@code ON DELETE SET NULL} at the DB level is only a safety net.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "paid_by_payout_id")
+    private WorkerPayoutEntity paidByPayout;
 }
