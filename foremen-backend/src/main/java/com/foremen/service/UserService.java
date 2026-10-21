@@ -8,6 +8,7 @@ import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkerKind;
+import com.foremen.config.persistence.LocaleAttributeConverter;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.UserServiceExtendedModel;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @Service
@@ -32,7 +34,6 @@ import java.util.Set;
 public class UserService implements AdminService<
         UserServiceModel, UserServiceExtendedModel, UserEntity, Long> {
 
-    private static final Set<String> SUPPORTED_LOCALES = Set.of("ru", "pl");
     private static final String ADMIN_ROLE_CODE = "ADMIN";
     private static final String CLIENT_ROLE_CODE = "CLIENT";
     private static final String WORKER_ROLE_CODE = "WORKER";
@@ -292,7 +293,7 @@ public class UserService implements AdminService<
         user.setActive(true);                 // Req 13.1 — active = true
         user.setPasswordHash(null);           // Req 13.1 — no password, cannot authenticate
         user.setStatus(UserStatus.INVITED);   // Req 13.1 — "not invited": no token issued, no email
-        user.setLocale("ru");                 // users.locale is NOT NULL; the worker form carries none
+        user.setLocale(LocaleAttributeConverter.RU); // users.locale is NOT NULL; the worker form carries none
         user.setWorkerKind(workerKind);       // D8 — PERSON / COMPANY
         user.setContactPerson(contactPerson); // D8 — COMPANY only, else null
         user.setNip(nip);                     // D8 — COMPANY only, else null
@@ -339,8 +340,20 @@ public class UserService implements AdminService<
         });
     }
 
+    /**
+     * Validates the inbound locale carried on the user DTO/service model. The wire contract keeps
+     * the locale as the lowercase language-tag {@code String} ({@code "pl"}/{@code "ru"}); a
+     * {@code null} locale is permitted (the entity defaults apply). A non-null, non-blank value is
+     * accepted only when it parses to one of the application's supported locales (PL/RU), reusing
+     * {@link LocaleAttributeConverter#isSupported(Locale)} as the single source of truth
+     * (FOR-06-12 R12.4). Anything else is rejected with 400 {@code error.user.locale.invalid}.
+     */
     private void validateLocale(String locale) {
-        if (locale != null && !SUPPORTED_LOCALES.contains(locale)) {
+        if (locale == null) {
+            return;
+        }
+        Locale parsed = Locale.forLanguageTag(locale.trim());
+        if (!LocaleAttributeConverter.isSupported(parsed)) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.user.locale.invalid", locale);
         }
     }

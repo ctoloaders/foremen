@@ -471,7 +471,7 @@ class WorkerCostServiceIntegrationTest {
         user.setEmail(key + "@example.com");
         user.setRole(role);
         user.setActive(true);
-        user.setLocale("pl");
+        user.setLocale(java.util.Locale.forLanguageTag("pl"));
         return userDao.save(user);
     }
 

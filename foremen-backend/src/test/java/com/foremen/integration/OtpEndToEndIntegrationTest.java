@@ -314,7 +314,7 @@ class OtpEndToEndIntegrationTest {
         user.setRole(clientRole);
         user.setStatus(UserStatus.ACTIVE);
         user.setActive(true);
-        user.setLocale("ru");
+        user.setLocale(java.util.Locale.forLanguageTag("ru"));
         return userDao.save(user);
     }
 

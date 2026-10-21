@@ -156,7 +156,7 @@ class MeConditionalRequestIntegrationTest {
         user.setRole(workerRole);
         user.setStatus(UserStatus.ACTIVE);
         user.setActive(true);
-        user.setLocale("ru");
+        user.setLocale(java.util.Locale.forLanguageTag("ru"));
         user.setPasswordHash(passwordEncoder.encode(KNOWN_PASSWORD));
         seededUserId = userDao.save(user).getId();
     }

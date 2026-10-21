@@ -434,7 +434,7 @@ class ProjectMemberFilterIT {
             user.setRole(attached);
             user.setActive(true);
             user.setStatus(UserStatus.INVITED);
-            user.setLocale("ru");
+            user.setLocale(java.util.Locale.forLanguageTag("ru"));
             entityManager.persist(user);
             entityManager.flush();
             return user;

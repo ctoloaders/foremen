@@ -73,6 +73,23 @@ foremen:
       credentials:
         path: ${FOREMEN_OCR_LLM_CREDENTIALS_PATH:}
         location: ${FOREMEN_OCR_LLM_CREDENTIALS_LOCATION:}
+  translation:
+    # Backend client<->staff message translation service (FOR-06-12). All values from environment;
+    # no secrets committed. When enabled is false (or absent), the DisabledMessageTranslationService
+    # fallback is wired and the application starts and runs normally without the Gemini provider
+    # configured (R10.3) — messages stay available in their original locale only. Credentials and the
+    # LLM model are read from here, never hardcoded (R10.2), mirroring foremen.ocr.
+    enabled: ${FOREMEN_TRANSLATION_ENABLED:false}
+    # The Google LLM (Gemini) model used for translation + locale classification.
+    model: ${FOREMEN_TRANSLATION_MODEL:gemini-3.8-flash}
+    # Enterprise (Vertex) backend: project + location + ADC/credentials. Leave project/location
+    # blank and set api-key to use the Gemini Developer API backend instead.
+    project: ${FOREMEN_TRANSLATION_PROJECT:}
+    location: ${FOREMEN_TRANSLATION_LOCATION:}
+    api-key: ${FOREMEN_TRANSLATION_API_KEY:}
+    credentials:
+      path: ${FOREMEN_TRANSLATION_CREDENTIALS_PATH:}
+      location: ${FOREMEN_TRANSLATION_CREDENTIALS_LOCATION:}
   google-places:
     # When enabled, api-key must be set or application startup fails fast.
     enabled: ${GOOGLE_PLACES_ENABLED:false}

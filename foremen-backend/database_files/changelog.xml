@@ -802,4 +802,38 @@
          NOT EXISTS self-guards. The @PermissionResource("PAYROLL") WorkerPayoutController is verified
          against this seed by PermissionAnnotationValidator at startup. Registered LAST, after 181. -->
     <include file="database_files/changesets/182-seed-payroll-resource.xml"/>
+    <!-- FOR-06-12 (R1.1, R1.4): the ClientMessage persistence root — client_messages, the
+         project-scoped aggregate for one message in the per-project client<->staff conversation.
+         project_id FK -> projects ON DELETE CASCADE (owner; drives the ProjectScopedService
+         project filter), author_id FK -> users RESTRICT, author_side VARCHAR(16) (AuthorSide
+         CLIENT/STAFF), original_text TEXT NOT NULL, original_locale VARCHAR(35) NOT NULL (lowercase
+         language tag via LocaleAttributeConverter), read_at TIMESTAMPTZ NULL + read_by_id FK -> users
+         RESTRICT NULL (first-read-wins), audit cols; index on project_id. Per-locale translations and
+         attachments live in the child tables 184/185 (ON DELETE CASCADE from this root). Idempotent
+         via NOT tableExists + MARK_RAN. Registered LAST, after 182. -->
+    <include file="database_files/changesets/183-create-client-messages.xml"/>
+    <!-- FOR-06-12 (R1.2, R1.6): the per-locale translation child of a ClientMessage —
+         client_message_translations. message_id FK -> client_messages ON DELETE CASCADE (owner;
+         cascaded transitively from the project via changeset 183), locale VARCHAR(35) NOT NULL
+         (lowercase language tag via LocaleAttributeConverter), text TEXT NOT NULL, machine BOOLEAN
+         NOT NULL (false = original-locale mirror, true = auto-translation), audit cols; UNIQUE
+         (message_id, locale) so a message carries at most one text per locale. Idempotent via NOT
+         tableExists + MARK_RAN. Registered after 183. -->
+    <include file="database_files/changesets/184-create-client-message-translations.xml"/>
+    <!-- FOR-06-12 (R1.3, R1.6): the attachment child of a ClientMessage — client_message_media.
+         message_id FK -> client_messages ON DELETE CASCADE (owner; cascaded transitively from the
+         project via changeset 183), file_name VARCHAR(255) NOT NULL, content_type VARCHAR(128) NOT
+         NULL, size_bytes BIGINT NOT NULL, storage_uri VARCHAR(512) NOT NULL (object storage,
+         ImageStorage / FOR-04-17), kind VARCHAR(24) NOT NULL (MediaKind), uploaded_by_id FK -> users
+         RESTRICT NOT NULL, audit cols. Metadata-only, mirroring document_media (144). Idempotent via
+         NOT tableExists + MARK_RAN. Registered after 184. -->
+    <include file="database_files/changesets/185-create-client-message-media.xml"/>
+    <!-- FOR-06-12 (R8.1, R8.2, R8.4): seed the project-scoped CLIENT_MESSAGES ABAC resource + its
+         per-role grants (ADMIN CRUD; MANAGER CREATE/READ/UPDATE; CLIENT CREATE/READ; FOREMAN /
+         FINANCIER / ESTIMATOR READ; WORKER deny-by-default). Two-changeSet resource+grant pattern
+         (017/158/175), idempotent via onFail="MARK_RAN" COUNT(*)=0 preconditions + per-row NOT
+         EXISTS self-guards. The resource row MUST exist so PermissionAnnotationValidator passes at
+         startup for ClientMessageController (@PermissionResource("CLIENT_MESSAGES")). Registered
+         LAST, after 185. -->
+    <include file="database_files/changesets/186-seed-client-messages-resource.xml"/>
 </databaseChangeLog>

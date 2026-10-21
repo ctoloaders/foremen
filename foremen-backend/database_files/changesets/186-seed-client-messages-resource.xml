@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-06-12 (R8.1, R8.2, R8.4; entity-creation-rules steps 1-2; design §ABAC seed): seed the
+         project-scoped CLIENT_MESSAGES ABAC resource + its per-role grants. The resource is
+         project-scoped; ClientMessageController carries @PermissionResource("CLIENT_MESSAGES") and
+         ClientMessageService implements ProjectScopedService with getProjectIdPath() = "project.id".
+         Every grant below sits on top of the project-membership filter enforced server-side by
+         ProjectScopedService, so the seed grants the full operation set per role and ownership
+         restricts the reachable rows to the caller's projects. This resource row MUST exist so
+         PermissionAnnotationValidator passes at application startup (R8.4).
+
+         Matrix (R8.1, R8.2):
+           ADMIN     -> CREATE, READ, UPDATE, DELETE  (matrix completeness; evaluator bypasses ADMIN)
+           MANAGER   -> CREATE, READ, UPDATE          (manager posts/edits, marks read)
+           CLIENT    -> CREATE, READ                  (client posts + reads own project thread)
+           FOREMAN   -> READ                          (reads the project thread)
+           FINANCIER -> READ                          (admin-staff visibility)
+           ESTIMATOR -> READ                          (admin-staff visibility)
+           WORKER    -> deny-by-default (no grant; see commented placeholder below)
+
+         Follows the 017-seed-users-resource.xml / 158-seed-*/ 175-seed-payments-resource.xml
+         two-changeSet resource+grant pattern. Every changeSet is idempotent via an
+         onFail="MARK_RAN" COUNT(*)=0 precondition AND a per-row NOT EXISTS self-guard, so a re-run
+         against an already-seeded database inserts nothing new. Depends on the resources/roles/
+         operations tables (002/003/004) plus the CLIENT (006) and ESTIMATOR (136) role seeds.
+         Registered LAST in changelog.xml, after 185. -->
+
+    <!-- ChangeSet A: Seed CLIENT_MESSAGES resource into resources table -->
+    <changeSet id="186-seed-client-messages-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'CLIENT_MESSAGES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="CLIENT_MESSAGES"/>
+            <column name="name_ru" value="Общение с клиентом"/>
+            <column name="name_pl" value="Komunikacja z klientem"/>
+            <column name="description_ru" value="Переписка клиента и сотрудников по проекту"/>
+            <column name="description_pl" value="Korespondencja klienta i pracowników w ramach projektu"/>
+        </insert>
+    </changeSet>
+
+    <!-- ChangeSet B: Seed the CLIENT_MESSAGES role matrix. ADMIN -> full CRUD; MANAGER ->
+         CREATE/READ/UPDATE; CLIENT -> CREATE/READ; FOREMAN / FINANCIER / ESTIMATOR -> READ only.
+         Role-resource rows and operation rows are both self-guarded by a per-row NOT EXISTS so the
+         changeSet is safe to re-run. -->
+    <changeSet id="186-seed-client-messages-permissions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE res.code = 'CLIENT_MESSAGES'
+            </sqlCheck>
+        </preConditions>
+
+        <!-- role_resources rows for every granted role on CLIENT_MESSAGES (self-guarded) -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code IN ('ADMIN', 'MANAGER', 'CLIENT', 'FOREMAN', 'FINANCIER', 'ESTIMATOR')
+              AND res.code = 'CLIENT_MESSAGES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  WHERE rr.role_id = r.id AND rr.resource_id = res.id
+              );
+        </sql>
+
+        <!-- ADMIN: full CRUD on CLIENT_MESSAGES (self-guarded) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN'
+              AND res.code = 'CLIENT_MESSAGES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER: CREATE / READ / UPDATE on CLIENT_MESSAGES (self-guarded) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE')
+            WHERE r.code = 'MANAGER'
+              AND res.code = 'CLIENT_MESSAGES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- CLIENT: CREATE / READ on CLIENT_MESSAGES (self-guarded) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ')
+            WHERE r.code = 'CLIENT'
+              AND res.code = 'CLIENT_MESSAGES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FOREMAN / FINANCIER / ESTIMATOR: READ only on CLIENT_MESSAGES (self-guarded) -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code IN ('FOREMAN', 'FINANCIER', 'ESTIMATOR')
+              AND res.code = 'CLIENT_MESSAGES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+    <!-- WORKER is intentionally omitted (deny-by-default): a WORKER records work on site but never
+         participates in the client conversation, so no role_resources / role_resource_operations row
+         is seeded for WORKER + CLIENT_MESSAGES. Left as a commented placeholder so the
+         deny-by-default decision is explicit:
+
+    <changeSet id="186-seed-client-messages-permissions-worker" author="foremen">
+        ... intentionally NOT seeded: WORKER has no access to CLIENT_MESSAGES ...
+    </changeSet>
+    -->
+
+</databaseChangeLog>

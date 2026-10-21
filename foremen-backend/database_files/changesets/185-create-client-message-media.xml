@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-12 (Requirements 1.3, 1.6): the attachments of a ClientMessage — the child table
+        client_message_media (design §Data Models / ClientMessageMediaEntity). Each row is one
+        attachment uploaded with a message, stored in object storage (ImageStorage / FOR-04-17)
+        with only metadata + kind in the DB, mirroring DocumentMediaEntity (changeset 144). The
+        media service validates content type and per-kind size caps on upload and resolves a signed
+        download URL per attachment.
+
+        Columns mirror ClientMessageMediaEntity:
+          - id             : BIGSERIAL PK.
+          - message_id     : owner FK to client_messages, NOT NULL; ON DELETE CASCADE so deleting a
+                             message (itself cascaded from its project, changeset 183) removes its
+                             attachments.
+          - file_name      : VARCHAR(255) NOT NULL; the uploaded file name (R1.3).
+          - content_type   : VARCHAR(128) NOT NULL; validated on upload (R4).
+          - size_bytes     : BIGINT NOT NULL; validated against the per-kind cap on upload (R4).
+          - storage_uri    : VARCHAR(512) NOT NULL; object-storage key (ImageStorage, FOR-04-17).
+          - kind           : VARCHAR(24) NOT NULL; the MediaKind enum (image/document/video)
+                             derived from the content type (R1.3, R4).
+          - uploaded_by_id : user FK, NOT NULL; who uploaded the attachment. RESTRICT — keep the
+                             uploader row (uploaded_by_id is NOT NULL).
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN, so a re-run against an
+        already-migrated database makes no schema change. Registered after 184 in changelog.xml.
+    -->
+
+    <changeSet id="185-create-client-message-media" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="client_message_media"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="client_message_media">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a message removes its attachments. -->
+            <column name="message_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The uploaded file name (R1.3). -->
+            <column name="file_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MIME content type, validated on upload (R4). -->
+            <column name="content_type" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Size in bytes, validated against the per-kind cap on upload (R4). -->
+            <column name="size_bytes" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Object-storage key (ImageStorage, FOR-04-17). -->
+            <column name="storage_uri" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- MediaKind enum (image/document/video) derived from the content type (R1.3, R4). -->
+            <column name="kind" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Who uploaded the attachment. -->
+            <column name="uploaded_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a message removes its attachment rows. -->
+        <addForeignKeyConstraint
+            constraintName="fk_client_message_media_message"
+            baseTableName="client_message_media"
+            baseColumnNames="message_id"
+            referencedTableName="client_messages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Uploader provenance; keep the user row (uploaded_by_id is NOT NULL). -->
+        <addForeignKeyConstraint
+            constraintName="fk_client_message_media_uploaded_by"
+            baseTableName="client_message_media"
+            baseColumnNames="uploaded_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>

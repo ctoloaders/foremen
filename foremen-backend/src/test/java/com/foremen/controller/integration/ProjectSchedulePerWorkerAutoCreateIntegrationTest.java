@@ -403,7 +403,7 @@ class ProjectSchedulePerWorkerAutoCreateIntegrationTest {
         user.setRole(role);
         user.setActive(true);
         user.setStatus(UserStatus.ACTIVE);
-        user.setLocale("pl");
+        user.setLocale(java.util.Locale.forLanguageTag("pl"));
         user = userDao.save(user);
         return user.getId();
     }
@@ -481,7 +481,7 @@ class ProjectSchedulePerWorkerAutoCreateIntegrationTest {
         crew.setRole(ensureRole(WORKER));
         crew.setActive(true);
         crew.setStatus(UserStatus.ACTIVE);
-        crew.setLocale("pl");
+        crew.setLocale(java.util.Locale.forLanguageTag("pl"));
         crew = userDao.save(crew);
 
         ProjectMemberEntity crewMember = new ProjectMemberEntity();

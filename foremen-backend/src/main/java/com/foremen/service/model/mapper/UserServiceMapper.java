@@ -53,11 +53,13 @@ public abstract class UserServiceMapper
     @Override
     @Mapping(target = "roleId", source = "role.id")
     @Mapping(target = "roleName", expression = "java(source.getRole() != null ? source.getRole().getNameRU() : null)")
+    @Mapping(target = "locale", expression = "java(localeToTag(source.getLocale()))")
     public abstract UserServiceModel toServiceModel(UserEntity source);
 
     @Override
     @Mapping(target = "roleId", source = "role.id")
     @Mapping(target = "roleName", expression = "java(source.getRole() != null ? source.getRole().getNameRU() : null)")
+    @Mapping(target = "locale", expression = "java(localeToTag(source.getLocale()))")
     @Mapping(target = "workCategoryIds", ignore = true)
     @Mapping(target = "workCategories", expression = "java(toWorkCategoryRefs(source))")
     public abstract UserServiceExtendedModel toServiceExtendedModel(UserEntity source);
@@ -65,14 +67,41 @@ public abstract class UserServiceMapper
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "locale", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
     public abstract UserEntity toCreateDaoModel(UserServiceExtendedModel source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "role", ignore = true)
+    @Mapping(target = "locale", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
     public abstract void updateFields(UserServiceExtendedModel source, @MappingTarget UserEntity target);
+
+    /**
+     * Applies the inbound {@code String} locale (the wire contract's lowercase language tag) onto
+     * the {@link UserEntity} as a {@link java.util.Locale}, keeping the entity side on the migrated
+     * {@code Locale} type while the DTO/service-model side stays a {@code String} so the external
+     * API shape is unchanged (FOR-06-12 R12.5). A {@code null}/blank value leaves the entity's
+     * existing locale untouched (partial-update semantics, consistent with {@code updateFields});
+     * on create the entity default (RU) then applies.
+     */
+    @AfterMapping
+    protected void applyLocale(UserServiceExtendedModel source, @MappingTarget UserEntity target) {
+        if (source.locale() != null && !source.locale().isBlank()) {
+            target.setLocale(java.util.Locale.forLanguageTag(source.locale().trim()));
+        }
+    }
+
+    /**
+     * Renders an entity {@link java.util.Locale} back to the wire-contract lowercase language-tag
+     * {@code String} ({@code "pl"}/{@code "ru"}), reusing the
+     * {@code LocaleAttributeConverter} write rule so the read side matches what is stored.
+     * {@code null} stays {@code null}.
+     */
+    protected static String localeToTag(java.util.Locale locale) {
+        return locale == null ? null : locale.toLanguageTag().toLowerCase(java.util.Locale.ROOT);
+    }
 
     /**
      * Resolves {@code roleId} into a managed {@link RoleEntity} and assigns it to the target.

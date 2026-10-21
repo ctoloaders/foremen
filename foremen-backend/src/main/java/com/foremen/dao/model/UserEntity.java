@@ -1,5 +1,6 @@
 package com.foremen.dao.model;
 
+import com.foremen.config.persistence.LocaleAttributeConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -9,6 +10,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Entity
@@ -41,8 +43,16 @@ public class UserEntity extends BaseEntity {
     @Column(name = "status", length = 20, nullable = false)
     private UserStatus status = UserStatus.INVITED;
 
+    /**
+     * FOR-06-12 (R12.3, R12.5) — the user's preferred locale, migrated {@code String → Locale}
+     * backwards-compatibly: the {@code users.locale} {@code VARCHAR} column keeps its existing
+     * lowercase {@code "pl"}/{@code "ru"} values, round-tripped unchanged by
+     * {@link LocaleAttributeConverter} (no DB migration). A {@code null}/blank/unsupported stored
+     * value resolves to PL on read. The default is RU, preserving the previous {@code "ru"} default.
+     */
+    @Convert(converter = LocaleAttributeConverter.class)
     @Column(length = 5, nullable = false)
-    private String locale = "ru";
+    private Locale locale = LocaleAttributeConverter.RU;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")

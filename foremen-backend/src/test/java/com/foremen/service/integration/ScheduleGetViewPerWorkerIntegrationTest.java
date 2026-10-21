@@ -372,7 +372,7 @@ class ScheduleGetViewPerWorkerIntegrationTest {
                 user.setRole(role);
                 user.setActive(true);
                 user.setStatus(UserStatus.ACTIVE);
-                user.setLocale("ru");
+                user.setLocale(java.util.Locale.forLanguageTag("ru"));
                 entityManager.persist(user);
 
                 ProjectMemberEntity member = new ProjectMemberEntity();

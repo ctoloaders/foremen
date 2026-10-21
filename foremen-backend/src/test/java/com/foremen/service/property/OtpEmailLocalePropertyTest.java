@@ -1,11 +1,13 @@
 package com.foremen.service.property;
 
 // Feature: FOR-03-05-otp-client-auth, Property 15: Email locale resolution falls back to Polish
+// FOR-06-12 (R12.4): adapted to the Locale-typed EmailLocaleResolver after the UserEntity.locale
+// String -> Locale migration. Stored-string normalization now lives in LocaleAttributeConverter;
+// this resolver operates on the already-resolved Locale.
 
 import com.foremen.service.EmailLocaleResolver;
 import net.jqwik.api.Arbitraries;
 import net.jqwik.api.Arbitrary;
-import net.jqwik.api.Combinators;
 import net.jqwik.api.ForAll;
 import net.jqwik.api.Property;
 import net.jqwik.api.Provide;
@@ -18,79 +20,69 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Property 15: Email locale resolution falls back to Polish (OTP email dispatch).
  *
- * <p>For all stored user locale strings, the resolved email locale SHALL be RU when the string
- * equals {@code RU} (case-insensitively), PL when it equals {@code PL} (case-insensitively), and
- * PL for every other value including empty.
+ * <p>For all user {@link Locale} values, the resolved email locale SHALL be RU when the locale's
+ * language is Russian, and PL for every other value including {@code null} and unsupported locales.
  *
  * <p>The OTP mail sender ({@code ThymeleafOtpMailSender}) resolves the recipient locale through the
  * same shared {@link EmailLocaleResolver} used by the FOR-03-02 invitation mail stack, so this
  * property re-asserts the resolver contract in the OTP context.
  *
- * <p><b>Validates: Requirements 9.3</b>
+ * <p><b>Validates: Requirements 9.3, 12.4</b>
  */
 class OtpEmailLocalePropertyTest {
 
-    /** "RU" in any letter casing resolves to the Russian locale. */
+    /** A Russian-language locale resolves to the Russian locale. */
     @Property(tries = 100)
-    void ruInAnyCaseResolvesToRussian(@ForAll("ruVariants") String storedLocale) {
-        assertThat(EmailLocaleResolver.resolve(storedLocale)).isEqualTo(EmailLocaleResolver.RU);
+    void russianLanguageResolvesToRussian(@ForAll("ruLocales") Locale userLocale) {
+        assertThat(EmailLocaleResolver.resolve(userLocale)).isEqualTo(EmailLocaleResolver.RU);
     }
 
-    /** "PL" in any letter casing resolves to the Polish locale. */
+    /** A Polish-language locale resolves to the Polish locale. */
     @Property(tries = 100)
-    void plInAnyCaseResolvesToPolish(@ForAll("plVariants") String storedLocale) {
-        assertThat(EmailLocaleResolver.resolve(storedLocale)).isEqualTo(EmailLocaleResolver.PL);
+    void polishLanguageResolvesToPolish(@ForAll("plLocales") Locale userLocale) {
+        assertThat(EmailLocaleResolver.resolve(userLocale)).isEqualTo(EmailLocaleResolver.PL);
     }
 
-    /** Every value other than RU (including null, empty, whitespace, unsupported codes) falls back to PL. */
+    /** Every non-Russian locale (including null and unsupported languages) falls back to PL. */
     @Property(tries = 100)
-    void everyOtherValueFallsBackToPolish(@ForAll("nonRuLocales") @WithNull(0.2) String storedLocale) {
-        assertThat(EmailLocaleResolver.resolve(storedLocale)).isEqualTo(EmailLocaleResolver.PL);
+    void everyOtherLocaleFallsBackToPolish(@ForAll("nonRuLocales") @WithNull(0.2) Locale userLocale) {
+        assertThat(EmailLocaleResolver.resolve(userLocale)).isEqualTo(EmailLocaleResolver.PL);
     }
 
     /** Resolution is total: the result is always exactly one of the two supported locales. */
     @Property(tries = 100)
-    void resolutionIsAlwaysPlOrRu(@ForAll("anyLocaleString") @WithNull(0.15) String storedLocale) {
-        Locale resolved = EmailLocaleResolver.resolve(storedLocale);
+    void resolutionIsAlwaysPlOrRu(@ForAll("anyLocale") @WithNull(0.15) Locale userLocale) {
+        Locale resolved = EmailLocaleResolver.resolve(userLocale);
         assertThat(resolved).isIn(EmailLocaleResolver.PL, EmailLocaleResolver.RU);
     }
 
-    /** "RU" in arbitrary letter casing. */
+    /** Russian locales: plain {@code ru} plus regional variants. */
     @Provide
-    Arbitrary<String> ruVariants() {
-        return caseVariants("ru");
+    Arbitrary<Locale> ruLocales() {
+        return Arbitraries.of("ru", "ru-RU", "ru-BY", "ru-UA").map(Locale::forLanguageTag);
     }
 
-    /** "PL" in arbitrary letter casing. */
+    /** Polish locales: plain {@code pl} plus a regional variant. */
     @Provide
-    Arbitrary<String> plVariants() {
-        return caseVariants("pl");
+    Arbitrary<Locale> plLocales() {
+        return Arbitraries.of("pl", "pl-PL").map(Locale::forLanguageTag);
     }
 
-    private Arbitrary<String> caseVariants(String base) {
-        Arbitrary<Boolean> upper0 = Arbitraries.of(true, false);
-        Arbitrary<Boolean> upper1 = Arbitraries.of(true, false);
-        return Combinators.combine(upper0, upper1).as((u0, u1) -> {
-            char c0 = u0 ? Character.toUpperCase(base.charAt(0)) : Character.toLowerCase(base.charAt(0));
-            char c1 = u1 ? Character.toUpperCase(base.charAt(1)) : Character.toLowerCase(base.charAt(1));
-            return "" + c0 + c1;
-        });
+    /** Non-Russian locales: PL and a spread of unsupported languages. */
+    @Provide
+    Arbitrary<Locale> nonRuLocales() {
+        return Arbitraries.of("pl", "pl-PL", "en", "en-US", "de", "fr", "es", "uk")
+                .map(Locale::forLanguageTag);
     }
 
-    /** Non-RU strings: explicit codes plus arbitrary strings that do not equal "ru". */
+    /** Any locale including ru/pl and arbitrary language tags. */
     @Provide
-    Arbitrary<String> nonRuLocales() {
-        Arbitrary<String> fixed = Arbitraries.of("pl", "PL", "en", "EN", "de", "fr", "", "  ", "russian", "r", "rus");
-        Arbitrary<String> random = Arbitraries.strings().ofMaxLength(10)
-                .filter(s -> !s.trim().equalsIgnoreCase("ru"));
-        return Arbitraries.oneOf(fixed, random);
-    }
-
-    /** Any locale string including pl/PL/ru/RU/en/empty and arbitrary strings. */
-    @Provide
-    Arbitrary<String> anyLocaleString() {
-        Arbitrary<String> fixed = Arbitraries.of("pl", "PL", "ru", "RU", "en", "", "  Ru ", " pl ");
-        Arbitrary<String> random = Arbitraries.strings().ofMaxLength(12);
+    Arbitrary<Locale> anyLocale() {
+        Arbitrary<Locale> fixed =
+                Arbitraries.of("ru", "ru-RU", "pl", "pl-PL", "en", "de", "fr").map(Locale::forLanguageTag);
+        Arbitrary<Locale> random = Arbitraries.strings()
+                .withCharRange('a', 'z').ofMinLength(2).ofMaxLength(2)
+                .map(Locale::forLanguageTag);
         return Arbitraries.oneOf(fixed, random);
     }
 }

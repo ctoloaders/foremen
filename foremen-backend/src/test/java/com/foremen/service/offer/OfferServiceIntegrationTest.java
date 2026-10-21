@@ -523,7 +523,7 @@ class OfferServiceIntegrationTest {
             user.setRole(role);
             user.setActive(true);
             user.setStatus(UserStatus.ACTIVE);
-            user.setLocale("ru");
+            user.setLocale(java.util.Locale.forLanguageTag("ru"));
             user = userDao.save(user);
             return user.getId();
         });

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-12 (Requirements 1.1, 1.4): the ClientMessage persistence root — the
+        project-scoped aggregate anchoring a single message in the per-project client<->staff
+        conversation (design §Data Models / ClientMessageEntity). Its per-locale translation rows
+        live in the child table client_message_translations (changeset 184) and its attachments in
+        client_message_media (changeset 185).
+
+        Columns:
+          - id              : BIGSERIAL PK.
+          - project_id      : owner FK to projects, NOT NULL; ON DELETE CASCADE so deleting a
+                              project removes its conversation (and, transitively, each message's
+                              translations/media via their own cascades). Drives the
+                              ProjectScopedService project filter (getProjectIdPath() -> "project.id").
+          - author_id       : user FK, NOT NULL; who posted the message. RESTRICT — a user who
+                              authored a message cannot be hard-deleted while it exists.
+          - author_side     : VARCHAR(16) NOT NULL; the AuthorSide enum { CLIENT, STAFF } derived
+                              from the author's project role at post time (R1.1).
+          - original_text   : TEXT NOT NULL; the message as the author wrote it (R1.1).
+          - original_locale : VARCHAR(35) NOT NULL; the author's message locale as a lowercase
+                              language tag ("pl"/"ru"), persisted via LocaleAttributeConverter (R1.1,
+                              R12). Length 35 accommodates any java.util.Locale language tag.
+          - read_at         : TIMESTAMP WITH TIME ZONE, NULL; when the message was first read
+                              (first-read-wins, set once by the MANAGER, R1.4 / R5).
+          - read_by_id      : user FK, NULL; who first read the message. RESTRICT.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN, so a re-run against
+        an already-migrated database makes no schema change. Registered LAST in changelog.xml,
+        after 182.
+    -->
+
+    <changeSet id="183-create-client-messages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="client_messages"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="client_messages">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a project removes its conversation; drives the project-scope filter. -->
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Who posted the message. -->
+            <column name="author_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- AuthorSide enum { CLIENT, STAFF }, derived from the author's project role (R1.1). -->
+            <column name="author_side" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The message as the author wrote it (R1.1). -->
+            <column name="original_text" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Author locale as a lowercase language tag ("pl"/"ru") via LocaleAttributeConverter (R1.1, R12). -->
+            <column name="original_locale" type="VARCHAR(35)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- First-read timestamp (first-read-wins); nullable until read (R1.4 / R5). -->
+            <column name="read_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <!-- Who first read the message; nullable until read. -->
+            <column name="read_by_id" type="BIGINT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a project removes its messages (and cascades to translations/media). -->
+        <addForeignKeyConstraint
+            constraintName="fk_client_messages_project"
+            baseTableName="client_messages"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- Author FK: cannot hard-delete a user who authored a message. -->
+        <addForeignKeyConstraint
+            constraintName="fk_client_messages_author"
+            baseTableName="client_messages"
+            baseColumnNames="author_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- Reader FK (nullable): cannot hard-delete a user who first read a message. -->
+        <addForeignKeyConstraint
+            constraintName="fk_client_messages_read_by"
+            baseTableName="client_messages"
+            baseColumnNames="read_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <!-- The project-scoped thread load of a project's messages (ProjectScopedService filter). -->
+        <createIndex tableName="client_messages" indexName="ix_client_messages_project">
+            <column name="project_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

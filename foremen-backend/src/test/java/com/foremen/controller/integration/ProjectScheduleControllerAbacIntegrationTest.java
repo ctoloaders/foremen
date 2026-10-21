@@ -630,7 +630,7 @@ class ProjectScheduleControllerAbacIntegrationTest {
         user.setRole(role);
         user.setActive(true);
         user.setStatus(UserStatus.ACTIVE);
-        user.setLocale("pl");
+        user.setLocale(java.util.Locale.forLanguageTag("pl"));
         user = userDao.save(user);
         entityManager.flush();
         return user.getId();
@@ -727,7 +727,7 @@ class ProjectScheduleControllerAbacIntegrationTest {
         crew.setRole(ensureRole(WORKER));
         crew.setActive(true);
         crew.setStatus(UserStatus.ACTIVE);
-        crew.setLocale("pl");
+        crew.setLocale(java.util.Locale.forLanguageTag("pl"));
         crew = userDao.save(crew);
 
         ProjectMemberEntity crewMember = new ProjectMemberEntity();

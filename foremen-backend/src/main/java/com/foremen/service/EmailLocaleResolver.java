@@ -1,45 +1,44 @@
 package com.foremen.service;
 
+import com.foremen.config.persistence.LocaleAttributeConverter;
+
 import java.util.Locale;
 
 /**
- * Pure helper that maps a stored {@code UserEntity.locale} string to the {@link Locale} used to
- * render invitation email subjects and bodies.
+ * Pure helper that maps a stored {@code UserEntity.locale} to the {@link Locale} used to render
+ * invitation / OTP email subjects and bodies.
  *
- * <p>Only Polish and Russian are supported. Resolution is case-insensitive: {@code "RU"} (in any
- * case) resolves to {@link #RU}, {@code "PL"} (in any case) resolves to {@link #PL}, and every
- * other value — including {@code null}, empty, whitespace, or an unsupported code such as
- * {@code "en"} — falls back to {@link #PL} (Requirements 4.7, 8.4).
+ * <p>Only Polish and Russian are supported. Resolution is by language, case-insensitively: a
+ * Russian locale resolves to {@link #RU}; every other value — including {@code null} or an
+ * unsupported locale — falls back to {@link #PL} (Requirements 4.7, 8.4, 9.3, 12.4).
  *
- * <p>This class is stateless and side-effect free so it can be unit- and property-tested in
- * isolation and reused by both {@code InviteService} and the invitation mail sender.
+ * <p>FOR-06-12 (R12.4): with {@code UserEntity.locale} migrated {@code String → Locale}, this
+ * resolver takes a {@link Locale} directly (the stored value already resolved to PL/RU through
+ * {@link LocaleAttributeConverter}). It delegates the PL/RU set and the PL fallback to that shared
+ * converter so there is one source of truth. The class is stateless and side-effect free so it can
+ * be unit- and property-tested in isolation and reused by the mail senders.
  */
 public final class EmailLocaleResolver {
 
-    /** Polish locale, the base/fallback language for invitation emails. */
-    public static final Locale PL = Locale.forLanguageTag("pl");
+    /** Polish locale, the base/fallback language for emails. */
+    public static final Locale PL = LocaleAttributeConverter.PL;
 
     /** Russian locale. */
-    public static final Locale RU = Locale.forLanguageTag("ru");
+    public static final Locale RU = LocaleAttributeConverter.RU;
 
     private EmailLocaleResolver() {
         // utility class; not instantiable
     }
 
     /**
-     * Resolves the email locale from a stored user-locale string.
+     * Resolves the email locale from a user's stored {@link Locale}.
      *
-     * @param storedLocale the value of {@code UserEntity.locale}; may be {@code null} or blank
-     * @return {@link #RU} when {@code storedLocale} equals {@code "RU"} case-insensitively,
-     *         {@link #PL} when it equals {@code "PL"} case-insensitively, and {@link #PL} for every
-     *         other value including {@code null} and empty/blank strings
+     * @param userLocale the value of {@code UserEntity.getLocale()}; may be {@code null}
+     * @return {@link #RU} when {@code userLocale}'s language is Russian, and {@link #PL} for every
+     *         other value including {@code null} and unsupported locales
      */
-    public static Locale resolve(String storedLocale) {
-        if (storedLocale == null) {
-            return PL;
-        }
-        String normalized = storedLocale.trim();
-        if (normalized.equalsIgnoreCase("RU")) {
+    public static Locale resolve(Locale userLocale) {
+        if (userLocale != null && RU.getLanguage().equals(userLocale.getLanguage())) {
             return RU;
         }
         return PL;

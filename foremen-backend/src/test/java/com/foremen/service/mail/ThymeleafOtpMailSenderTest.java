@@ -24,6 +24,8 @@ import com.foremen.dao.model.UserEntity;
 
 import jakarta.mail.internet.MimeMessage;
 
+import java.util.Locale;
+
 /**
  * Example test for {@link ThymeleafOtpMailSender} (task 9.3).
  *
@@ -73,11 +75,11 @@ class ThymeleafOtpMailSenderTest {
                 javaMailSender, templateEngine, messageResolver, "noreply@foremen.test");
     }
 
-    private static UserEntity user(String email, String locale) {
+    private static UserEntity user(String email, String localeTag) {
         UserEntity user = new UserEntity();
         user.setName("Recipient");
         user.setEmail(email);
-        user.setLocale(locale);
+        user.setLocale(Locale.forLanguageTag(localeTag));
         return user;
     }
 

@@ -482,7 +482,7 @@ class ProjectMemberControllerIntegrationTest {
         user.setRole(projectRole);
         user.setActive(true);
         user.setStatus(UserStatus.ACTIVE);
-        user.setLocale("ru");
+        user.setLocale(java.util.Locale.forLanguageTag("ru"));
         return userDao.save(user);
     }
 

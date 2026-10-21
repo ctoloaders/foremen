@@ -68,7 +68,7 @@ class DisplayPreferencesControllerIntegrationTest {
         testUser.setEmail("testuser@foremen.com");
         testUser.setRole(role);
         testUser.setActive(true);
-        testUser.setLocale("ru");
+        testUser.setLocale(java.util.Locale.forLanguageTag("ru"));
         testUser.setDisplayPreferences(null);
 
         when(userDao.findById(1L)).thenReturn(Optional.of(testUser));

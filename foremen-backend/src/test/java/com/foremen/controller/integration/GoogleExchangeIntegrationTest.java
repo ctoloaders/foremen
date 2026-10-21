@@ -320,7 +320,7 @@ class GoogleExchangeIntegrationTest {
         user.setRole(workerRole);
         user.setStatus(statusValue);
         user.setActive(statusValue == UserStatus.ACTIVE);
-        user.setLocale("ru");
+        user.setLocale(java.util.Locale.forLanguageTag("ru"));
         if (withPassword) {
             user.setPasswordHash(passwordEncoder.encode(KNOWN_PASSWORD));
         }

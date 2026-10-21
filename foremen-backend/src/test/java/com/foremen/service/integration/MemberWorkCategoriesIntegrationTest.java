@@ -387,7 +387,7 @@ class MemberWorkCategoriesIntegrationTest {
         user.setEmail("wcm+" + System.nanoTime() + "+" + runId + "@example.com");
         user.setRole(roleDao.findById(roleId).orElseThrow());
         user.setActive(true);
-        user.setLocale("ru");
+        user.setLocale(java.util.Locale.forLanguageTag("ru"));
         user.getWorkCategories().addAll(defaults);
         return userDao.save(user);
     }

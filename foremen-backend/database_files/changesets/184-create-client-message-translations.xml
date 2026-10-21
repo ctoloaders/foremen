@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-06-12 (Requirements 1.2, 1.6): the per-locale translation rows of a ClientMessage —
+        the child table client_message_translations (design §Data Models /
+        ClientMessageTranslationEntity). Each row is one localization of its parent message: the
+        original-locale mirror (machine=false) plus best-effort machine translations into the other
+        supported locale (machine=true). The reader-locale projection selects the matching row for a
+        given java.util.Locale; a locale without a row simply falls back to the original (R6.3).
+
+        Columns:
+          - id         : BIGSERIAL PK.
+          - message_id : owner FK to client_messages, NOT NULL; ON DELETE CASCADE so deleting a
+                         message (itself cascaded from its project, changeset 183) removes its
+                         translations.
+          - locale     : VARCHAR(35) NOT NULL; the translation's locale as a lowercase language tag
+                         ("pl"/"ru"), persisted via LocaleAttributeConverter (R1.2, R12). Length 35
+                         accommodates any java.util.Locale language tag.
+          - text       : TEXT NOT NULL; the localized message text.
+          - machine    : BOOLEAN NOT NULL; false = original-locale mirror, true = auto-translation.
+        Plus the four BaseEntity audit columns.
+
+        UNIQUE(message_id, locale): at most one translation row per (message, locale) — a message
+        cannot carry two competing texts for the same locale.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN, so a re-run against an
+        already-migrated database makes no schema change. Registered after 183 in changelog.xml.
+    -->
+
+    <changeSet id="184-create-client-message-translations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="client_message_translations"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="client_message_translations">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- OWNER FK: deleting a message removes its translations. -->
+            <column name="message_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Translation locale as a lowercase language tag ("pl"/"ru") via LocaleAttributeConverter (R1.2, R12). -->
+            <column name="locale" type="VARCHAR(35)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The localized message text. -->
+            <column name="text" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- false = original-locale mirror, true = auto-translation (R1.2). -->
+            <column name="machine" type="BOOLEAN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- OWNER FK: deleting a message removes its translation rows. -->
+        <addForeignKeyConstraint
+            constraintName="fk_client_message_translations_message"
+            baseTableName="client_message_translations"
+            baseColumnNames="message_id"
+            referencedTableName="client_messages"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <!-- At most one translation row per (message, locale). -->
+        <addUniqueConstraint
+            tableName="client_message_translations"
+            columnNames="message_id, locale"
+            constraintName="uq_client_message_translations_message_locale"/>
+    </changeSet>
+
+</databaseChangeLog>
