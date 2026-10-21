@@ -1,0 +1,217 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Backend: pure cost-derivation helpers + read-model DTOs": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002501
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584987106
+      }
+    ],
+    "1.1 Implement the worker-cost helpers + DTOs": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002605
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583010254
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583287756
+      }
+    ],
+    "2. Backend: worker-type resolution": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002676
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584988041
+      }
+    ],
+    "2.1 Implement the tier-resolution helper": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002738
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583011417
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583288314
+      }
+    ],
+    "3.1 Add `WorkerCostService`": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002805
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583296884
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583496512
+      }
+    ],
+    "3.2 Add the optional `WorkerCostController` + optional FINANCIER grant": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002890
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583501150
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583726002
+      }
+    ],
+    "4.1 Refactor the FOR-06-06 fact-cost call site": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583002991
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583502165
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583726687
+      }
+    ],
+    "5.1 Backend example / integration / smoke tests": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583003055
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583738171
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584494466
+      }
+    ],
+    "6.1 Frontend strings + locale parity (only if new strings are needed)": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583003180
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583739162
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584493300
+      }
+    ],
+    "7. Author test-cases.md": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583003303
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584498583
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584684093
+      }
+    ],
+    "8. Final verification + checkpoint": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583003400
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584688912
+      },
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584971120
+      }
+    ],
+    "1.1a Write property tests for the cost helpers (jqwik)": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583287827
+      }
+    ],
+    "2.1a Write property tests for tier resolution (jqwik)": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583288348
+      }
+    ],
+    "3. Backend: the worker-cost service + optional endpoint": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583726036
+      }
+    ],
+    "4. Backend: FOR-06-06 refactor (single formula)": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792583726719
+      }
+    ],
+    "5. Tests": [
+      {
+        "executionId": "c262b97b-33a0-4db2-963e-d2aeb56d41da",
+        "chatSessionId": "sess_ac4274ca-35a1-41d1-ab86-dec1efdff32b",
+        "timestamp": 1792584494585
+      }
+    ]
+  }
+}

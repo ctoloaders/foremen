@@ -16,6 +16,7 @@ import com.foremen.service.execution.marginmatrix.MarginMatrixInputs.ApprovedRep
 import com.foremen.service.execution.marginmatrix.MarginMatrixInputs.Bundle;
 import com.foremen.service.execution.marginmatrix.MarginMatrixInputs.PlanLine;
 import com.foremen.service.execution.marginmatrix.MarginMatrixInputs.ProcurementLine;
+import com.foremen.service.workercost.WorkerCostDerivation;
 
 /**
  * FOR-06-06 (design §B1) — the pure, stateless margin-matrix projection. Builds a
@@ -30,7 +31,9 @@ import com.foremen.service.execution.marginmatrix.MarginMatrixInputs.Procurement
  * {@code Plan_Margin = labourMargin(valueNet, Plan_Cost)}, R1.2/R2.3) and the fact side over each work
  * item's approved reports, each costed at its own resolved tier
  * ({@code Fact_Cost = Σ Tier_Cost(clientUnitPrice, Worker_Tier(report)) × totalQuantity},
- * {@code Fact_Revenue = Σ revenueValue}, R1.3/R2.4). There is no second cost formula.
+ * {@code Fact_Revenue = Σ revenueValue}, R1.3/R2.4). The fact-side labour cost is derived through the
+ * shared {@link WorkerCostDerivation#costValue} seam (FOR-06-10, R4.1/R4.3) so there is exactly one
+ * worker-cost formula shared with the worker-cost service and payroll — no second cost formula.
  *
  * <p>It then groups rows by work category (localized, estimate order) with per-category plan/fact
  * subtotals (R4.1); folds {@code Linked_Material_Cost} (linked lines only, R3.1), {@code Indirect_Cost}
@@ -163,11 +166,13 @@ public class MarginMatrixAssembler {
             if (report == null) {
                 continue;
             }
-            BigDecimal reportBaseCost = MarginCostService.baseCost(report.clientUnitPrice(), baseTier);
-            BigDecimal reportTierCost = MarginCostService.tierCost(reportBaseCost, report.tier());
-            // derivedTierCost = Tier_Cost(clientUnitPrice, Worker_Tier) × totalQuantity; null ⇒ excluded (R1.6).
-            BigDecimal derivedTierCost =
-                    (reportTierCost == null) ? null : reportTierCost.multiply(nz(report.totalQuantity()));
+            // Single worker-cost formula (FOR-06-10, R4.1/R4.3): delegate the fact-side labour cost to
+            // the shared WorkerCostDerivation.costValue — Tier_Cost(clientUnitPrice, Worker_Tier) ×
+            // totalQuantity, via the one MarginCostService core — instead of computing it inline. The
+            // null-safe quantity (nz) preserves the prior behaviour penny-for-penny (R4.2): a null
+            // unit cost ⇒ null (excluded, R1.6), a null quantity ⇒ a zero fact cost exactly as before.
+            BigDecimal derivedTierCost = WorkerCostDerivation.costValue(
+                    report.clientUnitPrice(), report.tier(), baseTier, nz(report.totalQuantity()));
             factRevenue = factRevenue.add(nz(report.revenueValue()));
             factQuantity = factQuantity.add(nz(report.totalQuantity()));
             if (derivedTierCost != null) {
