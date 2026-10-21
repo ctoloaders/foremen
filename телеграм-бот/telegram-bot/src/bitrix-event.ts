@@ -275,35 +275,33 @@ export async function handleBitrixEvent(body: unknown): Promise<any> {
   });
   const accessRows = accessRes.data.values || [];
 
-  // --- 2a. Upsert each worker into the workers registry (keyed by userId) ---
+  // --- 2a. Insert NEW workers only. Keyed by bitrix_user_id (column A). ---
+  // If a worker already exists in the registry we DO NOT touch their row. The deal event does
+  // not know the worker's telegram_id (it is maintained in the registry / via Apps Script), so
+  // rewriting the full row here would overwrite the existing telegram_id in column B with an
+  // empty value — which is exactly the bug that silently wiped Telegram IDs and locked people
+  // out. New workers are appended; existing ones are left as-is.
   for (const worker of workers) {
+    const wIndex = workersRows.findIndex(r => String(r[0]) === worker.userId);
+    if (wIndex >= 0) {
+      // Already registered — leave the row untouched (preserve telegram_id, name, role).
+      continue;
+    }
+
+    // New worker: resolve telegram_id from Bitrix (may be empty) and append a fresh row.
     let tgId = "";
     const userRes2 = await bitrixCall("user.get", { ID: worker.userId });
     if (userRes2.result && userRes2.result[0]) {
       tgId = userRes2.result[0][TELEGRAM_ID_FIELD] || "";
     }
-
-    const wIndex = workersRows.findIndex(r => String(r[0]) === worker.userId);
     const wRow = [worker.userId, tgId, worker.name, worker.role];
-    if (wIndex >= 0) {
-      // Keep admin role if already set
-      if (workersRows[wIndex][3] === "admin") wRow[3] = "admin";
-      const rowNum = wIndex + 2;
-      await sheets.spreadsheets.values.update({
-        spreadsheetId: config.google.workersSpreadsheetId,
-        range: `${config.google.workersSheetName}!A${rowNum}:D${rowNum}`,
-        valueInputOption: "RAW",
-        requestBody: { values: [wRow] },
-      });
-    } else {
-      await sheets.spreadsheets.values.append({
-        spreadsheetId: config.google.workersSpreadsheetId,
-        range: `${config.google.workersSheetName}!A:D`,
-        valueInputOption: "RAW",
-        requestBody: { values: [wRow] },
-      });
-      workersRows.push(wRow);
-    }
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: config.google.workersSpreadsheetId,
+      range: `${config.google.workersSheetName}!A:D`,
+      valueInputOption: "RAW",
+      requestBody: { values: [wRow] },
+    });
+    workersRows.push(wRow);
   }
 
   // --- 2b. Reconcile project_access: STRICTLY one row per (project, person) ---
