@@ -94,6 +94,14 @@ foremen:
     # When enabled, api-key must be set or application startup fails fast.
     enabled: ${GOOGLE_PLACES_ENABLED:false}
     api-key: ${GOOGLE_PLACES_API_KEY:}
+  bot:
+    # FOR-08: loaders-bot integration. identity-secret is the backend-only HS256 key used to sign
+    # the identity token (never reaches the frontend/logs; blank => fail fast once a token is
+    # signed, see BotIdentityTokenService). site-key is the public loaders-bot key
+    # (pk_test_ sandbox / pk_live_ production) surfaced to the frontend; blank by default so the
+    # app boots where the assistant is not configured.
+    identity-secret: ${FOREMEN_BOT_IDENTITY_SECRET:}
+    site-key: ${FOREMEN_BOT_SITE_KEY:}
   jwt:
     access-ttl-minutes: ${FOREMEN_JWT_ACCESS_TTL_MINUTES:30}
     refresh-ttl-days: ${FOREMEN_JWT_REFRESH_TTL_DAYS:7}

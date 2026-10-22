@@ -19,3 +19,6 @@ foremen:
   google-places:
     enabled: ${GOOGLE_PLACES_ENABLED:false}
     api-key: ${GOOGLE_PLACES_API_KEY:}
+  bot:
+    identity-secret: ${FOREMEN_BOT_IDENTITY_SECRET:}
+    site-key: ${FOREMEN_BOT_SITE_KEY:}

@@ -1,0 +1,1120 @@
+openapi: 3.0.3
+info:
+  title: Foremen Bot Toolset
+  version: v1
+  description: >-
+    Curated subset of the Foremen REST API imported into the loaders-bot agent as its toolset
+    (FOR-08-ai-assistant, task 2.2). It is hand-curated from the captured /v3/api-docs document
+    (see .kiro/specs/FOR-08-ai-estimate/openapi/README.md) and contains ONLY the intended agent
+    tool operations across projects, rooms, estimate, materials/assortment, catalog, sellers,
+    procurement, dictionaries, team, schedule, and images.
+
+    Excluded by design (Req 2.3): all /api/auth/**, POST /api/signatures/callback,
+    POST /api/payments/webhook/**, and account/role administration
+    (/api/users, /api/roles, /api/resources, /api/operations, /api/audit).
+
+    Every operation requires the bearer-jwt security scheme (the signed-in user's own Foremen
+    access token). GET operations are read/non-destructive; non-GET operations are writes and are
+    shown to the user for explicit confirmation by the widget before execution (Req 2.4, D4).
+
+servers:
+  - url: /
+    description: Foremen backend (same origin as the Foremen app)
+
+# Bearer security applied to every operation (also declared per-operation below, Req 2.4).
+security:
+  - bearer-jwt: []
+
+tags:
+  - name: projects
+    description: Projects — create/list/read/update and readiness-gated activation.
+  - name: rooms
+    description: Rooms of a project (CRUD).
+  - name: estimate
+    description: Estimate, estimate lines, the Estimate matrix (preview/save) and materials/reserve.
+  - name: materials
+    description: Materials, assortment groups/positions, work-material consumptions.
+  - name: catalog
+    description: Work items, work prices, work categories.
+  - name: sellers
+    description: Material sellers (list/search + CRUD).
+  - name: procurement
+    description: Procurement documents and procurement lines.
+  - name: dictionaries
+    description: Reference dictionaries (measurement units, VAT rates, room types, currencies, ...).
+  - name: team
+    description: Project memberships and candidate lookup.
+  - name: schedule
+    description: Project work schedule (read, save bars, auto-create).
+  - name: images
+    description: Image upload used by the rooms-from-plan goal.
+
+paths:
+
+  # ----------------------------------------------------------------------------
+  # Projects
+  # ----------------------------------------------------------------------------
+  /api/projects:
+    get:
+      tags: [projects]
+      operationId: listProjects
+      summary: List projects (read)
+      description: Paginated, access-filtered list of projects with their team and derived client.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [projects]
+      operationId: createProject
+      summary: Create a project (write)
+      description: Custom transactional project creation. Requires PROJECTS/CREATE.
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+
+  /api/projects/{id}:
+    get:
+      tags: [projects]
+      operationId: getProject
+      summary: Get a project by id (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    put:
+      tags: [projects]
+      operationId: updateProject
+      summary: Update a project (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/projects/{id}/activate:
+    post:
+      tags: [projects]
+      operationId: activateProject
+      summary: Activate a project (write)
+      description: Readiness-gated activation (pre-activation to ACTIVE). Requires PROJECTS/UPDATE.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Rooms
+  # ----------------------------------------------------------------------------
+  /api/rooms:
+    get:
+      tags: [rooms]
+      operationId: listRooms
+      summary: List rooms (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [rooms]
+      operationId: createRoom
+      summary: Create a room (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/rooms/{id}:
+    get:
+      tags: [rooms]
+      operationId: getRoom
+      summary: Get a room by id (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    put:
+      tags: [rooms]
+      operationId: updateRoom
+      summary: Update a room (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    delete:
+      tags: [rooms]
+      operationId: deleteRoom
+      summary: Delete a room (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Deleted }
+
+  # ----------------------------------------------------------------------------
+  # Estimate
+  # ----------------------------------------------------------------------------
+  /api/estimates/project/{projectId}:
+    get:
+      tags: [estimate]
+      operationId: getOrCreateEstimateForProject
+      summary: Get (or lazily create) the estimate for a project (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/matrix:
+    get:
+      tags: [estimate]
+      operationId: getEstimateMatrix
+      summary: Read the estimate matrix for a project (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/apply-package:
+    post:
+      tags: [estimate]
+      operationId: previewApplyPackage
+      summary: Preview applying a package to the estimate (non-persisting preview)
+      description: Computes the resulting matrix under a package WITHOUT persisting. Non-GET; shown for confirmation.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/apply-work:
+    post:
+      tags: [estimate]
+      operationId: previewApplyWork
+      summary: Preview applying a single work row (non-persisting preview)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/recompute-finishing:
+    post:
+      tags: [estimate]
+      operationId: previewRecomputeFinishing
+      summary: Preview recomputing finishing prices (non-persisting preview)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/preview:
+    post:
+      tags: [estimate]
+      operationId: previewStagedEdits
+      summary: Preview the whole staged estimate edit set (non-persisting preview)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/assignments:
+    post:
+      tags: [estimate]
+      operationId: saveEstimateAssignments
+      summary: Persist the staged estimate assignments (write)
+      description: The single batched Save — persists staged edits. Requires ESTIMATE/UPDATE; DRAFT-gated.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/materials:
+    get:
+      tags: [estimate]
+      operationId: getEstimateMaterials
+      summary: Read the estimate materials matrix for a project (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimates/project/{projectId}/materials/reserve:
+    put:
+      tags: [estimate]
+      operationId: saveEstimateMaterialsReserve
+      summary: Persist the per-material reserve map (write)
+      description: Requires ESTIMATE/UPDATE; DRAFT-gated.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimate-lines:
+    get:
+      tags: [estimate]
+      operationId: listEstimateLines
+      summary: List estimate lines (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [estimate]
+      operationId: createEstimateLine
+      summary: Create an estimate line (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/estimate-lines/{id}:
+    put:
+      tags: [estimate]
+      operationId: updateEstimateLine
+      summary: Update an estimate line (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    delete:
+      tags: [estimate]
+      operationId: deleteEstimateLine
+      summary: Delete an estimate line (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Deleted }
+
+  # ----------------------------------------------------------------------------
+  # Materials / assortment
+  # ----------------------------------------------------------------------------
+  /api/materials:
+    get:
+      tags: [materials]
+      operationId: listMaterials
+      summary: List materials (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [materials]
+      operationId: createMaterial
+      summary: Create a material (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/materials/{id}:
+    get:
+      tags: [materials]
+      operationId: getMaterial
+      summary: Get a material by id (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    put:
+      tags: [materials]
+      operationId: updateMaterial
+      summary: Update a material (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/assortment-groups:
+    get:
+      tags: [materials]
+      operationId: listAssortmentGroups
+      summary: List assortment groups (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/assortment-positions:
+    get:
+      tags: [materials]
+      operationId: listAssortmentPositions
+      summary: List assortment positions (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/assortment-positions/package-editor:
+    get:
+      tags: [materials]
+      operationId: getPackageAssortmentEditor
+      summary: Read the single-package assortment editor (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/PackageCode'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/assortment-positions/package-save:
+    post:
+      tags: [materials]
+      operationId: savePackageAssortment
+      summary: Save the single-package assortment editor (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/PackageCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/work-material-consumptions:
+    get:
+      tags: [materials]
+      operationId: listWorkMaterialConsumptions
+      summary: List work-material consumptions (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [materials]
+      operationId: createWorkMaterialConsumption
+      summary: Create a work-material consumption (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Catalog
+  # ----------------------------------------------------------------------------
+  /api/work-items:
+    get:
+      tags: [catalog]
+      operationId: listWorkItems
+      summary: List work items (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [catalog]
+      operationId: createWorkItem
+      summary: Create a work item (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/work-items/{id}:
+    get:
+      tags: [catalog]
+      operationId: getWorkItem
+      summary: Get a work item by id (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    put:
+      tags: [catalog]
+      operationId: updateWorkItem
+      summary: Update a work item (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/work-prices:
+    get:
+      tags: [catalog]
+      operationId: listWorkPrices
+      summary: List work prices (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [catalog]
+      operationId: createWorkPrice
+      summary: Create a work price (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/work-categories:
+    get:
+      tags: [catalog]
+      operationId: listWorkCategories
+      summary: List work categories (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [catalog]
+      operationId: createWorkCategory
+      summary: Create a work category (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Sellers
+  # ----------------------------------------------------------------------------
+  /api/material-sellers:
+    get:
+      tags: [sellers]
+      operationId: listMaterialSellers
+      summary: List / search material sellers (read)
+      description: The `query` parameter performs the seller search.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [sellers]
+      operationId: createMaterialSeller
+      summary: Create a material seller (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/material-sellers/{id}:
+    get:
+      tags: [sellers]
+      operationId: getMaterialSeller
+      summary: Get a material seller by id (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    put:
+      tags: [sellers]
+      operationId: updateMaterialSeller
+      summary: Update a material seller (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Procurement
+  # ----------------------------------------------------------------------------
+  /api/procurement-documents:
+    get:
+      tags: [procurement]
+      operationId: listProcurementDocuments
+      summary: List procurement documents of a project (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [procurement]
+      operationId: uploadProcurementDocument
+      summary: Upload a procurement document (write)
+      description: Multipart upload of an invoice/receipt image or PDF; runs OCR + parse + match inline.
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/procurement-documents/{id}:
+    get:
+      tags: [procurement]
+      operationId: getProcurementDocument
+      summary: Get a procurement document by id (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    delete:
+      tags: [procurement]
+      operationId: deleteProcurementDocument
+      summary: Delete a procurement document (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '204': { description: Deleted }
+
+  /api/procurement-documents/{id}/reprocess:
+    post:
+      tags: [procurement]
+      operationId: reprocessProcurementDocument
+      summary: Re-run OCR/parse/match on a procurement document (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/procurement-lines:
+    get:
+      tags: [procurement]
+      operationId: listProcurementLines
+      summary: List procurement lines (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/procurement-lines/{id}/match:
+    put:
+      tags: [procurement]
+      operationId: matchProcurementLine
+      summary: Set a procurement line match (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Dictionaries
+  # ----------------------------------------------------------------------------
+  /api/measurement-units:
+    get:
+      tags: [dictionaries]
+      operationId: listMeasurementUnits
+      summary: List measurement units (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/vat-rates:
+    get:
+      tags: [dictionaries]
+      operationId: listVatRates
+      summary: List VAT rates (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/room-types:
+    get:
+      tags: [dictionaries]
+      operationId: listRoomTypes
+      summary: List room types (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/currencies:
+    get:
+      tags: [dictionaries]
+      operationId: listCurrencies
+      summary: List currencies (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/material-categories:
+    get:
+      tags: [dictionaries]
+      operationId: listMaterialCategories
+      summary: List material categories (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/worker-types:
+    get:
+      tags: [dictionaries]
+      operationId: listWorkerTypes
+      summary: List worker types (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/Query'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Team
+  # ----------------------------------------------------------------------------
+  /api/project-members:
+    get:
+      tags: [team]
+      operationId: listProjectMembers
+      summary: List project members (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    post:
+      tags: [team]
+      operationId: assignProjectMember
+      summary: Assign a user to a project (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '201': { $ref: '#/components/responses/Created' }
+    patch:
+      tags: [team]
+      operationId: updateProjectMember
+      summary: Update a project member's attributes (write)
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+    delete:
+      tags: [team]
+      operationId: removeProjectMember
+      summary: Remove a user from a project (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - $ref: '#/components/parameters/ProjectIdQuery'
+      responses:
+        '204': { description: Removed }
+
+  /api/project-members/candidates:
+    get:
+      tags: [team]
+      operationId: listProjectMemberCandidates
+      summary: List candidates eligible to be assigned to a project (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+        - name: term
+          in: query
+          required: false
+          schema: { type: string }
+        - name: role
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Schedule
+  # ----------------------------------------------------------------------------
+  /api/project-schedules:
+    get:
+      tags: [schedule]
+      operationId: getProjectSchedule
+      summary: Read a project's work schedule (read)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/project-schedules/bars:
+    put:
+      tags: [schedule]
+      operationId: saveProjectScheduleBars
+      summary: Save the schedule bars (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  /api/project-schedules/auto-create:
+    post:
+      tags: [schedule]
+      operationId: autoCreateProjectSchedule
+      summary: Auto-create the per-worker schedule (write)
+      security:
+        - bearer-jwt: []
+      parameters:
+        - $ref: '#/components/parameters/ProjectIdQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+  # ----------------------------------------------------------------------------
+  # Images
+  # ----------------------------------------------------------------------------
+  /api/images:
+    post:
+      tags: [images]
+      operationId: uploadImage
+      summary: Upload an image (write)
+      description: >-
+        Multipart image upload charged against a target ABAC resource; used by the
+        rooms-from-plan goal to upload a plan image before creating rooms.
+      security:
+        - bearer-jwt: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                entityKind:
+                  type: string
+                resource:
+                  type: string
+      responses:
+        '200': { $ref: '#/components/responses/Ok' }
+
+components:
+
+  securitySchemes:
+    bearer-jwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >-
+        Foremen access token (the signed-in user's own JWT). Every tool call runs with the user's
+        token and is subject to Foremen's ABAC matrix and project scope.
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    ProjectIdPath:
+      name: projectId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    ProjectIdQuery:
+      name: projectId
+      in: query
+      required: true
+      schema: { type: integer, format: int64 }
+    PackageCode:
+      name: packageCode
+      in: query
+      required: true
+      schema: { type: string }
+    Query:
+      name: query
+      in: query
+      required: false
+      description: RSQL-style filter expression.
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      required: false
+      schema: { type: integer, minimum: 0, default: 0 }
+    Size:
+      name: size
+      in: query
+      required: false
+      schema: { type: integer, minimum: 1, default: 20 }
+    Sort:
+      name: sort
+      in: query
+      required: false
+      schema: { type: string }
+
+  responses:
+    Ok:
+      description: OK
+      content:
+        application/json:
+          schema: { type: object }
+    Created:
+      description: Created
+      content:
+        application/json:
+          schema: { type: object }

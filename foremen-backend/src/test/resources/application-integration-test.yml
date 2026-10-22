@@ -31,6 +31,9 @@ foremen:
     secret: test-only-jwt-secret-value-0123456789-abcdef
     access-ttl-minutes: 30
     refresh-ttl-days: 7
+  bot:
+    identity-secret: test-only-bot-identity-secret-0123456789-abcdef
+    site-key: pk_test_foremen
   admin:
     create: false
   invite:

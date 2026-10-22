@@ -1,0 +1,316 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Implement `BotIdentityTokenService` + `BotIdentityController` (`POST /api/bot/identity-token`)": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856480
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701864806
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702136277
+      }
+    ],
+    "1.2 Backend tests for the identity-token endpoint": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856533
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702149812
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702517606
+      }
+    ],
+    "2.1 Configure + capture springdoc OpenAPI": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856584
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701878509
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702137288
+      }
+    ],
+    "2.2 Produce + commit the curated `foremen-bot-toolset.yaml`": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856630
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702150920
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702516539
+      }
+    ],
+    "3.1 Define the seven agent roles + the Tool × Role matrix (in the bot admin panel; mirror in `bot-configuration.md`)": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856679
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702522180
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702907642
+      }
+    ],
+    "4.1 Create the `bot-configuration.md` skeleton (toolset import procedure, roles, matrix, goals sections)": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856725
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701879883
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702138618
+      }
+    ],
+    "4.2 Author + test-console-validate the goals": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856762
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702912418
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792703122322
+      }
+    ],
+    "5.1 Snippet embed + init on authenticated app": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856861
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701880664
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702139642
+      }
+    ],
+    "5.2 Identify lifecycle": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856894
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702152428
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702514284
+      }
+    ],
+    "5.3 Host-callback auth provider": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856925
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702153361
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702512826
+      }
+    ],
+    "5.4 Page context on route change": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856958
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702154327
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702515363
+      }
+    ],
+    "6.1 Env config + CSP + consent stance": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701856984
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702526296
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702906382
+      }
+    ],
+    "7.1 Author test-cases.md": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701857018
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792703126955
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792703201643
+      }
+    ],
+    "8.1 End-to-end verification": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701857053
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792703205996
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792704223282
+      }
+    ],
+    "8.2 Final checkpoint": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792701857083
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792704231000
+      },
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792704404219
+      }
+    ],
+    "5. Frontend — widget glue (commit from `foremen-frontend/`)": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702515394
+      }
+    ],
+    "2. Backend — curated OpenAPI toolset": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702516565
+      }
+    ],
+    "1. Backend — identity-token endpoint": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702517632
+      }
+    ],
+    "6. Environment, CSP, consent": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702906447
+      }
+    ],
+    "3. Bot configuration — roles + Tool × Role matrix": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792702907679
+      }
+    ],
+    "4. Bot configuration — goals + instructions": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792703122401
+      }
+    ],
+    "7. Test cases": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792703201710
+      }
+    ],
+    "8. Verification + checkpoint": [
+      {
+        "executionId": "f2e13771-0120-44fa-bb52-03c394d6cc04",
+        "chatSessionId": "sess_305e175f-910e-4874-b0f3-80c7f8936e10",
+        "timestamp": 1792704404268
+      }
+    ]
+  }
+}
