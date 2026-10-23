@@ -11,6 +11,7 @@ export enum ConversationStep {
   AWAIT_DESCRIPTION = "await_desc",
   AWAIT_STORE = "await_store",
   SAVING = "saving",
+  DONE = "done",                           // saved; awaiting "add another" / "finish" choice
 }
 
 export interface ConversationState {

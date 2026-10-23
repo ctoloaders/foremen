@@ -1,4 +1,5 @@
 import { Bot, Context, InlineKeyboard } from "grammy";
+import { randomUUID } from "crypto";
 import { getState, setState, clearState } from "../state/store.js";
 import { ConversationStep, ConversationState } from "../state/machine.js";
 import { downloadFile } from "../services/telegram.js";
@@ -225,6 +226,68 @@ async function goToPhoto(ctx: Context, state: ConversationState): Promise<void> 
 }
 
 /**
+ * Clears the per-receipt fields on `state` while PRESERVING the project/category context
+ * (isMaterial, projectName/Drive/Sheets, categoryName/extraPrompt) so the next invoice is saved
+ * against the same object without re-asking. A fresh session id is started for the new invoice.
+ */
+function resetForNextReceipt(state: ConversationState): void {
+  state.photoFileId = undefined;
+  state.photoFileIds = [];
+  state.sum = undefined;
+  state.description = undefined;
+  state.storeName = undefined;
+  state.ocrDescription = undefined;
+  state.ocrStoreName = undefined;
+  state.ocrGrossAmount = undefined;
+  state.categoryDetail = undefined;
+}
+
+/**
+ * Handles the post-save "add another / finish" buttons (more:add, more:done).
+ * - more:add  → keep the same project/category and jump straight to photo upload (no re-select).
+ * - more:done → clear the conversation state and end the flow.
+ */
+export async function handleMoreCallback(
+  ctx: Context,
+  _bot: Bot,
+  state: ConversationState,
+  data: string,
+): Promise<void> {
+  if (data === "more:done") {
+    await clearState(state.telegramId);
+    await ctx.editMessageText("Готово ✅ Чтобы отправить ещё — /start");
+    return;
+  }
+
+  if (data === "more:add") {
+    // New invoice for the SAME object: fresh session id, cleared receipt fields, same project.
+    resetForNextReceipt(state);
+    const worker = await getWorker(state.telegramId);
+    state.sessionId = randomUUID();
+    await sessionLog.startSession({
+      sessionId: state.sessionId,
+      telegramId: state.telegramId,
+      workerName: worker?.name,
+      role: worker?.role,
+      step: ConversationStep.AWAIT_PHOTO,
+    });
+    // Carry the project/category context into the new session's log row.
+    await sessionLog.updateSession(state.sessionId, {
+      projectName: state.projectName,
+      projectDriveUrl: state.projectDriveUrl,
+      projectSheetsUrl: state.projectSheetsUrl,
+    });
+    // Remove the inline buttons from the previous message to avoid double taps.
+    try {
+      await ctx.editMessageReplyMarkup({ reply_markup: undefined });
+    } catch {
+      // ignore if the message can't be edited
+    }
+    await goToPhoto(ctx, state);
+  }
+}
+
+/**
  * Pure helper: computes the receipt-row fields that depend on the category branch.
  *
  * - Материал branch: Projekt = project name, Kategoria = "" (empty), Opis = OCR/manual description.
@@ -348,8 +411,9 @@ export async function finalizeSave(ctx: Context, bot: Bot, state: ConversationSt
       return;
     }
 
-    // 4. Success.
-    await clearState(telegramId);
+    // 4. Success. Finalize the session log, but DON'T clear the conversation state yet — keep
+    //    the project/category context so the user can add another invoice for the same object
+    //    without re-selecting it. The state is cleared on "Закончить" (or when it goes stale).
     if (state.sessionId) {
       await sessionLog.finalizeSuccess(state.sessionId, {
         step: ConversationStep.SAVING,
@@ -358,9 +422,19 @@ export async function finalizeSave(ctx: Context, bot: Bot, state: ConversationSt
         photoLinks: [fileLink],
       });
     }
+    // Park the state in a terminal "awaiting next action" step so stray messages don't re-trigger
+    // the pipeline; the next step is driven by the inline buttons below.
+    state.step = ConversationStep.DONE;
+    await setState(state);
+
     const tag = state.isMaterial ? `Материал / ${project}` : category;
+    const nextKeyboard = new InlineKeyboard()
+      .text("➕ Добавить ещё фактуру", "more:add")
+      .row()
+      .text("✅ Закончить", "more:done");
     await ctx.reply(
-      `✅ Записал: ${tag}, ${state.sum ?? 0} PLN, ${state.storeName ?? ""}, ${description}\n\nМожете отправить следующий чек (/start)`,
+      `✅ Записал: ${tag}, ${state.sum ?? 0} PLN, ${state.storeName ?? ""}, ${description}`,
+      { reply_markup: nextKeyboard },
     );
 
     logger.info("Receipt saved (central)", {

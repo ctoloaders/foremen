@@ -4,7 +4,7 @@ import { ConversationStep, ConversationState } from "../state/machine.js";
 import { downloadFile } from "../services/telegram.js";
 import { extractTextFromPages } from "../services/ocr.js";
 import { parseReceipt } from "../services/gemini.js";
-import { handleCategorySelection, finalizeSave } from "./category.js";
+import { handleCategorySelection, finalizeSave, handleMoreCallback } from "./category.js";
 import { sessionLog } from "../services/session-log.js";
 import { logger } from "../utils/logger.js";
 
@@ -107,6 +107,12 @@ export function createOcrCallbackHandler(bot: Bot) {
     // Expense category selection (cat:N)
     if (data.startsWith("cat:")) {
       await handleCategorySelection(ctx, bot, state, data);
+      return;
+    }
+
+    // Post-save "add another / finish" buttons (more:add, more:done)
+    if (data.startsWith("more:")) {
+      await handleMoreCallback(ctx, bot, state, data);
       return;
     }
 

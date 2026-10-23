@@ -32,7 +32,7 @@ export function createBot(): Bot {
 
   // Callback queries (OCR flow + expense category selection)
   const handleOcrCallbacks = createOcrCallbackHandler(bot);
-  bot.callbackQuery(/^(ocr|cat):/, handleOcrCallbacks);
+  bot.callbackQuery(/^(ocr|cat|more):/, handleOcrCallbacks);
 
   // Callback query: cancel button
   bot.callbackQuery("cancel", async (ctx) => {
