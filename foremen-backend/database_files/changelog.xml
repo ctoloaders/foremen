@@ -836,4 +836,12 @@
          startup for ClientMessageController (@PermissionResource("CLIENT_MESSAGES")). Registered
          LAST, after 185. -->
     <include file="database_files/changesets/186-seed-client-messages-resource.xml"/>
+
+    <!-- FOR-07-01 (R9.1, R9.2, R9.3, R9.5): seed the read-only COMPANY_SCHEDULE ABAC resource
+         backing GET /api/company-schedule and grant READ to ADMIN + MANAGER only (no
+         CREATE/UPDATE/DELETE). Idempotent via onFail="MARK_RAN" COUNT(*)=0 resource precondition
+         plus per-row NOT EXISTS self-guards. The resource row MUST exist so
+         PermissionAnnotationValidator passes at startup for the controller carrying
+         @PermissionResource("COMPANY_SCHEDULE"). Registered LAST, after 186. -->
+    <include file="database_files/changesets/187-seed-company-schedule-resource.xml"/>
 </databaseChangeLog>

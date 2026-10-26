@@ -1,5 +1,7 @@
 package com.foremen.dao;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.stereotype.Repository;
@@ -25,4 +27,18 @@ public interface ProjectScheduleDao extends AdminDao<ProjectScheduleEntity, Long
      * @return the project's schedule, if any
      */
     Optional<ProjectScheduleEntity> findByProjectId(Long projectId);
+
+    /**
+     * All schedule aggregates whose owning project id is in {@code projectIds}, loaded in one query
+     * (FOR-07-01, Requirements 6.1, 10.2): the cross-project staffing projection loads every
+     * accessible project's schedule at once rather than per project.
+     *
+     * <p>Projects in {@code projectIds} that have no schedule row yet are simply absent from the
+     * result (never an entry with a missing schedule), so the caller still emits foreman spans for a
+     * schedule-less accessible project. An empty {@code projectIds} yields an empty list.
+     *
+     * @param projectIds the owning project ids to load schedules for
+     * @return the schedules of those projects that have one, in no guaranteed order
+     */
+    List<ProjectScheduleEntity> findByProjectIdIn(Collection<Long> projectIds);
 }

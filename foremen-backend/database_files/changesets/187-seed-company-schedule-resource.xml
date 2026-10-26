@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-01 (R9.1, R9.2, R9.3, R9.5; entity-creation-rules steps 1-2; design §ABAC seed): seed
+        the read-only COMPANY_SCHEDULE ABAC resource backing the cross-project staffing projection
+        (GET /api/company-schedule) and grant READ to ADMIN and MANAGER only.
+
+        This resource is NOT project-scoped and backs no mutable managed entity or domain table
+        (R9.5): the only persistence change is this resource-seed changeset. The resource row MUST
+        exist so PermissionAnnotationValidator passes at application startup for the controller
+        carrying @PermissionResource("COMPANY_SCHEDULE") with a READ handler.
+
+        Matrix (R9.2 — read-only resource, no CREATE/UPDATE/DELETE anywhere):
+          ADMIN     -> READ   (matrix completeness; the evaluator bypasses the exact ADMIN code)
+          MANAGER   -> READ   (manager views the company-wide staffing projection)
+          all other roles -> deny-by-default (no grant row seeded)
+
+        Idempotency (R9.1): the resource insert is guarded by onFail="MARK_RAN" on
+        resources.code = 'COMPANY_SCHEDULE'; every grant block is an INSERT ... SELECT ...
+        WHERE NOT EXISTS (the 153-seed-work-schedule-resource.xml pattern), so a re-run against an
+        already-seeded database inserts nothing and changes nothing. Registered LAST in
+        changelog.xml, after 186.
+    -->
+
+    <!-- changeSet 1: insert the COMPANY_SCHEDULE resource row (idempotent). -->
+    <changeSet id="187-seed-company-schedule-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'COMPANY_SCHEDULE'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="COMPANY_SCHEDULE"/>
+            <column name="name_ru" value="График по компании"/>
+            <column name="name_pl" value="Harmonogram firmowy"/>
+            <column name="description_ru" value="Сквозной график занятости персонала по всем проектам (только чтение)"/>
+            <column name="description_pl" value="Przekrojowy harmonogram obciążenia personelu we wszystkich projektach (tylko do odczytu)"/>
+        </insert>
+    </changeSet>
+
+    <!-- changeSet 2: ADMIN + MANAGER -> READ only (no CREATE/UPDATE/DELETE: read-only resource).
+         Each role_resources + role_resource_operations insert is self-guarded by NOT EXISTS. -->
+    <changeSet id="187-seed-company-schedule-grants-admin-manager" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'COMPANY_SCHEDULE'</sqlCheck>
+        </preConditions>
+
+        <!-- ADMIN x COMPANY_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ADMIN' AND res2.code = 'COMPANY_SCHEDULE'
+              );
+        </sql>
+
+        <!-- ADMIN x COMPANY_SCHEDULE operations: READ only. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER x COMPANY_SCHEDULE role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'COMPANY_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'MANAGER' AND res2.code = 'COMPANY_SCHEDULE'
+              );
+        </sql>
+
+        <!-- MANAGER x COMPANY_SCHEDULE operations: READ only. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'MANAGER' AND res.code = 'COMPANY_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
