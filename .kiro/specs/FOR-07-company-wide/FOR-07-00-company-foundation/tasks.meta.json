@@ -1,0 +1,97 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Realign NAV_CONFIG": [
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016187805
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016206357
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016286496
+      }
+    ],
+    "1.2 Add nav i18n keys (PL + RU, mirrored)": [
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016187892
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016207297
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016287390
+      }
+    ],
+    "1.3 Frontend tests (navigation + route-permissions + parity)": [
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016187947
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016292289
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016416159
+      }
+    ],
+    "2. Author test-cases.md": [
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016187989
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016420218
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016589961
+      }
+    ],
+    "3. Final verification + checkpoint": [
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016188029
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016593671
+      },
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016751460
+      }
+    ],
+    "1. Frontend: main-menu realignment + i18n + tests": [
+      {
+        "executionId": "d721d7c9-fde2-4122-8a50-94f4aa57d550",
+        "chatSessionId": "sess_5cc41a2a-febd-4782-b93b-0cd0ee784f65",
+        "timestamp": 1793016416203
+      }
+    ]
+  }
+}
