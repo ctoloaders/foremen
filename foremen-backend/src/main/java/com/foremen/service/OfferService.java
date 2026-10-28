@@ -568,7 +568,8 @@ public class OfferService
      */
     @Transactional(readOnly = true)
     public OfferEntity getOffer(Long offerId) {
-        return resolveOffer(offerId);
+        // R19 / R1.3: serve live totals (recompute-on-read), never a stale stored snapshot.
+        return applyLiveTotals(resolveOffer(offerId));
     }
 
     /**
@@ -603,11 +604,13 @@ public class OfferService
                 .stream()
                 .reduce((first, second) -> second);
         if (active.isPresent()) {
-            return active;
+            // R19 / R1.3: serve live totals (recompute-on-read), never a stale stored snapshot.
+            return active.map(this::applyLiveTotals);
         }
         // Otherwise fall back to the latest offer overall (e.g. the most recent terminal offer).
         return offerDao.findByProjectIdOrderByIdAsc(projectId).stream()
-                .reduce((first, second) -> second);
+                .reduce((first, second) -> second)
+                .map(this::applyLiveTotals);
     }
 
     /**
@@ -754,6 +757,20 @@ public class OfferService
      */
     @Transactional
     public void recomputeTotals(OfferEntity offer) {
+        OfferTotals totals = computeLiveTotals(offer);
+        offer.setTotalNet(totals.totalNet());
+        offer.setTotalVat(totals.totalVat());
+        offer.setTotalGross(totals.totalGross());
+    }
+
+    /**
+     * Computes the offer's totals from the <b>live-referenced</b> estimate prices and the offer's
+     * applied discounts WITHOUT mutating the offer (FOR-05-07 R19 Live_Referenced_Pricing, R1.3).
+     * This is the single pure computation both the write path ({@link #recomputeTotals}) and the
+     * read path ({@link #applyLiveTotals}) share, so a read reflects the estimate's current total
+     * regardless of when the stored snapshot was last written.
+     */
+    private OfferTotals computeLiveTotals(OfferEntity offer) {
         EstimateEntity estimate = offer.getEstimate();
         List<EstimateLineEntity> lines = estimate.getLines() != null ? estimate.getLines() : List.of();
 
@@ -761,13 +778,31 @@ public class OfferService
                 toDiscountInputs(offer.getDiscounts()),
                 toLineInputs(lines));
 
-        OfferTotals totals = offerTotalsCalculator.compute(
+        return offerTotalsCalculator.compute(
                 estimateClientPrices(estimate),
                 effective,
                 vatRateOf(estimate));
+    }
+
+    /**
+     * READ-PATH live recompute (FOR-05-07 R19 / R1.3): refreshes the offer's in-memory
+     * {@code totalNet}/{@code totalVat}/{@code totalGross} from the live-referenced estimate so a
+     * read reflects the estimate's current client-facing work total — NOT a stale stored snapshot
+     * frozen at the last write (prepare / select-package / discount change).
+     *
+     * <p>This is called only from {@code readOnly = true} read methods. It mutates the managed
+     * entity's transient total fields in memory for the assembler to project, but it deliberately
+     * performs NO {@code save}/{@code flush}: under a read-only transaction Hibernate runs with
+     * {@code FlushMode.MANUAL}, so the refreshed values are served to the caller without being
+     * persisted (a GET writes nothing). The stored columns are brought current on the next genuine
+     * write path, which already calls {@link #recomputeTotals}.
+     */
+    private OfferEntity applyLiveTotals(OfferEntity offer) {
+        OfferTotals totals = computeLiveTotals(offer);
         offer.setTotalNet(totals.totalNet());
         offer.setTotalVat(totals.totalVat());
         offer.setTotalGross(totals.totalGross());
+        return offer;
     }
 
     /** Maps the offer's applied {@link OfferDiscountEntity} rows to the resolver's pure inputs. */
