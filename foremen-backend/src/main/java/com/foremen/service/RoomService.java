@@ -360,9 +360,15 @@ public class RoomService
     }
 
     /**
-     * Range-checks a manual metric and returns the source flag it should carry: {@code MANUAL} when
-     * a value is supplied, {@code null} when the metric is absent. A caller-supplied source that is
-     * not a defined {@link MeasureSource} is rejected via {@link #validateSource(String, MeasureSource)}.
+     * Range-checks a geometry-less metric and returns the source flag it should carry.
+     *
+     * <p>With no polygon geometry, a supplied metric value is normally stamped {@code MANUAL}.
+     * However, the flat Rooms matrix (FOR-05-02) derives some metrics client-side from typed inputs
+     * (e.g. {@code wallArea = perimeter × ceilingHeight − openings}) with no polygon to recompute
+     * from, and flags those cells {@code CALCULATED}. To let that calculated flag survive a save,
+     * a caller may supply the metric value together with {@code *Source = CALCULATED}, in which case
+     * the value is kept and stamped {@code CALCULATED}; otherwise (no source, or {@code MANUAL}) a
+     * supplied value is stamped {@code MANUAL}. An absent metric keeps a {@code null} value/source.
      */
     private MeasureSource stampManual(String field, BigDecimal value, MeasureSource suppliedSource) {
         validateSource(field, suppliedSource);
@@ -370,7 +376,11 @@ public class RoomService
             return null;
         }
         validateMetricRange(field, value);
-        return MeasureSource.MANUAL;
+        // Honor an explicit CALCULATED flag for a client-derived (geometry-less) metric so the
+        // matrix's "Calculated" badge survives the round-trip; everything else stays MANUAL.
+        return suppliedSource == MeasureSource.CALCULATED
+                ? MeasureSource.CALCULATED
+                : MeasureSource.MANUAL;
     }
 
     /**
