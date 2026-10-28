@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-02-07 (users UI, worker-type bugfix): an OPTIONAL worker-type (cost tier) association on
+        a USER record. Shown in the admin create/edit form only for a WORKER-role user and, when
+        chosen, persisted on the user. Mirrors the existing worker-only user attributes (changeset
+        149) but as a single nullable FK to the existing worker_types dictionary (changeset 125).
+
+          worker_type_id BIGINT  — nullable FK -> worker_types(id). NULL for every non-worker user
+                                   and for a WORKER saved without a worker type. ON DELETE SET NULL
+                                   so deactivating/removing a worker type row never blocks or cascades
+                                   into the user; the user simply drops back to "no worker type".
+
+        No backfill: every existing user keeps worker_type_id NULL.
+
+        Idempotent: the column is added only when absent (NOT columnExists) and the FK only when
+        absent (NOT foreignKeyConstraintExists), each changeSet MARK_RAN, so a re-run against an
+        already-migrated database makes no schema change. Registered LAST in sequence.
+    -->
+
+    <changeSet id="188-add-user-worker-type-id" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="users" columnName="worker_type_id"/></not>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="worker_type_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="188-add-user-worker-type-fk" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="fk_users_worker_type"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint
+            baseTableName="users"
+            baseColumnNames="worker_type_id"
+            constraintName="fk_users_worker_type"
+            referencedTableName="worker_types"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+</databaseChangeLog>

@@ -20,6 +20,7 @@ import com.foremen.config.persistence.LocaleAttributeConverter;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.WorkCategoryDao;
+import com.foremen.dao.WorkerTypeDao;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
@@ -69,6 +70,8 @@ class UserLocaleMigrationRegressionTest {
     private ProjectAccessCache projectAccessCache;
     @Mock
     private WorkCategoryDao workCategoryDao;
+    @Mock
+    private WorkerTypeDao workerTypeDao;
 
     private UserService userService;
     private Method validateLocale;
@@ -76,7 +79,7 @@ class UserLocaleMigrationRegressionTest {
     private UserService service() {
         if (userService == null) {
             userService = new UserService(dao, roleDao, mapper, auditLogDao, entityManager,
-                    inviteService, projectAccessCache, workCategoryDao);
+                    inviteService, projectAccessCache, workCategoryDao, workerTypeDao);
         }
         return userService;
     }

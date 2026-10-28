@@ -6,6 +6,7 @@ import com.foremen.dao.RoleDao;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
+import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.model.UserServiceExtendedModel;
 import com.foremen.service.model.UserServiceModel;
@@ -77,6 +78,9 @@ public abstract class UserServiceMapper
     @Mapping(target = "locale", expression = "java(localeToTag(source.getLocale()))")
     @Mapping(target = "workCategoryIds", ignore = true)
     @Mapping(target = "workCategories", expression = "java(toWorkCategoryRefs(source))")
+    // FOR-02-07 — read path: inbound id stays null; the outbound ref is derived from the entity.
+    @Mapping(target = "workerTypeId", ignore = true)
+    @Mapping(target = "workerType", expression = "java(toWorkerTypeRef(source))")
     public abstract UserServiceExtendedModel toServiceExtendedModel(UserEntity source);
 
     @Override
@@ -84,6 +88,9 @@ public abstract class UserServiceMapper
     @Mapping(target = "role", ignore = true)
     @Mapping(target = "locale", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
+    // FOR-02-07 — the service resolves workerTypeId into a managed WorkerTypeEntity, so the mapper
+    // must not touch the association from the model's ref/id fields.
+    @Mapping(target = "workerType", ignore = true)
     public abstract UserEntity toCreateDaoModel(UserServiceExtendedModel source);
 
     @Override
@@ -91,6 +98,7 @@ public abstract class UserServiceMapper
     @Mapping(target = "role", ignore = true)
     @Mapping(target = "locale", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
+    @Mapping(target = "workerType", ignore = true)
     public abstract void updateFields(UserServiceExtendedModel source, @MappingTarget UserEntity target);
 
     /**
@@ -188,6 +196,35 @@ public abstract class UserServiceMapper
             refs.add(new RefDto(category.getId(), localizedName(category)));
         }
         return refs;
+    }
+
+    /** Localized name of a worker type: {@code nameRU} for a ru request else {@code namePL}, with
+     * the other locale then the code as fallbacks. */
+    protected static String localizedName(WorkerTypeEntity workerType) {
+        boolean russian = isRussianLocale();
+        String name = russian ? workerType.getNameRU() : workerType.getNamePL();
+        if (name == null || name.isBlank()) {
+            name = russian ? workerType.getNamePL() : workerType.getNameRU();
+        }
+        if (name == null || name.isBlank()) {
+            name = workerType.getCode();
+        }
+        return name;
+    }
+
+    /**
+     * FOR-02-07 — the OPTIONAL worker-type ref for a WORKER user, used as the {@code workerType}
+     * expression of {@link #toServiceExtendedModel(UserEntity)}. Carries the worker-type id and its
+     * localized display name (ru → pl → code fallback). Gated on WORKER (D-worker-only): a non-WORKER
+     * user, or a WORKER with no worker type, yields {@code null}. The write path leaves this null.
+     */
+    protected static RefDto toWorkerTypeRef(UserEntity source) {
+        boolean worker = source.getRole() != null && WORKER_ROLE_CODE.equals(source.getRole().getCode());
+        WorkerTypeEntity workerType = source.getWorkerType();
+        if (!worker || workerType == null) {
+            return null;
+        }
+        return new RefDto(workerType.getId(), localizedName(workerType));
     }
 
     private static boolean isRussianLocale() {

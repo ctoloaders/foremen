@@ -80,7 +80,7 @@ class AdminRoleProhibitionPropertyTest {
         EntityManager entityManager = mock(EntityManager.class);
         // Email uniqueness passes: no existing user for any email.
         when(dao.findByEmail(any())).thenReturn(Optional.empty());
-        UserService service = new UserService(dao, roleDao, mapper, auditLogDao, entityManager, null, null, null);
+        UserService service = new UserService(dao, roleDao, mapper, auditLogDao, entityManager, null, null, null, null);
         return new Fixture(service, dao, roleDao);
     }
 
@@ -94,7 +94,7 @@ class AdminRoleProhibitionPropertyTest {
     private static UserServiceExtendedModel model(long roleId) {
         return new UserServiceExtendedModel(
                 null, "Test User", "unique@example.com", null, roleId,
-                null, true, "ru", null, null, null);
+                null, true, "ru", null, null, null, null, null);
     }
 
     // Feature: FOR-03-01-jwt-auth, Property 25 (create branch)

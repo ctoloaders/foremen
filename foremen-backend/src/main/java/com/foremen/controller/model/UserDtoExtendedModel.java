@@ -20,5 +20,7 @@ public record UserDtoExtendedModel(
         boolean active,
         String locale,
         Map<String, Object> displayPreferences,
-        List<RefDto> workCategories
+        List<RefDto> workCategories,
+        // FOR-02-07 — OPTIONAL worker-type (id + localized name) for a WORKER user; null otherwise.
+        RefDto workerType
 ) {}

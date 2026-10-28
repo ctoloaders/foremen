@@ -31,5 +31,10 @@ public record UserServiceExtendedModel(
         String locale,
         Map<String, Object> displayPreferences,
         List<Long> workCategoryIds,
-        List<RefDto> workCategories
+        List<RefDto> workCategories,
+        // FOR-02-07 — worker-type: inbound id on the write path (applied only for a WORKER user,
+        // D-worker-only), outbound (id, localized name) ref on the read path. Each is left null on
+        // the opposite path, mirroring workCategoryIds / workCategories.
+        Long workerTypeId,
+        RefDto workerType
 ) {}

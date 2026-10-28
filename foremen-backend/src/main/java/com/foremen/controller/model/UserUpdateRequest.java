@@ -23,5 +23,8 @@ public record UserUpdateRequest(
         Boolean active,
         String locale,
         Map<String, Object> displayPreferences,
-        List<Long> workCategoryIds
+        List<Long> workCategoryIds,
+        // FOR-02-07 — OPTIONAL worker-type id, applied only when the resolved role is WORKER
+        // (D-worker-only); null/omitted clears it. Validation lives in UserService.
+        Long workerTypeId
 ) {}

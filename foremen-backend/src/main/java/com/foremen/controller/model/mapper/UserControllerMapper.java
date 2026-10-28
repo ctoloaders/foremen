@@ -24,11 +24,14 @@ public interface UserControllerMapper extends ControllerToServiceMapper<
     @Mapping(target = "active", constant = "true")
     @Mapping(target = "roleName", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
+    // FOR-02-07 — workerTypeId maps through by name; the outbound workerType ref is read-path only.
+    @Mapping(target = "workerType", ignore = true)
     UserServiceExtendedModel toServiceExtendedModel(UserCreateRequest source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "roleName", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
+    @Mapping(target = "workerType", ignore = true)
     UserServiceExtendedModel toUpdateServiceExtendedModel(UserUpdateRequest source);
 }

@@ -181,3 +181,108 @@ dev value for validation. This is unrelated to the bugfixes and was not committe
 
 - **Wave 1:** 6 — single backend mapper change.
 - **Wave 2:** V2 — browser/API validation; depends on 6.
+
+## Round 3 (2026-10-28)
+
+- [x] 7. WORKER-role user create/edit: show an OPTIONAL worker-type selector; persist the chosen worker type on the user
+  - Request (user): for a WORKER-role user, the create/edit form must show a worker-type selector
+    (optional). If chosen, it must be saved on the user entity.
+  - Layer: **both** (backend persistence + frontend conditional selector). This is a small feature
+    addition, not a defect, but is tracked here as requested ("append user management bugfix").
+  - Investigation (context-gatherer, grounded):
+    - A **WorkerType catalog already exists end-to-end** — no catalog work needed:
+      `WorkerTypeEntity` (table `worker_types`), `GET /api/worker-types` (paginated,
+      `WorkerTypeController`, ABAC resource `WORKER_TYPES`, read DTO `WorkerTypeDtoModel` with
+      id/code/locale-resolved `name`), seeded by changeset `125-create-worker-types.xml` with
+      ADMIN CRUD + MANAGER/FOREMAN/FINANCIER READ grants. Frontend already has
+      `features/worker-types/api/worker-types-api.ts#fetchWorkerTypes` + `WorkerTypeDto`.
+    - **Missing piece:** `UserEntity` has NO worker-type FK. A worker type is currently attached to
+      a user only PER-PROJECT via `ProjectMemberEntity.workerType`, not on the user record. So the
+      work is to add a nullable `users.worker_type_id` FK and thread it through create/update/read,
+      plus a WORKER-conditional selector in the admin form.
+    - **Strong precedent to mirror:** the FOR-05-10b `workCategoryIds` flow already added a
+      WORKER-gated, nullable field to this exact user create/update/read path
+      (`UserService.resolveWorkCategories` gated on `WORKER_ROLE_CODE = "WORKER"`; mapper
+      write-ignore / read-ref; frontend payload append). Mirror it one-for-one for a scalar
+      `workerTypeId`.
+  - Fix plan:
+    - **Backend (root repo):**
+      1. New changeset `database_files/changesets/188-add-user-worker-type.xml` — `addColumn`
+         `worker_type_id BIGINT` (nullable) on `users` + FK to `worker_types(id)` (`ON DELETE SET
+         NULL`), idempotent (`columnExists` precondition + `MARK_RAN`); register LAST in
+         `changelog.xml` after `187-...`. (Confirmed next free number is 188.)
+      2. `UserEntity` — add `@ManyToOne(fetch = LAZY) @JoinColumn(name = "worker_type_id")
+         WorkerTypeEntity workerType;` (nullable).
+      3. DTOs — add optional `Long workerTypeId` to `UserCreateRequest` + `UserUpdateRequest`;
+         add `workerTypeId` (write) + a `RefDto workerType` (read) to `UserServiceExtendedModel`;
+         add `RefDto workerType` to `UserDtoExtendedModel` (the edit-form read model).
+      4. Mappers — `UserServiceMapper`: `@Mapping(target="workerType", ignore=true)` on the write
+         path (service resolves the id to a managed entity), add a read-path expression populating
+         the `workerType` ref gated on WORKER (reuse `localizedName`), inject `WorkerTypeDao`;
+         `UserControllerMapper` passes `workerTypeId` straight through.
+      5. `UserService` — add `resolveWorkerType(role, workerTypeId)` that returns the managed
+         `WorkerTypeEntity` only when `role.code == "WORKER"` (else null; reject unknown/inactive id),
+         called from `validateCreate`/`validateUpdate` and applied in the overridden
+         `create(...)`/`update(...)`, mirroring `resolveWorkCategories`. No new ABAC wiring
+         (column on the existing `USERS` resource; `WORKER_TYPES` read already seeded).
+    - **Frontend (foremen-frontend repo):**
+      6. New `WorkerTypeSelect` cloned from `RoleSelect.tsx` (searchable/infinite Popover), backed by
+         `fetchWorkerTypes`. Render it in `UserFormBody` (UserFormSheet) ONLY when the selected
+         role's code is `WORKER` (surface the role code from `RoleSelect` or match `roleId` against
+         loaded options); append `workerTypeId` to the create + update payloads; prefill on edit
+         from `userData.workerType?.id`.
+      7. Types — add `workerTypeId?: number | null` to `UserCreateRequest`/`UserUpdateRequest`,
+         `workerType?: { id; name } | null` to `UserExtendedDto`; add `workerTypeId` to the zod
+         `userFormSchema` (optional).
+      8. i18n — add `users.form.workerType` (+ placeholder/none/search) to `pl.json` AND `ru.json`.
+  - _Requirements: (new — FOR-02-07 user create/edit; worker-type persistence on the user. Mirrors FOR-05-10b WORKER-gated field precedent.)_
+  - _Depends on: none_
+  - Implemented (backend, root repo): changeset `188-add-user-worker-type.xml` (nullable
+    `users.worker_type_id` FK → `worker_types(id)` `ON DELETE SET NULL`, idempotent) registered last
+    in `changelog.xml`; `UserEntity.workerType` `@ManyToOne`; `workerTypeId` on
+    `UserCreateRequest`/`UserUpdateRequest`; `workerTypeId` (write) + `RefDto workerType` (read) on
+    `UserServiceExtendedModel`; `RefDto workerType` on `UserDtoExtendedModel`; `UserServiceMapper`
+    write-ignore + read-ref (`toWorkerTypeRef`, WORKER-gated, localized `localizedName`);
+    `UserControllerMapper` ignores the outbound ref; `UserService.resolveWorkerType(role, id)`
+    (WORKER-only, rejects unknown/inactive → 400 `error.user.workerType.invalid`, PL+RU added),
+    wired into validateCreate/validateUpdate and applied in create/update. All
+    `UserServiceExtendedModel` call sites + 3 `UserService` test constructors updated.
+  - Implemented (frontend, foremen-frontend repo): `WorkerTypeSelect` (searchable/infinite Popover,
+    clearable, "none" option, cloned from `RoleSelect`, backed by `fetchWorkerTypes`);
+    `UserFormSheet` renders it ONLY when the selected role code is WORKER (resolved from
+    `useRolesForSelect` by id), appends `workerTypeId` to create+update payloads, prefills on edit;
+    `userFormSchema` + types (`workerTypeId` request, `workerType` ref response); `users.form.workerType*`
+    i18n in PL+RU.
+  - Verified: backend `./gradlew compileJava compileTestJava` clean; affected user tests pass
+    (`UserWorkCategoriesIntegrationTest` 9, `AdminRoleProhibitionPropertyTest` 5,
+    `UserCreateInvitePropertyTest` 1, `UserServicePreservationTest` 3, `UserServiceBugConditionTest`
+    2 — 0 failures). Frontend `npx tsc -b` clean; `npx vitest run src/features/users` → only the 3
+    PRE-EXISTING RoleSelect preservation failures (confirmed identical on a stashed/clean tree),
+    unrelated to this change. Liquibase applied 188 (column + FK verified in `\d users`).
+  - _Requirements: (as above)_
+  - _Depends on: none_
+
+- [x] V3. Validate Round 3 in the browser
+  - Create a WORKER user: the worker-type selector appears (optional); pick a type and save; reopen
+    the user in edit and confirm the chosen worker type is prefilled (persisted on the user). Switch
+    the role to a non-WORKER: the selector hides and no worker type is sent/kept. Confirm a WORKER
+    saved with NO worker type persists null without error. Mark `[x]` only on a confirmed pass.
+  - Result (2026-10-28, PASS): UI — with no role selected the worker-type field is hidden; selecting
+    "Pracownik" (WORKER) revealed it with the placeholder + "Brak" + the 4 catalog tiers (Baza /
+    Pracownik najemny bez narzędzi / Pracownik (JDG) z pełnym narzędziem / Firma); picking "Firma"
+    and saving created user 3872 with `worker_type_id = 4` (code FIRM) in the DB, and
+    `GET /api/users/3872` returned `workerType {id:4,name:"Firma"}` (localized) for edit prefill.
+    API edge cases — a WORKER created with `workerTypeId:null` persisted null (user 3873); a
+    non-WORKER (FOREMAN) sent `workerTypeId:4` ignored it and persisted null (user 3874, worker-only
+    gating); a WORKER sent an invalid id (999999) was rejected 400 with the localized message. Test
+    users 3872/3873/3874 deleted afterward (204) — no residual data.
+  - _Requirements: (as bug 7)_
+  - _Depends on: 7_
+
+## Parallel execution plan (waves) — Round 3
+
+- **Wave 1:** 7 — the worker-type field spans backend (changeset + entity + DTO/mapper/service) and
+  frontend (selector + types + i18n); the backend and frontend halves are committed per their own
+  repo but are one logical change, so they are a single leaf (serialized backend→frontend because
+  the frontend selector consumes the new read `workerType` ref and request `workerTypeId`).
+- **Wave 2:** V3 — browser validation; depends on 7.

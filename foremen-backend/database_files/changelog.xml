@@ -844,4 +844,9 @@
          PermissionAnnotationValidator passes at startup for the controller carrying
          @PermissionResource("COMPANY_SCHEDULE"). Registered LAST, after 186. -->
     <include file="database_files/changesets/187-seed-company-schedule-resource.xml"/>
+
+    <!-- FOR-02-07 (users UI, worker-type bugfix): add the optional users.worker_type_id FK to the
+         worker_types dictionary (ON DELETE SET NULL). Nullable, worker-only at the service layer.
+         Registered LAST, after 187. -->
+    <include file="database_files/changesets/188-add-user-worker-type.xml"/>
 </databaseChangeLog>

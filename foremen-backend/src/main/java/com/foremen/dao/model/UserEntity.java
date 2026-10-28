@@ -33,6 +33,17 @@ public class UserEntity extends BaseEntity {
     @JoinColumn(name = "role_id", nullable = false)
     private RoleEntity role;
 
+    /**
+     * FOR-02-07 (users UI, worker-type bugfix) — OPTIONAL worker-type (cost tier) for a WORKER user.
+     * Nullable: non-WORKER users and WORKER users saved without a selection keep it {@code null}.
+     * The service resolves/persists it only when the user's role code is {@code WORKER}
+     * (D-worker-only), mirroring {@link #workCategories}. FK is {@code ON DELETE SET NULL}
+     * (changeset 188) so removing a worker-type dictionary row drops the user back to no type.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "worker_type_id")
+    private WorkerTypeEntity workerType;
+
     @Column(nullable = false)
     private boolean active = true;
 

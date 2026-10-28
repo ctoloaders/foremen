@@ -304,7 +304,7 @@ class UserWorkCategoriesIntegrationTest {
     private UserServiceExtendedModel model(Long roleId, List<Long> workCategoryIds) {
         return new UserServiceExtendedModel(
                 null, "WC User " + runId, "wc+" + System.nanoTime() + "+" + runId + "@example.com",
-                null, roleId, null, true, "ru", null, workCategoryIds, null);
+                null, roleId, null, true, "ru", null, workCategoryIds, null, null, null);
     }
 
     /**
@@ -334,7 +334,7 @@ class UserWorkCategoriesIntegrationTest {
         UserEntity existing = userDao.findById(id).orElseThrow();
         return new UserServiceExtendedModel(
                 id, existing.getName(), existing.getEmail(), null, roleId, null, true, "ru",
-                null, workCategoryIds, null);
+                null, workCategoryIds, null, null, null);
     }
 
     private Long seedRole(String code, String nameRu, String namePl) {

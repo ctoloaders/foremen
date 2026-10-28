@@ -3,11 +3,13 @@ package com.foremen.service;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.WorkCategoryDao;
+import com.foremen.dao.WorkerTypeDao;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkerKind;
+import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.config.persistence.LocaleAttributeConverter;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.audit.AuditLogDao;
@@ -54,6 +56,7 @@ public class UserService implements AdminService<
     private final InviteService inviteService;
     private final ProjectAccessCache projectAccessCache;
     private final WorkCategoryDao workCategoryDao;
+    private final WorkerTypeDao workerTypeDao;
     private final Class<UserEntity> daoModelClass = UserEntity.class;
 
     // --- Validation hooks (framework reuses default create()/update() for audit/snapshot) ---
@@ -85,6 +88,9 @@ public class UserService implements AdminService<
         // rejects before anything is persisted (changing nothing). The resolved list is applied
         // onto the entity in create(...) once the role is known.
         resolveWorkCategories(role, model.workCategoryIds());
+        // FOR-02-07 — validate the optional worker type up front (worker-only; unknown/inactive id
+        // rejected). The resolved entity is applied onto the user in create(...).
+        resolveWorkerType(role, model.workerTypeId());
     }
 
     /**
@@ -107,6 +113,9 @@ public class UserService implements AdminService<
         // rejects before any field is changed (changing nothing). The resolved list is applied onto
         // the entity in update(...) with the role resolved on this update.
         resolveWorkCategories(targetRole, update.workCategoryIds());
+        // FOR-02-07 — validate the optional worker type up front (worker-only; unknown/inactive id
+        // rejected). The resolved entity is applied onto the user in update(...).
+        resolveWorkerType(targetRole, update.workerTypeId());
     }
 
     /**
@@ -121,16 +130,20 @@ public class UserService implements AdminService<
     public UserServiceExtendedModel create(UserServiceExtendedModel model) {
         RoleEntity role = findRoleById(model.roleId());
         List<WorkCategoryEntity> categories = resolveWorkCategories(role, model.workCategoryIds());
+        // FOR-02-07 — resolve the optional worker type (worker-only; null otherwise).
+        WorkerTypeEntity workerType = resolveWorkerType(role, model.workerTypeId());
         UserServiceExtendedModel created = AdminService.super.create(model);
-        if (!categories.isEmpty()) {
+        if (!categories.isEmpty() || workerType != null) {
             UserEntity entity = dao.findById(created.id())
                     .orElseThrow(() -> new ForemenApiException(
                             HttpStatus.INTERNAL_SERVER_ERROR, "error.entity.not.found", created.id()));
             entity.getWorkCategories().clear();
             entity.getWorkCategories().addAll(categories);
+            // FOR-02-07 — set the optional worker type (null for a non-WORKER user / no selection).
+            entity.setWorkerType(workerType);
             dao.save(entity);
             entityManager.flush();
-            // Re-read so the returned model carries the persisted, ordered categories (R1.5).
+            // Re-read so the returned model carries the persisted categories (R1.5) + worker type.
             return mapper.toServiceExtendedModel(entity);
         }
         return created;
@@ -154,6 +167,9 @@ public class UserService implements AdminService<
         List<WorkCategoryEntity> categories = resolveWorkCategories(entity.getRole(), model.workCategoryIds());
         entity.getWorkCategories().clear();
         entity.getWorkCategories().addAll(categories);
+        // FOR-02-07 — replace the optional worker type (worker-only). resolveWorkerType returns null
+        // for a non-WORKER user or a WORKER saved with no selection, which clears it (D-worker-only).
+        entity.setWorkerType(resolveWorkerType(entity.getRole(), model.workerTypeId()));
         dao.save(entity);
         entityManager.flush();
         UserServiceExtendedModel result = mapper.toServiceExtendedModel(entity);
@@ -215,6 +231,9 @@ public class UserService implements AdminService<
                 true,
                 resolvedLocale,
                 null,
+                null,
+                null,
+                // FOR-02-07 — client registration never carries a worker type.
                 null,
                 null
         );
@@ -408,6 +427,31 @@ public class UserService implements AdminService<
             resolved.add(category);
         }
         return resolved;
+    }
+
+    /**
+     * FOR-02-07 — resolves the OPTIONAL worker type for a user. Worker-only (D-worker-only): returns
+     * {@code null} for a non-WORKER role or when no id is supplied, so a non-WORKER user never carries
+     * a worker type and a WORKER saved without a selection clears it. For a WORKER with an id, the id
+     * must resolve to an existing, ACTIVE {@link WorkerTypeEntity}, else a 400 is raised before any
+     * change is persisted. Mirrors {@link #resolveWorkCategories} as a scalar.
+     *
+     * @param role         the user's resolved role (determines worker-only applicability)
+     * @param workerTypeId the submitted worker-type id (optional)
+     * @return the managed, active worker type, or {@code null} when not applicable / not supplied
+     * @throws ForemenApiException 400 {@code error.user.workerType.invalid} for an unknown/inactive id
+     */
+    private WorkerTypeEntity resolveWorkerType(RoleEntity role, Long workerTypeId) {
+        boolean worker = role != null && WORKER_ROLE_CODE.equals(role.getCode());
+        if (!worker || workerTypeId == null) {
+            return null;
+        }
+        WorkerTypeEntity workerType = workerTypeDao.findById(workerTypeId).orElse(null);
+        if (workerType == null || !workerType.isActive()) {
+            throw new ForemenApiException(
+                    HttpStatus.BAD_REQUEST, "error.user.workerType.invalid", workerTypeId);
+        }
+        return workerType;
     }
 
     /**
