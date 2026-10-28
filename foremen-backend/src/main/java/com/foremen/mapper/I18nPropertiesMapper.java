@@ -12,6 +12,23 @@ public interface I18nPropertiesMapper<TargetModel, SourceModel> {
 
     Set<String> getI18nSupportedProperties();
 
+    /**
+     * The i18n properties used ONLY for sort/filter field resolution (appending the active-locale
+     * {@code RU}/{@code PL} suffix to a query path). Defaults to {@link #getI18nSupportedProperties()}
+     * so existing mappers are unaffected.
+     *
+     * <p>Override this when a sortable/filterable column maps to a <em>localized association path</em>
+     * (e.g. {@code role.name} &rarr; {@code role.nameRU}/{@code role.namePL}) that must NOT be added
+     * to {@link #getI18nSupportedProperties()} — that set also drives the read/write model-field i18n
+     * {@code @AfterMapping} hooks ({@code processI18n} / {@code processI18nEmptyValues}), which expect
+     * a bare property resolvable to a {@code <prop>RU}/{@code <prop>PL} field on the entity and a
+     * matching {@code <prop>} field on the model. A nested path like {@code role.name} there would
+     * make those hooks look up a non-existent {@code role.namePL} field and fail.
+     */
+    default Set<String> getI18nSortFilterProperties() {
+        return getI18nSupportedProperties();
+    }
+
     @AfterMapping
     default void processI18n(@MappingTarget TargetModel target, SourceModel source) {
         Set<String> properties = getI18nSupportedProperties();

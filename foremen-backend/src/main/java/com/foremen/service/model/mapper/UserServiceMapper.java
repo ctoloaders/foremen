@@ -47,18 +47,33 @@ public abstract class UserServiceMapper
 
     @Override
     public Set<String> getI18nSupportedProperties() {
+        // User has no own localized model field resolved by the read-path i18n @AfterMapping
+        // (roleName is mapped by a dedicated expression, not the generic processI18n), so this set
+        // stays EMPTY. The localized role sort/filter path is declared separately in
+        // getI18nSortFilterProperties() so it does not feed the model-field i18n hook.
         return Set.of();
     }
 
     @Override
+    public Set<String> getI18nSortFilterProperties() {
+        // Sort/filter-only i18n resolution: the UI sends the unsuffixed association path
+        // "role.name"; the shared sort/filter resolution appends the active-locale suffix to the
+        // final segment -> "role.nameRU"/"role.namePL" (RoleEntity is localized). This is kept
+        // apart from getI18nSupportedProperties() because that set also drives the read/write
+        // model-field i18n @AfterMapping hooks, which expect a bare, model-resolvable property —
+        // a nested "role.name" there would make them look up a non-existent "role.namePL" field.
+        return Set.of("role.name");
+    }
+
+    @Override
     @Mapping(target = "roleId", source = "role.id")
-    @Mapping(target = "roleName", expression = "java(source.getRole() != null ? source.getRole().getNameRU() : null)")
+    @Mapping(target = "roleName", expression = "java(localizedRoleName(source.getRole()))")
     @Mapping(target = "locale", expression = "java(localeToTag(source.getLocale()))")
     public abstract UserServiceModel toServiceModel(UserEntity source);
 
     @Override
     @Mapping(target = "roleId", source = "role.id")
-    @Mapping(target = "roleName", expression = "java(source.getRole() != null ? source.getRole().getNameRU() : null)")
+    @Mapping(target = "roleName", expression = "java(localizedRoleName(source.getRole()))")
     @Mapping(target = "locale", expression = "java(localeToTag(source.getLocale()))")
     @Mapping(target = "workCategoryIds", ignore = true)
     @Mapping(target = "workCategories", expression = "java(toWorkCategoryRefs(source))")
@@ -119,6 +134,27 @@ public abstract class UserServiceMapper
                 target.setRole(role);
             }
         }
+    }
+
+    /**
+     * Localized display name of a user's role: {@code nameRU} for a ru request else {@code namePL},
+     * with the other locale then the role {@code code} as fallbacks. Resolving by the active request
+     * locale (rather than hard-coding RU) is what makes the Users table / edit form show the role
+     * name in the caller's language. {@code null} role yields {@code null}.
+     */
+    protected static String localizedRoleName(RoleEntity role) {
+        if (role == null) {
+            return null;
+        }
+        boolean russian = isRussianLocale();
+        String name = russian ? role.getNameRU() : role.getNamePL();
+        if (name == null || name.isBlank()) {
+            name = russian ? role.getNamePL() : role.getNameRU();
+        }
+        if (name == null || name.isBlank()) {
+            name = role.getCode();
+        }
+        return name;
     }
 
     /** Localized name of a work category: {@code nameRU} for a ru request else {@code namePL}, with

@@ -138,7 +138,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         if (rawQuery == null || rawQuery.isBlank()) {
             return (root, query, cb) -> null;
         }
-        Set<String> i18nProperties = getMapper().getI18nSupportedProperties();
+        Set<String> i18nProperties = getMapper().getI18nSortFilterProperties();
         String localeSuffix = resolveLocaleSuffix();
         return QueryParser.parse(rawQuery, getDaoModelClass(), i18nProperties, localeSuffix);
     }
@@ -173,7 +173,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
             return sort;
         }
 
-        Set<String> i18nProperties = getMapper().getI18nSupportedProperties();
+        Set<String> i18nProperties = getMapper().getI18nSortFilterProperties();
         if (i18nProperties == null || i18nProperties.isEmpty()) {
             return sort;
         }
@@ -265,6 +265,14 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
             int lastDot = property.lastIndexOf('.');
             String prefix = property.substring(0, lastDot);
             String finalSegment = property.substring(lastDot + 1);
+            // A fully-qualified i18n key (e.g. "role.name") scopes i18n resolution to a specific
+            // association path WITHOUT marking a root-level field of the same final segment
+            // (e.g. the owning entity's own plain "name"). Resolves "role.name" ->
+            // "role.nameRU"/"role.namePL" by the active locale.
+            if (i18nProperties.contains(property)) {
+                return prefix + "." + finalSegment + suffix;
+            }
+            // Bare-segment i18n key (e.g. "name"): any path ending in that segment is localized.
             if (i18nProperties.contains(finalSegment)) {
                 return prefix + "." + finalSegment + suffix;
             }

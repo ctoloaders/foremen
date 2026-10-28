@@ -52,6 +52,14 @@ public class QueryParser {
             int lastDot = field.lastIndexOf('.');
             String prefix = field.substring(0, lastDot);
             String finalSegment = field.substring(lastDot + 1);
+            // A fully-qualified i18n key (e.g. "role.name") scopes i18n resolution to a specific
+            // association path WITHOUT marking a root-level field of the same final segment
+            // (e.g. the owning entity's own plain "name"). Appends the locale suffix to the final
+            // segment: "role.name" -> "role.nameRU"/"role.namePL".
+            if (i18nProperties.contains(field)) {
+                return prefix + "." + finalSegment + localeSuffix;
+            }
+            // Bare-segment i18n key (e.g. "name"): any path ending in that segment is localized.
             if (i18nProperties.contains(finalSegment)) {
                 return prefix + "." + finalSegment + localeSuffix;
             }
