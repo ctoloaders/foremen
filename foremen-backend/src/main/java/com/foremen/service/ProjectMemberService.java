@@ -642,6 +642,16 @@ public class ProjectMemberService
         member.setTags(tagHolder.tags != null ? tagHolder.tags : new ArrayList<>()); // Req 5.3 (normalized)
         if (userHolder.workerType != null) {                             // Req 5.3, Property 3 (WORKER only, validated at step 8)
             member.setWorkerType(userHolder.workerType);
+        } else if (isWorkerRole(companyRole)) {
+            // FOR-02-07 (team preselect, server safety net): when no Worker_Type was submitted for a
+            // WORKER member, default it from the user's user-level Worker_Type — but only when that
+            // default is ACTIVE (never inherit a deactivated tier). Mirrors the adjacent
+            // copyUserWorkCategoriesOnCreate default. A null/inactive user default leaves the member
+            // Uncategorized (null), unchanged from before.
+            WorkerTypeEntity userDefault = user.getWorkerType();
+            if (userDefault != null && userDefault.isActive()) {
+                member.setWorkerType(userDefault);
+            }
         }
         // FOR-05-10b (R2.1, D-copy) — on WORKER membership creation initialize Member_Work_Categories
         // as an ordered COPY of the user's current User_Work_Categories. Independent thereafter (R2.4).
@@ -2413,9 +2423,18 @@ public class ProjectMemberService
 
         WorkerKind workerKind = null;
         String contactPerson = null;
+        Long workerTypeId = null;
+        String workerTypeName = null;
         if (block == TeamBlock.WORKERS) {
             workerKind = user.getWorkerKind() == null ? WorkerKind.PERSON : user.getWorkerKind();
             contactPerson = user.getContactPerson();
+            // FOR-02-07 (team preselect): expose the user's user-level Worker_Type (tier REFERENCE —
+            // id + localized name, NOT a cost/rate) so the add-member dialog can preselect it.
+            WorkerTypeEntity userWorkerType = user.getWorkerType();
+            if (userWorkerType != null) {
+                workerTypeId = userWorkerType.getId();
+                workerTypeName = localizedWorkerTypeName(userWorkerType, russian);
+            }
         }
 
         return new Candidate(
@@ -2427,7 +2446,9 @@ public class ProjectMemberService
                 roleName,
                 block,
                 workerKind,
-                contactPerson);
+                contactPerson,
+                workerTypeId,
+                workerTypeName);
     }
 
     /** Trims the value, returning {@code null} for a {@code null} or blank-after-trim string. */

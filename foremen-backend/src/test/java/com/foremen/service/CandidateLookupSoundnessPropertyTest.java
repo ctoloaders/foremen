@@ -214,13 +214,15 @@ class CandidateLookupSoundnessPropertyTest {
                 }
             }
 
-            // The Candidate record never carries a secret / internal field (Req 11.5).
+            // The Candidate record never carries a genuine secret / internal field (Req 11.5).
+            // FOR-02-07 deliberately ADDS the user's user-level Worker_Type (a tier reference, id +
+            // localized name) to drive the team add-member preselect, so "workertype" is intentionally
+            // permitted here; the true secrets (NIP, tag, password, token, rate, cost) remain forbidden.
             assertThat(Candidate.class.getRecordComponents())
                     .extracting(RecordComponent::getName)
                     .allSatisfy(n -> assertThat(n.toLowerCase(Locale.ROOT))
                             .doesNotContain("nip")
                             .doesNotContain("tag")
-                            .doesNotContain("workertype")
                             .doesNotContain("password")
                             .doesNotContain("token")
                             .doesNotContain("rate")

@@ -10,6 +10,7 @@ import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
 import com.foremen.dao.model.WorkerKind;
+import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.team.TeamBlock;
 import org.junit.jupiter.api.AfterEach;
@@ -295,16 +296,19 @@ class ProjectMemberServiceCandidateTest {
         assertThat(c.block()).isEqualTo(TeamBlock.WORKERS);
         assertThat(c.workerKind()).isEqualTo(WorkerKind.COMPANY);
         assertThat(c.contactPerson()).isEqualTo("Jan Kowalski");
-        // The Candidate record carries no NIP/tag/worker-type/password field at all.
+        // The Candidate record carries no NIP/tag/password/rate/cost secret. FOR-02-07 intentionally
+        // adds the user's user-level Worker_Type (a tier reference) for the team preselect, so the
+        // worker-type component is expected; the genuine secrets remain absent.
         assertThat(Candidate.class.getRecordComponents())
                 .noneMatch(rc -> rc.getName().toLowerCase().contains("nip")
                         || rc.getName().toLowerCase().contains("tag")
-                        || rc.getName().toLowerCase().contains("worketype")
-                        || rc.getName().toLowerCase().contains("workertype")
                         || rc.getName().toLowerCase().contains("password")
                         || rc.getName().toLowerCase().contains("token")
                         || rc.getName().toLowerCase().contains("rate")
                         || rc.getName().toLowerCase().contains("cost"));
+        // FOR-02-07: a WORKERS candidate carries the user's user-level worker type (here: none set).
+        assertThat(c.workerTypeId()).isNull();
+        assertThat(c.workerTypeName()).isNull();
     }
 
     @Test
@@ -322,6 +326,28 @@ class ProjectMemberServiceCandidateTest {
         // Worker attributes are populated only for the WORKERS block.
         assertThat(c.workerKind()).isNull();
         assertThat(c.contactPerson()).isNull();
+    }
+
+    @Test
+    @DisplayName("FOR-02-07: a WORKERS candidate surfaces the user's user-level worker type "
+            + "(id + localized name) for the team add-member preselect")
+    void workersCandidateCarriesUserLevelWorkerType() {
+        UserEntity worker = user(11L, "Teresa", "teresa@example.com", UserStatus.ACTIVE, "WORKER", true);
+        WorkerTypeEntity wt = new WorkerTypeEntity();
+        wt.setId(4L);
+        wt.setCode("FIRM");
+        wt.setNamePL("Firma");
+        wt.setNameRU("Фирма");
+        worker.setWorkerType(wt);
+        when(userDao.searchCandidates(eq(PROJECT_ID), isNull(), isNull(), isNull(), eq(false), any()))
+                .thenReturn(new PageImpl<>(List.of(worker), PageRequest.of(0, 20), 1));
+
+        Candidate c = service.searchCandidates(PROJECT_ID, null, null, null, 0, null).getContent().get(0);
+
+        assertThat(c.block()).isEqualTo(TeamBlock.WORKERS);
+        assertThat(c.workerTypeId()).isEqualTo(4L);
+        // PL by default here (no ru locale authenticated); resolution mirrors localizedRoleName.
+        assertThat(c.workerTypeName()).isEqualTo("Firma");
     }
 
     // --- helpers ---
