@@ -2529,12 +2529,26 @@ public class ProjectMemberService
         int financier = countActiveOfRole(projectId, FINANCIER_ROLE_CODE);
         int client = countActiveOfRole(projectId, CLIENT_ROLE_CODE);
 
-        // DONE iff at least one ACTIVE FOREMAN; BLOCKED otherwise (Req 20.1/20.2, Property 9).
-        ReadinessState state = foreman >= 1 ? ReadinessState.DONE : ReadinessState.BLOCKED;
+        // Enhancement batch (user decision 5b): require an ACTIVE MANAGER.
+        //  - no ACTIVE MANAGER                -> BLOCKED (manager-required blocker)
+        //  - MANAGER present, no ACTIVE FOREMAN -> WARNING (manager acts as foreman; non-blocking)
+        //  - MANAGER and FOREMAN both present -> DONE
+        ReadinessState state;
+        String messageKey;
+        if (manager < 1) {
+            state = ReadinessState.BLOCKED;
+            messageKey = TeamReadiness.MANAGER_REQUIRED_BLOCKER;
+        } else if (foreman < 1) {
+            state = ReadinessState.WARNING;
+            messageKey = TeamReadiness.MANAGER_ACTS_AS_FOREMAN_WARNING;
+        } else {
+            state = ReadinessState.DONE;
+            messageKey = null;
+        }
 
         TeamReadiness.Counts counts =
                 new TeamReadiness.Counts(manager, foreman, estimator, worker, financier, client);
-        return new TeamReadiness(TeamReadiness.KEY, state, counts);
+        return new TeamReadiness(TeamReadiness.KEY, state, counts, messageKey);
     }
 
     /** The Assignable_Project_Role codes whose ACTIVE members the readiness gate counts (Req 20.2). */

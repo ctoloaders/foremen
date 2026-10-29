@@ -19,16 +19,20 @@ class TeamCompositionTest {
     // --- isAssignableProjectRole (Req 6.1) ---
 
     @ParameterizedTest
-    @ValueSource(strings = {"MANAGER", "FOREMAN", "ESTIMATOR", "WORKER", "FINANCIER", "CLIENT"})
-    @DisplayName("the six system role codes are Assignable_Project_Roles")
-    void sixSystemRolesAreAssignable(String code) {
+    @ValueSource(strings = {
+            "MANAGER", "FOREMAN", "ESTIMATOR", "WORKER", "FINANCIER", "CLIENT",
+            // Enhancement batch (user decision 5a): SALESMAN and any custom (non-system) role are now
+            // assignable — the assignable set is "any role except ADMIN" rather than a closed whitelist.
+            "SALESMAN", "SUPERVISOR", "custom-role"})
+    @DisplayName("every role except ADMIN is an Assignable_Project_Role (incl. custom roles)")
+    void everyRoleExceptAdminIsAssignable(String code) {
         assertThat(TeamComposition.isAssignableProjectRole(code)).isTrue();
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"ADMIN", "SUPERVISOR", "custom-role", ""})
-    @DisplayName("ADMIN and non-system / unknown codes are not assignable")
-    void adminAndUnknownRolesAreNotAssignable(String code) {
+    @ValueSource(strings = {"ADMIN", "admin", " Admin ", ""})
+    @DisplayName("ADMIN (case-insensitive) and a blank code are not assignable")
+    void adminAndBlankRolesAreNotAssignable(String code) {
         assertThat(TeamComposition.isAssignableProjectRole(code)).isFalse();
     }
 

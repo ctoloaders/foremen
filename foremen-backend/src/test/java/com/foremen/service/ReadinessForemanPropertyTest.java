@@ -110,31 +110,44 @@ class ReadinessForemanPropertyTest {
             assertThat(c.financier()).isEqualTo(financier);
             assertThat(c.client()).isEqualTo(client);
 
-            // state == DONE iff ACTIVE FOREMAN count >= 1 (Requirement 20.1/20.2, Property 9).
-            ReadinessState expected = foreman >= 1 ? ReadinessState.DONE : ReadinessState.BLOCKED;
+            // Enhancement batch (user decision 5b): manager-first rule.
+            //  no MANAGER -> BLOCKED (manager-required); MANAGER but no FOREMAN -> WARNING
+            //  (manager acts as foreman); MANAGER and FOREMAN -> DONE.
+            ReadinessState expected;
+            String expectedMsg;
+            if (manager < 1) {
+                expected = ReadinessState.BLOCKED;
+                expectedMsg = TeamReadiness.MANAGER_REQUIRED_BLOCKER;
+            } else if (foreman < 1) {
+                expected = ReadinessState.WARNING;
+                expectedMsg = TeamReadiness.MANAGER_ACTS_AS_FOREMAN_WARNING;
+            } else {
+                expected = ReadinessState.DONE;
+                expectedMsg = null;
+            }
             assertThat(readiness.state()).isEqualTo(expected);
-            assertThat(readiness.state() == ReadinessState.DONE).isEqualTo(foreman >= 1);
+            assertThat(readiness.messageKey()).isEqualTo(expectedMsg);
         } finally {
             f.close();
         }
     }
 
     /**
-     * Property 9 (ACTIVE-only driver, Requirement 27 criterion 8). Only the ACTIVE FOREMAN count can
-     * drive the gate to DONE: an arbitrary number of INACTIVE FOREMAN members (modelled by the
-     * service never querying them — the ACTIVE count is independently generated and may be zero even
-     * while other roles are populated) leaves the gate BLOCKED when the ACTIVE FOREMAN count is zero.
+     * Enhancement batch (user decision 5b): with zero ACTIVE FOREMAN, the gate is never DONE; it is
+     * BLOCKED when there is also no ACTIVE MANAGER (manager-required), and WARNING (manager acts as
+     * foreman) when an ACTIVE MANAGER is present. The remaining roles never drive the gate.
      */
     @Property(tries = 200)
     @Tag("Feature: FOR-05-09-team-selection, Property 9")
-    void zeroActiveForemanBlocksRegardlessOfOtherRoles(
+    void zeroActiveForemanIsBlockedOrWarningByManagerPresence(
             @ForAll("nonForemanCounts") int[] others) {
 
         Fixture f = new Fixture();
         try {
             // No ACTIVE FOREMAN at all; every other role arbitrarily populated.
+            int manager = others[0];
             stubActiveCount(f, FOREMAN, 0);
-            stubActiveCount(f, MANAGER, others[0]);
+            stubActiveCount(f, MANAGER, manager);
             stubActiveCount(f, ESTIMATOR, others[1]);
             stubActiveCount(f, WORKER, others[2]);
             stubActiveCount(f, FINANCIER, others[3]);
@@ -143,7 +156,16 @@ class ReadinessForemanPropertyTest {
             TeamReadiness readiness = f.service.readiness(PROJECT_ID);
 
             assertThat(readiness.counts().foreman()).isZero();
-            assertThat(readiness.state()).isEqualTo(ReadinessState.BLOCKED);
+            // Never DONE with zero foreman; BLOCKED iff no manager, else WARNING.
+            assertThat(readiness.state()).isNotEqualTo(ReadinessState.DONE);
+            if (manager < 1) {
+                assertThat(readiness.state()).isEqualTo(ReadinessState.BLOCKED);
+                assertThat(readiness.messageKey()).isEqualTo(TeamReadiness.MANAGER_REQUIRED_BLOCKER);
+            } else {
+                assertThat(readiness.state()).isEqualTo(ReadinessState.WARNING);
+                assertThat(readiness.messageKey())
+                        .isEqualTo(TeamReadiness.MANAGER_ACTS_AS_FOREMAN_WARNING);
+            }
         } finally {
             f.close();
         }

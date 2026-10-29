@@ -27,9 +27,17 @@ import java.util.Set;
  */
 public final class TeamComposition {
 
-    /** The six Assignable_Project_Role codes (Glossary). Any other code is not assignable. */
-    private static final Set<String> ASSIGNABLE_ROLE_CODES =
-            Set.of("MANAGER", "FOREMAN", "ESTIMATOR", "WORKER", "FINANCIER", "CLIENT");
+    /**
+     * Role codes that can NEVER be a project member (blacklist). Enhancement batch (FOR-05-09
+     * additional-tasks, user decision 5a): the admin-staff assignment path accepts ALL roles except
+     * WORKER and CLIENT — including custom (non-system) roles — so the assignable set is now defined
+     * by exclusion rather than a closed whitelist. {@code ADMIN} stays non-assignable: the global
+     * superuser is managed through the admin area and is never attached as a project member
+     * (consistent with the prior rule and with {@link TeamMemberOrdering}'s "any other role is
+     * admin-staff" fallback). WORKER and CLIENT remain assignable (through their dedicated blocks),
+     * so they are NOT in this blacklist.
+     */
+    private static final Set<String> NON_ASSIGNABLE_ROLE_CODES = Set.of("ADMIN");
 
     /**
      * The team-composition criteria of Requirement 6 that {@link #firstTeamCompositionViolation}
@@ -54,12 +62,17 @@ public final class TeamComposition {
     /**
      * Whether {@code roleCode} is an Assignable_Project_Role (Requirement 6 criterion 1). Matching is
      * case-insensitive on the trimmed code; a {@code null} or blank code is not assignable.
+     *
+     * <p>Enhancement batch (user decision 5a): assignable = any non-blank role code NOT in
+     * {@link #NON_ASSIGNABLE_ROLE_CODES} (currently just {@code ADMIN}). This admits every admin-staff
+     * role (MANAGER / FOREMAN / ESTIMATOR / FINANCIER / SALESMAN and any custom role) plus WORKER and
+     * CLIENT, replacing the former closed six-code whitelist so custom roles are assignable.
      */
     public static boolean isAssignableProjectRole(String roleCode) {
-        if (roleCode == null) {
+        if (roleCode == null || roleCode.isBlank()) {
             return false;
         }
-        return ASSIGNABLE_ROLE_CODES.contains(roleCode.trim().toUpperCase());
+        return !NON_ASSIGNABLE_ROLE_CODES.contains(roleCode.trim().toUpperCase());
     }
 
     /**
