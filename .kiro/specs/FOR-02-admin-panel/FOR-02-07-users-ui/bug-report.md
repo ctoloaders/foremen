@@ -286,3 +286,42 @@ dev value for validation. This is unrelated to the bugfixes and was not committe
   repo but are one logical change, so they are a single leaf (serialized backend→frontend because
   the frontend selector consumes the new read `workerType` ref and request `workerTypeId`).
 - **Wave 2:** V3 — browser validation; depends on 7.
+
+## Round 4 (2026-10-29)
+
+- [x] 8. Work-category multiselect dropdown is not wheel-scrollable (user edit form AND team change-categories dialog)
+  - FIXED (2026-10-29): added `onWheel={(e) => e.stopPropagation()}` to the `max-h-60 overflow-y-auto`
+    list `<div>` in `WorkCategoryMultiSelect.tsx`, stopping the Radix Dialog `react-remove-scroll`
+    lock from swallowing wheel events over the portalled popover.
+  - Triage: observed — the `WorkCategoryMultiSelect` options list overflows (e.g. 20 categories,
+    scrollHeight 648 vs clientHeight 240) but the mouse WHEEL does not scroll it; the user can't
+    reach the lower options. Expected — the dropdown scrolls with the wheel. Layer: **frontend**.
+    Verified in-browser: the list container (`max-h-60 overflow-y-auto`) IS structurally scrollable
+    (setting `scrollTop` works), but wheel events don't scroll it — the component renders inside a
+    Radix `Popover` nested in a Radix `Dialog`/`Sheet`, whose `react-remove-scroll` scroll-lock
+    swallows wheel events over the portalled popover. Same component is used by the admin user form
+    (FOR-05-10 Work_Categories multiselect) and the team `EditWorkCategoriesDialog`, so both exhibit
+    it. Fix: stop wheel-event propagation on the scrollable list container
+    (`onWheel={(e) => e.stopPropagation()}`) so the Dialog's scroll-lock no longer intercepts it;
+    the container's own `overflow-y-auto` then scrolls normally. (Apply the same guard to the sibling
+    popovers that share the pattern — `RoleSelect`, `WorkerTypeSelect` — if they exhibit it.)
+  - Suspect: `foremen-frontend/src/features/work-categories/components/WorkCategoryMultiSelect.tsx`
+    (the `max-h-60 overflow-y-auto` list `<div>`).
+  - _Requirements: FOR-05-10b R1/R2 (work-category assignment UI usable)_
+  - _Depends on: none_
+
+- [x] V4. Validate Round 4 in the browser
+  - PASS (2026-10-29): in the user edit form (WORKER "Valera") the work-category dropdown had 20
+    options (scrollHeight 648 > clientHeight 240); a real mouse wheel over the open popover scrolled
+    the list from scrollTop 0 → 300. The dropdown is now wheel-scrollable. Validated against the
+    live Docker stack.
+  - In the user edit form (WORKER role) and the team change-work-categories dialog, open the
+    work-category dropdown with enough categories to overflow and confirm the mouse wheel scrolls the
+    list to the bottom options. Mark `[x]` only on a confirmed browser pass.
+  - _Requirements: as bug 8_
+  - _Depends on: 8_
+
+## Parallel execution plan (waves) — Round 4
+
+- **Wave 1:** 8 — single shared-component CSS/handler fix.
+- **Wave 2:** V4 — browser validation; depends on 8.

@@ -236,3 +236,50 @@ Screen URL: http://localhost:3000/projects/1/pricing
   logically independent they share a file and are applied sequentially (3 then 4) to avoid a
   conflicting edit; only 2 is truly parallel.
 - **Wave 2:** V2 — browser validation; depends on 2, 3, 4.
+
+## Round 3 (2026-10-29)
+
+- [x] 5. Finishing-material search dropdown shows stale options after an offer-level package change
+  - FIXED (2026-10-29): added `useEffect(() => setLinePackageCode(selectedPackageCode),
+    [selectedPackageCode])` to `FinishingRow` in `ClientMaterialSelection.tsx` so the per-line
+    package re-syncs when the offer-level `selectedPackageCode` prop changes; the picker's `filter`
+    then changes and `AsyncEntitySelect` refetches. No change to `AsyncEntitySelect` /
+    `use-reference-options` (query layer was already correct).
+  - Triage: observed — on `/projects/1/pricing`, when choosing/changing a finishing material the
+    product search dropdown is filtered by the selected package; after the user changes the offer's
+    PACKAGE the dropdown still shows the OLD package's materials (it does not reload). Expected — the
+    materials dropdown reloads (refetches with the new package filter) after a package change. Layer:
+    **frontend**. Root cause (traced): the options query layer is CORRECT — `AsyncEntitySelect` →
+    `useReferenceOptions` keys its `useInfiniteQuery` on the `filter` (`['reference-options', …,
+    filter ?? '', …]`), so a changed filter refetches. The bug is in `ClientMaterialSelection.tsx`
+    `FinishingRow`: `const [linePackageCode, setLinePackageCode] = useState(selectedPackageCode)` is
+    seeded ONCE on mount and never re-syncs when the offer-level `selectedPackageCode` prop changes.
+    So `finishingConcreteFilter(typeId, linePackageCode)` keeps the stale package code, the `filter`
+    prop doesn't change, the query key doesn't change, and the picker shows the old package's
+    materials. (Changing the PER-LINE package select works, because that updates `linePackageCode`
+    directly.) Fix: re-sync the per-line package to the offer package when it changes —
+    `useEffect(() => setLinePackageCode(selectedPackageCode), [selectedPackageCode])` in `FinishingRow`.
+    Optionally also clear a now-invalid staged selection for the line when the effective package
+    changes so the trigger doesn't show a product outside the new package.
+  - Suspect: `foremen-frontend/src/features/project-offer/components/ClientMaterialSelection.tsx`
+    (`FinishingRow` `linePackageCode`). No change needed in `AsyncEntitySelect` / `use-reference-options`.
+  - _Requirements: FOR-05-07 R11 (finishing selection per package)_
+  - _Depends on: none_
+
+- [x] V3. Validate Round 3 in the browser
+  - PASS (2026-10-29): on `/projects/1/pricing` opened a finishing line's picker (package "Budżet
+    (START)"), changed the package to "Lux (PRESTIGE)" and reopened the picker — the picker fired
+    `GET /api/finishing-materials?...&query=type.id==30 AND packages.code==lux` (HTTP 200), i.e. it
+    refetched with the NEW package code instead of the stale `packages.code==budget`. This exercises
+    the exact `linePackageCode → finishingConcreteFilter → AsyncEntitySelect refetch` chain the new
+    `useEffect` feeds for the offer-level package change. Validated against the live Docker stack.
+  - On `/projects/1/pricing`, open a finishing line's material picker, note the options; change the
+    offer package; reopen the picker and confirm the options reloaded to the new package's materials.
+    Mark `[x]` only on a confirmed browser pass.
+  - _Requirements: as bug 5 (Round 3)_
+  - _Depends on: 5_
+
+## Parallel execution plan (waves) — Round 3
+
+- **Wave 1:** 5 (Round 3) — single frontend effect in `ClientMaterialSelection`.
+- **Wave 2:** V3 — browser validation; depends on 5.

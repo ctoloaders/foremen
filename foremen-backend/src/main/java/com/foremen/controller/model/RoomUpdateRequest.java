@@ -36,5 +36,14 @@ public record RoomUpdateRequest(
         BigDecimal doorArea,
         MeasureSource doorAreaSource,
         BigDecimal windowArea,
-        MeasureSource windowAreaSource
+        MeasureSource windowAreaSource,
+        // FOR-05-02 (rooms matrix persistence): per-door/window quantity + per-unit dimensions the
+        // flat (geometry-less) matrix edits. Honored on the no-geometry path and overwritten when
+        // real geometry is supplied. Persisted so they survive save/reload (bug fix).
+        Integer doorCount,
+        Integer windowCount,
+        BigDecimal doorHeight,
+        BigDecimal doorWidth,
+        BigDecimal windowHeight,
+        BigDecimal windowWidth
 ) {}

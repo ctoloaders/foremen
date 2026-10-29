@@ -189,3 +189,64 @@ Result: 2 fixed / 0 failed. Validation: live Docker stack + browser + API. Backe
 source tests (`RoomManualSourcePropertyTest`, `RoomPerFieldOverridePropertyTest`) pass; frontend 283
 rooms tests pass. (`RoomGeometryAuthoritativePropertyTest` is a pre-existing flaky geometry-rounding
 property test — fails identically on the clean tree, unrelated to these changes.)
+
+## Round 3 (2026-10-29)
+
+- [x] 1. Rooms matrix: door/window quantity + per-unit dimensions disappear after Save (only the computed area persists)
+  - FIXED (2026-10-29): added `doorCount, windowCount, doorHeight, doorWidth, windowHeight,
+    windowWidth` to the write DTOs `RoomCreateRequest.java` / `RoomUpdateRequest.java`, to the
+    frontend `RoomCreateRequest`/`RoomUpdateRequest` types, and to `buildBulkSavePayload` /
+    `REQUEST_*_FIELDS` + `persistedNumeric` in `RoomsMatrixTab.tsx` (reads them directly from the
+    read DTO). No DB migration and no `RoomService` change were needed: the columns already exist and
+    the MapStruct `RoomServiceMapper`/`RoomControllerMapper` map the new fields by name onto the
+    entity on the geometry-less write path; `validateCounts` already guards the counts.
+  - Triage: observed — on `/projects/1/rooms` the flat matrix lets the user type door/window
+    QUANTITY (`doorCount`/`windowCount`) and per-unit DIMENSIONS (`doorHeight`/`doorWidth`/
+    `windowHeight`/`windowWidth`), from which `doorArea`/`windowArea` are computed client-side. After
+    Save (+ reload) the computed areas persist but the quantity + dimensions come back empty — they
+    must persist and remain visible. Expected — the per-door/window quantity + dimensions survive
+    save/reload. Layer: **both (backend write-contract + frontend payload)** — NOT a re-render bug.
+  - Root cause (traced): the READ DTO `RoomDtoModel` already exposes `doorCount/windowCount/
+    doorHeight/doorWidth/windowHeight/windowWidth`, and the `RoomEntity` + `RoomServiceExtendedModel`
+    already have the columns/fields — but the WRITE path never carries them for a flat (geometry-less)
+    room: (a) the write DTOs `RoomCreateRequest`/`RoomUpdateRequest` have NO such fields; (b)
+    `RoomService` writes these flat fields ONLY in `applyCalculatedMetrics` (the `hasGeometry` branch
+    — polygon vertices), and the flat matrix produces no geometry, so `applyManualMetrics` runs and
+    leaves them null; (c) the frontend `buildBulkSavePayload` (`RoomsMatrixTab.tsx`) only sends
+    `REQUEST_METRIC_FIELDS` (floor/wall/perimeter/door/window area) + `REQUEST_PLAIN_FIELDS`
+    (ceilingHeight/internalCorners), explicitly omitting the door/window counts + dims. So they are
+    never sent, never persisted on the manual path, and read back null.
+  - Fix direction (no DB migration — columns already exist): add `doorCount, windowCount, doorHeight,
+    doorWidth, windowHeight, windowWidth` (optionally `wallGap`, `finishGap`) to the write DTOs
+    `RoomCreateRequest.java` / `RoomUpdateRequest.java` and the frontend `RoomCreateRequest`/
+    `RoomUpdateRequest` types; carry them through the controller→service mapper onto the entity in the
+    geometry-less branch of `RoomService` (keep `applyCalculatedMetrics` overwriting them when real
+    geometry exists); and extend `buildBulkSavePayload` to transmit the edited values.
+  - Suspect: `foremen-frontend/src/features/rooms/components/workspace/RoomsMatrixTab.tsx`
+    (`buildBulkSavePayload` / `REQUEST_*_FIELDS`); `foremen-frontend/src/features/rooms/types/index.ts`
+    (request types); `foremen-backend/.../controller/model/RoomCreateRequest.java` +
+    `RoomUpdateRequest.java`; `foremen-backend/.../service/RoomService.java` (`applyManualMetrics` /
+    `normalize`); `RoomServiceMapper` / `RoomControllerMapper` (carry the fields on write).
+  - _Requirements: FOR-05-02 R4 (manual metrics persist), R5 (matrix edits persist)_
+  - _Depends on: none_
+
+- [x] V3. Validate Round 3 in the browser
+  - PASS (2026-10-29): validated against the live Docker stack via the real write path
+    (`PUT /api/rooms/bulk`, the same endpoint the matrix Save calls) on a flat geometry-less room
+    (room 3, draft project 2). Before: all six fields `null`. Sent
+    `doorCount=2, doorHeight=2.0, doorWidth=0.9, windowCount=3, windowHeight=1.5, windowWidth=1.2`;
+    `GET /api/rooms/3` after returned exactly those values (not null) — they persist and are exposed
+    by the read DTO the matrix renders. (Project 1's matrix is read-only because it is not a DRAFT;
+    the write contract — the actual bug — was exercised directly. Frontend unit tests for
+    `RoomsMatrixTab.persistedNumeric` also pass.)
+  - On `/projects/1/rooms`, enter door/window quantity + dimensions for a flat (no-geometry) room,
+    Save, reload, and confirm the quantity + per-unit dimensions are still shown (and the computed
+    door/window area matches). Mark `[x]` only on a confirmed browser pass.
+  - _Requirements: as bug 1 (Round 3)_
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 3
+
+- **Wave 1:** 1 (Round 3) — one logical change spanning the write DTOs + service manual branch
+  (backend) and the save payload (frontend); serialized backend→frontend.
+- **Wave 2:** V3 — browser validation; depends on 1.

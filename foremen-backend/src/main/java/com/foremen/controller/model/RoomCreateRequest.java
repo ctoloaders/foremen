@@ -26,5 +26,15 @@ public record RoomCreateRequest(
         BigDecimal wallArea,
         BigDecimal perimeter,
         BigDecimal doorArea,
-        BigDecimal windowArea
+        BigDecimal windowArea,
+        // FOR-05-02 (rooms matrix persistence): the per-door/window quantity + per-unit dimensions
+        // the flat (geometry-less) matrix edits and from which door/window area is computed. Honored
+        // only on the no-geometry (manual) path; when real geometry is supplied the backend derives
+        // and overwrites them. Persisted so they survive save/reload (bug fix).
+        Integer doorCount,
+        Integer windowCount,
+        BigDecimal doorHeight,
+        BigDecimal doorWidth,
+        BigDecimal windowHeight,
+        BigDecimal windowWidth
 ) {}
