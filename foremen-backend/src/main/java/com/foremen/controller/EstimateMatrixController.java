@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.foremen.collab.CollabAccessGuard;
+import com.foremen.collab.CollabMessages.CollabSnapshot;
+import com.foremen.collab.CollabPrincipal;
+import com.foremen.collab.EstimateCollabService;
 import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.ApplyAssignmentsRequest;
@@ -67,8 +71,12 @@ public class EstimateMatrixController {
     private static final String ESTIMATE_RESOURCE = "ESTIMATE";
     private static final String UPDATE_OPERATION = "UPDATE";
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(EstimateMatrixController.class);
+
     private final EstimateAssignmentService estimateAssignmentService;
     private final ForemenPermissionEvaluator permissionEvaluator;
+    private final EstimateCollabService collabService;
+    private final CollabAccessGuard collabAccessGuard;
 
     /**
      * The full Estimate matrix read model for a project (R1.1, R1.2, R2.1, R14): works grouped by
@@ -146,8 +154,42 @@ public class EstimateMatrixController {
     @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<EstimateMatrixDto> saveAssignments(
             @PathVariable Long projectId, @Valid @RequestBody ApplyAssignmentsRequest request) {
+        // saveAndAssemble is @Transactional and has committed by the time it returns, so the
+        // collaboration broadcast below only ever announces a persisted Save.
         EstimateMatrixDto matrix = estimateAssignmentService.saveAndAssemble(projectId, request.toStagedEdits());
+        // FOR-05-13: prune the committed entries from the shared draft and tell every other editor
+        // to refetch. Best effort — a collaboration failure must never fail a successful Save.
+        try {
+            CollabPrincipal caller = currentPrincipal();
+            collabService.onSaved(projectId, request.stagedIds(), caller == null ? null : caller.userId());
+        } catch (RuntimeException e) {
+            log.warn("Collab save broadcast failed for project {}: {}", projectId, e.getMessage());
+        }
         return ResponseEntity.ok(matrix);
+    }
+
+    /**
+     * FOR-05-13 — the collaboration catch-up snapshot: the shared staged-edit draft (in replay order)
+     * and the live presence roster. A client fetches it when it opens the Estimate tab, then follows
+     * {@code /topic/estimate/{projectId}} over STOMP. {@code ESTIMATE} READ plus project scope
+     * (an out-of-scope project is reported as 404, indistinguishable from a missing one).
+     */
+    @GetMapping("/project/{projectId}/collab")
+    @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = "READ")
+    public ResponseEntity<CollabSnapshot> collabSnapshot(@PathVariable Long projectId) {
+        if (!collabAccessGuard.isAllowed(currentPrincipal(), projectId, "READ")) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", projectId);
+        }
+        return ResponseEntity.ok(collabService.snapshot(projectId));
+    }
+
+    /** The REST caller as a {@link CollabPrincipal} (user id + role; name not needed here). */
+    private CollabPrincipal currentPrincipal() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Long userId)) {
+            return null;
+        }
+        return new CollabPrincipal(userId, currentRoleCode(), null);
     }
 
     /**

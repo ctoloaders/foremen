@@ -45,6 +45,10 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-aspectj'
     implementation 'org.springframework.boot:spring-boot-starter-mail'
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    // FOR-05-13 collaborative estimate: STOMP-over-WebSocket transport + Redis as the distributed
+    // store for presence and the shared staged-edit draft (plus pub/sub fan-out across instances).
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     // MapStruct
     implementation "org.mapstruct:mapstruct:${mapstructVersion}"

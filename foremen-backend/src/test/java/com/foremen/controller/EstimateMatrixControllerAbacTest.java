@@ -58,7 +58,7 @@ class EstimateMatrixControllerAbacTest {
      * A bare controller instance used solely as the bean for {@link HandlerMethod} construction; its
      * {@code null} collaborators are never dereferenced because only annotations are inspected.
      */
-    private final EstimateMatrixController controller = new EstimateMatrixController(null, null);
+    private final EstimateMatrixController controller = new EstimateMatrixController(null, null, null, null);
 
     // --- class-level guarding ---
 

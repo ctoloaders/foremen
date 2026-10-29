@@ -103,6 +103,13 @@ public class SecurityConfig {
                         // This is redundant with the anyRequest().authenticated() catch-all below but
                         // stated explicitly to document the intended guard.
                         .requestMatchers("/api/addresses/**").authenticated()
+                        // FOR-05-13: the STOMP-over-WebSocket handshake for the collaborative
+                        // estimate. Browsers cannot attach an Authorization header to a WebSocket
+                        // upgrade, so the HTTP handshake is admitted here and authentication happens
+                        // on the STOMP CONNECT frame instead (StompAuthChannelInterceptor validates
+                        // the same JWT and rejects an invalid/missing token with an ERROR frame);
+                        // every SUBSCRIBE/SEND is then authorized per project (ESTIMATE READ/UPDATE).
+                        .requestMatchers("/api/ws", "/api/ws/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable())

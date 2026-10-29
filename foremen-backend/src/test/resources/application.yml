@@ -29,3 +29,6 @@ foremen:
     ttl-hours: 72
   mail:
     invite-base-url: http://localhost:3000/auth/set-password
+  # FOR-05-13: no Redis in unit/integration test contexts — collaboration runs in single-user mode.
+  collab:
+    enabled: false

@@ -16,6 +16,20 @@ services:
       retries: 5
       start_period: 5s
 
+  # FOR-05-13 collaborative estimate: distributed store for presence + shared staged-edit drafts
+  # (and pub/sub fan-out across backend instances). Ephemeral state only — no persistence volume.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 3s
+
   liquibase:
     image: liquibase/liquibase:4.31
     depends_on:
@@ -55,11 +69,15 @@ services:
       FOREMEN_ADMIN_CREATE: true
       FOREMEN_ADMIN_EMAIL: cto+1@loaders.dev
       FOREMEN_ADMIN_PASSWORD: alejano123
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
       postgres:
         condition: service_healthy
       liquibase:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:

@@ -3,6 +3,15 @@ spring:
     active: local
   liquibase:
     change-log: classpath:database_files/changelog.xml
+  # FOR-05-13 collaborative estimate: Redis holds only ephemeral collaboration state (presence +
+  # shared staged-edit drafts). No Spring Data Redis repositories are used.
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+      repositories:
+        enabled: false
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
@@ -19,6 +28,13 @@ spring:
 server:
   port: 8080
 
+management:
+  health:
+    # FOR-05-13: Redis carries only optional collaboration state, so its outage must not mark the
+    # whole service DOWN (the estimate degrades to single-user mode instead).
+    redis:
+      enabled: false
+
 springdoc:
   api-docs:
     path: /api-docs
@@ -28,6 +44,17 @@ foremen:
     spec: "maximumSize=500,expireAfterWrite=10m"
   cors:
     allowed-origins: "http://localhost:3000"
+  collab:
+    # FOR-05-13 collaborative estimate (presence + shared staged-edit draft over STOMP/Redis).
+    # When disabled (or Redis is unreachable) the estimate keeps working single-user: edits stay
+    # in the browser's local store and nothing is shared.
+    enabled: ${FOREMEN_COLLAB_ENABLED:true}
+    # How long an untouched shared draft survives in Redis (days).
+    draft-ttl-days: ${FOREMEN_COLLAB_DRAFT_TTL_DAYS:7}
+    # A presence entry with no heartbeat for this long is treated as gone (seconds).
+    presence-ttl-seconds: ${FOREMEN_COLLAB_PRESENCE_TTL_SECONDS:45}
+    # Upper bound on staged edits held in one shared draft (guards Redis memory).
+    max-draft-edits: ${FOREMEN_COLLAB_MAX_DRAFT_EDITS:2000}
   google:
     client-id: ${FOREMEN_GOOGLE_CLIENT_ID:}
   image-storage:

@@ -19,7 +19,19 @@ import com.foremen.service.estimate.EstimateAssignmentService.StagedEdit;
  *
  * @param edits the ordered staged set (may be empty ⇒ a no-op Save)
  */
-public record ApplyAssignmentsRequest(List<StagedEditPayload> edits) {
+public record ApplyAssignmentsRequest(List<StagedEditPayload> edits, List<String> stagedIds) {
+
+    /**
+     * Backwards-compatible constructor for callers that send only the edits (no collaboration ids).
+     *
+     * <p>FOR-05-13: {@code stagedIds} (optional) are the client {@code stagedId}s of the shared-draft
+     * entries this Save commits. After a successful Save the collaboration layer removes exactly those
+     * entries from the shared draft and broadcasts a {@code SAVED} event, so edits another editor staged
+     * <em>while</em> the Save was in flight are not lost. When absent, the whole shared draft is cleared.
+     */
+    public ApplyAssignmentsRequest(List<StagedEditPayload> edits) {
+        this(edits, null);
+    }
 
     /** Maps the request's staged payloads to the service {@link StagedEdit}s, preserving order. */
     public List<StagedEdit> toStagedEdits() {
