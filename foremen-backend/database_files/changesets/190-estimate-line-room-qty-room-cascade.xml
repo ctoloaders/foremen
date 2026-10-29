@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Enhancement batch (FOR-05-05 additional-tasks, user decision 2d): relax the
+        estimate_line_room_qty.room_id foreign key from ON DELETE RESTRICT (changeset 078) to
+        ON DELETE CASCADE, so deleting a room removes its estimate cells. Each cell's material lines
+        (estimate_line_room_materials) already cascade via the JPA @OneToMany orphanRemoval + their
+        own FK to the room-qty row. The delete-room flow (with the change-impact approval) relies on
+        this cascade.
+
+        Idempotent: drop the existing FK then re-add it with CASCADE. Registered LAST in changelog.xml.
+    -->
+    <changeSet id="190-estimate-line-room-qty-room-cascade" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <foreignKeyConstraintExists foreignKeyName="fk_elrq_room"/>
+        </preConditions>
+
+        <dropForeignKeyConstraint
+            baseTableName="estimate_line_room_qty"
+            constraintName="fk_elrq_room"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_elrq_room"
+            baseTableName="estimate_line_room_qty"
+            baseColumnNames="room_id"
+            referencedTableName="rooms"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+
+</databaseChangeLog>

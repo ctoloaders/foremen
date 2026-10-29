@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        Enhancement batch (FOR-02-06 additional-tasks): seed the NEW system role SALESMAN
+        (Russian label "Продавец", Polish label "Sprzedawca").
+
+        Its grant set is:
+          1. READ access to every resource MANAGER can READ, derived at seed time by
+             INSERT ... SELECT joins against MANAGER's actual role_resources /
+             role_resource_operations rows filtered to the READ operation (so SALESMAN
+             mirrors MANAGER's READ surface and stays correct no matter which resources
+             MANAGER holds). Unlike the ESTIMATOR seed (which mirrored FOREMAN's FULL
+             operation set), SALESMAN mirrors MANAGER's READ grants ONLY.
+          2. CRU (CREATE + READ + UPDATE, NO DELETE, NO APPROVE) on OFFERS.
+          3. CRU (CREATE + READ + UPDATE, NO DELETE) on SIGNABLE_DOCUMENTS.
+        Explicitly NOT granted: SIGNABLE_DOCUMENT_TYPES, DOCUMENT_TEMPLATES.
+
+        Idempotency: the role insert is guarded by onFail="MARK_RAN" on
+        roles.code = 'SALESMAN'; every grant block is self-guarded by a NOT EXISTS
+        clause, so a re-run against an already-seeded DB inserts nothing. Mirrors the
+        ESTIMATOR seed (changeset 136) pattern. Registered LAST in changelog.xml.
+    -->
+
+    <!-- changeSet 1: insert the SALESMAN role (idempotent). -->
+    <changeSet id="189-seed-salesman-role" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE code = 'SALESMAN'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="roles">
+            <column name="code" value="SALESMAN"/>
+            <column name="name_ru" value="Продавец"/>
+            <column name="name_pl" value="Sprzedawca"/>
+            <column name="description_ru" value="Продажи: оферты и документы на подпись"/>
+            <column name="description_pl" value="Sprzedaż: oferty i dokumenty do podpisu"/>
+            <column name="system" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+    </changeSet>
+
+    <!-- changeSet 2: mirror MANAGER's READ grants onto SALESMAN.
+         First copy every role_resources row MANAGER has on which MANAGER holds the READ
+         operation (that SALESMAN does not yet have), then grant SALESMAN the READ
+         operation on each such mirrored resource. Each INSERT ... SELECT is self-guarded
+         by a NOT EXISTS clause for idempotency. -->
+    <changeSet id="189-seed-salesman-manager-read-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM roles WHERE code = 'SALESMAN'</sqlCheck>
+        </preConditions>
+
+        <!-- Mirror onto SALESMAN a role_resources row for every resource on which MANAGER
+             has the READ operation. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT sal.id, mrr.resource_id, NOW(), 'system'
+            FROM roles sal
+            JOIN role_resources mrr ON mrr.role_id = (SELECT id FROM roles WHERE code = 'MANAGER')
+            JOIN role_resource_operations mrro ON mrro.role_resource_id = mrr.id
+            JOIN operations o ON o.id = mrro.operation_id AND o.code = 'READ'
+            WHERE sal.code = 'SALESMAN'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources srr
+                  WHERE srr.role_id = sal.id
+                    AND srr.resource_id = mrr.resource_id
+              );
+        </sql>
+
+        <!-- Grant SALESMAN the READ operation on each mirrored resource (only those where
+             MANAGER actually holds READ). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT srr.id, o.id
+            FROM role_resources srr
+            JOIN roles sal ON srr.role_id = sal.id AND sal.code = 'SALESMAN'
+            JOIN operations o ON o.code = 'READ'
+            JOIN role_resources mrr
+                ON mrr.resource_id = srr.resource_id
+               AND mrr.role_id = (SELECT id FROM roles WHERE code = 'MANAGER')
+            JOIN role_resource_operations mrro
+                ON mrro.role_resource_id = mrr.id
+               AND mrro.operation_id = o.id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations srro
+                WHERE srro.role_resource_id = srr.id
+                  AND srro.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+
+    <!-- changeSet 3: SALESMAN CRU on OFFERS and SIGNABLE_DOCUMENTS.
+         CREATE + READ + UPDATE (no DELETE, no APPROVE). Each role_resources +
+         role_resource_operations insert guarded by NOT EXISTS. NOT granted:
+         SIGNABLE_DOCUMENT_TYPES, DOCUMENT_TEMPLATES. -->
+    <changeSet id="189-seed-salesman-offers-signable-docs-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM roles WHERE code = 'SALESMAN'</sqlCheck>
+        </preConditions>
+
+        <!-- SALESMAN x OFFERS role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'SALESMAN' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'SALESMAN' AND res2.code = 'OFFERS'
+              );
+        </sql>
+
+        <!-- SALESMAN x OFFERS operations: READ + CREATE + UPDATE (no APPROVE, no DELETE). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE', 'UPDATE')
+            WHERE r.code = 'SALESMAN' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- SALESMAN x SIGNABLE_DOCUMENTS role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'SALESMAN' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'SALESMAN' AND res2.code = 'SIGNABLE_DOCUMENTS'
+              );
+        </sql>
+
+        <!-- SALESMAN x SIGNABLE_DOCUMENTS operations: READ + CREATE + UPDATE (no DELETE). -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE', 'UPDATE')
+            WHERE r.code = 'SALESMAN' AND res.code = 'SIGNABLE_DOCUMENTS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

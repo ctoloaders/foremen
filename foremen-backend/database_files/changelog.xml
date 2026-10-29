@@ -849,4 +849,12 @@
          worker_types dictionary (ON DELETE SET NULL). Nullable, worker-only at the service layer.
          Registered LAST, after 187. -->
     <include file="database_files/changesets/188-add-user-worker-type.xml"/>
+
+    <!-- Enhancement batch (FOR-02-06 additional-tasks): seed the SALESMAN system role — MANAGER's
+         READ grants mirrored + CRU on OFFERS and SIGNABLE_DOCUMENTS. Registered LAST, after 188. -->
+    <include file="database_files/changesets/189-seed-salesman-role.xml"/>
+
+    <!-- Enhancement batch (FOR-05-05 additional-tasks): relax estimate_line_room_qty.room_id FK to
+         ON DELETE CASCADE so deleting a room removes its estimate cells. Registered LAST, after 189. -->
+    <include file="database_files/changesets/190-estimate-line-room-qty-room-cascade.xml"/>
 </databaseChangeLog>
