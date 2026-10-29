@@ -457,8 +457,13 @@ public class ProjectScheduleService
         List<ProjectMemberEntity> workerMembers = activeWorkerMembers(projectId);
         int crewSize = workerMembers.size();
         Map<Long, String> workerNameById = new LinkedHashMap<>();
+        // FOR-05-10b (soft-match, this change) — the categories each ACTIVE worker member covers, so
+        // the per-bar read model can flag a worker-vs-category MISMATCH (a bar whose assigned worker
+        // does not perform the bar's work category). The match set is the member's Work_Categories.
+        Map<Long, Set<Long>> coveredCategoriesByMemberForView = new HashMap<>();
         for (ProjectMemberEntity member : workerMembers) {
             workerNameById.put(member.getId(), memberDisplayName(member));
+            coveredCategoriesByMemberForView.put(member.getId(), memberCategoryIds(member));
         }
 
         // 4 — coverage of the estimate categories by those members (CoverageResolver, R4.1/4.2); the
@@ -503,12 +508,25 @@ public class ProjectScheduleService
                     continue; // defensive: a persisted bar always has both (CHECK >= 1)
                 }
                 Long memberId = bar.getProjectMember() == null ? null : bar.getProjectMember().getId();
+                // FOR-05-10b soft-match: flag a covered bar whose assigned worker does NOT perform
+                // this work category. Null member (virtual uncovered bar) is never a "mismatch".
+                // Prefer the active-worker map; fall back to the bar's own member categories so a
+                // now-inactive assignee is still evaluated honestly.
+                boolean categoryMismatch = false;
+                if (memberId != null) {
+                    Set<Long> memberCovered = coveredCategoriesByMemberForView.get(memberId);
+                    if (memberCovered == null) {
+                        memberCovered = memberCategoryIds(bar.getProjectMember());
+                    }
+                    categoryMismatch = !memberCovered.contains(categoryId);
+                }
                 barViews.add(new ScheduleBarView(
                         memberId,
                         memberId == null ? null : workerNameById.get(memberId),
                         ScheduleCalculator.startDayFromHalfDays(startHalfDays),
                         ScheduleCalculator.durationDaysFromHalfDays(durationHalfDays),
-                        ScheduleCalculator.finishDayFromHalfDays(startHalfDays, durationHalfDays)));
+                        ScheduleCalculator.finishDayFromHalfDays(startHalfDays, durationHalfDays),
+                        categoryMismatch));
                 finishHalfDays.add(ScheduleCalculator.finishHalfDay(startHalfDays, durationHalfDays));
             }
 
@@ -821,16 +839,18 @@ public class ProjectScheduleService
                     || !seen.add(new BarKey(entry.projectMemberId(), categoryId))) {
                 throw new ForemenApiException(HttpStatus.BAD_REQUEST, CATEGORY_INVALID_MESSAGE, categoryId);
             }
-            // The (member, category) pairing must be valid: a null member is the allowed virtual
-            // uncovered bar; a non-null member must be an ACTIVE WORKER of the project that covers the
-            // category (R3.5, error.schedule.assignment.invalid).
+            // The (member, category) pairing: a null member is the allowed virtual uncovered bar; a
+            // non-null member must be an ACTIVE WORKER of the project (hard guard — an unknown /
+            // non-worker / inactive member is still rejected with error.schedule.assignment.invalid).
+            //
+            // FOR-05-10b soft-match (this change): a category MISMATCH — the member IS an ACTIVE
+            // WORKER of the project but does NOT perform this work category — is NO LONGER rejected.
+            // The planner may deliberately assign a non-covering worker (confirmed in the UI); the
+            // mismatch is surfaced as the ScheduleBarView.categoryMismatch flag rather than a 400.
             Long memberId = entry.projectMemberId();
-            if (memberId != null) {
-                Set<Long> covered = coveredCategoriesByMember.get(memberId);
-                if (covered == null || !covered.contains(categoryId)) {
-                    throw new ForemenApiException(
-                            HttpStatus.BAD_REQUEST, ASSIGNMENT_INVALID_MESSAGE, categoryId);
-                }
+            if (memberId != null && !coveredCategoriesByMember.containsKey(memberId)) {
+                throw new ForemenApiException(
+                        HttpStatus.BAD_REQUEST, ASSIGNMENT_INVALID_MESSAGE, categoryId);
             }
         }
         // Grid / horizon bounds for every value entry (R3.4): the day values must be on the 0.5 grid

@@ -254,7 +254,7 @@ class PlanActualServiceTest {
 
     private void stubScheduleWithOneCategoryBar(int startHalfDays, int durationHalfDays, boolean moneyViewer) {
         ScheduleBarView bar = new ScheduleBarView(11L, "Anna",
-                startHalfDays / 2.0, durationHalfDays / 2.0, (startHalfDays + durationHalfDays - 1) / 2.0);
+                startHalfDays / 2.0, durationHalfDays / 2.0, (startHalfDays + durationHalfDays - 1) / 2.0, false);
         ScheduleView view = new ScheduleView(
                 PROJECT_ID, LocalDate.now().minusDays(30), null, false, 5L, 1,
                 moneyViewer ? "PLN" : null, bar.finishDay(), null, false,
@@ -264,7 +264,7 @@ class PlanActualServiceTest {
 
     private void stubScheduleNoAnchor(int startHalfDays, int durationHalfDays) {
         ScheduleBarView bar = new ScheduleBarView(11L, "Anna",
-                startHalfDays / 2.0, durationHalfDays / 2.0, (startHalfDays + durationHalfDays - 1) / 2.0);
+                startHalfDays / 2.0, durationHalfDays / 2.0, (startHalfDays + durationHalfDays - 1) / 2.0, false);
         ScheduleView view = new ScheduleView(
                 PROJECT_ID, null, null, false, 5L, 1, null, bar.finishDay(), null, false,
                 List.of(), List.of(row(List.of(bar))));

@@ -104,8 +104,6 @@ class ProjectSchedulePerWorkerSaveBarsIntegrationTest {
     private static final String ADMIN = "ADMIN";
     private static final String WORKER = "WORKER";
 
-    /** Localized (PL base bundle) text of the invalid-pairing 400 asserted below. */
-    private static final String PL_ASSIGNMENT_INVALID_PREFIX = "Pracownik nie może wykonywać";
     /** Localized (PL base bundle) text of the invalid-bar 400 asserted below. */
     private static final String PL_BAR_INVALID_PREFIX = "Nieprawidłowy okres dla kategorii";
 
@@ -261,21 +259,31 @@ class ProjectSchedulePerWorkerSaveBarsIntegrationTest {
         assertThat(barByMember(rowAfterClear, workerMember1)).isNotNull();
         long versionAfterClear = afterClear.get("version").asLong();
 
-        // --- 5. Invalid pairing: worker 2 does NOT cover category B — rejected 400, nothing changes. ---
-        String invalidPairing = """
+        // --- 5. Soft-match (FOR-05-10b relaxation): worker 1 does NOT cover category B, but the
+        //        assignment is now ALLOWED and marked with categoryMismatch=true (no longer a 400). ---
+        String mismatchPairing = """
                 {"version": %d, "bars": [
                   {"projectMemberId": %d, "workCategoryId": %d, "startDay": 1.0, "durationDays": 1.0}
                 ]}
                 """.formatted(versionAfterClear, workerMember1, categoryB);
-        saveBars(adminToken, invalidPairing)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value(
-                        org.hamcrest.Matchers.startsWith(PL_ASSIGNMENT_INVALID_PREFIX)));
-        JsonNode afterInvalid = readView();
-        assertThat(afterInvalid.get("version").asLong())
-                .as("a rejected pairing changes nothing").isEqualTo(versionAfterClear);
-        assertThat(rowByCategory(afterInvalid, categoryB).get("bars")).isEmpty();
+        saveBars(adminToken, mismatchPairing).andExpect(status().isOk());
+        JsonNode afterMismatch = readView();
+        long versionAfterMismatch = afterMismatch.get("version").asLong();
+        assertThat(versionAfterMismatch)
+                .as("an accepted (mismatched) assignment increments the version")
+                .isGreaterThan(versionAfterClear);
+        JsonNode mismatchBar = barByMember(rowByCategory(afterMismatch, categoryB), workerMember1);
+        assertThat(mismatchBar).as("the non-covering worker's bar on category B is persisted").isNotNull();
+        assertThat(mismatchBar.get("categoryMismatch").asBoolean())
+                .as("a worker assigned to a category they do not perform is flagged").isTrue();
+        // Clear it again so the subsequent virtual-bar step starts from an empty category B.
+        String clearMismatch = """
+                {"version": %d, "bars": [
+                  {"projectMemberId": %d, "workCategoryId": %d, "startDay": null, "durationDays": null}
+                ]}
+                """.formatted(versionAfterMismatch, workerMember1, categoryB);
+        saveBars(adminToken, clearMismatch).andExpect(status().isOk());
+        long versionAfterClearMismatch = readView().get("version").asLong();
 
         // --- 6. Virtual bar allowed: a null-member entry on the uncovered category B is accepted. ---
         long auditBeforeVirtual = scheduleAuditCount();
@@ -283,7 +291,7 @@ class ProjectSchedulePerWorkerSaveBarsIntegrationTest {
                 {"version": %d, "bars": [
                   {"projectMemberId": null, "workCategoryId": %d, "startDay": 2.0, "durationDays": 3.0}
                 ]}
-                """.formatted(versionAfterClear, categoryB);
+                """.formatted(versionAfterClearMismatch, categoryB);
         saveBars(adminToken, virtualBody).andExpect(status().isOk());
 
         JsonNode afterVirtual = readView();

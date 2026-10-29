@@ -27,6 +27,12 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  * @param durationDays    the bar duration in days as a 0.5-multiple ({@code durationHalfDays / 2})
  * @param finishDay       the bar inclusive finish day as a 0.5-multiple
  *                        ({@code (startHalfDays + durationHalfDays − 1) / 2})
+ * @param categoryMismatch FOR-05-10b soft-match (worker-type/category assignment relaxation): true
+ *                         iff this bar is assigned to a worker ({@code projectMemberId != null}) whose
+ *                         Work_Categories do NOT include the bar's work category — the planner may
+ *                         still make such an assignment, but the UI marks it with a warning. Always
+ *                         {@code false} for the virtual {@code Uncovered_Category} bar. A primitive
+ *                         {@code boolean} so it is always present in the payload.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ScheduleBarView(
@@ -34,5 +40,6 @@ public record ScheduleBarView(
         String workerName,
         Double startDay,
         Double durationDays,
-        Double finishDay
+        Double finishDay,
+        boolean categoryMismatch
 ) {}
