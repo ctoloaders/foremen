@@ -47,6 +47,9 @@ import java.time.LocalDate;
  * @param startDate        the absolute inclusive start date; {@code null} for an {@code Undatable_Bar}
  * @param endDate          the absolute inclusive end date; {@code null} for an {@code Undatable_Bar}
  * @param unanchored       whether this bar is an {@code Undatable_Bar} (null absolute dates)
+ * @param managerActingAsForeman FOR-07-01 redesign — {@code true} for a {@code FOREMAN_SPAN}
+ *                         synthesized for a project MANAGER because the project has no ACTIVE
+ *                         foreman (the UI emphasizes it); {@code false} otherwise
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ProjectedBar(
@@ -60,5 +63,16 @@ public record ProjectedBar(
         Integer durationHalfDays,
         LocalDate startDate,
         LocalDate endDate,
-        boolean unanchored
-) {}
+        boolean unanchored,
+        boolean managerActingAsForeman
+) {
+
+    /** A bar that is not a manager-acting-as-foreman span (the pre-redesign shape). */
+    public ProjectedBar(BarKind kind, Long projectId, String projectName, int colorIndex,
+                        Long workCategoryId, String workCategoryName, Integer startHalfDays,
+                        Integer durationHalfDays, LocalDate startDate, LocalDate endDate,
+                        boolean unanchored) {
+        this(kind, projectId, projectName, colorIndex, workCategoryId, workCategoryName,
+                startHalfDays, durationHalfDays, startDate, endDate, unanchored, false);
+    }
+}

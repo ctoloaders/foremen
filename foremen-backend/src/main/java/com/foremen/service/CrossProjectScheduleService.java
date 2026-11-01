@@ -1,5 +1,6 @@
 package com.foremen.service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -25,6 +26,7 @@ import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectScheduleBarEntity;
 import com.foremen.dao.model.ProjectScheduleEntity;
+import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.service.companyschedule.CrossProjectScheduleProjector;
@@ -72,6 +74,15 @@ public class CrossProjectScheduleService {
     /** The project-role code of a FOREMAN member (source of synthesized Foreman_Span_Bars). */
     private static final String FOREMAN_ROLE_CODE = "FOREMAN";
 
+    /** The project-role code of a MANAGER member (promoted to a span when there is no foreman). */
+    private static final String MANAGER_ROLE_CODE = "MANAGER";
+
+    /** FOR-07-01 redesign (decision 6b): a non-ACTIVE project stays in the default view this long after its end. */
+    static final int RECENTLY_ENDED_DAYS = 14;
+
+    /** The clock behind the default-view "recently ended" cut-off; overridable in tests. */
+    private Clock clock = Clock.systemDefaultZone();
+
     private final ProjectScheduleDao projectScheduleDao;
     private final ProjectMemberDao projectMemberDao;
     private final ProjectDao projectDao;
@@ -100,6 +111,11 @@ public class CrossProjectScheduleService {
      * @return the immutable {@link CompanyScheduleView}; empty {@code rows} and {@code legend} for an
      *         empty projection (no authenticated caller, empty allowed set, or everything filtered out)
      */
+    /** Test hook: fixes "today" for the project-inclusion rule. */
+    void setClock(Clock clock) {
+        this.clock = clock;
+    }
+
     public CompanyScheduleView getProjection(CompanyScheduleQuery query) {
         // 1 — resolve the caller's allowed project id set: null = exact-authority ADMIN (all projects);
         //     empty = a non-ADMIN with no accessible project (or no identifiable caller) → empty view.
@@ -120,7 +136,15 @@ public class CrossProjectScheduleService {
         }
 
         // 3 — load the in-scope projects, their schedules (batched), and their members.
-        List<ProjectEntity> projects = projectDao.findAllByIdIn(inScope);
+        //     FOR-07-01 redesign (decisions 6b/6c): keep only the projects the view is about — by
+        //     default ACTIVE ones and those that ended within the last two weeks; with a Date_Window,
+        //     the projects whose [startDate, endDate] intersects it.
+        LocalDate from = query == null ? null : query.from();
+        LocalDate to = query == null ? null : query.to();
+        LocalDate today = LocalDate.now(clock);
+        List<ProjectEntity> projects = projectDao.findAllByIdIn(inScope).stream()
+                .filter(p -> isIncluded(p, from, to, today))
+                .toList();
         if (projects.isEmpty()) {
             return new CompanyScheduleView(List.of(), List.of());
         }
@@ -140,6 +164,31 @@ public class CrossProjectScheduleService {
 
         // 5 — delegate all decision logic to the pure projector, localizing category names per locale.
         return CrossProjectScheduleProjector.project(inputs, query, isRussianLocale());
+    }
+
+    /**
+     * FOR-07-01 redesign — the project-level inclusion rule (decisions 6b/6c).
+     * <ul>
+     *   <li><b>Default view</b> (no Date_Window bound): included iff {@code status == ACTIVE} OR its
+     *       {@code endDate} is after {@code today - 14 days}.</li>
+     *   <li><b>Windowed view</b>: included iff {@code [startDate, endDate]} intersects
+     *       {@code [from, to]}; a missing project date leaves that side open (an undated project is
+     *       not excluded by the window; its undatable bars are dropped by the projector anyway).</li>
+     * </ul>
+     */
+    static boolean isIncluded(ProjectEntity project, LocalDate from, LocalDate to, LocalDate today) {
+        if (project == null) {
+            return false;
+        }
+        if (from == null && to == null) {
+            return project.getStatus() == ProjectStatus.ACTIVE
+                    || (project.getEndDate() != null
+                        && project.getEndDate().isAfter(today.minusDays(RECENTLY_ENDED_DAYS)));
+        }
+        if (to != null && project.getStartDate() != null && project.getStartDate().isAfter(to)) {
+            return false;
+        }
+        return from == null || project.getEndDate() == null || !project.getEndDate().isBefore(from);
     }
 
     /**
@@ -219,6 +268,26 @@ public class CrossProjectScheduleService {
                 foremen.add(new ForemanInput(user.getId(), user.getName()));
             }
         }
+        // FOR-07-01 redesign (decisions 5b/6d): a project with NO active foreman shows its ACTIVE
+        // manager(s) as the foreman, flagged so the UI emphasizes the stand-in.
+        if (foremen.isEmpty()) {
+            for (ProjectMemberEntity member : members) {
+                if (isActiveWithRole(member, MANAGER_ROLE_CODE) && member.getUser() != null) {
+                    UserEntity user = member.getUser();
+                    foremen.add(new ForemanInput(user.getId(), user.getName(), true));
+                }
+            }
+        }
+        // Every ACTIVE member's role, for the rows' main-role resolution (decision 6d).
+        Map<Long, String> memberRoles = new LinkedHashMap<>();
+        for (ProjectMemberEntity member : members) {
+            if (member != null && member.getAssignmentStatus() == AssignmentStatus.ACTIVE
+                    && member.getUser() != null && member.getUser().getId() != null
+                    && member.getProjectRole() != null) {
+                memberRoles.merge(member.getUser().getId(), member.getProjectRole().getCode(),
+                        CrossProjectScheduleService::higherRanked);
+            }
+        }
 
         List<WorkerBarInput> workerBars = new ArrayList<>();
         if (schedule != null && schedule.getBars() != null) {
@@ -236,7 +305,13 @@ public class CrossProjectScheduleService {
                 project.getStartDate(),
                 project.getEndDate(),
                 workerBars,
-                foremen);
+                foremen,
+                memberRoles);
+    }
+
+    /** The higher-ranked of two role codes (MANAGER > FOREMAN > WORKER > other). */
+    private static String higherRanked(String a, String b) {
+        return CrossProjectScheduleProjector.roleRank(a) <= CrossProjectScheduleProjector.roleRank(b) ? a : b;
     }
 
     /**

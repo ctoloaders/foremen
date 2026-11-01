@@ -107,6 +107,8 @@ class CrossProjectScheduleServiceTest {
         p.setName(name);
         p.setStartDate(start);
         p.setEndDate(end);
+        // FOR-07-01 redesign: the default view keeps ACTIVE projects (and recently ended ones).
+        p.setStatus(com.foremen.dao.model.ProjectStatus.ACTIVE);
         return p;
     }
 

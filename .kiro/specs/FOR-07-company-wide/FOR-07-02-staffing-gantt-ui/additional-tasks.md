@@ -2,8 +2,23 @@
 
 Screen URL: http://localhost:3000/company/staffing-gantt
 
-> **Status (2026-10-29):** NOT started. Depends on FOR-07-01's backend changes. Staged for a
-> dedicated session (worker-row unfold-into-projects, manager rows, bar emphasis).
+> **Status (2026-11-01):** tasks 1–5 and V DONE. Task 6 (test-cases) remains open.
+>
+> Implementation notes:
+> - `lib/rowGroups.ts`: `projectGroups`, `summaryRow` (one merged bar per project, spanning its
+>   datable bars; FOREMAN_SPAN / stand-in / conflicted carried over), `projectSubRow` (bars +
+>   remapped conflicts).
+> - Only rows spanning ≥ 2 projects get the unfold chevron; a single-project row shows its real bars
+>   directly (collapsed and expanded would be identical). Expansion state is UI-local.
+> - Grid renders "display rows" (member + sub-rows) with height sync keyed per display row (inner
+>   wrapper measured at natural height so rows shrink after collapse; content-box border so both
+>   columns stay pixel-aligned).
+> - Stand-in bars: hatched + dashed dark border, `data-manager-as-foreman`, tooltip and aria label
+>   name the stand-in. Summary bars: testid `company-bar-summary-{projectId}`, `ariaSummary` label.
+> - Browser (local, temporary data, restored afterwards): rows Marek (Menedżer, hatched stand-in
+>   span) → QA foreman (Kierownik) → Foremen Biuro / Valera (Pracownik, 2 projects each, merged
+>   summaries + conflict badge); unfold shows 5 + 6 real bars in per-project sub-rows; collapse
+>   removes them; all 8 label/track rows aligned (0px delta).
 
 Enhancement batch (2026-10-29). Approved by the user. NEW feature tasks (not bug fixes). This spec
 owns the staffing-gantt UI (`CompanySchedulePage`, `CompanyGanttGrid`, `CompanyGanttRow`,
@@ -51,13 +66,13 @@ None (read-only view).
 
 ## Tasks
 
-- [ ] 1. Mirror the backend DTO changes in `types.ts`
+- [x] 1. Mirror the backend DTO changes in `types.ts`
   - Extend `CompanyRole` to include `'MANAGER'`; add `managerActingAsForeman: boolean` to
     `ProjectedBar`. Keep the rest of `CompanyScheduleView`/`MemberRow` in sync with FOR-07-01's DTO.
   - _Requirements: FOR-07-02 R-view; mirrors FOR-07-01 task 4_
   - _Depends on: none_
 
-- [ ] 2. Row unfold: merged collapsed timeline + per-project expansion
+- [x] 2. Row unfold: merged collapsed timeline + per-project expansion
   - Rework `CompanyGanttRow` (and `CompanyGanttGrid` row rendering) so a collapsed row shows a MERGED
     timeline of the worker's bars across all projects, and a click toggles an expanded state showing
     per-project sub-rows (grouped by `projectId`, using `projectName` + project color). Expansion
@@ -66,20 +81,20 @@ None (read-only view).
   - _Requirements: user decisions 6a/6d_
   - _Depends on: 1_
 
-- [ ] 3. Role label (incl. MANAGER) + managers→foremen→workers order
+- [x] 3. Role label (incl. MANAGER) + managers→foremen→workers order
   - Render the MANAGER role badge in the row label (add `companySchedule.role.manager`). Rows are
     rendered in the server's order (managers→foremen→workers from FOR-07-01 task 3) with no client
     re-sort — verify the UI respects it and the badge matches `row.companyRole`.
   - _Requirements: user decision 6d_
   - _Depends on: 1_
 
-- [ ] 4. Emphasize manager-as-foreman bars
+- [x] 4. Emphasize manager-as-foreman bars
   - In `CompanyGanttBar`, when `bar.managerActingAsForeman` is true, render an emphasized variant
     (distinct border/hatch + `companySchedule.managerAsForeman` tooltip) so these bars stand out.
   - _Requirements: user decision 6d_
   - _Depends on: 1_
 
-- [ ] 5. i18n keys (PL + RU)
+- [x] 5. i18n keys (PL + RU)
   - Add `companySchedule.role.manager`, `companySchedule.expand`, `companySchedule.collapse`,
     `companySchedule.managerAsForeman` to `pl.json` and `ru.json` at parity.
   - _Requirements: tasks 2, 3, 4_
@@ -96,7 +111,7 @@ None (read-only view).
   - _Requirements: the requirements covered (FOR-07-02 R-view, decisions 6a/6b/6c/6d)_
   - _Depends on: 1, 2, 3, 4, 5_
 
-- [ ] V. Validate in the browser
+- [x] V. Validate in the browser
   - Rebuild the frontend container (and backend for FOR-07-01). Open `/company/staffing-gantt`:
     confirm worker rows ordered managers→foremen→workers, collapsed merged timelines, per-project
     unfold on click, emphasized manager-as-foreman bars, default inclusion of ACTIVE + recently-ended

@@ -442,7 +442,8 @@ class CrossProjectScheduleControllerIntegrationTest {
 
         ProjectEntity p = new ProjectEntity();
         p.setName("Company Schedule Project " + suffix);
-        p.setStatus(ProjectStatus.DRAFT);
+        // FOR-07-01 redesign: ACTIVE so the default view (ACTIVE or ended < 2 weeks ago) includes it.
+        p.setStatus(ProjectStatus.ACTIVE);
         p.setStartDate(LocalDate.of(2026, 5, 1));
         p.setEndDate(LocalDate.of(2026, 6, 30));
         p = projectDao.save(p);

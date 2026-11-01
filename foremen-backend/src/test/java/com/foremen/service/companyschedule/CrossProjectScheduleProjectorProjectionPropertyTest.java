@@ -474,6 +474,14 @@ class CrossProjectScheduleProjectorProjectionPropertyTest {
         for (int i = 1; i < rows.size(); i++) {
             MemberRow prev = rows.get(i - 1);
             MemberRow cur = rows.get(i);
+            // FOR-07-01 redesign (decision 6d): rows are ordered by main-role rank first
+            // (MANAGER → FOREMAN → WORKER), then (userName, userId).
+            int byRank = Integer.compare(CrossProjectScheduleProjector.roleRank(prev.companyRole()),
+                    CrossProjectScheduleProjector.roleRank(cur.companyRole()));
+            if (byRank != 0) {
+                assertThat(byRank).as("rows ordered by main-role rank").isLessThan(0);
+                continue;
+            }
             int byName = compareNullsLast(prev.userName(), cur.userName());
             if (byName != 0) {
                 assertThat(byName).as("rows ordered by userName").isLessThanOrEqualTo(0);

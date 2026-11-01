@@ -2,8 +2,23 @@
 
 Screen URL (consumer): http://localhost:3000/company/staffing-gantt
 
-> **Status (2026-10-29):** NOT started. Staged for a dedicated session. Large projection + DTO change
-> (manager rows, manager-as-foreman synthesis, role ordering, active-in-range inclusion).
+> **Status (2026-11-01):** tasks 1–4 and V DONE (API + browser validated via FOR-07-02). Task 5
+> (test-cases) remains open.
+>
+> Implementation notes:
+> - `ForemanInput.managerActingAsForeman`, `ProjectInput.memberRoles`, and
+>   `ProjectedBar.managerActingAsForeman` were added with the old constructors kept as secondary
+>   constructors, so existing generators/fixtures compile unchanged.
+> - Main role = highest of `CrossProjectScheduleProjector.roleRank` (MANAGER 0, FOREMAN 1, WORKER 2,
+>   other 3) over the roles the user contributes AND holds (ACTIVE membership, even without bars).
+>   Rows sort by (rank, userName, userId). A manager with no bars still yields no row (nothing to draw).
+> - A stand-in span matches a FOREMAN or a MANAGER Role_Filter.
+> - Inclusion: `CrossProjectScheduleService.isIncluded` — default `ACTIVE || endDate > today-14d`
+>   (a DRAFT project without an end date is therefore NOT in the default view); windowed
+>   `[start, end] ∩ [from, to] ≠ ∅` with missing project dates treated as open. `Clock` is injectable
+>   for tests (`setClock`).
+> - Tests: new `CrossProjectScheduleRedesignTest` (6); Property 11 row order updated to rank-first;
+>   service + integration fixtures made ACTIVE. Integration suite 6/6 green.
 
 Enhancement batch (2026-10-29). Approved by the user. NEW feature tasks (not bug fixes). This spec
 owns the backend projection: `CrossProjectScheduleService`, the pure `CrossProjectScheduleProjector`,
@@ -63,7 +78,7 @@ notifications" posture).
 
 ## Tasks
 
-- [ ] 1. Surface MANAGER + manager-as-foreman synthesis in `toProjectInput`
+- [x] 1. Surface MANAGER + manager-as-foreman synthesis in `toProjectInput`
   - In `CrossProjectScheduleService.toProjectInput`, resolve each project's ACTIVE FOREMAN set; if it
     is empty, promote the project's ACTIVE MANAGER(s) to synthesized foreman spans flagged
     `managerActingAsForeman = true`. Always surface MANAGER members as projection inputs (so manager
@@ -72,7 +87,7 @@ notifications" posture).
   - _Requirements: FOR-07-01 R1 (projection), R2; user decisions 5b/6d_
   - _Depends on: none_
 
-- [ ] 2. Explicit project active-in-range inclusion
+- [x] 2. Explicit project active-in-range inclusion
   - Add a project-inclusion filter in `CrossProjectScheduleService` before projecting: default
     (no Date_Window) → include a project iff `status == ACTIVE` OR `endDate` is after `now() - 14
     days`; windowed → include iff `[startDate, endDate]` intersects `[from, to]`. Document the rule;
@@ -80,7 +95,7 @@ notifications" posture).
   - _Requirements: FOR-07-01 R6/R7; user decisions 6b/6c_
   - _Depends on: none_
 
-- [ ] 3. Projector: role-rank ordering + MANAGER row role + emphasis flag
+- [x] 3. Projector: role-rank ordering + MANAGER row role + emphasis flag
   - In `CrossProjectScheduleProjector`: (a) admit `MANAGER` as a row `companyRole` (the user's main
     role, deterministic precedence manager > foreman > worker, or however "main role" is resolved —
     use the highest-ranked role the user holds across projects); (b) order rows by a role-rank
@@ -89,7 +104,7 @@ notifications" posture).
   - _Requirements: FOR-07-01 R1; user decision 6d_
   - _Depends on: 1_
 
-- [ ] 4. DTO changes: `MemberRow.companyRole` admits MANAGER; `ProjectedBar.managerActingAsForeman`
+- [x] 4. DTO changes: `MemberRow.companyRole` admits MANAGER; `ProjectedBar.managerActingAsForeman`
   - Extend `CompanyScheduleView`/`MemberRow`/`ProjectedBar` DTOs: `companyRole` may be `MANAGER`;
     add `boolean managerActingAsForeman` to `ProjectedBar`. Update the projector to populate them.
   - _Requirements: FOR-07-01 R1_
@@ -106,7 +121,7 @@ notifications" posture).
   - _Requirements: the requirements covered (FOR-07-01 R1/R2/R6/R7, decisions 6b/6c/6d/5b)_
   - _Depends on: 1, 2, 3, 4_
 
-- [ ] V. Validate (API)
+- [x] V. Validate (API)
   - Rebuild backend; call `GET /api/company-schedule` (default and with a window) and assert the new
     rows/ordering/flags and project inclusion. (Browser validation of the view is in FOR-07-02.)
   - _Requirements: as all tasks_

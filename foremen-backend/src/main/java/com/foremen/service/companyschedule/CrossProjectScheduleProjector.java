@@ -32,6 +32,31 @@ public final class CrossProjectScheduleProjector {
     /** Role_Filter / {@code projectRole.code} value for a FOREMAN member. */
     private static final String FOREMAN_ROLE = "FOREMAN";
 
+    /** Role_Filter / {@code projectRole.code} value for a MANAGER member (FOR-07-01 redesign). */
+    private static final String MANAGER_ROLE = "MANAGER";
+
+    /** Role_Filter / {@code projectRole.code} value for a WORKER member. */
+    private static final String WORKER_ROLE = "WORKER";
+
+    /**
+     * FOR-07-01 redesign (decision 6d) — the "main role" precedence of a row: MANAGER(0) &lt;
+     * FOREMAN(1) &lt; WORKER(2) &lt; anything else(3). A row's {@code companyRole} is the
+     * highest-ranked role its user holds across the projected projects, and rows are ordered by this
+     * rank first (managers, then foremen, then workers).
+     */
+    public static int roleRank(String roleCode) {
+        if (MANAGER_ROLE.equals(roleCode)) {
+            return 0;
+        }
+        if (FOREMAN_ROLE.equals(roleCode)) {
+            return 1;
+        }
+        if (WORKER_ROLE.equals(roleCode)) {
+            return 2;
+        }
+        return 3;
+    }
+
     // ------------------------------------------------------------------------------------------
     // Top-level orchestration (FOR-07-01 Requirements 1, 2, 7, 10; design §"Pure projector").
     //   Turns the raw Accessible_Project inputs plus the caller's filters into the immutable
@@ -135,10 +160,16 @@ public final class CrossProjectScheduleProjector {
                                 0, // colorIndex assigned after the post-filter project set is known
                                 null, null, null, null,
                                 span[0], span[1],
-                                span[0] == null || span[1] == null);
-                        if (includeBar(bar, FOREMAN_ROLE, foreman.userId(),
-                                roleSet, memberSet, from, to, dateWindowSupplied)) {
-                            accumulate(byUser, foreman.userId(), foreman.userName(), FOREMAN_ROLE, bar);
+                                span[0] == null || span[1] == null,
+                                foreman.managerActingAsForeman());
+                        // A manager standing in for a missing foreman acts as FOREMAN for that project,
+                        // and is also matched by a MANAGER Role_Filter (decisions 5b/6d).
+                        boolean roleMatch = roleSet == null || roleSet.contains(FOREMAN_ROLE)
+                                || (foreman.managerActingAsForeman() && roleSet.contains(MANAGER_ROLE));
+                        if (roleMatch && includeBar(bar, null, foreman.userId(),
+                                null, memberSet, from, to, dateWindowSupplied)) {
+                            accumulate(byUser, foreman.userId(), foreman.userName(),
+                                    foreman.managerActingAsForeman() ? MANAGER_ROLE : FOREMAN_ROLE, bar);
                         }
                     }
                 }
@@ -186,10 +217,29 @@ public final class CrossProjectScheduleProjector {
         }
         Map<Long, Integer> colors = ProjectColorAssigner.assignColors(survivingProjectIds);
 
-        // Rows ordered by (userName, userId); omit empty-after-filter members (R10.3, R2.3).
+        // FOR-07-01 redesign (decision 6d): each row reads as its user's MAIN role, the highest-ranked
+        // role the user holds in any projected project (memberships without bars included).
+        if (projects != null) {
+            for (ProjectInput project : projects) {
+                if (project == null || project.memberRoles() == null
+                        || (projectSet != null && !projectSet.contains(project.projectId()))) {
+                    continue;
+                }
+                for (Map.Entry<Long, String> member : project.memberRoles().entrySet()) {
+                    UserAccumulator acc = member.getKey() == null ? null : byUser.get(member.getKey());
+                    if (acc != null && roleRank(member.getValue()) < roleRank(acc.companyRole)) {
+                        acc.companyRole = member.getValue();
+                    }
+                }
+            }
+        }
+
+        // Rows ordered by (main-role rank, userName, userId): managers, then foremen, then workers;
+        // omit empty-after-filter members (R10.3, R2.3).
         List<UserAccumulator> orderedUsers = new ArrayList<>(byUser.values());
         orderedUsers.sort(Comparator
-                .comparing((UserAccumulator a) -> a.userName, Comparator.nullsLast(Comparator.naturalOrder()))
+                .comparingInt((UserAccumulator a) -> roleRank(a.companyRole))
+                .thenComparing(a -> a.userName, Comparator.nullsLast(Comparator.naturalOrder()))
                 .thenComparingLong(a -> a.userId));
 
         List<MemberRow> rows = new ArrayList<>(orderedUsers.size());
@@ -212,7 +262,8 @@ public final class CrossProjectScheduleProjector {
                         bar.kind(), bar.projectId(), bar.projectName(), colorIndex,
                         bar.workCategoryId(), bar.workCategoryName(),
                         bar.startHalfDays(), bar.durationHalfDays(),
-                        bar.startDate(), bar.endDate(), bar.unanchored()));
+                        bar.startDate(), bar.endDate(), bar.unanchored(),
+                        bar.managerActingAsForeman()));
             }
 
             List<ConflictPair> conflicts = detectConflicts(coloredBars);
@@ -270,10 +321,10 @@ public final class CrossProjectScheduleProjector {
                                    String roleCode, ProjectedBar bar) {
         UserAccumulator acc = byUser.computeIfAbsent(
                 userId, id -> new UserAccumulator(id, userName, roleCode));
-        // Foreman precedence for the row's Company_Role: a user contributing any foreman span reads
-        // as FOREMAN regardless of accumulation order, keeping the role deterministic (R1.4).
-        if (FOREMAN_ROLE.equals(roleCode)) {
-            acc.companyRole = FOREMAN_ROLE;
+        // The row's Company_Role is the highest-ranked role contributed (MANAGER > FOREMAN > WORKER),
+        // independent of accumulation order, keeping the role deterministic (R1.4; redesign 6d).
+        if (roleRank(roleCode) < roleRank(acc.companyRole)) {
+            acc.companyRole = roleCode;
         }
         acc.bars.add(bar);
     }
