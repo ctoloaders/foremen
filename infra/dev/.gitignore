@@ -5,3 +5,5 @@ secrets.local.env
 .env
 *.key
 *.pem
+# Snapshots of the VM's live stack files fetched by 56-sync-stack.sh (review only).
+.vm-live/

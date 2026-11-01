@@ -46,6 +46,8 @@ SECRET_JWT="$(md secret-jwt)"
 SECRET_ADMIN_PASSWORD="$(md secret-admin-password)"
 SECRET_GOOGLE_PLACES_KEY="$(md secret-google-places-key || true)"
 SECRET_OCR_GEMINI_KEY="$(md secret-ocr-gemini-key || true)"
+SECRET_BOT_IDENTITY="$(md secret-bot-identity || true)"
+SECRET_BOT_SITE_KEY="$(md secret-bot-site-key || true)"
 
 # --- docker auth to Artifact Registry (via VM service account) ---
 gcloud auth configure-docker "${AR_HOST}" --quiet
@@ -73,6 +75,20 @@ if [ -n "${SECRET_OCR_GEMINI_KEY}" ] && gcloud secrets describe "${SECRET_OCR_GE
   FOREMEN_OCR_LLM_API_KEY="$(sm "${SECRET_OCR_GEMINI_KEY}")"
   [ -n "${FOREMEN_OCR_LLM_API_KEY}" ] && FOREMEN_OCR_ENABLED="true"
 fi
+# FOR-08 loaders-bot (reconciled from the live startup-script metadata). The
+# identity secret is required (backend fails fast on blank); the site key is
+# public (pk_test_/pk_live_). Both pulled from Secret Manager.
+# Fetch directly with `versions access` — do NOT gate on `gcloud secrets describe`,
+# which needs secretmanager.secrets.get (NOT included in roles/secretmanager.secretAccessor
+# that the VM SA holds for these secrets). The metadata-pointer non-empty check is the guard.
+FOREMEN_BOT_IDENTITY_SECRET=""
+FOREMEN_BOT_SITE_KEY=""
+if [ -n "${SECRET_BOT_IDENTITY}" ]; then
+  FOREMEN_BOT_IDENTITY_SECRET="$(sm "${SECRET_BOT_IDENTITY}" || true)"
+fi
+if [ -n "${SECRET_BOT_SITE_KEY}" ]; then
+  FOREMEN_BOT_SITE_KEY="$(sm "${SECRET_BOT_SITE_KEY}" || true)"
+fi
 
 # --- write .env for compose ---
 cat > "${APP_DIR}/.env" <<EOF
@@ -89,6 +105,8 @@ GOOGLE_PLACES_ENABLED=${GOOGLE_PLACES_ENABLED}
 FOREMEN_OCR_ENABLED=${FOREMEN_OCR_ENABLED}
 FOREMEN_OCR_LLM_API_KEY=${FOREMEN_OCR_LLM_API_KEY}
 FOREMEN_OCR_LLM_MODEL=${FOREMEN_OCR_LLM_MODEL}
+FOREMEN_BOT_IDENTITY_SECRET=${FOREMEN_BOT_IDENTITY_SECRET}
+FOREMEN_BOT_SITE_KEY=${FOREMEN_BOT_SITE_KEY}
 EOF
 chmod 600 "${APP_DIR}/.env"
 

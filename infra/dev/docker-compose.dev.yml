@@ -25,6 +25,25 @@ services:
       start_period: 10s
     restart: unless-stopped
 
+  # FOR-05-13 collaborative estimate: distributed store for the "who is editing"
+  # roster and the shared staged-edit drafts, plus pub/sub fan-out. Ephemeral
+  # state only (persistence off, no volume): a restart drops presence and unsaved
+  # shared drafts, never saved estimate data. Internal only — no host port.
+  # maxmemory + noeviction: a full Redis rejects new draft writes (the backend
+  # degrades to single-user for that edit) instead of silently evicting drafts.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
   liquibase:
     image: liquibase/liquibase:4.31
     depends_on:
@@ -91,11 +110,25 @@ services:
       FOREMEN_OCR_ENABLED: ${FOREMEN_OCR_ENABLED:-false}
       FOREMEN_OCR_LLM_API_KEY: ${FOREMEN_OCR_LLM_API_KEY:-}
       FOREMEN_OCR_LLM_MODEL: ${FOREMEN_OCR_LLM_MODEL:-gemini-3.8-flash}
+      # --- FOR-08 loaders-bot ------------------------------------------------
+      # Reconciled from the live VM file (it was hand-edited there). The identity
+      # secret is REQUIRED — the backend fails fast on a blank value — and comes
+      # from Secret Manager (foremen-dev-bot-identity-secret) via vm-startup.sh.
+      FOREMEN_BOT_IDENTITY_SECRET: ${FOREMEN_BOT_IDENTITY_SECRET}
+      FOREMEN_BOT_SITE_KEY: ${FOREMEN_BOT_SITE_KEY:-}
+      # --- FOR-05-13 collaborative estimate (presence + shared drafts) -------
+      # Non-secret: Redis is internal to the compose network. If Redis is down
+      # the backend still starts and the estimate degrades to single-user mode.
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      FOREMEN_COLLAB_ENABLED: ${FOREMEN_COLLAB_ENABLED:-true}
     depends_on:
       postgres:
         condition: service_healthy
       liquibase:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     healthcheck:
       # "Is the app up and serving HTTP on :8080?" We do NOT assert the body,
       # because /actuator/health is secured (returns 401 until authenticated) —

@@ -87,6 +87,15 @@ if [ "${SERVICE}" = "backend" ]; then
   echo ">> running Liquibase migrations (fresh one-shot service, before backend)"
   "${COMPOSE[@]}" rm -fsv liquibase >/dev/null 2>&1 || true
   "${COMPOSE[@]}" run --rm liquibase || { echo "!! liquibase failed"; exit 1; }
+
+  # 3) FOR-05-13: make sure the backend's supporting services are running before
+  #    it is recreated with --no-deps (which would never start a newly added
+  #    service). Idempotent: an already-running redis is left untouched. Skipped
+  #    when the compose file on the VM has no redis service yet.
+  if "${COMPOSE[@]}" config --services 2>/dev/null | grep -qx redis; then
+    echo ">> ensuring redis is up"
+    "${COMPOSE[@]}" up -d --no-deps --wait redis
+  fi
 fi
 
 echo ">> recreating ${SERVICE}"
