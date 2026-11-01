@@ -78,7 +78,7 @@ None. Seeding a role emits no user-facing notification.
   - _Requirements: FOR-02-06_
   - _Depends on: 1_
 
-- [ ] 3. Author test-cases.md
+- [x] 3. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md`. API scenarios (Dockerized app):
     SALESMAN role exists with localized names; SALESMAN can READ every resource MANAGER can READ;
     SALESMAN has CREATE/READ/UPDATE but NOT DELETE on OFFERS and SIGNABLE_DOCUMENTS; SALESMAN has NO

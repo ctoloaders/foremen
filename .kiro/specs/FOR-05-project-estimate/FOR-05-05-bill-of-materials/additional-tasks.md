@@ -176,7 +176,7 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: all above_
   - _Depends on: none_
 
-- [ ] 10. Author test-cases.md
+- [x] 10. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md`. API scenarios (Dockerized app):
     the no-force room save returns 409 with a change diff when derived cells would change; the force
     save applies the recalculation and skips overridden cells/lines; add-room propagation from a

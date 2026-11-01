@@ -110,7 +110,7 @@ notifications" posture).
   - _Requirements: FOR-07-01 R1_
   - _Depends on: 1, 3_
 
-- [ ] 5. Author test-cases.md
+- [x] 5. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md`. API scenarios (Dockerized app):
     a MANAGER appears as a row with role MANAGER; a project with no foreman promotes its manager to a
     foreman-style span flagged `managerActingAsForeman`; a project WITH a foreman does NOT promote the

@@ -150,7 +150,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: all above_
   - _Depends on: none_
 
-- [ ] 7. Author test-cases.md
+- [x] 7. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md`. API scenarios (Dockerized app):
     estimate change with a SENT offer → offer becomes WITHDRAWN + a notification row exists for the
     client/manager; estimate change with an APPROVED offer → a new DRAFT offer revision=N+1 exists +

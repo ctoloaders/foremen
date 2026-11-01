@@ -100,7 +100,7 @@ None. Team assignment and readiness are in-session; the acting user sees the res
   - _Requirements: tasks 2, 4_
   - _Depends on: none_
 
-- [ ] 6. Author test-cases.md
+- [x] 6. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md`. API scenarios (Dockerized app):
     assigning a MANAGER/ESTIMATOR/FINANCIER/SALESMAN/custom role succeeds; assigning WORKER via the
     admin path is rejected (WORKER uses the worker path) and CLIENT via the admin path is rejected;

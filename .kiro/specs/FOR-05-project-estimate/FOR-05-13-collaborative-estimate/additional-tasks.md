@@ -183,7 +183,7 @@ changes in staged cells", i.e. live in-matrix indicators, not notifications.)
   - _Requirements: decision 5_
   - _Depends on: none_
 
-- [ ] 10. Author test-cases.md
+- [x] 10. Author test-cases.md
   - Create `test-cases.md` per `.kiro/steering/test-cases.md`. Two-client scenarios driven by the
     browser engine (two sessions): presence roster shows both users + colors; focusing a cell shows
     the other user's colored cursor; a staged (unsaved) op by client A appears in client B's matrix as

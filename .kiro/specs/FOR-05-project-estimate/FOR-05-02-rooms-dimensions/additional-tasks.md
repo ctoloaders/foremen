@@ -63,7 +63,7 @@ changes.
   - _Requirements: FOR-05-02 R2_
   - _Depends on: none_
 
-- [ ] 4. Author test-cases.md
+- [x] 4. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md` (UI browser-engine scenarios,
     Russian): the flag column renders, the marker appears on the always-manual rows and not on the
     geometry-derivable rows, the tooltip shows on hover, and the column is sticky on horizontal

@@ -100,7 +100,7 @@ None (read-only view).
   - _Requirements: tasks 2, 3, 4_
   - _Depends on: none_
 
-- [ ] 6. Author test-cases.md
+- [x] 6. Author test-cases.md
   - Create/append `test-cases.md` per `.kiro/steering/test-cases.md` (UI browser-engine scenarios,
     Russian): a worker row shows a merged timeline collapsed and expands to per-project sub-rows;
     rows ordered managers→foremen→workers with the right role badges; manager-as-foreman bars are

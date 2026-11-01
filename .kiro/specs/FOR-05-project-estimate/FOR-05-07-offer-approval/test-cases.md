@@ -635,3 +635,99 @@ OTP-письмо подавляется бином `LoggingOtpMailSender` (`@Pro
 (backend :8080, frontend :3000), профиль `docker`. Запуск:
 `./gradlew featureTestForQaAuto05OfferApproval`. Доступ к OTP-коду клиента — чтением из `otp_tokens`
 (реальная доставка писем на стенде невозможна; письмо подавлено под профилем `docker`).
+
+
+---
+
+# Дополнительные задачи (2026-11): реакция оферты на изменение сметы
+
+Покрывает `additional-tasks.md` задачи 1–6 (решения 3a–3c) и уведомления. Тип: **API (Docker) + UI
+(браузерный движок)**. Триггер — `EstimateChangedEvent` после коммита: принудительное сохранение
+помещений (`ROOMS_CHANGED`) или Save вкладки «Kosztorys», изменивший итог (`ESTIMATE_SAVED`).
+
+Правила: активная оферта, которую видел клиент (`SENT` / `CHANGES_REQUESTED` / `COUNTERED`), →
+`WITHDRAWN`; если последняя оферта `APPROVED` → новая `DRAFT` с `revision = max + 1`; `DRAFT`
+не трогается. Аудит `audit_log`: `OfferEntity` / `SYSTEM_WITHDRAW` | `SYSTEM_REVISE`. Уведомления
+`notification.offer.estimateChanged.withdrawn` / `.newVersion` — ACTIVE-членам CLIENT / MANAGER /
+SALESMAN, кроме действующего пользователя, ссылка `/projects/{id}/pricing`.
+
+## Стратегия повторяемости
+
+**Генератор `run-id` + teardown.** Прогон создаёт DRAFT-проект `OfferReact {run-id}` с клиентом
+`client+{run-id}@example.com`, менеджером и одним помещением с назначенной работой. Оферты готовятся
+через `POST /api/offers/project/{id}/prepare`, отправляются (`/send`) и утверждаются клиентом
+(`/approve`). В конце: проект → `CANCELLED`, тестовые пользователи деактивируются, их уведомления
+удаляются (`DELETE /api/notifications/{id}`).
+
+## Фича O1. Отзыв отправленной оферты
+
+### TC-OR-01 — Подсказка в 409 и эндпоинт влияния
+- Шаги:
+  1. Оферта в `SENT`.
+  2. `GET /api/estimates/project/{id}/offer-impact` → `{"impact":"WITHDRAW"}`.
+  3. `POST /api/rooms/project/{id}/save?force=false` с изменением площади → 409, `offerImpact=WITHDRAW`.
+
+### TC-OR-02 — Принудительное сохранение отзывает оферту
+- Шаги:
+  1. Тот же запрос с `force=true` → 200.
+  2. `GET /api/offers/{offerId}` → `status=WITHDRAWN`.
+  3. В `audit_log` строка `SYSTEM_WITHDRAW`, `performed_by` = id действующего пользователя,
+     `snapshot_after` содержит `"trigger":"ESTIMATE_CHANGED"`, `"source":"ROOMS_CHANGED"`.
+- _Покрывает: задачи 1, 3; решения 3a, 3b_
+
+### TC-OR-03 — Роль действующего пользователя не важна
+- Шаги: изменение выполняет пользователь с правом `ROOMS` UPDATE, но без роли исполнителя оферты →
+  оферта всё равно `WITHDRAWN`.
+- _Покрывает: решение 3b_
+
+### TC-OR-04 — Уведомления об отзыве
+- Шаги: у клиента и менеджера (не действующих) — уведомление типа `…estimateChanged.withdrawn`,
+  `deepLink=/projects/{id}/pricing`, `read=false`; у действующего пользователя уведомления нет.
+- _Покрывает: задача 4_
+
+## Фича O2. Новая версия утверждённой оферты
+
+### TC-OR-05 — Save сметы создаёт новую версию
+- Шаги:
+  1. Оферта `APPROVED`, `offer-impact` → `REVISE`.
+  2. Save вкладки «Kosztorys», меняющий итог.
+  3. Утверждённая оферта осталась `APPROVED`; появилась новая `DRAFT` с `revision = max + 1` и
+     пакетом сметы; аудит `SYSTEM_REVISE` с `"source":"ESTIMATE_SAVED"`.
+  4. Уведомление `…estimateChanged.newVersion` — клиенту (и менеджеру, если действовал не он).
+- _Покрывает: задача 2; решение 3a_
+
+### TC-OR-06 — DRAFT-оферта не отзывается
+- Шаги: при активной `DRAFT` → `offer-impact=NONE`; изменение сметы оставляет оферту `DRAFT`,
+  уведомлений нет.
+
+## Фича O3. Предупреждения (UI)
+
+### TC-OR-UI-01 — Строка предупреждения в диалоге пересчёта
+- Шаги: оферта `SENT`, изменить помещение → «Zapisz» → в диалоге строка «Wysłana oferta zostanie
+  wycofana…».
+- _Покрывает: задача 5; решение 3c_
+
+### TC-OR-UI-02 — Подтверждение перед Save сметы
+- Шаги: оферта `APPROVED`, staged-правка на вкладке «Kosztorys» → «Zapisz» → диалог «Zapis
+  kosztorysu wpłynie na ofertę» с текстом о новой версии; «Odrzuć» — ничего не сохранено;
+  «Zapisz mimo to» — сохранено, на вкладке «Oferta / uzgodnienie» видна «Robocza · Wersja N».
+
+### TC-OR-UI-03 — Колокольчик клиента
+- Шаги: войти клиентом → колокольчик показывает «Oferta została wycofana — kosztorys projektu się
+  zmienił» → клик открывает `/projects/{id}/pricing` со статусом «Wycofana / Zamknięta».
+
+## Регрессия (доп. задачи)
+
+- **TC-OR-REG-01** — ручные send / withdraw / approve / reject работают как раньше.
+- **TC-OR-REG-02** — «Przygotuj nową ofertę» после отзыва создаёт DRAFT и отправляется.
+
+## Шаблон MD-репорта (доп. задачи)
+
+| # | Тест-кейс | Шаг | Запрос/Действие | Ожидание | Факт | Статус |
+|---|-----------|-----|-----------------|----------|------|--------|
+| 1 | TC-OR-01 | 3 | POST rooms save force=false | 409, offerImpact=WITHDRAW | | |
+| 2 | TC-OR-02 | 2 | GET /api/offers/{id} | WITHDRAWN | | |
+| 3 | TC-OR-05 | 3 | оферты проекта | APPROVED + DRAFT rev N+1 | | |
+| 4 | TC-OR-UI-03 | 1 | колокольчик клиента | текст + ссылка | | |
+
+Итог: X пройдено / Y провалено / Z пропущено. Run-id: `<timestamp>`. Стратегия: `генератор + teardown`.
