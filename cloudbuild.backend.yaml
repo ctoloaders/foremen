@@ -68,10 +68,10 @@ steps:
         # for substitution refs too, so avoid writing a bare dollar-name here.)
         STAGE="/tmp/foremen-db-sync-${SHORT_SHA}"
         gcloud compute ssh "${_VM_NAME}" \
-          --zone="${_ZONE}" --tunnel-through-iap --quiet \
+          --zone="${_ZONE}" --tunnel-through-iap --quiet --ssh-key-expire-after=1h \
           --command="rm -rf '$${STAGE}' && mkdir -p '$${STAGE}'"
         gcloud compute scp --recurse \
-          --zone="${_ZONE}" --tunnel-through-iap --quiet \
+          --zone="${_ZONE}" --tunnel-through-iap --quiet --ssh-key-expire-after=1h \
           foremen-backend/database_files \
           "${_VM_NAME}:$${STAGE}/"
 
@@ -86,7 +86,7 @@ steps:
         # _VM_NAME / _ZONE / _SERVICE are genuine Cloud Build substitutions expanded before the step.
         STAGE="/tmp/foremen-db-sync-${SHORT_SHA}/database_files"
         gcloud compute ssh "${_VM_NAME}" \
-          --zone="${_ZONE}" --tunnel-through-iap --quiet \
+          --zone="${_ZONE}" --tunnel-through-iap --quiet --ssh-key-expire-after=1h \
           --command="/opt/foremen/deploy-service.sh ${_SERVICE} '$${STAGE}'"
 
 images:
