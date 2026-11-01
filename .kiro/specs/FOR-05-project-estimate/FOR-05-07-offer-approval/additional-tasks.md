@@ -2,9 +2,35 @@
 
 Screen URL: http://localhost:3000/projects/{id}/pricing
 
-> **Status (2026-10-29):** NOT started. This spec's reaction depends entirely on FOR-05-05's
-> `EstimateChangedEvent` (FOR-05-05 task 6), which is not yet implemented. Staged for a dedicated
-> session after the FOR-05-05 recalc engine lands.
+> **Status (2026-11-01):** tasks 1–6 and V DONE and browser + API validated on project 2. Task 7
+> (test-cases) remains open.
+>
+> Implementation map: `service/offer/{OfferEstimateImpact, OfferEstimateReactionService,
+> OfferEstimateReactionListener}`; the rooms 409 body carries `offerImpact`;
+> `GET /api/estimates/project/{projectId}/offer-impact` (ESTIMATE READ) feeds the Estimate-tab
+> pre-Save confirm; FE `OfferImpactWarning` (rooms dialog + estimate confirm), offer queries
+> invalidated after estimate-changing saves.
+>
+> Decisions taken while implementing (deviations flagged to the user):
+> - **DRAFT is NOT auto-withdrawn.** Only offers the client has seen (`SENT`, `CHANGES_REQUESTED`,
+>   `COUNTERED`) are withdrawn. A DRAFT is invisible to the client and its totals are live-referenced
+>   from the estimate, so it already reflects the change; withdrawing it would also kill the fresh
+>   revision this feature creates on the very next edit. One constant
+>   (`OfferEstimateReactionService.WITHDRAWABLE`) if DRAFT should be included.
+> - The system withdraw goes through `OfferStatusMachine` as the system (executor) actor, so the
+>   user's offer role is irrelevant but a terminal offer is still never reopened.
+> - New version: `revision = max(revision over the project's offers) + 1`, package = the estimate's
+>   applied package (as `prepareOffer`), else the approved offer's package. The APPROVED offer stays
+>   APPROVED; the project status is not changed.
+> - Recipients: ACTIVE CLIENT / MANAGER / SALESMAN members, excluding the acting user. Body is empty
+>   (the type key carries the text); deep link `/projects/{id}/pricing`.
+> - Audit: `audit_log` rows `OfferEntity` / `SYSTEM_WITHDRAW` | `SYSTEM_REVISE`, `performed_by` =
+>   acting user id, snapshot_after JSON with `trigger=ESTIMATE_CHANGED`, `source`
+>   (`ROOMS_CHANGED`/`ESTIMATE_SAVED`), `actingUserId`, `estimateId`.
+> - Warning (decision 3c) is shown on BOTH paths: the rooms change-impact dialog and a pre-Save
+>   confirm on the Estimate tab (only when an offer would be affected).
+> - Known pre-existing caveat: offers live-reference the estimate, so an APPROVED offer's displayed
+>   totals also follow the changed estimate (its "frozen" agreed view is not a snapshot).
 
 Enhancement batch (2026-10-29). Approved by the user. NEW feature tasks (not bug fixes). This spec
 owns the offer domain (`OfferService`, `OfferStatusMachine`, `OfferEntity`, the generic
@@ -72,7 +98,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
 
 ## Tasks
 
-- [ ] 1. Backend: system withdraw path (no executor-role gate)
+- [x] 1. Backend: system withdraw path (no executor-role gate)
   - Add `OfferService.withdrawSystem(offerId, actingUserId)` (or a `system` flag on `withdraw`) that
     transitions a non-terminal offer → `WITHDRAWN` WITHOUT the `OfferStatusMachine` executor-role
     check (still rejecting a terminal source), records an audit row (acting user + trigger
@@ -80,7 +106,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: FOR-05-07 R3.7; user decision 3a/3b_
   - _Depends on: none_
 
-- [ ] 2. Backend: revise-approved-offer (new version)
+- [x] 2. Backend: revise-approved-offer (new version)
   - Add `OfferService.reviseApprovedOffer(projectId, actingUserId)`: resolve the latest `APPROVED`
     offer, create a new `DRAFT` `OfferEntity` with `revision = latestApproved.revision + 1`, same
     project + estimate, package seeded from the estimate's applied package, `recomputeTotals`,
@@ -89,7 +115,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: FOR-05-07 R1/R7; user decision 3a/3b_
   - _Depends on: none_
 
-- [ ] 3. Backend: estimate-changed reaction listener
+- [x] 3. Backend: estimate-changed reaction listener
   - Add `OfferEstimateReactionListener` with `@TransactionalEventListener(phase = AFTER_COMMIT)` on
     `EstimateChangedEvent` (FOR-05-05 task 6). It resolves the project's offer state: if a non-terminal,
     non-approved active offer exists → `withdrawSystem`; else if the latest offer is `APPROVED` →
@@ -98,7 +124,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: user decision 3a/3b_
   - _Depends on: 1, 2_
 
-- [ ] 4. Backend: offer-reaction notification emitter
+- [x] 4. Backend: offer-reaction notification emitter
   - Add `OfferReactionNotificationEmitter` (mirror `OfferNotificationEmitter`): on a system withdraw
     emit type `offer.withdrawn.estimateChanged`; on a new version emit type
     `offer.newVersion.estimateChanged`. Recipients: the project's CLIENT + MANAGER(s) (+ SALESMAN if
@@ -108,7 +134,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: notifications in scope above_
   - _Depends on: 3_
 
-- [ ] 5. Frontend: offer-impact warning line in the approval dialog
+- [x] 5. Frontend: offer-impact warning line in the approval dialog
   - Extend the FOR-05-05 change-impact dialog (task 7 there) to show, when the impact payload
     indicates an active/approved offer, a line: "the active offer will be withdrawn" or "a new offer
     version will be prepared". Localized `estimate.recalc.offerWithdrawWarning` /
@@ -117,7 +143,7 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: user decision 3c_
   - _Depends on: 4_
 
-- [ ] 6. i18n keys (PL + RU)
+- [x] 6. i18n keys (PL + RU)
   - Frontend `estimate.recalc.offerWithdrawWarning` / `estimate.recalc.offerReviseWarning`; backend
     notification type bodies for `offer.withdrawn.estimateChanged` / `offer.newVersion.estimateChanged`
     at PL + RU parity.
@@ -135,12 +161,21 @@ When the estimate (or room dimensions driving it) changes such that the estimate
   - _Requirements: the requirements covered (FOR-05-07 R3.7/R1/R7, decisions 3a–3c, notifications)_
   - _Depends on: 1, 2, 3, 4, 5, 6_
 
-- [ ] V. Validate end-to-end in the browser + API
+- [x] V. Validate end-to-end in the browser + API
   - Rebuild backend + frontend. On a draft project with a SENT offer: change the estimate/room,
     approve the warning → offer WITHDRAWN + bell notification. On a project with an APPROVED offer:
     change the estimate → new DRAFT version N+1 + notification. Confirm the audit record.
   - _Requirements: as all tasks_
   - _Depends on: 1, 2, 3, 4, 5, 6_
+  - DONE (2026-11-01, local stack, project 2): rooms edit with offer #1 SENT → dialog shows the
+    withdraw warning → Approve → offer WITHDRAWN, `notification.offer.estimateChanged.withdrawn` for
+    CLIENT (12) + MANAGER (10), audit `SYSTEM_WITHDRAW` by the acting admin (11, ROOMS_CHANGED).
+    Client bell shows "Oferta została wycofana — kosztorys projektu się zmienił"; click → pricing tab
+    (Wycofana / Zamknięta). Then prepare → send → client approve (offer 174) → `offer-impact` =
+    REVISE → Estimate-tab row clear + Save → confirm dialog (revise wording) → "Zapisz mimo to" →
+    offer 174 stays APPROVED, new DRAFT 175 revision 2 (pakiet lux, 72 550,35), `newVersion`
+    notification to the CLIENT only (the acting manager excluded), audit `SYSTEM_REVISE`
+    (ESTIMATE_SAVED). Pricing tab shows "Robocza · Wersja 2" with Send/Withdraw.
 
 ## Parallel execution plan (waves)
 

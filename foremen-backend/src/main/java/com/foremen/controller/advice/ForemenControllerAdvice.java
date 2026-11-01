@@ -151,7 +151,8 @@ public class ForemenControllerAdvice {
         logError(request, HttpStatus.CONFLICT.value(), code, false, ex);
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new EstimateRecalcConflictError(
-                code, message, changes, ex.getImpact().totalNetBefore(), ex.getImpact().totalNetAfter()));
+                code, message, changes, ex.getImpact().totalNetBefore(), ex.getImpact().totalNetAfter(),
+                ex.getOfferImpact()));
     }
 
     /**

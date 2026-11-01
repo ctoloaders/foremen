@@ -13,13 +13,16 @@ import java.util.List;
  * @param changes        the affected estimate cells
  * @param totalNetBefore the estimate net total before the save
  * @param totalNetAfter  the estimate net total after the save
+ * @param offerImpact    FOR-05-07 — what approving does to the offer: {@code NONE} /
+ *                       {@code WITHDRAW} / {@code REVISE} ({@code null} when unknown)
  */
 public record EstimateRecalcConflictError(
         String code,
         String message,
         List<Change> changes,
         BigDecimal totalNetBefore,
-        BigDecimal totalNetAfter) {
+        BigDecimal totalNetAfter,
+        String offerImpact) {
 
     /** One affected cell with localized names. */
     public record Change(

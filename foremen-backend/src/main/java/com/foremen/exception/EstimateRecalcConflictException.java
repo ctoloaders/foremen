@@ -12,13 +12,28 @@ import com.foremen.service.estimate.recalc.EstimateImpact;
 public class EstimateRecalcConflictException extends RuntimeException {
 
     private final transient EstimateImpact impact;
+    private final String offerImpact;
 
     public EstimateRecalcConflictException(EstimateImpact impact) {
+        this(impact, null);
+    }
+
+    /**
+     * @param impact      the estimate changes
+     * @param offerImpact what approving does to the project's offer (FOR-05-07: {@code NONE} /
+     *                    {@code WITHDRAW} / {@code REVISE}), or {@code null} when unknown
+     */
+    public EstimateRecalcConflictException(EstimateImpact impact, String offerImpact) {
         super("error.estimate.recalc.conflict");
         this.impact = impact;
+        this.offerImpact = offerImpact;
     }
 
     public EstimateImpact getImpact() {
         return impact;
+    }
+
+    public String getOfferImpact() {
+        return offerImpact;
     }
 }

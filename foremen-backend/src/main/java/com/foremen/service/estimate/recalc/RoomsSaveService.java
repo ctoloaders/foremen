@@ -30,6 +30,7 @@ import com.foremen.service.estimate.DraftGateGuard;
 import com.foremen.service.estimate.EstimateAssignmentService;
 import com.foremen.service.estimate.EstimateRecomputeService;
 import com.foremen.service.model.RoomServiceExtendedModel;
+import com.foremen.service.offer.OfferEstimateReactionService;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -73,6 +74,7 @@ public class RoomsSaveService {
     private final ProjectAccessCache projectAccessCache;
     private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
+    private final OfferEstimateReactionService offerReactionService;
 
     /** An existing room's update: its id and the normalized-on-write service model. */
     public record RoomUpdate(Long id, RoomServiceExtendedModel model) {
@@ -175,7 +177,9 @@ public class RoomsSaveService {
             entityManager.flush();
             impact = EstimateSnapshot.diff(before, EstimateSnapshot.of(estimate));
             if (!impact.isEmpty() && !force) {
-                throw new EstimateRecalcConflictException(impact); // rolls back every write above
+                // FOR-05-07: tell the dialog what approving does to the offer (withdraw / new version).
+                throw new EstimateRecalcConflictException(
+                        impact, offerReactionService.impactOf(projectId).name()); // rolls back every write above
             }
             if (!impact.isEmpty()) {
                 eventPublisher.publishEvent(new EstimateChangedEvent(
