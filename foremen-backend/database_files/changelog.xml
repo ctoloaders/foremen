@@ -857,4 +857,7 @@
     <!-- Enhancement batch (FOR-05-05 additional-tasks): relax estimate_line_room_qty.room_id FK to
          ON DELETE CASCADE so deleting a room removes its estimate cells. Registered LAST, after 189. -->
     <include file="database_files/changesets/190-estimate-line-room-qty-room-cascade.xml"/>
+    <!-- FOR-05-02 bug-report Round 4: fixed per-project room order (rooms.sort_order, backfilled
+         0..n by id). Registered LAST, after 190. -->
+    <include file="database_files/changesets/191-rooms-sort-order.xml"/>
 </databaseChangeLog>

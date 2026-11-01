@@ -27,6 +27,14 @@ public class RoomEntity extends BaseEntity {
     @Column(length = 255)
     private String label;
 
+    /**
+     * FOR-05-02 bug-report Round 4 — the room's fixed position within its project (0-based,
+     * ascending). Assigned on create (appended last) and changed ONLY by the explicit reorder
+     * endpoint; never part of the create/update payloads, so a room edit cannot change it.
+     */
+    @Column(name = "sort_order", nullable = false)
+    private int sortOrder;
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "geometry", columnDefinition = "jsonb")
     private RoomGeometry geometry;

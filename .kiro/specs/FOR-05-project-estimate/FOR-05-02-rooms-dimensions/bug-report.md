@@ -250,3 +250,78 @@ property test — fails identically on the clean tree, unrelated to these change
 - **Wave 1:** 1 (Round 3) — one logical change spanning the write DTOs + service manual branch
   (backend) and the save payload (frontend); serialized backend→frontend.
 - **Wave 2:** V3 — browser validation; depends on 1.
+
+## Round 4 (2026-11-01)
+
+Screen URL: http://localhost:3000/projects/2/rooms
+
+- [x] 1. After any change the rooms order may change — introduce a fixed order within the project (backwards compatible: order 0..n by `room.id` within each project); on the UI rooms may be re-ordered only by drag-and-drop
+  - FIXED (2026-11-01): changeset `191-rooms-sort-order.xml` (backfilled 0..n-1 per project by id;
+    1355 rooms, 0 NULL); `RoomEntity.sortOrder` + read DTO `sortOrder`; `RoomService.afterCreate`
+    appends last (`max + 1`), bulk create routed through single create; `RoomDao.findByProjectId`
+    orders by `sortOrder, id` (estimate matrix / documents / readiness follow); `PUT
+    /api/rooms/project/{projectId}/order` (`RoomService.reorder`, exact-set validation → 400
+    `error.room.order.invalid`, per-room audit). FE: `useProjectRooms` stable-sorts by
+    `sortOrder`/id; drag handle (`GripVertical`) per persisted room header, drop target highlight,
+    `useReorderRooms` optimistic + rollback toast; handles hidden when read-only. i18n
+    `roomsSummary.dragToReorder` / `reorderError` (PL + RU), backend message PL + RU.
+  - Tests: new `RoomSortOrderIT` (3: append-last single + bulk, reorder + update keeps order, invalid
+    lists → 400); `RoomBulkUpdateIT`, `RoomCrudIT`, `RoomGeometryIT`, `RoomManualMetricsIT`,
+    `RoomScopingIT`, `RoomAnnotationCoverageSmokeIT` green (21). FE: `roomOrder.test.ts` + DnD tests in
+    `RoomsMatrixTab.test.tsx`; rooms suite 307/307.
+  - Triage: observed — the Rooms tab loads rooms via the generic `GET /api/rooms`
+    (`useProjectRooms` → `fetchRooms({ filter: project.id~in~<id> })`) with **no sort**, so Postgres
+    returns rows in physical order, which shifts after an UPDATE (an updated tuple moves) → the matrix
+    columns jump after a Save. There is also no persisted order at all (`rooms` has no order column;
+    `RoomDao.findByProjectId` orders by `id`, used by the estimate matrix, documents, readiness).
+    Expected — every project has a stable, persisted room order; saves never change it; the user
+    changes it only by dragging a room column. Layer: **both** (DB + backend + frontend).
+  - Fix plan:
+    - **DB (changeset `191-rooms-sort-order.xml`, registered last):** add `rooms.sort_order INT`;
+      backfill `ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY id) - 1` (0..n-1 per project, by
+      id — the backwards-compatible order); then `NOT NULL DEFAULT 0`; index
+      `(project_id, sort_order)`. Idempotent (precondition: column absent).
+    - **Backend:** `RoomEntity.sortOrder`; exposed read-only on the room read DTO (`sortOrder`); NOT
+      part of the create/update requests, so a room edit can never change it. A new room (single
+      create, bulk create, and the FOR-05-05 atomic rooms save) gets `max(sort_order in project) + 1`
+      (appended last). `RoomDao.findByProjectId` → `ORDER BY r.sortOrder, r.id` so the estimate
+      matrix / materials / documents / readiness follow the same order. New endpoint
+      `PUT /api/rooms/project/{projectId}/order` `{ roomIds: [...] }` (ROOMS UPDATE, project scope):
+      the list must be exactly the project's room ids (else 400 `error.room.order.invalid`), assigns
+      `sort_order = index`, audited per room. Delete leaves gaps (harmless — order is relative).
+    - **Frontend:** `useProjectRooms` sorts by `sortOrder` then `id` (request `sort=sortOrder,asc`
+      + client-side stable sort as a guard). Room column headers in the matrix get a drag handle
+      (native HTML5 drag-and-drop, `aria-label`, cursor `grab`); dropping a column on another
+      persists the new order immediately via the order endpoint (optimistic update, rollback + error
+      toast on failure) — independent of the staged dimension edits, which are keyed by room id and
+      therefore unaffected. Pending (unsaved) new rooms stay last and are not draggable until saved.
+      Drag-and-drop is the ONLY way to reorder (no sort control). Editing disabled (non-DRAFT / no
+      `ROOMS` UPDATE) → no drag handle.
+    - **i18n (PL + RU):** `roomsSummary.dragToReorder` (handle aria-label/tooltip, e.g. PL "Przeciągnij,
+      aby zmienić kolejność", RU "Перетащите, чтобы изменить порядок"), `roomsSummary.reorderError`
+      (toast); backend `error.room.order.invalid` in `messages.properties` / `messages_ru.properties`.
+      No new entity i18n fields.
+    - **Notifications:** none (layout preference of the project, no domain event).
+  - Suspect: `foremen-backend/database_files/changesets/` (new 191), `dao/model/RoomEntity.java`,
+    `dao/RoomDao.java`, `service/RoomService.java`, room DTO/mappers, `controller/RoomController.java`;
+    FE `features/rooms/api/{query-hooks,rooms-api,mutation-hooks}.ts`,
+    `features/rooms/components/workspace/RoomDimensionsMatrix*.tsx`, `RoomsMatrixTab.tsx`, locales.
+  - _Requirements: FOR-05-02 rooms matrix (column per room, stable layout), FOR-04-14 room entity_
+  - _Depends on: none_
+- [x] V4. Validate Round 4 in the browser
+  - DONE (2026-11-01, local stack, MANAGER on project 2): backfill `2,3,4,5,6,16` → `0..5`; three
+    dimension edits + Save (with recalc approval) → column order unchanged after each save and after
+    reload; drag room 16 onto room 3 → `2,16,3,4,5,6` immediately, after reload, and on the Estimate
+    tab room columns (10 audit rows); new "Salon" room + Save → appended last; deleting it → order
+    intact; API invalid list → 400. Original order restored afterwards.
+  - On `/projects/2/rooms`: note the column order → edit a dimension + Save several times → order
+    unchanged; reload → unchanged; drag a room column to another position → order persists after
+    reload and is the same on the Estimate tab room columns; add a new room + Save → it appears last;
+    confirm the backfill gave 0..n by id (`SELECT id, sort_order FROM rooms WHERE project_id=2`).
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 4
+
+- **Wave 1:** 1 — one logical change serialized DB → backend → frontend (the FE depends on the new
+  `sortOrder` field and the order endpoint).
+- **Wave 2:** V4 — browser validation; depends on 1.

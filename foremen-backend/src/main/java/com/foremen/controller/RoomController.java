@@ -115,6 +115,23 @@ public class RoomController implements AdminController<
                 impact.totalNetAfter()));
     }
 
+    /**
+     * FOR-05-02 bug-report Round 4 — sets the project's fixed room order (drag-and-drop on the Rooms
+     * tab). Body {@code {"roomIds": [...]}} must list exactly the project's room ids in the new order;
+     * otherwise 400 {@code error.room.order.invalid}. {@code ROOMS} UPDATE + project scope.
+     */
+    @org.springframework.web.bind.annotation.PutMapping("/project/{projectId}/order")
+    @RequiresPermission(resource = ROOMS_RESOURCE, operation = "UPDATE")
+    public ResponseEntity<Void> reorderForProject(
+            @PathVariable Long projectId, @RequestBody RoomsReorderRequest request) {
+        service.reorder(projectId, request == null ? null : request.roomIds());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** The reorder body: every room id of the project, in the new order. */
+    public record RoomsReorderRequest(List<Long> roomIds) {
+    }
+
     private void requireOperation(String operation) {
         String roleCode = currentRoleCode();
         if (roleCode == null || !permissionEvaluator.isAllowed(roleCode, ROOMS_RESOURCE, operation)) {

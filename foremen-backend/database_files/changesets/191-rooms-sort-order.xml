@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 bug-report Round 4: a fixed, persisted room order within each project.
+        1. Add rooms.sort_order (nullable while backfilling).
+        2. Backfill 0..n-1 per project ordered by room id (the backwards-compatible order).
+        3. Enforce NOT NULL DEFAULT 0 and index (project_id, sort_order).
+        Idempotent: the add-column changeset is guarded by "column absent"; the later steps run once
+        with it. Registered LAST in changelog.xml (after 190).
+    -->
+    <changeSet id="191-rooms-sort-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="rooms" columnName="sort_order"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="rooms">
+            <column name="sort_order" type="INT"/>
+        </addColumn>
+        <sql>
+            UPDATE rooms r
+               SET sort_order = o.rn
+              FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY id) - 1 AS rn
+                      FROM rooms) o
+             WHERE r.id = o.id;
+        </sql>
+        <addDefaultValue tableName="rooms" columnName="sort_order" defaultValueNumeric="0"/>
+        <addNotNullConstraint tableName="rooms" columnName="sort_order" columnDataType="INT"
+                              defaultNullValue="0"/>
+        <createIndex tableName="rooms" indexName="idx_rooms_project_sort_order">
+            <column name="project_id"/>
+            <column name="sort_order"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

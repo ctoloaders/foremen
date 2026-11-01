@@ -29,5 +29,8 @@ public record RoomDtoModel(
         MeasureValueDto wallArea,
         MeasureValueDto perimeter,
         MeasureValueDto doorArea,
-        MeasureValueDto windowArea
+        MeasureValueDto windowArea,
+        // FOR-05-02 Round 4: the room's fixed position within its project (read-only; changed only
+        // via PUT /api/rooms/project/{projectId}/order).
+        Integer sortOrder
 ) {}

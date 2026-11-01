@@ -23,6 +23,8 @@ public class RoomServiceModel {
     private Long roomTypeId;
     private String roomTypeName;
     private String label;
+    /** FOR-05-02 Round 4: the room's fixed position within its project (read-only). */
+    private Integer sortOrder;
     private RoomGeometry geometry;
     private BigDecimal ceilingHeight;
     private Integer internalCorners;

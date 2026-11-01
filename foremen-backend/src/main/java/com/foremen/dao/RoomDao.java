@@ -18,8 +18,17 @@ public interface RoomDao extends AdminDao<RoomEntity, Long> {
      * (all rooms when empty, R10.2/R10.3). Ordered by id for a deterministic apply order.
      *
      * @param projectId the owning project id
-     * @return the project's rooms, ordered by id (empty when the project has none)
+     * @return the project's rooms in their fixed project order ({@code sortOrder}, then id — FOR-05-02
+     *         Round 4), empty when the project has none
      */
-    @Query("SELECT r FROM RoomEntity r WHERE r.project.id = :projectId ORDER BY r.id")
+    @Query("SELECT r FROM RoomEntity r WHERE r.project.id = :projectId ORDER BY r.sortOrder, r.id")
     List<RoomEntity> findByProjectId(@Param("projectId") Long projectId);
+
+    /** FOR-05-02 Round 4: the highest {@code sortOrder} in a project, or {@code null} when it has no rooms. */
+    @Query("SELECT MAX(r.sortOrder) FROM RoomEntity r WHERE r.project.id = :projectId")
+    Integer findMaxSortOrder(@Param("projectId") Long projectId);
+
+    /** FOR-05-02 Round 4: the highest {@code sortOrder} among the project's rooms other than {@code roomId}. */
+    @Query("SELECT MAX(r.sortOrder) FROM RoomEntity r WHERE r.project.id = :projectId AND r.id <> :roomId")
+    Integer findMaxSortOrderExcluding(@Param("projectId") Long projectId, @Param("roomId") Long roomId);
 }

@@ -195,6 +195,66 @@ public class RoomService
     }
 
     /**
+     * FOR-05-02 bug-report Round 4 — a new room is appended LAST in its project's fixed order:
+     * {@code sortOrder = max(sortOrder of the project's other rooms) + 1} (0 for the first room).
+     * Runs inside the create transaction after the insert is flushed.
+     */
+    @Override
+    public void afterCreate(RoomEntity entity) {
+        if (entity.getProject() == null || entity.getProject().getId() == null) {
+            return;
+        }
+        Integer max = roomDao.findMaxSortOrderExcluding(entity.getProject().getId(), entity.getId());
+        entity.setSortOrder(max == null ? 0 : max + 1);
+        roomDao.save(entity);
+        entityManager.flush();
+    }
+
+    /**
+     * Bulk create routes every row through the single-row {@link #create(Object)} so each new room
+     * gets the same normalization and its append-last {@code sortOrder} (FOR-05-02 Round 4).
+     */
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public java.util.List<RoomServiceExtendedModel> create(java.util.List<RoomServiceExtendedModel> models) {
+        return models.stream().map(this::create).toList();
+    }
+
+    /**
+     * FOR-05-02 bug-report Round 4 — sets the project's fixed room order to {@code roomIds} (index =
+     * position). The list must contain EXACTLY the project's room ids, each once; otherwise 400
+     * {@code error.room.order.invalid} and nothing changes. Project scope is enforced per room by
+     * {@link #assertProjectAccess}. Each moved room gets an UPDATE audit row.
+     *
+     * @param projectId the project whose rooms are reordered
+     * @param roomIds   every room id of the project, in the new order
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public void reorder(Long projectId, java.util.List<Long> roomIds) {
+        java.util.List<RoomEntity> rooms = roomDao.findByProjectId(projectId);
+        java.util.Set<Long> expected = new java.util.HashSet<>();
+        rooms.forEach(r -> expected.add(r.getId()));
+        if (roomIds == null || roomIds.size() != expected.size()
+                || !new java.util.HashSet<>(roomIds).equals(expected)) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.room.order.invalid");
+        }
+        java.util.Map<Long, RoomEntity> byId = new java.util.HashMap<>();
+        rooms.forEach(r -> byId.put(r.getId(), r));
+        for (int index = 0; index < roomIds.size(); index++) {
+            Long roomId = roomIds.get(index);
+            assertProjectAccess(roomId);
+            RoomEntity room = byId.get(roomId);
+            if (room.getSortOrder() != index) {
+                String before = serializeEntity(room);
+                room.setSortOrder(index);
+                roomDao.save(room);
+                saveAuditWithSnapshot(before, room, "UPDATE");
+            }
+        }
+        entityManager.flush();
+    }
+
+    /**
      * The shared create/update normalization. Mutates {@code model} in place so the mapper writes
      * geometry-authoritative (or manual-stamped) metrics onto the entity. Every rejection path
      * throws before any write, so the enclosing transaction rolls back.
