@@ -408,6 +408,22 @@ public class EstimateAssignmentService
      * @param projectId the owning project whose estimate lifecycle to read
      * @return {@code true} iff the estimate exists and is DRAFT
      */
+    /**
+     * The project's current estimate net total, or {@code null} when it has no estimate yet. Read
+     * before and after an Estimate-tab Save to detect a change of the estimate numbers (FOR-05-05
+     * additional task 6).
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal currentTotalNet(Long projectId) {
+        return estimateDao.findByProjectId(projectId).map(EstimateEntity::getTotalNet).orElse(null);
+    }
+
+    /** The id of the project's estimate, or {@code null} when it has none. */
+    @Transactional(readOnly = true)
+    public Long estimateIdOf(Long projectId) {
+        return estimateDao.findByProjectId(projectId).map(EstimateEntity::getId).orElse(null);
+    }
+
     @Transactional
     public boolean isDraft(Long projectId) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
@@ -1175,6 +1191,109 @@ public class EstimateAssignmentService
      * line per consumption type. Returns the persisted room-qty. Does NOT recompute — the public
      * entry points recompute once after the whole batch.
      */
+    // =====================================================================================
+    // Room-change propagation primitives (FOR-05-05 additional tasks 3-5: auto-recalc on room save)
+    // =====================================================================================
+
+    /**
+     * Re-derives every assigned cell of {@code room} after its dimensions changed (additional task 3):
+     * each {@code (line, room)} cell's Volume is re-resolved through the same {@link #resolveVolume}
+     * path the matrix uses, under the estimate's applied package. A cell with a manual Volume
+     * override ({@code volumeOverridden}) is left untouched (user decision 2a). Material quantities
+     * follow automatically: a non-overridden material line's need is {@code norm × Volume} on read,
+     * and an overridden one ({@code qtyOverridden}) keeps its manual quantity. Does NOT recompute.
+     *
+     * @param estimate the project's DRAFT estimate (caller has already loaded it in this transaction)
+     * @param room     the (already updated, managed) room whose cells to re-derive
+     */
+    public void rederiveRoom(EstimateEntity estimate, RoomEntity room) {
+        OfferPackageEntity offerPackage = resolvePackageOrNull(estimate.getAppliedPackageCode());
+        for (EstimateLineEntity line : estimate.getLines()) {
+            EstimateLineRoomQtyEntity roomQty = findRoomQty(line, room.getId());
+            if (roomQty == null || roomQty.isVolumeOverridden() || line.getWorkItem() == null) {
+                continue;
+            }
+            BigDecimal volume = resolveVolume(line.getWorkItem(), offerPackage, room);
+            if (roomQty.getQuantity() == null || roomQty.getQuantity().compareTo(volume) != 0) {
+                roomQty.setQuantity(volume);
+                estimateLineRoomQtyDao.save(roomQty);
+            }
+        }
+    }
+
+    /**
+     * Removes every estimate cell of {@code roomId} (additional task 5): each {@code (line, room)}
+     * room-qty is deleted (its material lines cascade via orphan removal) and a line left with no
+     * rooms is dropped, exactly like {@link #doUnassign}. Called BEFORE the room row itself is
+     * deleted so the in-memory estimate graph stays consistent with the database. Does NOT recompute.
+     *
+     * @param estimate the project's DRAFT estimate
+     * @param roomId   the room about to be deleted
+     */
+    public void unassignRoom(EstimateEntity estimate, Long roomId) {
+        for (EstimateLineEntity line : new ArrayList<>(estimate.getLines())) {
+            doUnassign(estimate, line, roomId);
+        }
+    }
+
+    /**
+     * Applies to a freshly created {@code newRoom} the works already assigned to a same-room-type
+     * sibling (additional task 4, user decision 2c). The sibling is the candidate with the most
+     * assigned works (ties broken by the lowest room id, so the choice is deterministic). Each of
+     * the sibling's works is assigned to the new room through {@link #doAssign} — the same path a
+     * matrix ASSIGN takes — so its Volume is derived from the new room's dimensions under the
+     * estimate's applied package and its material lines are seeded from the work's consumption
+     * norms. A no-op when no candidate has any assigned work. Does NOT recompute.
+     *
+     * @param estimate   the project's DRAFT estimate
+     * @param newRoom    the newly created (managed) room
+     * @param candidates existing rooms of the project with the same room type (never the new room)
+     * @return the number of works applied to the new room
+     */
+    public int replicateFromSibling(EstimateEntity estimate, RoomEntity newRoom, List<RoomEntity> candidates) {
+        RoomEntity sibling = null;
+        int siblingWorks = 0;
+        for (RoomEntity candidate : candidates) {
+            int works = 0;
+            for (EstimateLineEntity line : estimate.getLines()) {
+                if (findRoomQty(line, candidate.getId()) != null) {
+                    works++;
+                }
+            }
+            if (works > siblingWorks
+                    || (works == siblingWorks && works > 0 && sibling != null && candidate.getId() < sibling.getId())) {
+                sibling = candidate;
+                siblingWorks = works;
+            }
+        }
+        if (sibling == null) {
+            return 0;
+        }
+
+        OfferPackageEntity offerPackage = resolvePackageOrNull(estimate.getAppliedPackageCode());
+        List<WorkItemEntity> works = new ArrayList<>();
+        for (EstimateLineEntity line : estimate.getLines()) {
+            if (line.getWorkItem() != null && findRoomQty(line, sibling.getId()) != null) {
+                works.add(line.getWorkItem());
+            }
+        }
+        Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                groupConsumptionsBy(works.stream().map(WorkItemEntity::getId).distinct().toList());
+        for (WorkItemEntity work : works) {
+            doAssign(estimate, work, newRoom, offerPackage, consumptionsByWork);
+        }
+        return works.size();
+    }
+
+    /**
+     * The resolved material need of a material line — {@code manualQty} when overridden, {@code norm}
+     * for a PER_ROOM basis, else {@code norm × Volume} — exposed for the room-change impact diff so
+     * it measures material quantities exactly as the matrix assembler renders them.
+     */
+    public static BigDecimal materialNeed(EstimateLineRoomMaterialEntity material) {
+        return resolvedNeed(material);
+    }
+
     private EstimateLineRoomQtyEntity doAssign(
             EstimateEntity estimate, WorkItemEntity workItem, RoomEntity room, OfferPackageEntity offerPackage,
             Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork) {

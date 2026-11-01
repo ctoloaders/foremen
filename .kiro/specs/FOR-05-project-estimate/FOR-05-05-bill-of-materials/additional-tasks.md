@@ -2,11 +2,32 @@
 
 Screen URLs: http://localhost:3000/projects/{id}/rooms and http://localhost:3000/projects/{id}/estimate
 
-> **Status (2026-10-29):** tasks 1 (DB cascade) and 8 (manual-cell icon) are DONE and
-> browser-validated. The core auto-recalc engine — tasks 2–7 (dry-run impact, 409/force protocol,
-> add/delete-room propagation, the `EstimateChangedEvent`) — is NOT yet implemented: it is a large
-> change to the estimate write path and is staged here for a dedicated session. Task 10 (test-cases)
-> and task 9 (the `estimate.recalc.*` i18n) depend on 2–7.
+> **Status (2026-11-01):** tasks 1–9 and V are DONE and browser + API validated. The auto-recalc
+> engine landed as ONE atomic rooms save — `POST /api/rooms/project/{projectId}/save?force=` — that
+> applies deletes → updates → creates and the estimate derivation in a single transaction, diffs the
+> estimate before/after, and (without `force`) throws a 409 that rolls everything back. The matrix
+> tab AND the full-page room editor both use it. Task 10 (test-cases) remains open.
+>
+> Implementation map: `service/estimate/recalc/{RoomsSaveService, EstimateSnapshot, EstimateImpact,
+> EstimateChangedEvent}`, `EstimateAssignmentService.{rederiveRoom, unassignRoom,
+> replicateFromSibling}`, `EstimateRecalcConflictException` → `ForemenControllerAdvice` 409,
+> `collab/EstimateChangedCollabListener` (refresh open estimate tabs); FE
+> `rooms/api/{recalc.ts, saveProjectRooms}`, `useBulkSaveRooms` (single request), `useSaveRoomInProject`,
+> `rooms/components/EstimateRecalcDialog`.
+>
+> Decisions taken while implementing:
+> - Re-derivation uses the estimate's applied package (`appliedPackageCode`) — the same formula
+>   context as apply-package. Cells whose stored Volume predates current formulas therefore also
+>   show up in the diff; the user sees and approves them.
+> - Add-room sibling = the same-room-type room with the most assigned works (tie → lowest id); its
+>   works are assigned through `doAssign`, so material lines are seeded from consumption norms
+>   (package-merged finishing allocations are not copied — re-run apply-package for those).
+> - `EstimateChangedEvent` is published for a forced rooms save (`ROOMS_CHANGED`) and for an
+>   Estimate-tab Save whose net total changed (`ESTIMATE_SAVED`).
+> - A room delete against a NON-draft estimate that still has cells for the room is rejected with
+>   the existing `error.estimate.locked` (never silently cascades a locked estimate).
+> - Fixed alongside (pre-existing): the room editor seeded `{value, source}` metric objects into the
+>   number fields, so every metric rendered empty and the form could not be saved.
 
 Enhancement batch (2026-10-29). Approved by the user. NEW feature tasks (not bug fixes). This spec
 owns the estimate derivation engine (`EstimateRecomputeService`, `EstimateAssignmentService`,
@@ -86,7 +107,7 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: FOR-05-05 R3/R19 (estimate line room qty lifecycle)_
   - _Depends on: none_
 
-- [ ] 2. Backend: estimate change-impact computation (dry run)
+- [x] 2. Backend: estimate change-impact computation (dry run)
   - Add a pure/read-only impact computation: given a project and a prospective set of room-dimension
     changes (and/or a new/deleted room), compute which estimate cells/lines WOULD change under
     derivation — skipping `volumeOverridden` cells and `qtyOverridden` material lines — and return a
@@ -96,7 +117,7 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: FOR-05-05 R3 (derived quantities), R2a (skip manual overrides)_
   - _Depends on: none_
 
-- [ ] 3. Backend: force-flag wiring on the room-save path
+- [x] 3. Backend: force-flag wiring on the room-save path
   - Add a `force` flag to the room bulk-save request path. On `force = false` (default), after
     staging the room change, run task 2's impact computation; if the diff is non-empty, abort with
     **409** carrying the localized diff payload (new error key `error.estimate.recalc.conflict` +
@@ -106,7 +127,7 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: FOR-05-05 R3; user decision 2a/2b_
   - _Depends on: 2_
 
-- [ ] 4. Backend: add-room propagation from a same-room-type sibling
+- [x] 4. Backend: add-room propagation from a same-room-type sibling
   - When a new room is saved (force path), if the estimate has works/material lines applied to an
     existing room of the SAME `roomTypeId`, replicate that room's assigned works (and
     package-applied material lines) onto the new room via the existing assign/seed path, then derive
@@ -115,14 +136,14 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: FOR-05-05 R3; user decision 2c_
   - _Depends on: 2, 3_
 
-- [ ] 5. Backend: delete-room propagation to the estimate
+- [x] 5. Backend: delete-room propagation to the estimate
   - When a room is deleted (force path), cascade-remove its estimate cells (relies on task 1's FK +
     JPA orphan removal) and drop any line left with no rooms (mirror `EstimateAssignmentService.
     doUnassign`), then `recomputeEstimate`. Included in the dry-run diff for the approval.
   - _Requirements: FOR-05-05 R3/R19; user decision 2d_
   - _Depends on: 1, 2, 3_
 
-- [ ] 6. Backend: publish an estimate-changed signal for the offer reaction
+- [x] 6. Backend: publish an estimate-changed signal for the offer reaction
   - After a committed estimate recalculation (the force path's recompute+flush), publish an
     `EstimateChangedEvent(projectId, estimateId)` via `ApplicationEventPublisher` (mirror
     `OfferStateChangeEvent`), consumed by the FOR-05-07 offer reaction via
@@ -132,7 +153,7 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: FOR-05-05 R3; cross-ref FOR-05-07_
   - _Depends on: 3_
 
-- [ ] 7. Frontend: change-impact approval dialog + force re-send (rooms save)
+- [x] 7. Frontend: change-impact approval dialog + force re-send (rooms save)
   - In the rooms bulk-save flow (`RoomsMatrixTab`), on a 409 `error.estimate.recalc.conflict`,
     render a warning dialog listing the estimate changes (work / room / old→new) with Approve /
     Decline. On Approve, re-send the identical save with `force = true`. On Decline, keep the pending
@@ -148,9 +169,10 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: FOR-05-05 R-manual-cell visibility_
   - _Depends on: none_
 
-- [~] 9. Frontend + backend i18n keys
-  - PARTIAL: `estimate.manualCell.tooltip` added (PL + RU) for task 8. The `estimate.recalc.*` keys
-    and the `error.estimate.recalc.conflict` backend message remain (tasks 2–7 not yet implemented).
+- [x] 9. Frontend + backend i18n keys
+  - DONE: `estimate.manualCell.tooltip` (task 8) plus `estimate.recalc.*` (dialog title/body, column
+    headers, change kinds, total line, manual note, approve/decline, success toast) in PL + RU, and
+    the backend `error.estimate.recalc.conflict` in `messages.properties` / `messages_ru.properties`.
   - _Requirements: all above_
   - _Depends on: none_
 
@@ -165,11 +187,17 @@ immediately. (The offer withdraw/new-version notification is owned by FOR-05-07.
   - _Requirements: the requirements covered by the test cases (FOR-05-05 R3/R19, decisions 2a–2d)_
   - _Depends on: 1, 2, 3, 4, 5, 6, 7, 8, 9_
 
-- [ ] V. Validate end-to-end in the browser + API
+- [x] V. Validate end-to-end in the browser + API
   - Rebuild backend + frontend. On a draft project: change a room dimension → confirm the 409 warning
     lists the right changes → Approve → estimate recomputes (non-overridden cells only) → an
     overridden cell stays. Add a room of an existing type → same works applied with approval. Delete
     a room → its estimate cells removed with approval. Confirm the manual-cell icon.
+  - DONE (2026-11-01, project 2, local stack): API dry run → 409 with 17 changes and NOTHING
+    persisted (floor + total unchanged); force → room + estimate committed; a `volumeOverridden` cell
+    stayed put while its neighbour re-derived. Browser: matrix edit → dialog (13 changes + total
+    line) → Decline keeps the pending edit and persists nothing → Approve commits + toast; add a Hol
+    room → 40 ADDED cells = the Hol sibling's works; delete it → 40 REMOVED, room + cells gone, total
+    back; room editor save → dialog → Approve → redirect. Estimate tab shows the refreshed total.
   - _Requirements: as all tasks_
   - _Depends on: 1, 2, 3, 4, 5, 6, 7, 8, 9_
 

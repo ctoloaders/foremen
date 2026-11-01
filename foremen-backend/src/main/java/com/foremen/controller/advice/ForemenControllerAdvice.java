@@ -1,8 +1,10 @@
 package com.foremen.controller.advice;
 
 import com.foremen.config.i18n.MessageResolver;
+import com.foremen.exception.EstimateRecalcConflictException;
 import com.foremen.exception.FieldValidationException;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.exception.dto.EstimateRecalcConflictError;
 import com.foremen.exception.ProjectNotReadyException;
 import com.foremen.exception.WorkReportBatchItemException;
 import com.foremen.exception.dto.ErrorResponse;
@@ -115,6 +117,41 @@ public class ForemenControllerAdvice {
         ProjectNotReadyError body = new ProjectNotReadyError(message, areas);
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    /**
+     * FOR-05-05 additional task 3 — a Rooms-tab save without {@code force} would change the estimate.
+     * The save transaction has already rolled back; the response is HTTP 409 with an
+     * {@link EstimateRecalcConflictError} body: the stable {@code code}, the localized message and
+     * every affected estimate cell with its work / room names resolved to the request locale.
+     */
+    @ExceptionHandler(EstimateRecalcConflictException.class)
+    public ResponseEntity<EstimateRecalcConflictError> handleEstimateRecalcConflict(
+            EstimateRecalcConflictException ex, HttpServletRequest request, Locale locale) {
+
+        String code = "error.estimate.recalc.conflict";
+        String message = messageResolver.resolve(code, null, locale);
+        boolean ru = locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
+
+        List<EstimateRecalcConflictError.Change> changes = ex.getImpact().changes().stream()
+                .map(c -> new EstimateRecalcConflictError.Change(
+                        c.kind().name(),
+                        c.workItemId(),
+                        ru ? c.workNameRu() : c.workNamePl(),
+                        c.unitCode(),
+                        c.roomId(),
+                        ru ? c.roomLabel() : c.roomLabelPl(),
+                        c.oldVolume(),
+                        c.newVolume(),
+                        c.oldLabour(),
+                        c.newLabour(),
+                        c.materialsChanged()))
+                .toList();
+
+        logError(request, HttpStatus.CONFLICT.value(), code, false, ex);
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new EstimateRecalcConflictError(
+                code, message, changes, ex.getImpact().totalNetBefore(), ex.getImpact().totalNetAfter()));
     }
 
     /**

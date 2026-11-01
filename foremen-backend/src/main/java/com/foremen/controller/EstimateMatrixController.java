@@ -1,5 +1,8 @@
 package com.foremen.controller;
 
+import java.math.BigDecimal;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,6 +28,7 @@ import com.foremen.controller.model.RecomputeFinishingRequest;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.estimate.EstimateAssignmentService;
 import com.foremen.service.estimate.matrix.EstimateMatrixDto;
+import com.foremen.service.estimate.recalc.EstimateChangedEvent;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
 
 import jakarta.validation.Valid;
@@ -77,6 +81,7 @@ public class EstimateMatrixController {
     private final ForemenPermissionEvaluator permissionEvaluator;
     private final EstimateCollabService collabService;
     private final CollabAccessGuard collabAccessGuard;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * The full Estimate matrix read model for a project (R1.1, R1.2, R2.1, R14): works grouped by
@@ -154,16 +159,26 @@ public class EstimateMatrixController {
     @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<EstimateMatrixDto> saveAssignments(
             @PathVariable Long projectId, @Valid @RequestBody ApplyAssignmentsRequest request) {
+        BigDecimal totalBefore = estimateAssignmentService.currentTotalNet(projectId);
         // saveAndAssemble is @Transactional and has committed by the time it returns, so the
         // collaboration broadcast below only ever announces a persisted Save.
         EstimateMatrixDto matrix = estimateAssignmentService.saveAndAssemble(projectId, request.toStagedEdits());
+        CollabPrincipal caller = currentPrincipal();
+        Long callerId = caller == null ? null : caller.userId();
         // FOR-05-13: prune the committed entries from the shared draft and tell every other editor
         // to refetch. Best effort — a collaboration failure must never fail a successful Save.
         try {
-            CollabPrincipal caller = currentPrincipal();
-            collabService.onSaved(projectId, request.stagedIds(), caller == null ? null : caller.userId());
+            collabService.onSaved(projectId, request.stagedIds(), callerId);
         } catch (RuntimeException e) {
             log.warn("Collab save broadcast failed for project {}: {}", projectId, e.getMessage());
+        }
+        // FOR-05-05 additional task 6: a committed Save that changed the estimate numbers is an
+        // estimate change (consumed by the FOR-05-07 offer reaction). Published after the commit.
+        BigDecimal totalAfter = estimateAssignmentService.currentTotalNet(projectId);
+        if (totalAfter != null && (totalBefore == null || totalBefore.compareTo(totalAfter) != 0)) {
+            eventPublisher.publishEvent(new EstimateChangedEvent(
+                    projectId, estimateAssignmentService.estimateIdOf(projectId), callerId,
+                    EstimateChangedEvent.Trigger.ESTIMATE_SAVED));
         }
         return ResponseEntity.ok(matrix);
     }
