@@ -174,5 +174,5 @@ foremen:
     max-projected-finish-day: ${FOREMEN_PLAN_ACTUAL_MAX_PROJECTED_FINISH_DAY:3650}
   mail:
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
-    reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/set-password}
+    reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/reset-password}
     invite-base-url: ${MAIL_INVITE_BASE_URL:http://localhost:3000/auth/set-password}

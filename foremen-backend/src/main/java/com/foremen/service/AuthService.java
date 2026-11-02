@@ -8,6 +8,7 @@ import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -42,6 +43,7 @@ import com.foremen.service.mail.MailSender;
  * flows is wired up front so subsequent tasks can add the remaining methods without changing
  * the constructor.
  */
+@Slf4j
 @Service
 public class AuthService {
 
@@ -216,7 +218,9 @@ public class AuthService {
         }
 
         UserEntity user = maybeUser.get();
-        if (user.getStatus() != UserStatus.ACTIVE) {
+        // FOR-03-09: only ACTIVE password accounts may reset; CLIENT users sign in via OTP and get
+        // the same neutral outcome as an unknown email (no token, no mail).
+        if (user.getStatus() != UserStatus.ACTIVE || isClient(user)) {
             return;
         }
 
@@ -228,7 +232,17 @@ public class AuthService {
         resetToken.setUsed(false);
         passwordResetTokenDao.save(resetToken);
 
-        mailSender.sendPasswordReset(user.getEmail(), tokenValue);
+        // FOR-03-09: best-effort dispatch. A transport failure is logged but must not surface as a
+        // 500, which would reveal that the account exists (the endpoint stays a neutral 200).
+        try {
+            mailSender.sendPasswordReset(user, tokenValue);
+        } catch (RuntimeException e) {
+            log.error("Password-reset email dispatch failed for user id={}", user.getId(), e);
+        }
+    }
+
+    private static boolean isClient(UserEntity user) {
+        return user.getRole() != null && "CLIENT".equals(user.getRole().getCode());
     }
 
     /**

@@ -158,7 +158,7 @@ class PasswordResetPropertyTest {
                 .isAfterOrEqualTo(lower)
                 .isBeforeOrEqualTo(upper);
 
-        verify(fx.mailSender()).sendPasswordReset(active.getEmail(), saved.getToken());
+        verify(fx.mailSender()).sendPasswordReset(active, saved.getToken());
     }
 
     // Feature: FOR-03-01-jwt-auth, Property 27: Reset request does not enumerate users
@@ -177,7 +177,7 @@ class PasswordResetPropertyTest {
         fx.service().requestPasswordReset(email);
 
         verify(fx.passwordResetTokenDao(), never()).save(any(PasswordResetTokenEntity.class));
-        verify(fx.mailSender(), never()).sendPasswordReset(anyString(), anyString());
+        verify(fx.mailSender(), never()).sendPasswordReset(any(UserEntity.class), anyString());
     }
 
     // Feature: FOR-03-01-jwt-auth, Property 28: Reset confirm sets the hash and revokes refresh tokens

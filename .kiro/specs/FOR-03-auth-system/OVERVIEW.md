@@ -137,6 +137,7 @@ project_members
 | 06 | FOR-03-06-frontend-auth | Фронтенд: auth store (Zustand), login page, set-password page, token storage, API client (attach JWT + auto-refresh), logout, protected routes | 01, 02 | ✅ Завершено |
 | 07 | FOR-03-07-menu-visibility | Фронтенд: загрузка прав текущего пользователя, route guards по ресурсу/операции, скрытие пунктов меню без доступа, redirect на /403 | 06, 03 | ✅ Завершено |
 | 08 | FOR-03-08-api-protection | Миграция существующих контроллеров: `anyRequest().authenticated()` + декларативное `@PermissionResource`/`@PermissionOperation`-гардирование через `PermissionResolver`, startup-валидация полноты аннотаций, seed ресурса `USERS`, интеграционные тесты | 03, 04 | ✅ Завершено |
+| 09 | FOR-03-09-password-reset | Сброс пароля end-to-end поверх API FOR-03-01: ссылка «Nie pamiętasz hasła?» на логине, страницы `/auth/forgot-password` и `/auth/reset-password?token=`, исправленная ссылка в письме, локализованное HTML-письмо (PL/RU по `users.locale`), исключение CLIENT (OTP), пароль 8..72. Без миграций и in-app уведомлений | 01, 02, 05, 06 | ✅ Завершено |
 
 ### Граф зависимостей
 
