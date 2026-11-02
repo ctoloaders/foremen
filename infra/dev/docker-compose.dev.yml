@@ -84,6 +84,8 @@ services:
       FOREMEN_ADMIN_PASSWORD: ${FOREMEN_ADMIN_PASSWORD}
       GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY:-}
       GOOGLE_PLACES_ENABLED: ${GOOGLE_PLACES_ENABLED:-false}
+      # FOR-03-10: Google OAuth client id (Secret Manager foremen-dev-google-oauth-client -> .env)
+      FOREMEN_GOOGLE_CLIENT_ID: ${FOREMEN_GOOGLE_CLIENT_ID:-}
       # --- FOR-05-08 / FOR-06-03 object storage (dev VM) --------------------
       # Private GCS dev bucket for all media (procurement uploads, signable
       # documents). The VM has an attached service account

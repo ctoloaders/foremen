@@ -48,6 +48,7 @@ SECRET_GOOGLE_PLACES_KEY="$(md secret-google-places-key || true)"
 SECRET_OCR_GEMINI_KEY="$(md secret-ocr-gemini-key || true)"
 SECRET_BOT_IDENTITY="$(md secret-bot-identity || true)"
 SECRET_BOT_SITE_KEY="$(md secret-bot-site-key || true)"
+SECRET_GOOGLE_OAUTH_CLIENT="$(md secret-google-oauth-client || true)"
 
 # --- docker auth to Artifact Registry (via VM service account) ---
 gcloud auth configure-docker "${AR_HOST}" --quiet
@@ -90,6 +91,12 @@ if [ -n "${SECRET_BOT_SITE_KEY}" ]; then
   FOREMEN_BOT_SITE_KEY="$(sm "${SECRET_BOT_SITE_KEY}" || true)"
 fi
 
+# FOR-03-10 Google OAuth client id (public; Sign in with Google). Optional:
+# blank => Google login is rejected by the backend and hidden in the UI.
+FOREMEN_GOOGLE_CLIENT_ID=""
+if [ -n "${SECRET_GOOGLE_OAUTH_CLIENT}" ]; then
+  FOREMEN_GOOGLE_CLIENT_ID="$(sm "${SECRET_GOOGLE_OAUTH_CLIENT}" || true)"
+fi
 # --- write .env for compose ---
 cat > "${APP_DIR}/.env" <<EOF
 POSTGRES_DB=${DB_NAME}
@@ -107,6 +114,7 @@ FOREMEN_OCR_LLM_API_KEY=${FOREMEN_OCR_LLM_API_KEY}
 FOREMEN_OCR_LLM_MODEL=${FOREMEN_OCR_LLM_MODEL}
 FOREMEN_BOT_IDENTITY_SECRET=${FOREMEN_BOT_IDENTITY_SECRET}
 FOREMEN_BOT_SITE_KEY=${FOREMEN_BOT_SITE_KEY}
+FOREMEN_GOOGLE_CLIENT_ID=${FOREMEN_GOOGLE_CLIENT_ID}
 EOF
 chmod 600 "${APP_DIR}/.env"
 

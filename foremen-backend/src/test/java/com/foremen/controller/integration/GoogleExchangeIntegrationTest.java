@@ -1,7 +1,6 @@
 package com.foremen.controller.integration;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foremen.dao.InviteTokenDao;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
@@ -95,7 +94,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class GoogleExchangeIntegrationTest {
 
     private static final String GOOGLE_PATH = "/api/auth/google";
-    private static final String SET_PASSWORD_PATH = "/api/auth/set-password";
     private static final String KNOWN_PASSWORD = "Sup3rSecret!";
     private static final String CHANGELOG = "database_files/changelog.xml";
 
@@ -158,8 +156,6 @@ class GoogleExchangeIntegrationTest {
     @MockitoBean
     private GoogleIdTokenVerifier googleIdTokenVerifier;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
     /** Per-run id so seeded emails never collide across repeated runs (repeatability). */
     private String runId;
 
@@ -186,48 +182,54 @@ class GoogleExchangeIntegrationTest {
     }
 
     @Test
-    @DisplayName("INVITED account -> 200 ACTIVATION_REQUIRED; minted token activates via set-password")
-    void invitedAccountReturnsActivationRequiredAndTokenActivates() throws Exception {
+    @DisplayName("INVITED employee -> 200 AUTHENTICATED; auto-activated, invite tokens consumed (FOR-03-10)")
+    void invitedAccountIsAutoActivated() throws Exception {
         String email = seedUser(UserStatus.INVITED, false);
         Long userId = userDao.findByEmail(email).orElseThrow().getId();
         stubVerifiedEmail(email);
 
-        // Google exchange for an INVITED account: no session, a fresh set-password token instead.
-        String body = mockMvc.perform(post(GOOGLE_PATH)
+        mockMvc.perform(post(GOOGLE_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(googleJson("any-google-id-token")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACTIVATION_REQUIRED"))
-                .andExpect(jsonPath("$.tokens").doesNotExist())
-                .andExpect(jsonPath("$.setPasswordToken").isNotEmpty())
-                .andReturn().getResponse().getContentAsString();
+                .andExpect(jsonPath("$.status").value("AUTHENTICATED"))
+                .andExpect(jsonPath("$.tokens.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.tokens.refreshToken").isNotEmpty())
+                .andExpect(jsonPath("$.setPasswordToken").doesNotExist());
 
-        String setPasswordToken = objectMapper.readTree(body).path("setPasswordToken").asText();
-        assertThat(setPasswordToken)
-                .as("ACTIVATION_REQUIRED must carry a non-blank set-password token (14.5)")
-                .isNotBlank();
-
-        // The minted token is a genuine, unused invite token bound to the INVITED user.
-        InviteTokenEntity minted = inviteTokenDao.findByToken(setPasswordToken).orElseThrow();
-        assertThat(minted.isUsed()).as("minted set-password token must be unused").isFalse();
-        assertThat(minted.getUser().getId()).isEqualTo(userId);
-
-        // Follow-up POST /api/auth/set-password accepts the minted token -> 200 auto-login (14.5).
-        mockMvc.perform(post(SET_PASSWORD_PATH)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(setPasswordJson(setPasswordToken, KNOWN_PASSWORD)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
-
-        // Account is now ACTIVE and the minted token has been consumed.
         UserEntity activated = userDao.findById(userId).orElseThrow();
-        assertThat(activated.getStatus())
-                .as("account must be ACTIVE after set-password on the Google-minted token")
-                .isEqualTo(UserStatus.ACTIVE);
-        assertThat(inviteTokenDao.findByToken(setPasswordToken).orElseThrow().isUsed())
-                .as("minted token must be marked used after set-password")
-                .isTrue();
+        assertThat(activated.getStatus()).as("auto-activated").isEqualTo(UserStatus.ACTIVE);
+        assertThat(activated.getPasswordHash()).as("no password is set by Google activation").isNull();
+        assertThat(inviteTokenDao.findByUserIdAndUsedFalse(userId))
+                .as("every outstanding invite token is consumed").isEmpty();
+    }
+
+    @Test
+    @DisplayName("CLIENT account -> 403 error.auth.google.client (FOR-03-10)")
+    void clientAccountIsRejected() throws Exception {
+        String email = seedUser(UserStatus.ACTIVE, false, "CLIENT");
+        stubVerifiedEmail(email);
+
+        mockMvc.perform(post(GOOGLE_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(googleJson("any-google-id-token")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message")
+                        .value("Klienci logują się jednorazowym kodem wysyłanym na e-mail."));
+    }
+
+    @Test
+    @DisplayName("Unverified Google email -> 401 error.auth.google.email.unverified (FOR-03-10)")
+    void unverifiedEmailIsRejected() throws Exception {
+        String email = seedUser(UserStatus.ACTIVE, true);
+        stubEmail(email, false);
+
+        mockMvc.perform(post(GOOGLE_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(googleJson("any-google-id-token")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message")
+                        .value("Adres e-mail konta Google nie jest zweryfikowany."));
     }
 
     @Test
@@ -242,7 +244,7 @@ class GoogleExchangeIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.status").value(403))
                 .andExpect(jsonPath("$.message")
-                        .value("Skontaktuj się z administratorem, aby uzyskać konto."));
+                        .value("Najpierw poproś administratora o zarejestrowanie Cię w systemie."));
     }
 
     @Test
@@ -290,8 +292,14 @@ class GoogleExchangeIntegrationTest {
      * address, so the exchange branch is driven purely by the looked-up account's status.
      */
     private void stubVerifiedEmail(String email) {
+        stubEmail(email, true);
+    }
+
+    /** Stubs the verifier with a token for {@code email} and the given {@code email_verified} claim. */
+    private void stubEmail(String email, boolean emailVerified) {
         GoogleIdToken.Payload payload = new GoogleIdToken.Payload();
         payload.setEmail(email);
+        payload.setEmailVerified(emailVerified);
         GoogleIdToken token = Mockito.mock(GoogleIdToken.class);
         when(token.getPayload()).thenReturn(payload);
         try {
@@ -309,10 +317,15 @@ class GoogleExchangeIntegrationTest {
      * @return the seeded user's email
      */
     private String seedUser(UserStatus statusValue, boolean withPassword) {
-        RoleEntity workerRole = roleDao.findByCode("WORKER")
-                .orElseThrow(() -> new IllegalStateException("WORKER role must be seeded by Liquibase"));
+        return seedUser(statusValue, withPassword, "WORKER");
+    }
 
-        String email = "google-" + statusValue.name().toLowerCase() + "+" + runId + "@example.com";
+    private String seedUser(UserStatus statusValue, boolean withPassword, String roleCode) {
+        RoleEntity workerRole = roleDao.findByCode(roleCode)
+                .orElseThrow(() -> new IllegalStateException(roleCode + " role must be seeded by Liquibase"));
+
+        String email = "google-" + roleCode.toLowerCase() + "-" + statusValue.name().toLowerCase()
+                + "+" + runId + "@example.com";
 
         UserEntity user = new UserEntity();
         user.setName("Google " + statusValue.name() + " User");
@@ -342,9 +355,5 @@ class GoogleExchangeIntegrationTest {
 
     private static String googleJson(String idToken) {
         return "{\"idToken\": \"" + idToken + "\"}";
-    }
-
-    private static String setPasswordJson(String token, String password) {
-        return "{\"token\": \"" + token + "\", \"password\": \"" + password + "\"}";
     }
 }

@@ -138,6 +138,7 @@ project_members
 | 07 | FOR-03-07-menu-visibility | Фронтенд: загрузка прав текущего пользователя, route guards по ресурсу/операции, скрытие пунктов меню без доступа, redirect на /403 | 06, 03 | ✅ Завершено |
 | 08 | FOR-03-08-api-protection | Миграция существующих контроллеров: `anyRequest().authenticated()` + декларативное `@PermissionResource`/`@PermissionOperation`-гардирование через `PermissionResolver`, startup-валидация полноты аннотаций, seed ресурса `USERS`, интеграционные тесты | 03, 04 | ✅ Завершено |
 | 09 | FOR-03-09-password-reset | Сброс пароля end-to-end поверх API FOR-03-01: ссылка «Nie pamiętasz hasła?» на логине, страницы `/auth/forgot-password` и `/auth/reset-password?token=`, исправленная ссылка в письме, локализованное HTML-письмо (PL/RU по `users.locale`), исключение CLIENT (OTP), пароль 8..72. Без миграций и in-app уведомлений | 01, 02, 05, 06 | ✅ Завершено |
+| 10 | FOR-03-10-google-login | Вход через Google end-to-end: кнопка GIS на логине (PL/RU), client id из Secret Manager (`foremen-dev-google-oauth-client`) в бэкенд и сборку фронтенда, CSP для accounts.google.com, проверка `email_verified`, точное совпадение email (без привязки к другому email), CLIENT → только OTP, INVITED сотрудник активируется автоматически. Без миграций и уведомлений | 01, 02, 06 | ✅ Завершено |
 
 ### Граф зависимостей
 

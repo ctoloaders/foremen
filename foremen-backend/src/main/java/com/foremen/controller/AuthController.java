@@ -61,15 +61,11 @@ public class AuthController {
     }
 
     /**
-     * Exchanges a verified Google ID token for the application session (Requirements 14.3, 14.4,
-     * 14.5). Delegates to {@link AuthService#loginWithGoogle(String)}, which verifies the token,
-     * links it to an existing account by verified email, and returns one of two HTTP 200 outcomes:
-     * {@code AUTHENTICATED} (an ACTIVE account, carrying the JWT pair) or {@code ACTIVATION_REQUIRED}
-     * (an INVITED account, carrying a freshly-minted set-password token and no session). Both are
-     * HTTP 200 because Google verification itself succeeded; the discriminated
-     * {@link GoogleLoginResponse} lets the client branch on {@code status} without inferring intent
-     * from null fields (14.4, 14.5, 14.14). The unlinked and DEACTIVATED cases are surfaced as HTTP
-     * 403 by {@link AuthService}.
+     * Exchanges a verified Google ID token for the application session (FOR-03-10). Delegates to
+     * {@link AuthService#loginWithGoogle(String)}: an ACTIVE employee is signed in and an INVITED
+     * employee is auto-activated, both returning HTTP 200 {@code AUTHENTICATED} with the JWT pair.
+     * An invalid token or unverified email is HTTP 401; an unknown email, a CLIENT, or a DEACTIVATED
+     * account is HTTP 403.
      *
      * <p>{@code @Valid} rejects a blank or missing {@code idToken} with HTTP 400 through the existing
      * {@code MethodArgumentNotValidException} handler, before any token verification.
@@ -81,8 +77,7 @@ public class AuthController {
      * needed for {@code POST /api/auth/google}, so an unauthenticated caller reaches the controller
      * rather than receiving a security 401.
      *
-     * @return HTTP 200 with a {@link GoogleLoginResponse} for both AUTHENTICATED and
-     *         ACTIVATION_REQUIRED
+     * @return HTTP 200 with an {@code AUTHENTICATED} {@link GoogleLoginResponse}
      */
     @PostMapping("/google")
     public ResponseEntity<GoogleLoginResponse> google(@RequestBody @Valid GoogleLoginRequest request) {

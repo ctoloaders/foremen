@@ -122,6 +122,7 @@ class GoogleLoginResponseInvariantPropertyTest {
     private static GoogleIdToken verifiedToken(String email) {
         GoogleIdToken.Payload payload = new GoogleIdToken.Payload();
         payload.setEmail(email);
+        payload.setEmailVerified(true);
         GoogleIdToken token = Mockito.mock(GoogleIdToken.class);
         when(token.getPayload()).thenReturn(payload);
         return token;
@@ -143,9 +144,8 @@ class GoogleLoginResponseInvariantPropertyTest {
     // Feature: FOR-03-06-frontend-auth, Property 9: The Google login response carries tokens only
     // for ACTIVE accounts (backend).
     // For every verified Google email resolving to an ACTIVE or INVITED account, the response holds
-    // the invariant `tokens != null` iff `status == AUTHENTICATED`: ACTIVE -> AUTHENTICATED with a
-    // non-null tokens and a null setPasswordToken; INVITED -> ACTIVATION_REQUIRED with a null tokens
-    // and a non-null setPasswordToken.
+    // the invariant `tokens != null` iff `status == AUTHENTICATED`. Since FOR-03-10 both ACTIVE and
+    // INVITED (auto-activated) accounts yield AUTHENTICATED with tokens and a null setPasswordToken.
     // Validates: Requirements 14.4, 14.5, 14.14
     @Property(tries = 100)
     void tokensPresentIffAuthenticated(@ForAll("userIds") long id,
@@ -164,24 +164,13 @@ class GoogleLoginResponseInvariantPropertyTest {
                         response.status())
                 .isEqualTo(authenticated);
 
-        if (status == UserStatus.ACTIVE) {
-            assertThat(response.status()).isEqualTo(GoogleLoginResponse.STATUS_AUTHENTICATED);
-            assertThat(response.tokens()).as("ACTIVE -> non-null tokens").isNotNull();
-            assertThat(response.tokens().accessToken())
-                    .as("ACTIVE -> issued access token").isNotBlank();
-            assertThat(response.tokens().refreshToken())
-                    .as("ACTIVE -> issued refresh token").isNotBlank();
-            assertThat(response.setPasswordToken())
-                    .as("ACTIVE -> null setPasswordToken").isNull();
-        } else {
-            assertThat(response.status())
-                    .isEqualTo(GoogleLoginResponse.STATUS_ACTIVATION_REQUIRED);
-            assertThat(response.tokens()).as("INVITED -> null tokens").isNull();
-            assertThat(response.setPasswordToken())
-                    .as("INVITED -> non-null setPasswordToken").isNotNull();
-            assertThat(response.setPasswordToken())
-                    .as("INVITED -> non-empty setPasswordToken").isNotBlank();
-        }
+        // FOR-03-10: ACTIVE and INVITED both sign in (INVITED is auto-activated).
+        assertThat(response.status()).isEqualTo(GoogleLoginResponse.STATUS_AUTHENTICATED);
+        assertThat(response.tokens()).as("non-null tokens").isNotNull();
+        assertThat(response.tokens().accessToken()).as("issued access token").isNotBlank();
+        assertThat(response.tokens().refreshToken()).as("issued refresh token").isNotBlank();
+        assertThat(response.setPasswordToken()).as("legacy setPasswordToken is null").isNull();
+        assertThat(account.getStatus()).as("account is ACTIVE afterwards").isEqualTo(UserStatus.ACTIVE);
     }
 
     // DEACTIVATED and not-found are outside the token-invariant scope: they throw a

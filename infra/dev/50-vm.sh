@@ -87,6 +87,7 @@ else
   META="${META},secret-jwt=${SECRET_JWT}"
   META="${META},secret-admin-password=${SECRET_ADMIN_PASSWORD}"
   META="${META},secret-google-places-key=${SECRET_GOOGLE_PLACES_KEY}"
+  META="${META},secret-google-oauth-client=${SECRET_GOOGLE_OAUTH_CLIENT}"
   META="${META},enable-oslogin=TRUE"
 
   gcloud compute instances create "${VM_NAME}" \

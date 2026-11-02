@@ -71,6 +71,8 @@ services:
       FOREMEN_ADMIN_PASSWORD: alejano123
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # FOR-03-10: Google OAuth client id (from .env; blank disables Google login)
+      FOREMEN_GOOGLE_CLIENT_ID: ${FOREMEN_GOOGLE_CLIENT_ID:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -84,6 +86,8 @@ services:
     build:
       context: ./foremen-frontend
       dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     ports:
       - "3000:3000"
     depends_on:

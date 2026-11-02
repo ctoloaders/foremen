@@ -349,61 +349,70 @@ public class AuthService {
     }
 
     /**
-     * Exchanges a verified Google ID token for the application session, or an activation bridge,
-     * depending on the matched account's status (Requirement 14).
+     * Exchanges a verified Google ID token for an application session (FOR-03-10).
      *
-     * <p>Flow:
+     * <p>Rules, in order:
      * <ol>
-     *   <li>The {@code idToken} is verified via the injected {@link GoogleIdTokenVerifier}
-     *       (audience = {@code foremen.google.client-id}). Any verification failure — bad
-     *       signature, wrong audience, expired token, malformed token, or a transport error —
-     *       is surfaced as {@code 401 error.auth.google.token.invalid} (14.7 client counterpart).</li>
-     *   <li>The verified email is extracted from the token payload and looked up case-insensitively
-     *       via {@link UserDao#findByEmail(String)}.</li>
-     *   <li>Branch on the matched account:
-     *     <ul>
-     *       <li><b>Not found</b> &rarr; {@code 403 error.auth.google.no.account} (14.5): the token
-     *           is valid but no session-eligible account is linked to the verified email.</li>
-     *       <li><b>ACTIVE</b> &rarr; {@link GoogleLoginResponse#authenticated(TokenResponse)} with a
-     *           freshly issued JWT pair, reusing the employee token-issue path (14.4).</li>
-     *       <li><b>INVITED</b> &rarr; no session is issued; a fresh set-password token is minted via
-     *           {@link InviteService#mintSetPasswordToken(UserEntity)} (reusing the FOR-03-02 invite
-     *           token, same TTL/semantics) and returned in
-     *           {@link GoogleLoginResponse#activationRequired(String)}. The response carries no
-     *           access/refresh token — the single activation gate remains
-     *           {@code POST /api/auth/set-password} (14.5, 14.14).</li>
-     *       <li><b>DEACTIVATED</b> &rarr; {@code 403 error.auth.account.deactivated} (14.8), reusing
-     *           the existing deactivated message code.</li>
-     *     </ul>
-     *   </li>
+     *   <li>The token is verified (signature, audience = {@code foremen.google.client-id}, expiry);
+     *       any failure &rarr; {@code 401 error.auth.google.token.invalid}.</li>
+     *   <li>The {@code email_verified} claim must be {@code true}; otherwise
+     *       {@code 401 error.auth.google.email.unverified} (an unverified address could belong to
+     *       someone else, so it must never be matched to a Foremen account).</li>
+     *   <li>The user is looked up by the exact (lower-cased) token email &mdash; no linking of a Google
+     *       account to a different email. Not found &rarr; {@code 403 error.auth.google.no.account}.</li>
+     *   <li>CLIENT users sign in only with the email OTP &rarr; {@code 403 error.auth.google.client}.</li>
+     *   <li>ACTIVE &rarr; session. INVITED &rarr; auto-activated (Google's verified email is trusted:
+     *       status ACTIVE, outstanding invite tokens marked used, password hash untouched) and a session
+     *       is issued. DEACTIVATED &rarr; {@code 403 error.auth.account.deactivated}.</li>
      * </ol>
      *
-     * @param idToken the raw Google ID token from the client's Google Identity flow
-     * @return an {@code AUTHENTICATED} response for an ACTIVE account, or an
-     *         {@code ACTIVATION_REQUIRED} response for an INVITED account
-     * @throws ForemenApiException 401 {@code error.auth.google.token.invalid} on any verification
-     *                             failure; 403 {@code error.auth.google.no.account} when unlinked;
-     *                             403 {@code error.auth.account.deactivated} for a DEACTIVATED account
+     * @param idToken the raw Google ID token from the browser's Google Identity Services flow
+     * @return always an {@code AUTHENTICATED} response carrying the JWT pair
      */
     @Transactional
     public GoogleLoginResponse loginWithGoogle(String idToken) {
         GoogleIdToken verifiedToken = verifyGoogleIdToken(idToken);
-        String email = verifiedToken.getPayload().getEmail();
+        GoogleIdToken.Payload payload = verifiedToken.getPayload();
+        String email = payload.getEmail();
         if (email == null || email.isBlank()) {
             throw googleTokenInvalid();
+        }
+        if (!Boolean.TRUE.equals(payload.getEmailVerified())) {
+            throw new ForemenApiException(HttpStatus.UNAUTHORIZED, "error.auth.google.email.unverified");
         }
 
         UserEntity user = userDao.findByEmail(email.toLowerCase())
                 .orElseThrow(() -> new ForemenApiException(
                         HttpStatus.FORBIDDEN, "error.auth.google.no.account"));
 
+        if (isClient(user)) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.auth.google.client");
+        }
+
         return switch (user.getStatus()) {
             case ACTIVE -> GoogleLoginResponse.authenticated(issueTokens(user));
-            case INVITED -> GoogleLoginResponse.activationRequired(
-                    inviteService.mintSetPasswordToken(user));
+            case INVITED -> {
+                activateViaGoogle(user);
+                yield GoogleLoginResponse.authenticated(issueTokens(user));
+            }
             case DEACTIVATED -> throw new ForemenApiException(
                     HttpStatus.FORBIDDEN, "error.auth.account.deactivated");
         };
+    }
+
+    /**
+     * Activates an INVITED employee on their first Google sign-in: status becomes ACTIVE and every
+     * outstanding invite token is consumed so an old invitation link can no longer be used. The
+     * password hash is left as is (the user may set one later via the password-reset flow).
+     */
+    private void activateViaGoogle(UserEntity user) {
+        user.setStatus(UserStatus.ACTIVE);
+        userDao.save(user);
+        for (InviteTokenEntity invite : inviteTokenDao.findByUserIdAndUsedFalse(user.getId())) {
+            invite.setUsed(true);
+            inviteTokenDao.save(invite);
+        }
+        log.info("User id={} activated via Google sign-in", user.getId());
     }
 
     /**
