@@ -146,13 +146,18 @@ public final class CrossProjectScheduleProjector {
                     }
                 }
 
-                // Foreman_Span_Bars.
+                // Foreman_Span_Bars. FOR-07-02 bug-report R1 #2: a project with a start date but no end
+                // date still dates its worker bars, so the span ends at the project's latest dated
+                // worker-bar end (or its start) instead of becoming undatable and vanishing under a
+                // Date_Window.
                 if (project.foremen() != null) {
+                    LocalDate latestWorkerEnd = latestWorkerBarEnd(project);
                     for (ForemanInput foreman : project.foremen()) {
                         if (foreman == null) {
                             continue;
                         }
-                        LocalDate[] span = foremanSpanDates(project.startDate(), project.endDate());
+                        LocalDate[] span = foremanSpanDates(
+                                project.startDate(), project.endDate(), latestWorkerEnd);
                         ProjectedBar bar = new ProjectedBar(
                                 BarKind.FOREMAN_SPAN,
                                 project.projectId(),
@@ -399,6 +404,50 @@ public final class CrossProjectScheduleProjector {
             return new LocalDate[] {null, null};
         }
         return new LocalDate[] {start, end};
+    }
+
+    /**
+     * The Foreman_Span_Bar dates when the project end date may be missing (FOR-07-02 bug-report
+     * Round 1 #2). With both project dates present this equals {@link #foremanSpanDates(LocalDate,
+     * LocalDate)}. With a start but no end, the span runs from the start to the project's latest dated
+     * worker-bar end ({@code latestWorkerEnd}), or is the single start day when there is none (or it
+     * lies before the start). Without a start date the span stays undatable: the project's worker
+     * bars cannot be dated either.
+     *
+     * @param start           the project's start date; {@code null} makes the span undatable
+     * @param end             the project's end date, may be {@code null}
+     * @param latestWorkerEnd the latest end date among the project's dated worker bars, may be {@code null}
+     * @return {@code [start, end']} or both elements {@code null} when undatable
+     */
+    public static LocalDate[] foremanSpanDates(LocalDate start, LocalDate end, LocalDate latestWorkerEnd) {
+        if (start == null) {
+            return new LocalDate[] {null, null};
+        }
+        if (end != null) {
+            return foremanSpanDates(start, end);
+        }
+        LocalDate derivedEnd = latestWorkerEnd != null && !latestWorkerEnd.isBefore(start)
+                ? latestWorkerEnd : start;
+        return new LocalDate[] {start, derivedEnd};
+    }
+
+    /** The latest end date among {@code project}'s datable worker bars, or {@code null} when none. */
+    private static LocalDate latestWorkerBarEnd(ProjectInput project) {
+        if (project.startDate() == null || project.workerBars() == null) {
+            return null;
+        }
+        LocalDate latest = null;
+        for (WorkerBarInput worker : project.workerBars()) {
+            if (worker == null) {
+                continue;
+            }
+            LocalDate[] dates = workerBarDates(
+                    project.startDate(), worker.startHalfDays(), worker.durationHalfDays());
+            if (dates[1] != null && (latest == null || dates[1].isAfter(latest))) {
+                latest = dates[1];
+            }
+        }
+        return latest;
     }
 
     // ------------------------------------------------------------------------------------------

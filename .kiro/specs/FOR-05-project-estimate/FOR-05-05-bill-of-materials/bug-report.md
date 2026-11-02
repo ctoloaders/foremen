@@ -291,3 +291,127 @@ tests pass.
 
 - **Wave 1:** 9 — a mount-time preview-reconcile effect in `EstimateTab`.
 - **Wave 2:** V4 — browser validation (reload path); depends on 9.
+
+## Round 5 (2026-11-02)
+
+Source: meeting notes, reported against `https://dev.foremen.eu/projects/2/estimate`. Reproduce
+locally at `http://localhost:3000/projects/{id}/estimate`.
+
+- [x] 10. A removed cell, when clicked again, comes back without works and materials (must behave like clicking a new cell)
+  - Triage: observed — a cell is removed (Cell_Report "remove" → `UNASSIGN`, or clear-row /
+    clear-estimate), then the same cell is clicked again: it shows as assigned but with Volume 0,
+    labour 0 and an empty materials list. Expected — re-clicking a removed cell behaves exactly like
+    clicking a never-assigned cell: formula Volume, labour and the default material lines seeded from
+    the work's `WorkMaterialConsumption` with their `Type_Price_Range` (R3.1, R3.4, R3.5).
+    Layer: **frontend**. The backend is correct: `doUnassign` hard-deletes the room-qty and its
+    material lines, and a later `ASSIGN` goes through `doAssign` → `seedMaterialLines`, so the
+    debounced `/preview` for `[…, UNASSIGN(w,r), ASSIGN(w,r)]` already returns the freshly seeded cell.
+    Root cause: the client overlay `projectStagedEdits` (`state/projectStagedEdits.ts` ~92-149)
+    re-folds ALL staged edits over the cached base, which by then is the baked-in preview. The
+    `UNASSIGN` blanks the preview's correct cell (`unassignCell` ~257-271), then the `ASSIGN` reaches
+    `assignCell` (~238-254). Its #13 guard (`if (cell.assigned) return cell`) checks the **folded**
+    cell (now unassigned), not the base cell, so it lays the zero placeholder over the server's seeded
+    numbers. A brand-new cell has no preceding `UNASSIGN`, so the guard keeps the preview cell. That is
+    why only removed-then-re-clicked cells are affected. Contributing: the store's `STAGE` reducer
+    (`state/estimateMatrixStore.ts` ~212-220) never collapses an `UNASSIGN`/`ASSIGN` pair on the same cell.
+    Fix direction: when an `ASSIGN` follows an `UNASSIGN` of the same cell in the fold, take the
+    cell from the ORIGINAL base matrix once the base reflects this staged set (the preview has baked
+    it). Before that, keep the pending placeholder (Round 3 `isPendingCell` → `…`). Never restore the
+    pre-removal saved cell: it would bring back the old customized materials instead of the defaults.
+    One option is for `useStagedPreview` to record the `stagedId`s its last baked preview covered;
+    the overlay then lets covered `UNASSIGN`→`ASSIGN` pairs yield to the base. Do NOT just UNSTAGE
+    the earlier `UNASSIGN`: that also brings back saved materials and prior `REMOVE_MATERIAL` effects.
+    During the fix, also check the post-Save path (remove → Save → click). It should already work like
+    a new cell. If it doesn't, check whether collab or localStorage hydrate re-inserts a stale `UNASSIGN`.
+    Suspect: `foremen-frontend/src/features/estimate/state/projectStagedEdits.ts`,
+    `foremen-frontend/src/features/estimate/api/useStagedPreview.ts`,
+    `foremen-frontend/src/features/estimate/EstimateTab.tsx` (`projectedMatrix` memo ~262-265).
+    Add a unit test in `projectStagedEdits` for `[UNASSIGN, ASSIGN]` over an assigned base.
+  - _Requirements: 3.1, 3.4, 3.5, 15.1, 15.3_
+  - _Depends on: none_
+
+- [x] 11. Add a column "total works in units of measurement"
+  - Triage: observed — the matrix has the work column, one column per room and the trailing package
+    money column. There is no per-work total quantity. Expected — a new trailing column showing, for
+    each work row, the work's total Volume across all rooms (Σ volume of the row's assigned cells) with
+    the work's unit of measurement (e.g. `42,50 m²`). It shows `—` when nothing is assigned and
+    updates live with staged edits. The group header row gets an empty, aligned cell, because volumes
+    of different works/units must not be summed. Layer: **both**.
+    - Backend: `WorkRowDto` (`service/estimate/matrix/WorkRowDto.java`, built at
+      `EstimateMatrixAssembler.java` ~164-166) has no unit. Add `unitCode` + a localized `unitName`
+      (from `MeasurementUnitEntity.nameRU/namePL`, chosen by the request locale like `workItemName`).
+      No new entity fields and no migration.
+    - Frontend: mirror the fields in `types/index.ts` `WorkRowDto`. Compute the total client-side with
+      a `totalVolumeOfRow(row)` helper in `state/costModel.ts` (next to `packageVolumeOfRow`), so it
+      follows the staged overlay with no `projectStagedEdits` recompute. Render a header `<th>` in
+      `components/WorksRoomsMatrix.tsx` (next to `estimate-package-col`, ~297-305). Add a per-row
+      `<td>` (`estimate-work-total-volume-{workItemId}`) and a matching empty group-header `<th>` in
+      `components/WorkTypeGroupSection.tsx` (~223-238, ~359-381). Update the
+      `WorksRoomsMatrix`/`WorkTypeGroupSection` tests' column-count assumptions.
+    - Column placement (before or after the package column) is a UI choice. Default: right after the
+      room columns, before the package money column.
+    - i18n (PL + RU parity, merged into the existing `estimate.matrix` object, no duplicate top-level
+      key): `estimate.matrix.totalVolumeColumn` (PL "Razem pracy (j.m.)", RU "Итого работ (ед. изм.)")
+      and `estimate.matrix.totalVolumeColumnHint` (PL "Łączna ilość pracy we wszystkich
+      pomieszczeniach", RU "Суммарный объём работы по всем помещениям").
+    - Notifications: none (read-only display column).
+  - **User decision (2026-11-02):** put the column **before the first room** (right after the
+    sticky work-name column), and enrich it with **volume, unit and price per unit**. Each row cell
+    shows the total volume + unit (e.g. `42,50 m²`) and, under it, the labour price per unit (e.g.
+    `50,00 / m²`). Backend `WorkRowDto` gains `unitCode`, `unitName` (localized from
+    `MeasurementUnitEntity.nameRU/namePL`) and `unitPrice`. `unitPrice` is the line's frozen
+    `EstimateLine.unitPrice` when the work is assigned, otherwise the catalog `WorkPrice.netPrice`
+    (batch-loaded, `null` when unpriced). Extra i18n:
+    `estimate.matrix.unitPrice` (PL "{{price}} / {{unit}}", RU "{{price}} / {{unit}}") and
+    `estimate.matrix.unitPriceHint` (PL "Cena robocizny za jednostkę", RU "Цена работы за единицу").
+  - _Requirements: 1, 4.1, 18_
+  - _Depends on: none_
+
+- [x] V5. Validate Round 5 in the browser
+  - Rebuild backend + frontend. On `/projects/{id}/estimate`, check bug 10 for both a saved and an
+    unsaved cell: remove it, click it again, and confirm it shows the same Volume / labour / default
+    materials as a fresh cell (Cell_Report lists the seeded material lines), with no `0,00` and no
+    empty list. Check bug 11: the new column shows Σ room volumes + unit per row, `—` for unassigned
+    rows, updates on assign/unassign/SET_QUANTITY, stays aligned in group header rows, and is
+    localized in PL and RU. Mark `[x]` only on a confirmed browser pass.
+  - _Requirements: as 10, 11_
+  - _Depends on: 10, 11_
+
+## Parallel execution plan (waves) — Round 5
+
+- **Wave 1 (parallel):** 10, 11 — independent. 10 is the overlay/preview logic
+  (`projectStagedEdits`, `useStagedPreview`). 11 is backend `WorkRowDto` + assembler, plus the
+  matrix components, `costModel` helper and i18n. If 10 needs a new `costModel` helper, serialize the
+  `costModel.ts` edit after 11's.
+- **Wave 2:** V5 — browser validation; depends on 10, 11.
+
+## Round 5 — validation results (2026-11-02)
+
+Fixes:
+- **#10:** `useStagedPreview` marks the matrix it bakes into the cache with the `previewedStagedIds`
+  it covered (client-only `EstimateMatrixDto.previewedStagedIds`). `EstimateTab` overlays only the
+  edits not yet covered (new pure `editsNotCoveredByPreview`). The server preview is authoritative
+  for the edits it includes, so `UNASSIGN` → `ASSIGN` no longer blanks the freshly seeded cell.
+  `projectStagedEdits` itself is unchanged. Tests: 3 new cases in `projectStagedEdits.test.ts`; the
+  `useStagedPreview` test was updated for the marker.
+- **#11:** backend `WorkRowDto` gains `unitCode`, `unitName` (localized) and `unitPrice` (frozen line
+  price, else catalog `WorkPrice.netPrice`, batch-loaded via `WorkPriceDao.findByWorkItemIdIn`), with
+  a 6-arg compatibility constructor. Frontend: `totalVolumeOfRow` / `hasAssignedCell` in `costModel`,
+  a new column before the first room (`estimate-total-volume-col`, per-row
+  `estimate-work-total-volume-{id}`), group header `colSpan` +1. i18n `estimate.matrix.totalVolumeColumn`,
+  `totalVolumeColumnHint`, `unitPrice`, `unitPriceHint`, `totalVolumeAria` (PL/RU). Two new assembler
+  unit tests.
+
+Validation environment: same as FOR-07-02 Round 1 (temporary backend from a clean `HEAD` worktree +
+this round's backend files; the shared working tree's backend did not compile because of the
+in-progress FOR-07-06 work). Logged in as ADMIN.
+
+| # | Bug | Verified | Evidence |
+|---|-----|----------|----------|
+| 10 | Removed cell comes back empty | ✅ Fixed | Project 2 (DRAFT), cell work 1 × room 2 (`484,65`, saved with chosen products). Cell_Report → clear cell, then the cell is empty and the row total drops to 47,00 m². Click again: `…` pending, then `411,11 – 414,04`, row total back to 74,00 m². The Cell_Report shows labour 268,65 and all 9 default material lines as placeholders ("Wybierz produkt"), the same as a new cell. Discard restored `484,65`, staged store empty. Only the unsaved path was exercised (the reported one). The post-Save path goes through the backend `doUnassign` hard delete and was not re-run. |
+| 11 | "Total works" column with volume, unit, price | ✅ Fixed | Header order: Robota → `Razem pracy (j.m.)` → rooms → package. Rows: `75,00 m² / 9,95 / m²`, `62,50 m² / 164,00 / m²`, `25,00 mb / 86,90 / mb`; an unassigned row shows `— / 275,00 / kpl.`. Live update on unassign/assign (74 → 47 → 74 m²). Group header colSpan = rooms + 2. |
+
+Result: 2 fixed / 0 failed. Tests: `EstimateMatrixAssemblerPackageDivergenceTest` (7),
+`MaterialsListAssemblerPropertyTest`, `MarginsListAssemblerPropertyTest` green. Frontend `tsc -b`
+clean; estimate suites pass. The one failure in the full multi-folder run,
+`DataTable-action-gating.property.test.tsx`, passes alone and is unrelated (load flake).

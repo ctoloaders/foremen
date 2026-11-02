@@ -19,6 +19,7 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import com.foremen.dao.RoomDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkMaterialConsumptionDao;
+import com.foremen.dao.WorkPriceDao;
 import com.foremen.dao.WorkVolumeFormulaDao;
 import com.foremen.dao.model.ConstructionMaterialEntity;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
@@ -35,6 +36,7 @@ import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.dao.model.WorkPriceEntity;
 
 /**
  * Unit guard for {@link EstimateMatrixAssembler}'s package-divergence surface on the matrix read
@@ -64,8 +66,10 @@ class EstimateMatrixAssemblerPackageDivergenceTest {
     private final WorkVolumeFormulaDao workVolumeFormulaDao = mock(WorkVolumeFormulaDao.class);
     private final WorkMaterialConsumptionDao workMaterialConsumptionDao = mock(WorkMaterialConsumptionDao.class);
 
+    private final WorkPriceDao workPriceDao = mock(WorkPriceDao.class);
+
     private final EstimateMatrixAssembler assembler = new EstimateMatrixAssembler(
-            roomDao, workItemDao, workVolumeFormulaDao, workMaterialConsumptionDao);
+            roomDao, workItemDao, workVolumeFormulaDao, workMaterialConsumptionDao, workPriceDao);
 
     private RoomEntity room;
     private WorkItemEntity work;
@@ -83,6 +87,36 @@ class EstimateMatrixAssemblerPackageDivergenceTest {
         when(workItemDao.findAll()).thenReturn(List.of(work));
         when(workVolumeFormulaDao.findAllWithWorkItem()).thenReturn(List.of());
         lenient().when(workMaterialConsumptionDao.findByWorkItemIdIn(any())).thenReturn(List.of());
+        WorkPriceEntity catalogPrice = new WorkPriceEntity();
+        catalogPrice.setWorkItem(work);
+        catalogPrice.setNetPrice(new BigDecimal("55.00"));
+        lenient().when(workPriceDao.findByWorkItemIdIn(any())).thenReturn(List.of(catalogPrice));
+    }
+
+    @Test
+    @DisplayName("Round 5 #11: an assigned work row carries its unit code/name and the frozen line unit price")
+    void assignedRowCarriesUnitAndFrozenUnitPrice() {
+        wireCatalog();
+        EstimateMatrixDto matrix = assembleWith(constructionLine("Klej", null), APPLIED_CODE);
+        WorkRowDto row = matrix.groups().get(0).rows().get(0);
+
+        assertThat(row.unitCode()).isEqualTo("m2");
+        assertThat(row.unitName()).isEqualTo("Metr kw.");
+        // the fixture line's frozen price (ZERO) wins over the catalog price
+        assertThat(row.unitPrice()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
+    @DisplayName("Round 5 #11: an unassigned work row falls back to the catalog WorkPrice net price")
+    void unassignedRowFallsBackToCatalogUnitPrice() {
+        wireCatalog();
+        EstimateEntity estimate = new EstimateEntity();
+        estimate.setId(1L);
+        EstimateMatrixDto matrix = assembler.assemble(estimate, PROJECT_ID, false);
+        WorkRowDto row = matrix.groups().get(0).rows().get(0);
+
+        assertThat(row.unitCode()).isEqualTo("m2");
+        assertThat(row.unitPrice()).isEqualByComparingTo("55.00");
     }
 
     @Test
@@ -211,6 +245,8 @@ class EstimateMatrixAssemblerPackageDivergenceTest {
     private static WorkItemEntity work() {
         MeasurementUnitEntity unit = new MeasurementUnitEntity();
         unit.setCode("m2");
+        unit.setNameRU("Кв. метр");
+        unit.setNamePL("Metr kw.");
         WorkCategoryEntity category = new WorkCategoryEntity();
         category.setId(100L);
         category.setOrderNo(1);

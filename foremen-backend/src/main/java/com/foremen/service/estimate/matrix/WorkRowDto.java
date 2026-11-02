@@ -21,6 +21,12 @@ import java.util.List;
  *                      line across the row's cells — the SAME contribution used for cost, so it
  *                      collapses (min == max) when every package-flagged line in the row is concrete,
  *                      and is a band otherwise. {@code 0..0} when the row has no package-flagged lines
+ * @param unitCode      the work's unit-of-measurement code (e.g. {@code M2}); {@code null} when unknown
+ *                      (FOR-05-05 bug-report Round 5 #11 — the "total works" column)
+ * @param unitName      the work's unit-of-measurement name, localized (RU/PL) at the read layer
+ * @param unitPrice     the work's labour price per unit: the frozen {@code EstimateLine.unitPrice} when
+ *                      the work is assigned in the estimate, otherwise the catalog
+ *                      {@code WorkPrice.netPrice}; {@code null} when the work is unpriced
  */
 public record WorkRowDto(
         Long workItemId,
@@ -28,5 +34,14 @@ public record WorkRowDto(
         List<Long> roomTypeIds,
         List<CellDto> cells,
         java.math.BigDecimal packageVolume,
-        MoneyRange packageMoney) {
+        MoneyRange packageMoney,
+        String unitCode,
+        String unitName,
+        java.math.BigDecimal unitPrice) {
+
+    /** A row without unit / unit-price information (the pre-Round-5 shape, used by tests). */
+    public WorkRowDto(Long workItemId, String workItemName, List<Long> roomTypeIds, List<CellDto> cells,
+                      java.math.BigDecimal packageVolume, MoneyRange packageMoney) {
+        this(workItemId, workItemName, roomTypeIds, cells, packageVolume, packageMoney, null, null, null);
+    }
 }

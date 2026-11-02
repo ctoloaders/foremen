@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import com.foremen.dao.RoomDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkMaterialConsumptionDao;
+import com.foremen.dao.WorkPriceDao;
 import com.foremen.dao.WorkVolumeFormulaDao;
 import com.foremen.dao.model.ConstructionMaterialEntity;
 import com.foremen.dao.model.ConstructionMaterialTypeEntity;
@@ -25,12 +26,14 @@ import com.foremen.dao.model.EstimateLineRoomMaterialEntity;
 import com.foremen.dao.model.EstimateLineRoomQtyEntity;
 import com.foremen.dao.model.FinishingMaterialEntity;
 import com.foremen.dao.model.MaterialTypeEntity;
+import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.OfferPackageEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.dao.model.WorkMaterialConsumptionEntity;
+import com.foremen.dao.model.WorkPriceEntity;
 import com.foremen.dao.model.WorkVolumeFormulaEntity;
 import com.foremen.service.formula.VolumeResolver;
 
@@ -67,16 +70,19 @@ public class EstimateMatrixAssembler {
     private final WorkItemDao workItemDao;
     private final WorkVolumeFormulaDao workVolumeFormulaDao;
     private final WorkMaterialConsumptionDao workMaterialConsumptionDao;
+    private final WorkPriceDao workPriceDao;
 
     public EstimateMatrixAssembler(
             RoomDao roomDao,
             WorkItemDao workItemDao,
             WorkVolumeFormulaDao workVolumeFormulaDao,
-            WorkMaterialConsumptionDao workMaterialConsumptionDao) {
+            WorkMaterialConsumptionDao workMaterialConsumptionDao,
+            WorkPriceDao workPriceDao) {
         this.roomDao = roomDao;
         this.workItemDao = workItemDao;
         this.workVolumeFormulaDao = workVolumeFormulaDao;
         this.workMaterialConsumptionDao = workMaterialConsumptionDao;
+        this.workPriceDao = workPriceDao;
     }
 
     /**
@@ -132,6 +138,17 @@ public class EstimateMatrixAssembler {
                         .filter(c -> c.getWorkItem() != null && c.getWorkItem().getId() != null)
                         .collect(java.util.stream.Collectors.groupingBy(c -> c.getWorkItem().getId()));
 
+        // Catalog labour price per work, batch-loaded ONCE (FOR-05-05 bug-report Round 5 #11): the
+        // per-unit price shown for works not yet assigned (assigned works show their frozen price).
+        Map<Long, BigDecimal> catalogPriceByWorkId = new java.util.HashMap<>();
+        if (!workItemIds.isEmpty()) {
+            for (WorkPriceEntity price : workPriceDao.findByWorkItemIdIn(workItemIds)) {
+                if (price.getWorkItem() != null && price.getWorkItem().getId() != null) {
+                    catalogPriceByWorkId.putIfAbsent(price.getWorkItem().getId(), price.getNetPrice());
+                }
+            }
+        }
+
         for (WorkItemEntity work : sortedWorks) {
             WorkCategoryEntity category = work.getWorkCategory();
             Long categoryId = category != null ? category.getId() : null;
@@ -161,9 +178,17 @@ public class EstimateMatrixAssembler {
 
             group.packageFold.merge(rowPackageFold);
             headerPackageFold.merge(rowPackageFold);
+            MeasurementUnitEntity unit = work.getUnit();
+            EstimateLineEntity rowLine = lineByWork.get(work.getId());
+            BigDecimal unitPrice = rowLine != null && rowLine.getUnitPrice() != null
+                    ? rowLine.getUnitPrice()
+                    : catalogPriceByWorkId.get(work.getId());
             group.rows.add(new WorkRowDto(
                     work.getId(), workItemName(work, ru), roomTypeIds(work), cells,
-                    rowPackageFold.volume(), rowPackageFold.toMoney()));
+                    rowPackageFold.volume(), rowPackageFold.toMoney(),
+                    unit != null ? unit.getCode() : null,
+                    unit != null ? localizedName(ru, unit.getNameRU(), unit.getNamePL()) : null,
+                    unitPrice));
         }
 
         List<WorkTypeGroupDto> groupDtos = new ArrayList<>(groups.size());
