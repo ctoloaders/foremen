@@ -36,5 +36,9 @@ public record RoomCreateRequest(
         BigDecimal doorHeight,
         BigDecimal doorWidth,
         BigDecimal windowHeight,
-        BigDecimal windowWidth
+        BigDecimal windowWidth,
+        // FOR-05-02 Round 5: narrow place (mb) + per-dimension value formulas, e.g.
+        // {"ceilingHeight": "=2,5+0,2"}. A formula wins over the submitted number (evaluated here).
+        BigDecimal narrowPlace,
+        java.util.Map<String, String> dimensionFormulas
 ) {}

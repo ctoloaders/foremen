@@ -11,6 +11,7 @@ import com.foremen.dao.model.RoomGeometry;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
+import com.foremen.service.formula.DimensionFormulaEvaluator;
 import com.foremen.service.model.RoomMetrics;
 import com.foremen.service.model.RoomServiceExtendedModel;
 import com.foremen.service.model.RoomServiceModel;
@@ -265,7 +266,11 @@ public class RoomService
      */
     private void normalize(RoomServiceExtendedModel model) {
         resolveReferences(model);
+        applyDimensionFormulas(model);
         validateCounts(model);
+        if (model.getNarrowPlace() != null) {
+            validateMetricRange("narrowPlace", model.getNarrowPlace());
+        }
 
         RoomGeometry geometry = model.getGeometry();
         if (hasGeometry(geometry)) {
@@ -482,6 +487,107 @@ public class RoomService
         if (count != null && count < 0) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, COUNT_NEGATIVE_MESSAGE, field);
         }
+    }
+
+    // =====================================================================================
+    // Dimension value formulas (FOR-05-02 bug-report Round 5 #1)
+    // =====================================================================================
+
+    /** The dimension fields that accept a value formula (every editable numeric dimension). */
+    static final Set<String> FORMULA_FIELDS = Set.of(
+            "floorArea", "wallArea", "perimeter", "doorArea", "windowArea",
+            "doorCount", "windowCount", "internalCorners",
+            "doorHeight", "doorWidth", "windowHeight", "windowWidth",
+            "ceilingHeight", "narrowPlace");
+
+    /** The integer (count) dimensions: their formula must evaluate to a whole number. */
+    private static final Set<String> INTEGER_FORMULA_FIELDS = Set.of("doorCount", "windowCount", "internalCorners");
+
+    /**
+     * Evaluates every submitted dimension formula server-side and writes the result into the
+     * dimension field, so the formula always wins over the submitted number. Blank entries are
+     * dropped, and the cleaned map is stored (an empty map clears every formula). A formula on one
+     * of the five source-carrying metrics stamps {@code MANUAL}, exactly like a typed value. An
+     * unknown field, an unparsable or non-arithmetic formula, a negative or out-of-range result, or
+     * a fractional count is rejected with {@code 400 error.room.dimension.formula.invalid} before
+     * anything is written.
+     */
+    private void applyDimensionFormulas(RoomServiceExtendedModel model) {
+        java.util.Map<String, String> formulas = model.getDimensionFormulas();
+        if (formulas == null) {
+            return; // not supplied: keep whatever is stored
+        }
+        java.util.Map<String, String> cleaned = new java.util.LinkedHashMap<>();
+        for (java.util.Map.Entry<String, String> entry : formulas.entrySet()) {
+            String field = entry.getKey();
+            String text = entry.getValue();
+            if (text == null || text.isBlank()) {
+                continue;
+            }
+            if (field == null || !FORMULA_FIELDS.contains(field)) {
+                throw formulaInvalid(field);
+            }
+            BigDecimal value = DimensionFormulaEvaluator.evaluate(field, text);
+            if (value.compareTo(METRIC_MIN) < 0 || value.compareTo(METRIC_MAX) > 0) {
+                throw formulaInvalid(field);
+            }
+            if (INTEGER_FORMULA_FIELDS.contains(field)) {
+                if (value.stripTrailingZeros().scale() > 0) {
+                    throw formulaInvalid(field);
+                }
+                setIntegerDimension(model, field, value.intValueExact());
+            } else {
+                setDecimalDimension(model, field, value);
+            }
+            cleaned.put(field, text.trim());
+        }
+        model.setDimensionFormulas(cleaned);
+    }
+
+    private static void setIntegerDimension(RoomServiceExtendedModel model, String field, int value) {
+        switch (field) {
+            case "doorCount" -> model.setDoorCount(value);
+            case "windowCount" -> model.setWindowCount(value);
+            case "internalCorners" -> model.setInternalCorners(value);
+            default -> throw formulaInvalid(field);
+        }
+    }
+
+    private static void setDecimalDimension(RoomServiceExtendedModel model, String field, BigDecimal value) {
+        switch (field) {
+            case "floorArea" -> {
+                model.setFloorArea(value);
+                model.setFloorAreaSource(MeasureSource.MANUAL);
+            }
+            case "wallArea" -> {
+                model.setWallArea(value);
+                model.setWallAreaSource(MeasureSource.MANUAL);
+            }
+            case "perimeter" -> {
+                model.setPerimeter(value);
+                model.setPerimeterSource(MeasureSource.MANUAL);
+            }
+            case "doorArea" -> {
+                model.setDoorArea(value);
+                model.setDoorAreaSource(MeasureSource.MANUAL);
+            }
+            case "windowArea" -> {
+                model.setWindowArea(value);
+                model.setWindowAreaSource(MeasureSource.MANUAL);
+            }
+            case "doorHeight" -> model.setDoorHeight(value);
+            case "doorWidth" -> model.setDoorWidth(value);
+            case "windowHeight" -> model.setWindowHeight(value);
+            case "windowWidth" -> model.setWindowWidth(value);
+            case "ceilingHeight" -> model.setCeilingHeight(value);
+            case "narrowPlace" -> model.setNarrowPlace(value);
+            default -> throw formulaInvalid(field);
+        }
+    }
+
+    private static ForemenApiException formulaInvalid(String field) {
+        return new ForemenApiException(HttpStatus.BAD_REQUEST,
+                DimensionFormulaEvaluator.FORMULA_INVALID_MESSAGE, field);
     }
 
     private ForemenApiException notFound(String field, Long id) {

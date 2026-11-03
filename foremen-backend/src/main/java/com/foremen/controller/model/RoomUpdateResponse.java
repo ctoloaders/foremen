@@ -28,5 +28,7 @@ public record RoomUpdateResponse(
         BigDecimal wallArea,
         BigDecimal perimeter,
         BigDecimal doorArea,
-        BigDecimal windowArea
+        BigDecimal windowArea,
+        BigDecimal narrowPlace,
+        java.util.Map<String, String> dimensionFormulas
 ) {}

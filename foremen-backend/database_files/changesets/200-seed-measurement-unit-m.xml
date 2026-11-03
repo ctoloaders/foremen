@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 bug-report Round 5 #3: the plain metre unit "m" (a length or height, as opposed to
+        the running metre "mb"). Same idempotent pattern as 019/064: MARK_RAN when a unit with code
+        'm' already exists. Registered LAST (after 199).
+    -->
+    <changeSet id="200-seed-measurement-unit-m" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM measurement_units WHERE code = 'm'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="measurement_units">
+            <column name="code" value="m"/>
+            <column name="name_ru" value="м"/>
+            <column name="name_pl" value="m"/>
+            <column name="active" valueBoolean="true"/>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

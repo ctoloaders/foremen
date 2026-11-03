@@ -32,5 +32,8 @@ public record RoomDtoModel(
         MeasureValueDto windowArea,
         // FOR-05-02 Round 4: the room's fixed position within its project (read-only; changed only
         // via PUT /api/rooms/project/{projectId}/order).
-        Integer sortOrder
+        Integer sortOrder,
+        // FOR-05-02 Round 5: narrow place (mb) + per-dimension value formulas (shown while editing).
+        BigDecimal narrowPlace,
+        java.util.Map<String, String> dimensionFormulas
 ) {}

@@ -63,7 +63,9 @@ public sealed interface FormulaAst
             "windowWidth",
             "windowArea",
             "internalCorners",
-            "ceilingHeight"
+            "ceilingHeight",
+            // FOR-05-02 bug-report Round 5 #2: narrow place up to 40 cm (mb).
+            "narrowPlace"
     );
 
     /** A numeric literal, e.g. {@code 2}, {@code 1.5}. */

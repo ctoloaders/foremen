@@ -885,4 +885,11 @@
          deny-by-default; paid status stays visible via work reports). Idempotent (MARK_RAN when the
          grant is already absent). Registered LAST, after 197. -->
     <include file="database_files/changesets/198-revoke-foreman-payroll-read.xml"/>
+    <!-- FOR-05-02 bug-report Round 5: rooms.dimension_formulas (per-dimension value formulas,
+         #1) + rooms.narrow_place (new "narrow place up to 40 cm" dimension, mb, #2). Idempotent.
+         Registered LAST, after 198. -->
+    <include file="database_files/changesets/199-rooms-dimension-formulas-narrow-place.xml"/>
+    <!-- FOR-05-02 bug-report Round 5 #3: plain metre unit "m" (MARK_RAN when present). Registered
+         LAST, after 199. -->
+    <include file="database_files/changesets/200-seed-measurement-unit-m.xml"/>
 </databaseChangeLog>

@@ -69,6 +69,23 @@ public class RoomEntity extends BaseEntity {
     @Column(name = "finish_gap", precision = 12, scale = 2)
     private BigDecimal finishGap;
 
+    /**
+     * FOR-05-02 bug-report Round 5 #2 — "narrow place up to 40 cm" in running metres (mb). A plain
+     * manual dimension, exposed to work formulas as {@code narrowPlace}.
+     */
+    @Column(name = "narrow_place", precision = 12, scale = 2)
+    private BigDecimal narrowPlace;
+
+    /**
+     * FOR-05-02 bug-report Round 5 #1 — per-dimension value formulas, keyed by the dimension field
+     * name (e.g. {@code {"ceilingHeight": "=2,5+0,2"}}). The numeric column of each such dimension
+     * holds the value the backend evaluated on save, so readers (formulas, estimate) are unchanged.
+     * {@code null} or absent key: the dimension was typed as a plain number.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "dimension_formulas", columnDefinition = "jsonb")
+    private java.util.Map<String, String> dimensionFormulas;
+
     @Column(name = "floor_area", precision = 12, scale = 2)
     private BigDecimal floorArea;
 

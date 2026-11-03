@@ -29,5 +29,7 @@ public record RoomDtoExtendedModel(
         MeasureValueDto wallArea,
         MeasureValueDto perimeter,
         MeasureValueDto doorArea,
-        MeasureValueDto windowArea
+        MeasureValueDto windowArea,
+        BigDecimal narrowPlace,
+        java.util.Map<String, String> dimensionFormulas
 ) {}

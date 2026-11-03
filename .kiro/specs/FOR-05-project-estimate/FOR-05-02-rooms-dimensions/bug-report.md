@@ -325,3 +325,186 @@ Screen URL: http://localhost:3000/projects/2/rooms
 - **Wave 1:** 1 — one logical change serialized DB → backend → frontend (the FE depends on the new
   `sortOrder` field and the order endpoint).
 - **Wave 2:** V4 — browser validation; depends on 1.
+
+## Round 5 (2026-11-02)
+
+Screen URL: https://dev.foremen.eu/projects/4/rooms (reproduce locally at
+`http://localhost:3000/projects/{id}/rooms`). Source: meeting notes.
+
+Background (grounded in code): there is no dimension catalog. Every dimension is a fixed column on
+`rooms` (changeset `042-create-rooms.xml`; `RoomEntity`). The frontend registry
+`features/rooms/dimensions.ts` (`DIMENSION_ROWS`, 15 rows) hard-codes each row's unit
+(`RoomUnit = 'm2' | 'mb' | 'szt'`), its label, `summable` and `alwaysManual`. Formulas read
+dimensions through the whitelist `FormulaAst.ROOM_DIMENSION_VARS`, `VolumeResolver.roomVariables()`,
+the duplicate binding in `FormulaRoomQtyDeriver`, and the FE mirror
+`work-catalog/lib/formula-dimensions.ts`. Latest changeset in `changelog.xml`: `198`. Another
+session is adding changesets concurrently, so take the next free number at implementation time.
+
+- [x] 1. Allow entering a formula as a value (e.g. `=25+31+12`): store the formula separately, show it while editing, show the computed value in the table
+  - Triage: observed — a matrix cell accepts only a number. `EditableCell.validateDimension`
+    (`components/workspace/EditableCell.tsx` ~150-158) runs zod `roomCellValueSchema`, so `=25+31+12`
+    is rejected as invalid. Expected — a value that starts with `=` is an arithmetic expression. The
+    cell shows the computed value (`68`). Re-opening the cell shows the formula text (`=25+31+12`).
+    The value used everywhere else (Σ, estimate volumes, formulas) is the computed number. Layer:
+    **both**.
+    - **DB:** a new changeset adds `rooms.dimension_formulas jsonb NULL`, a map
+      `{ "<dimensionField>": "=25+31+12" }`. That's one column, like the existing `geometry jsonb`,
+      instead of 15 TEXT columns. Idempotent (precondition: column absent).
+    - **Backend:** `RoomEntity.dimensionFormulas` (`Map<String,String>`), plus the read DTO, the
+      create/update/bulk-save requests, `RoomServiceModel` and `RoomControllerMapper`. On save,
+      `RoomService` re-evaluates every submitted formula server-side (authoritative), writes the
+      numeric result into the dimension column, and stores the text in the map.
+      - Evaluation reuses `service/formula` (`FormulaTokenizer` already strips the leading `=`;
+        `FormulaParser` + `FormulaEvaluator`). A new constants-only check rejects variables,
+        `WorkRef` and functions, so only numbers, `+ - * /` and parentheses are allowed, and
+        decimal commas are accepted.
+      - The result must be ≥ 0 and ≤ MAX_METRIC. Integer dimensions (`doorCount`, `windowCount`,
+        `internalCorners`) require a whole-number result.
+      - Otherwise: 400 `error.room.dimension.formula.invalid` (PL + RU in
+        `messages.properties` / `messages_ru.properties`).
+      - Typing a plain number into a cell clears that field's formula.
+      - A formula on a source-carrying metric (floorArea, …) stamps `MANUAL`, exactly like a typed
+        value.
+    - **Frontend:** a small safe arithmetic evaluator `features/rooms/lib/dimensionFormula.ts`
+      (recursive-descent; numbers with `.`/`,`, `+ - * /`, unary minus, parentheses; no `eval`). It
+      computes the cell value and Σ before Save.
+      - `EditableCell` seeds the input with the formula when one exists. On commit `=…` is evaluated
+        and validated with the same range/integer rules; invalid input keeps the cell open and red
+        (Req 4.5).
+      - The display button shows the computed value plus a small `ƒ` marker whose tooltip shows the
+        formula.
+      - The store (`state/roomMatrixStorage.ts` `RoomEdit`) carries `{ value, formula }` per edited
+        field. `RoomsMatrixTab`'s save payload builder sends both.
+      - `RoomDto` / types gain `dimensionFormulas`.
+      - Unit tests for the evaluator and for EditableCell's formula path.
+    - **i18n (PL + RU):** `roomsSummary.formula.hint` (tooltip "Formula: {{formula}}" / "Формула:
+      {{formula}}"), `roomsSummary.formula.invalid` ("Nieprawidłowa formuła" / "Некорректная
+      формула"), and the backend `error.room.dimension.formula.invalid`. No entity i18n fields.
+    - **Notifications:** none (data entry).
+    - **User decision (2026-11-02): both.** Formulas work in the rooms matrix inline cells AND in the
+      full-page editor (`pages/RoomEditorPage.tsx`, plus `RoomFormSheet`, which shares its schema).
+  - _Requirements: FOR-05-02 Req 4 (inline editing / validation), Req 5 (manual source), Req 6 (bulk
+    save), Req 13 (i18n)_
+  - _Depends on: none_
+
+- [x] 2. Add a new dimension (running metres, `пог. м`) — "narrow place" (up to 40 cm)
+  - Triage: observed — the matrix has 15 fixed dimension rows; there is no row for narrow places
+    (strips up to 40 cm wide, e.g. reveals and niches, counted in running metres). Expected — a new row
+    "Narrow place (up to 40 cm)" in `mb`, summable (Σ across rooms), always manual, and usable in
+    work volume formulas. Layer: **both**.
+    - **DB:** a new changeset adds `rooms.narrow_place NUMERIC(12,2) NULL`.
+    - **Backend:** `RoomEntity.narrowPlace` + DTOs/requests/service model/mapper/save+patch paths.
+      Formula variable `narrowPlace` goes into `FormulaAst.ROOM_DIMENSION_VARS`,
+      `VolumeResolver.roomVariables()` and `FormulaRoomQtyDeriver`'s binding, so a work formula like
+      `narrowPlace` or `perimeter - narrowPlace` works.
+    - **Frontend:** a `PlainField` `'narrowPlace'` row in `DIMENSION_ROWS`
+      (`unit: 'mb', summable: true, alwaysManual: true`), placed after `perimeter`. Also needed in
+      `RoomDto`, `RoomEditField`, zod `room-schema.ts`, `RoomEditorPage` / `RoomFormSheet` fields, and
+      the formula-picker token list `FORMULA_DIMENSION_TOKENS` (with its label).
+    - **i18n (PL + RU):** `roomsSummary.dimension.narrowPlace` — PL "Wąskie miejsca do 40 cm (mb)", RU
+      "Узкие места до 40 см (пог. м)"; the formula-token label in the work-catalog formula dimensions
+      (same text without the unit). No entity i18n fields.
+    - "Up to 40 cm" is a definition in the label, not a validation rule (the value is a length in
+      running metres, not a width).
+    - **Notifications:** none.
+  - _Requirements: FOR-05-02 Req 2 (AC 2.2/2.3 row list + units), Req 2.5 (Σ), Req 12, Req 13_
+  - _Depends on: 1_ (both touch `RoomEntity`, the DTOs, the service save path, `dimensions.ts` and the
+    changelog, so they run one after the other)
+
+- [x] 3. Add the unit "metre" (`m`) and use it for room dimensions (height in `m` instead of `пог. м`)
+  - Triage: observed — linear sizes and heights are labelled `mb` / `пог. м` (running metres):
+    `doorHeight`, `doorWidth`, `windowHeight`, `windowWidth`, `ceilingHeight` (and the gaps
+    `wallGap`, `finishGap`). A height is a plain length, not a running length. Expected — a plain
+    metre unit `m` / `м`. The matrix unit column and the row labels show `m` for heights and widths.
+    `perimeter` stays `mb` (and so does the new narrow place). Layer: **both** (catalog seed +
+    frontend labels; dimension units are hard-coded on the FE, so stored values need no migration).
+    - **DB:** a new seed changeset adds `measurement_units` row `code='m'`, `name_ru='м'`,
+      `name_pl='m'`, `active=true`, guarded by `sqlCheck` MARK_RAN on `code='m'` (the
+      019/064 pattern). The catalog then has `m` available for works/materials too.
+    - **Frontend:** `RoomUnit` gains `'m'`; `DIMENSION_ROWS` switches `doorHeight`, `doorWidth`,
+      `windowHeight`, `windowWidth` and `ceilingHeight` to `unit: 'm'`; `unitSymbol()` in
+      `work-catalog/lib/formula-dimensions.ts` maps `m`.
+    - **i18n (PL + RU):** `roomsSummary.unit.m` (PL "m", RU "м"); fix the unit suffix in the affected
+      labels (`roomsSummary.dimension.doorHeight/doorWidth/windowHeight/windowWidth` and
+      `rooms.form.ceilingHeight`): "(mb)" → "(m)" in PL, "(пог. м)" → "(м)" in RU.
+    - **User decision (2026-11-02):** `wallGap` / `finishGap` stay `mb` (counted in running metres).
+      The labels proposed above are approved.
+    - **Notifications:** none.
+  - _Requirements: FOR-05-02 Req 2 (AC 2.3 units), Req 13_
+  - _Depends on: 2_ (same `dimensions.ts` rows, locale blocks and changelog tail)
+
+- [x] V5. Validate Round 5 in the browser
+  - Rebuild backend + frontend (+ Liquibase). On `/projects/{id}/rooms` (DRAFT project):
+    - Bug 1: type `=25+31+12` in a cell; it shows `68` and Σ updates. Re-open it; it shows
+      `=25+31+12`. Save and reload; it still shows `68` with the formula on edit. An invalid
+      formula (`=25+abc`, `=2.5` on a count) keeps the cell red. A plain number clears the formula.
+      The estimate volume for a formula using that dimension uses `68`.
+    - Bug 2: the "Narrow place (up to 40 cm)" row appears in `mb` with Σ. Enter and save a value. A
+      work formula `narrowPlace` resolves it in the estimate.
+    - Bug 3: heights and widths show `m`/`м` in PL and RU; perimeter stays `mb`; `m` exists in
+      Measurement units.
+    - Restore temporary data. Mark `[x]` only on a confirmed browser pass.
+  - _Depends on: 1, 2, 3_
+
+## Parallel execution plan (waves) — Round 5
+
+- **Wave 1:** 1 — formula storage + evaluation (DB → backend → frontend).
+- **Wave 2:** 2 — new dimension. It shares `RoomEntity`, the DTOs, the service, `dimensions.ts`
+  and the changelog tail with 1, so it runs after it.
+- **Wave 3:** 3 — `m` unit + label switch (same registry rows, locale blocks and changelog tail).
+- **Wave 4:** V5 — browser validation; depends on 1, 2, 3.
+
+## Round 5 — validation results (2026-11-03)
+
+Fixes:
+- **DB:** `199-rooms-dimension-formulas-narrow-place.xml` (`rooms.dimension_formulas jsonb`,
+  `rooms.narrow_place NUMERIC(12,2)`) and `200-seed-measurement-unit-m.xml` (`m` / `м` / `m`). Both
+  are idempotent and registered last.
+- **Backend:**
+  - New `DimensionFormulaEvaluator`: a constants-only subset of the formula engine. It accepts a
+    decimal comma, rounds to 2 decimals, and rejects variables, refs, functions and division by zero.
+  - `RoomService.applyDimensionFormulas` runs first in normalize. It evaluates every submitted
+    formula, so the formula wins over the number. It enforces range ≥ 0 and whole numbers for counts,
+    stamps MANUAL on the 5 metrics, drops blank entries and stores the cleaned map (`{}` clears).
+  - Errors return 400 `error.room.dimension.formula.invalid` (PL/RU).
+  - `narrowPlace` is added to the entity, DTOs, requests and service models, and to the formula
+    variable whitelist (`FormulaAst`, `VolumeResolver`, `FormulaRoomQtyDeriver`).
+- **Frontend:**
+  - `lib/dimensionFormula.ts`: a safe recursive-descent evaluator mirroring the backend.
+  - The store keeps a formula edit verbatim, as a string value.
+  - Every number coercion goes through `parseDimensionInput` (Σ, auto-calc, payload).
+  - `EditableCell` gets a `formula` prop: it seeds the input with the formula, shows an `ƒ` marker
+    with a tooltip, validates and commits the formula string, and shows an invalid-formula hint.
+  - The save payload sends the merged `dimensionFormulas` map.
+  - `RoomEditorPage`: formula-capable `NumberInput`s (new `allowFormula` prop) for ceiling height,
+    internal corners, narrow place and the 5 metrics, with a live `= value` hint. Formulas are taken
+    from the raw form values; metric formulas are dropped in geometry mode.
+  - `RoomFormSheet` drops the stored formulas of the fields it submits as numbers.
+  - The registry gets the `narrowPlace` row (mb, Σ). `doorHeight`, `doorWidth`, `windowHeight`,
+    `windowWidth` and `ceilingHeight` switch to `m`; the gaps stay `mb` (user decision).
+  - i18n (PL/RU): `roomsSummary.formula.hint` / `.invalid`, `roomsSummary.unit.m`,
+    `roomsSummary.dimension.narrowPlace`, and the label suffixes `(mb)` → `(m)` / `(м)`.
+
+Validated on the rebuilt local stack (Liquibase ran 199 + 200), as ADMIN on DRAFT project 2, room 2:
+
+| # | Bug | Verified | Evidence |
+|---|-----|----------|----------|
+| 1 | Formula as value | ✅ Fixed | Matrix: typed `=25+31+12` into perimeter. The cell shows `ƒ 68 Ręcznie` with tooltip "Formuła: =25+31+12", Σ updated, and auto-calc derived wall area 161.6. Re-opening shows `=25+31+12`. `=25+abc` keeps the cell open, red, with the invalid-formula hint. Save → estimate-impact dialog (9 lines change) → approve → DB `perimeter 68.00 MANUAL`, `{"perimeter": "=25+31+12"}`. After reload the cell still shows `ƒ 68`. Full editor: perimeter seeded `=25+31+12` (`= 68` hint); typed ceiling `=2,5+0,2` (`= 2.7` hint); after Save → DB `{"perimeter": "=25+31+12", "ceilingHeight": "=2,5+0,2"}`. |
+| 2 | Narrow place (mb) | ✅ Fixed | Row "Wąskie miejsca do 40 cm (mb)" with unit `mb` right after perimeter; `3,5` saved as 3.50 with Σ 3.5; the editor shows the field with the same label. Not browser-checked: a work formula referencing `narrowPlace` in the estimate (the variable is bound in `VolumeResolver` / `FormulaRoomQtyDeriver` and whitelisted; FE picker test lists 15 tokens). |
+| 3 | Unit `m` | ✅ Fixed | Matrix: door/window height and width and ceiling height show `m` with labels "(m)"; perimeter and both gaps stay `mb`. `measurement_units` row `m / м / m` seeded. |
+
+Restored afterwards: room 2 back to perimeter 33.00 MANUAL, wall area 45.00 MANUAL, ceiling 2.70,
+narrow place NULL, no formulas. The forced save re-derived the estimate.
+
+Tests:
+- Backend: `DimensionFormulaEvaluatorTest` (11), new `RoomDimensionFormulaIT` (3), and the formula
+  and room ITs `RoomManualMetricsIT`, `RoomCrudIT`, `RoomBulkUpdateIT`, `RoomGeometryIT`, all green.
+- Frontend: `tsc -b` clean; rooms + estimate + work-catalog + ui suites 38 files / 635 tests, plus the
+  new `dimensionFormulas.test.tsx` (6) and `dimensionFormula.test.ts`. `FormulaInput.test` was
+  updated from 14 to 15 tokens.
+
+**Found during validation (not in this round's scope):** clearing a dimension (setting it to empty)
+does not persist on UPDATE, for every dimension, not just `narrowPlace`. `ForemenMapperConfig` uses
+`NullValuePropertyMappingStrategy.IGNORE`, so a `null` in the update payload keeps the stored value.
+Fixing it needs care, because partial payloads (the full editor doesn't send door/window fields)
+would then wipe data. Candidate for a follow-up round.

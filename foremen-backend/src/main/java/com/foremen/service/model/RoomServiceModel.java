@@ -36,6 +36,10 @@ public class RoomServiceModel {
     private BigDecimal windowWidth;
     private BigDecimal wallGap;
     private BigDecimal finishGap;
+    /** FOR-05-02 Round 5 #2 — narrow place up to 40 cm (mb). */
+    private BigDecimal narrowPlace;
+    /** FOR-05-02 Round 5 #1 — per-dimension value formulas keyed by dimension field. */
+    private java.util.Map<String, String> dimensionFormulas;
     private BigDecimal floorArea;
     private MeasureSource floorAreaSource;
     private BigDecimal wallArea;

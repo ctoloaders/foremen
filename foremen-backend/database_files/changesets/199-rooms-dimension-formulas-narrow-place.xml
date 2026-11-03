@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 bug-report Round 5.
+        #1 rooms.dimension_formulas (jsonb, nullable): per-dimension value formulas, e.g.
+           {"ceilingHeight": "=2,5+0,2"}. The numeric dimension columns keep holding the evaluated
+           value (the backend evaluates on save), so every reader stays unchanged.
+        #2 rooms.narrow_place (NUMERIC(12,2), nullable): the new "narrow place up to 40 cm"
+           dimension in running metres (mb).
+        Each changeset is idempotent (guarded by "column absent"). Registered LAST (after 198).
+    -->
+    <changeSet id="199-rooms-dimension-formulas" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="rooms" columnName="dimension_formulas"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="rooms">
+            <column name="dimension_formulas" type="JSONB"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="199-rooms-narrow-place" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="rooms" columnName="narrow_place"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="rooms">
+            <column name="narrow_place" type="NUMERIC(12,2)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

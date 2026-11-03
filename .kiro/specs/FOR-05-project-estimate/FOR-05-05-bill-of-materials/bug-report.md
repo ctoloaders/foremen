@@ -415,3 +415,56 @@ Result: 2 fixed / 0 failed. Tests: `EstimateMatrixAssemblerPackageDivergenceTest
 `MaterialsListAssemblerPropertyTest`, `MarginsListAssemblerPropertyTest` green. Frontend `tsc -b`
 clean; estimate suites pass. The one failure in the full multi-folder run,
 `DataTable-action-gating.property.test.tsx`, passes alone and is unrelated (load flake).
+
+## Round 6 (2026-11-02)
+
+Source: meeting notes, reported against `https://dev.foremen.eu/projects/4/estimate`.
+
+- [x] 12. When scrolling down, keep the header row fixed (`Robota | Razem pracy (j.m.) | rooms… | Z pakietu`)
+  - Triage: observed — when the page scrolls down, the matrix header row scrolls away, so you lose
+    track of which column is which room / total / package. Expected — the whole header row stays
+    visible at the top while scrolling down. The sticky first column still works while scrolling
+    sideways. Layer: **frontend** only.
+    Root cause: every header `<th>` is already `sticky top-0`, but the wrapper in
+    `components/WorksRoomsMatrix.tsx` (~231-234) is `overflow-x-auto overflow-y-visible`. Per CSS,
+    when one overflow axis is not `visible` the other computes to `auto`, so the wrapper is a scroll
+    container on both axes. With no height limit it never scrolls vertically, so `top: 0` sticks to
+    the top of a box that never moves, and the header scrolls away with the page. The code comment
+    there assumes `overflow-y-visible` releases the vertical axis; it doesn't.
+    Fix direction: make the wrapper the vertical scroller too:
+    `overflow-auto` + `max-h-[calc(100vh-<offset>)]`, where the offset leaves room for the app bar
+    and tab header. The `sticky top-0` header row and the `sticky left-0` work column then both work
+    inside it, and the top-left corner (`z-30`) stays above both. Update the misleading comment.
+    Check that the busy overlay (`absolute inset-0`) still covers the matrix, and that the group
+    header rows, which are not sticky, scroll under the header.
+    Suspect: `foremen-frontend/src/features/estimate/components/WorksRoomsMatrix.tsx`.
+    i18n: none. Notifications: none.
+  - _Requirements: 1 (matrix rendering), FOR-05-05 Round 5 #11 column_
+  - _Depends on: none_
+
+- [x] V6. Validate Round 6 in the browser
+  - On `/projects/{id}/estimate` with expanded groups: scroll down. The header row (Robota, Razem
+    pracy, every room, Z pakietu) stays at the top of the matrix. Scroll sideways; the work column
+    stays left and the corner cell stays on top. Mark `[x]` only on a confirmed browser pass.
+  - _Depends on: 12_
+
+## Parallel execution plan (waves) — Round 6
+
+- **Wave 1:** 12 — single-file layout fix.
+- **Wave 2:** V6 — browser validation; depends on 12.
+
+## Round 6 — validation results (2026-11-03)
+
+Fix: `WorksRoomsMatrix` now has a non-scrolling `relative overflow-hidden` frame, which holds the
+busy overlay, around an inner `estimate-matrix-scroll` div
+(`max-h-[calc(100vh-14rem)] min-h-[16rem] overflow-auto`). The table scrolls inside it on both axes,
+so the existing `sticky top-0` header row and `sticky left-0` work column work. The misleading
+`overflow-y-visible` comment is replaced.
+
+| # | Bug | Verified | Evidence |
+|---|-----|----------|----------|
+| 12 | Header row fixed on scroll | ✅ Fixed | Project 2, all groups expanded (content 9935 px in a 966 px box). After `scrollTop = 1500`, the "Razem pracy (j.m.)" header and the corner cell stay at offset 0 from the top of the scroll box. A screenshot deep in the HYDRAULIKA group shows the header row Robota / Razem pracy / rooms / Z pakietu pinned. Horizontal: the table fit the viewport (2240 = 2240), so the sticky-left column was not exercised; that code is unchanged. |
+
+Cosmetic leftover: with `border-collapse`, a few pixels of the scrolled rows show through above the
+pinned header (the collapsed borders don't stick). If it bothers you, switch the table to
+`border-separate border-spacing-0`.

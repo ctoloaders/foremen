@@ -156,6 +156,7 @@ public final class FormulaRoomQtyDeriver {
         putIfPresent(vars, "windowArea", room.getWindowArea());
         putIfPresent(vars, "internalCorners", room.getInternalCorners());
         putIfPresent(vars, "ceilingHeight", room.getCeilingHeight());
+        putIfPresent(vars, "narrowPlace", room.getNarrowPlace()); // FOR-05-02 Round 5 #2
         return vars;
     }
 
