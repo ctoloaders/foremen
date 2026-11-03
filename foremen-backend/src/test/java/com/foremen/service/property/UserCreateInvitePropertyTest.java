@@ -107,7 +107,7 @@ class UserCreateInvitePropertyTest {
         when(f.roleDao.findById(anyLong())).thenReturn(Optional.of(role(roleId, roleCode)));
 
         UserServiceExtendedModel model = new UserServiceExtendedModel(
-                null, name, email, null, roleId, null, active, locale, null, null, null, null, null);
+                null, name, email, null, roleId, null, active, locale, null, null, null, null, null, null);
 
         f.service.create(model);
 

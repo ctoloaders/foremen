@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-06 (Requirements 1.4, 1.8): the allocation table — how much of a worker-wide payout
+        went to which report line. Replaces the FOR-06-11 work_report_rooms.paid_by_payout_id
+        marker (dropped by changeset 192); one line may be paid partially by many payouts and one
+        payout may cover many lines across projects.
+
+        Columns:
+          - id                  : BIGSERIAL PK (BaseEntity).
+          - payout_id           : FK -> worker_payouts(id), NOT NULL, ON DELETE CASCADE — deleting
+                                  a PLANNED payout removes its allocations.
+          - work_report_room_id : FK -> work_report_rooms(id), NOT NULL, ON DELETE CASCADE.
+          - amount              : NUMERIC(19,2) NOT NULL, CHECK amount > 0 — the part of the
+                                  payout applied to the line.
+        Plus the four BaseEntity audit columns.
+
+        Constraints / indices:
+          - uq_worker_payout_allocations_payout_line UNIQUE (payout_id, work_report_room_id) — at
+            most one allocation of a payout per line (also serves payout_id lookups);
+          - ix_worker_payout_allocations_line (work_report_room_id) — per-line paid reads.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN. Registered LAST in
+        changelog.xml, after 193.
+    -->
+
+    <changeSet id="194-create-worker-payout-allocations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="worker_payout_allocations"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="worker_payout_allocations">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- The payout this allocation belongs to. -->
+            <column name="payout_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- The report line paid (partially or fully) by this allocation. -->
+            <column name="work_report_room_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Part of the payout applied to the line; strictly positive. -->
+            <column name="amount" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            constraintName="fk_worker_payout_allocations_payout"
+            baseTableName="worker_payout_allocations"
+            baseColumnNames="payout_id"
+            referencedTableName="worker_payouts"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint
+            constraintName="fk_worker_payout_allocations_line"
+            baseTableName="worker_payout_allocations"
+            baseColumnNames="work_report_room_id"
+            referencedTableName="work_report_rooms"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addUniqueConstraint
+            constraintName="uq_worker_payout_allocations_payout_line"
+            tableName="worker_payout_allocations"
+            columnNames="payout_id, work_report_room_id"/>
+
+        <createIndex tableName="worker_payout_allocations" indexName="ix_worker_payout_allocations_line">
+            <column name="work_report_room_id"/>
+        </createIndex>
+
+        <sql>
+            ALTER TABLE worker_payout_allocations
+                ADD CONSTRAINT ck_worker_payout_allocations_amount_positive CHECK (amount &gt; 0);
+        </sql>
+        <rollback>
+            <dropTable tableName="worker_payout_allocations"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

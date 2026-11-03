@@ -82,4 +82,11 @@ public class WorkReportServiceExtendedModel {
     /** Forward-compat cost placeholders — always null (cost side is FOR-06-10/11, R6.5). */
     private java.math.BigDecimal costValue;
     private java.math.BigDecimal margin;
+
+    /**
+     * FOR-07-06 R12.1 — the report's aggregate payment status; read path only, {@code null} unless
+     * {@code APPROVED}. Set by {@code WorkReportService}; per-room status/paid amount live on
+     * {@link #rooms}. No payout ids/channels are exposed (R12.2).
+     */
+    private com.foremen.service.payroll.LinePaymentStatus paymentStatus;
 }

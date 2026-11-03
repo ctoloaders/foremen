@@ -91,6 +91,8 @@ public abstract class UserServiceMapper
     // FOR-02-07 — the service resolves workerTypeId into a managed WorkerTypeEntity, so the mapper
     // must not touch the association from the model's ref/id fields.
     @Mapping(target = "workerType", ignore = true)
+    // FOR-07-06 (R3.2) — the service applies the role-gated, validated seniority (resolveSeniority).
+    @Mapping(target = "seniorityPct", ignore = true)
     public abstract UserEntity toCreateDaoModel(UserServiceExtendedModel source);
 
     @Override
@@ -99,6 +101,7 @@ public abstract class UserServiceMapper
     @Mapping(target = "locale", ignore = true)
     @Mapping(target = "workCategories", ignore = true)
     @Mapping(target = "workerType", ignore = true)
+    @Mapping(target = "seniorityPct", ignore = true)
     public abstract void updateFields(UserServiceExtendedModel source, @MappingTarget UserEntity target);
 
     /**

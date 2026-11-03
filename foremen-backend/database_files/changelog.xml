@@ -860,4 +860,29 @@
     <!-- FOR-05-02 bug-report Round 4: fixed per-project room order (rooms.sort_order, backfilled
          0..n by id). Registered LAST, after 190. -->
     <include file="database_files/changesets/191-rooms-sort-order.xml"/>
+    <!-- FOR-07-06 (company payroll): drop the FOR-06-11 work_report_rooms.paid_by_payout_id marker
+         and add paid_amount NUMERIC(19,2) NOT NULL DEFAULT 0 (CHECK >= 0). No data conversion.
+         Registered LAST, after 191. -->
+    <include file="database_files/changesets/192-payroll-report-line-paid-amount.xml"/>
+    <!-- FOR-07-06: worker-wide payouts — drop worker_payouts.project_id (index + FK), add
+         payout_date DATE NOT NULL DEFAULT CURRENT_DATE + index (worker_id, payout_date).
+         Registered LAST, after 192. -->
+    <include file="database_files/changesets/193-worker-payouts-worker-wide.xml"/>
+    <!-- FOR-07-06: worker_payout_allocations (payout -> report line partial amounts, both FKs
+         ON DELETE CASCADE, unique (payout_id, work_report_room_id)). Registered LAST, after 193. -->
+    <include file="database_files/changesets/194-create-worker-payout-allocations.xml"/>
+    <!-- FOR-07-06: worker_payroll_lines (per-month additional bonus/deduction lines, amount <> 0).
+         Registered LAST, after 194. -->
+    <include file="database_files/changesets/195-create-worker-payroll-lines.xml"/>
+    <!-- FOR-07-06: worker_payroll_profiles (one per worker, opening_balance DEFAULT 0).
+         Registered LAST, after 195. -->
+    <include file="database_files/changesets/196-create-worker-payroll-profiles.xml"/>
+    <!-- FOR-07-06: users.seniority_pct NUMERIC(6,4) NOT NULL DEFAULT 0, CHECK 0..1.
+         Registered LAST, after 196. -->
+    <include file="database_files/changesets/197-add-user-seniority-pct.xml"/>
+
+    <!-- FOR-07-06 (R14.3): revoke the FOR-06-11 FOREMAN PAYROLL/READ grant (FOREMAN becomes
+         deny-by-default; paid status stays visible via work reports). Idempotent (MARK_RAN when the
+         grant is already absent). Registered LAST, after 197. -->
+    <include file="database_files/changesets/198-revoke-foreman-payroll-read.xml"/>
 </databaseChangeLog>

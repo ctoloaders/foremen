@@ -2,11 +2,14 @@ package com.foremen.service.workercost;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -14,11 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.AdminDao;
-import com.foremen.dao.ProjectMemberDao;
+import com.foremen.dao.UserDao;
 import com.foremen.dao.WorkReportDao;
 import com.foremen.dao.WorkerTypeDao;
-import com.foremen.dao.model.AssignmentStatus;
-import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.dao.model.WorkReportEntity;
@@ -38,17 +39,17 @@ import jakarta.persistence.EntityManager;
 /**
  * FOR-06-10 (design §B1, R1, R2, R3, R5, R7) — the single, reusable, project-scoped, read-only
  * <strong>worker service-cost</strong> derivation seam. Given a project, it resolves each
- * {@code APPROVED} work report's worker type (via {@code ProjectMember.workerType}, base-tier
- * fallback), derives the unit {@code Worker_Service_Cost} and the total {@code Cost_Value} through the
- * FOR-05-06 {@link com.foremen.service.estimate.margins.MarginCostService} core reused verbatim (via
+ * {@code APPROVED} work report's worker tier, derives the unit {@code Worker_Service_Cost} and the
+ * total {@code Cost_Value} through the FOR-05-06
+ * {@link com.foremen.service.estimate.margins.MarginCostService} core reused verbatim (via
  * {@link WorkerCostDerivation}), and folds the per-worker and per-work-item aggregates — the cost side
- * the FOR-06-01 {@code WorkReport} deliberately left out, consumed by FOR-06-06 (margin matrix) and
- * FOR-06-11 (payroll). There is exactly one cost formula shared with the estimate side (R1.2).
+ * the FOR-06-01 {@code WorkReport} deliberately left out, consumed by FOR-06-10's read model and the
+ * payroll. There is exactly one cost formula shared with the estimate side (R1.2).
  *
  * <p>It is a pure derivation over existing read models — it <strong>reads</strong> the approved
  * reports ({@code clientUnitPrice} / {@code totalQuantity}, read as-is per R1.4), the active
- * {@code WorkerType} tiers, and the project memberships, and changes none. It persists no cost column,
- * mutates no report / membership / tier (R2.5), and emits <strong>no</strong> notifications (R7.1).
+ * {@code WorkerType} tiers, and the worker users, and changes none. It persists no cost column,
+ * mutates no report / user / tier (R2.5), and emits <strong>no</strong> notifications (R7.1).
  *
  * <p><b>Project scope (R5.3).</b> Following the FOR-03-04a single-contract shape (mirrors
  * {@code WorkReportService} / {@code MarginMatrixService}), it implements exactly one CRUD contract —
@@ -57,13 +58,14 @@ import jakarta.persistence.EntityManager;
  * through the inherited project filter and never returns another project's data; the bespoke
  * {@link #costForProject(Long)} read takes the {@code projectId} directly.
  *
- * <p><b>Worker-tier resolution (R2).</b> The project's {@code ProjectMember} rows are batched once
- * into a {@code userId → active workerType} map (no N+1): a member contributes its {@code workerType}
- * only when the member is ACTIVE and the type is ACTIVE — otherwise (no membership, inactive
- * membership, null type, inactive type) the worker is absent from the map and {@link WorkerCostDerivation#tierFor}
- * falls back to the base tier with {@code baseTierFallback = true} (R2.1, R2.2). This mirrors the
- * FOR-06-06 {@code MarginMatrixService} resolution exactly, so the refactor (task 4.1) is
- * penny-for-penny behaviour-preserving (R4.2).
+ * <p><b>Worker-tier resolution (FOR-07-06 R2).</b> The tier follows the <strong>worker user</strong>,
+ * not the project membership: the workers present in the reports are batched once (no N+1) via
+ * {@link #workerProfilesById(Collection)} into {@code userId → WorkerProfile(workerType,
+ * seniorityPct)}, and each tier is resolved through the pure {@link EffectiveTier} — an active type
+ * costs at {@code Base_Cost × (1 + tierUplift + seniorityPct)}; a missing / inactive type falls back
+ * to the base tier (+ seniority) with {@code baseTierFallback = true} (R2.1–R2.3). With
+ * {@code seniorityPct = 0} the result equals FOR-06-10 for the same tier (R2.4). The FOR-06-06 margin
+ * matrix keeps its own member-based resolution and is unaffected (R2.5).
  */
 @Service
 public class WorkerCostService
@@ -75,8 +77,7 @@ public class WorkerCostService
     private final ProjectAccessCache projectAccessCache;
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
-
-    private final ProjectMemberDao projectMemberDao;
+    private final UserDao userDao;
     private final WorkerTypeDao workerTypeDao;
 
     public WorkerCostService(WorkReportDao workReportDao,
@@ -84,14 +85,14 @@ public class WorkerCostService
                              ProjectAccessCache projectAccessCache,
                              AuditLogDao auditLogDao,
                              EntityManager entityManager,
-                             ProjectMemberDao projectMemberDao,
+                             UserDao userDao,
                              WorkerTypeDao workerTypeDao) {
         this.workReportDao = workReportDao;
         this.serviceMapper = serviceMapper;
         this.projectAccessCache = projectAccessCache;
         this.auditLogDao = auditLogDao;
         this.entityManager = entityManager;
-        this.projectMemberDao = projectMemberDao;
+        this.userDao = userDao;
         this.workerTypeDao = workerTypeDao;
     }
 
@@ -149,9 +150,9 @@ public class WorkerCostService
      *   <li>load the active {@code WorkerType} tiers to resolve the base tier (R2.3);</li>
      *   <li>load the project's {@code APPROVED} work reports (reusing
      *       {@link WorkReportDao#findApprovedByProjectWithWorkItemAndWorker(Long)}, R3.1/R3.3);</li>
-     *   <li>batch the project's {@code ProjectMember} rows once into a {@code userId → active workerType}
-     *       map (R2.1, avoid N+1);</li>
-     *   <li>for each report compose {@link WorkerCostDerivation#tierFor} + the cost math into a
+     *   <li>batch the workers present in those reports once into {@code userId → WorkerProfile}
+     *       (FOR-07-06 R2.1, avoid N+1);</li>
+     *   <li>for each report resolve the tier via {@link EffectiveTier} + the cost math into a
      *       {@link WorkerCostLineDto} ({@code workItemRate = clientUnitPrice} read as-is, R1.4);</li>
      *   <li>fold the per-worker and per-work-item aggregates over the approved reports, excluding any
      *       unavailable-cost line from every sum (R3.2, R3.4).</li>
@@ -165,7 +166,6 @@ public class WorkerCostService
     @Transactional(readOnly = true)
     public WorkerCostReadModelDto costForProject(Long projectId) {
         boolean ru = isRussianLocale();
-
         WorkerTypeEntity baseType = findBaseType();
         WorkerTypeTier baseTier = baseType == null ? null : WorkerTypeTier.base(baseType.getTierPct());
         String baseTierName = baseType == null ? null : workerTypeName(baseType, ru);
@@ -175,8 +175,7 @@ public class WorkerCostService
         if (reports.isEmpty()) {
             return new WorkerCostReadModelDto(projectId, List.of(), List.of(), List.of());
         }
-
-        Map<Long, WorkerTypeEntity> activeTypeByWorkerId = activeTypeByWorkerId(projectId);
+        Map<Long, WorkerProfile> profilesById = workerProfilesById(workerIdsOf(reports));
 
         List<WorkerCostLineDto> lines = new ArrayList<>(reports.size());
         WorkerAggregator byWorker = new WorkerAggregator();
@@ -193,11 +192,12 @@ public class WorkerCostService
             Long workItemId = workItem == null ? null : workItem.getId();
             String workItemName = workItem == null ? null : workItemName(workItem, ru);
 
-            ResolvedTier resolved =
-                    WorkerCostDerivation.tierFor(workerId, activeTypeByWorkerId, baseType);
+            WorkerProfile profile = workerId == null ? null : profilesById.get(workerId);
+            ResolvedTier resolved = WorkerProfile.resolve(profile, baseType);
             String tierName = resolved.baseTierFallback()
                     ? baseTierName
-                    : activeTypeName(activeTypeByWorkerId.get(workerId), ru);
+                    : activeTypeName(profile.workerType(), ru);
+            BigDecimal seniorityPct = profile == null ? BigDecimal.ZERO : profile.seniorityPct();
 
             BigDecimal rate = report.getClientUnitPrice();   // read as-is (R1.4)
             BigDecimal quantity = report.getTotalQuantity();
@@ -215,6 +215,7 @@ public class WorkerCostService
                     resolved.workerTypeId(),
                     tierName,
                     resolved.baseTierFallback(),
+                    seniorityPct,
                     rate,
                     quantity,
                     unitServiceCost,
@@ -232,72 +233,85 @@ public class WorkerCostService
     }
 
     /**
-     * Per-report convenience for FOR-06-06's assembler (task 4.1): derive a single report's total
-     * {@code Cost_Value} from a pre-resolved base tier and the pre-built {@code userId → active
-     * workerType} member map, so the caller derives it inside its existing loop without re-querying.
-     * Reuses the exact same resolution + cost math as {@link #costForProject(Long)}, guaranteeing the
-     * single cost-side formula (R4.1, R4.2). An unavailable (null/zero) rate or unknown quantity
-     * yields {@code null} (never a fabricated zero, R1.5).
+     * Per-report convenience for consumers costing inside their own loop: derive a single report's
+     * total {@code Cost_Value} from a pre-resolved base tier and a pre-built
+     * {@code userId → WorkerProfile} map (see {@link #workerProfilesById(Collection)}), without
+     * re-querying. Reuses the exact same resolution ({@link EffectiveTier}) + cost math as
+     * {@link #costForProject(Long)} (single formula, R2.5). An unavailable (null/zero) rate or unknown
+     * quantity yields {@code null} (never a fabricated zero, R2.6).
      *
-     * @param report   the APPROVED work report to cost; {@code null} ⇒ {@code null}
-     * @param baseTier the resolved base {@link WorkerTypeTier} (its share scales the rate); {@code null}
-     *                 ⇒ the {@code MarginCostService} default base share
-     * @param baseType the active base {@code WorkerType} (the {@code is_base = true} row) the tier
-     *                 resolution uses for its fallback; {@code null} when unseeded
-     * @param activeTypeByWorkerId a pre-built {@code userId → active workerType} map (an INACTIVE type
-     *                 or inactive member MUST NOT be present); {@code null} ⇒ base-tier fallback
+     * @param report       the APPROVED work report to cost; {@code null} ⇒ {@code null}
+     * @param baseTier     the resolved base {@link WorkerTypeTier}; {@code null} ⇒ the
+     *                     {@code MarginCostService} default base share
+     * @param baseType     the active base {@code WorkerType} (the {@code is_base = true} row) used for the
+     *                     fallback; {@code null} when unseeded
+     * @param profilesById a pre-built {@code userId → WorkerProfile} map; {@code null} or a missing
+     *                     worker ⇒ base-tier fallback
      * @return the report's total worker cost, or {@code null} when unavailable
      */
     public BigDecimal costFor(WorkReportEntity report,
                               WorkerTypeTier baseTier,
                               WorkerTypeEntity baseType,
-                              Map<Long, WorkerTypeEntity> activeTypeByWorkerId) {
+                              Map<Long, WorkerProfile> profilesById) {
         if (report == null) {
             return null;
         }
         UserEntity worker = report.getWorker();
         Long workerId = worker == null ? null : worker.getId();
-        ResolvedTier resolved = WorkerCostDerivation.tierFor(workerId, activeTypeByWorkerId, baseType);
+        WorkerProfile profile = workerId == null || profilesById == null ? null : profilesById.get(workerId);
+        ResolvedTier resolved = WorkerProfile.resolve(profile, baseType);
         return WorkerCostDerivation.costValue(
                 report.getClientUnitPrice(), resolved.tier(), baseTier, report.getTotalQuantity());
     }
 
     /**
-     * Batch the project's {@code ProjectMember} rows into a {@code userId → active workerType} map so
-     * each report's worker tier resolves without an N+1 (R2.1). A worker is present ONLY when the
-     * member is ACTIVE and the referenced {@code workerType} is non-null and ACTIVE — so an inactive
-     * member, a null (Uncategorized) type, or an inactive type leaves the worker absent, and
-     * {@link WorkerCostDerivation#tierFor} then falls back to the base tier (R2.2), identical to the
-     * FOR-06-06 {@code MarginMatrixService} resolution. On a (schema-forbidden) duplicate
-     * {@code (user, project)} the first wins.
+     * FOR-07-06 R2.1 — batch the given worker users into a {@code userId → WorkerProfile} map in one
+     * query ({@link UserDao#findWorkerProfiles(Collection)}, JOIN FETCH {@code workerType}). The
+     * profile carries the user's {@code workerType} <em>as stored</em> (possibly {@code null} or
+     * inactive — {@link EffectiveTier} applies the base-tier fallback) and its {@code seniorityPct}
+     * ({@code null} ⇒ 0). Null ids are ignored; an empty input yields an empty map without querying.
+     * An id with no user row is simply absent (⇒ base-tier fallback for the caller).
+     *
+     * @param workerIds the worker user ids to resolve
+     * @return the {@code userId → WorkerProfile} map; never {@code null}
      */
-    private Map<Long, WorkerTypeEntity> activeTypeByWorkerId(Long projectId) {
-        Map<Long, WorkerTypeEntity> byUserId = new HashMap<>();
-        for (ProjectMemberEntity member : projectMemberDao.findByProjectId(projectId)) {
-            if (member == null || member.getUser() == null) {
+    @Transactional(readOnly = true)
+    public Map<Long, WorkerProfile> workerProfilesById(Collection<Long> workerIds) {
+        if (workerIds == null || workerIds.isEmpty()) {
+            return Map.of();
+        }
+        Set<Long> ids = new LinkedHashSet<>();
+        for (Long id : workerIds) {
+            if (id != null) {
+                ids.add(id);
+            }
+        }
+        if (ids.isEmpty()) {
+            return Map.of();
+        }
+        Map<Long, WorkerProfile> byId = new HashMap<>();
+        for (UserEntity user : userDao.findWorkerProfiles(ids)) {
+            if (user == null || user.getId() == null) {
                 continue;
             }
-            boolean memberActive = member.getAssignmentStatus() == AssignmentStatus.ACTIVE;
-            WorkerTypeEntity type = member.getWorkerType();
-            if (!memberActive || type == null || !type.isActive()) {
-                continue; // inactive member / Uncategorized / inactive type ⇒ base-tier fallback (R2.2)
-            }
-            byUserId.putIfAbsent(member.getUser().getId(), type);
+            byId.putIfAbsent(user.getId(),
+                    new WorkerProfile(user.getId(), user.getWorkerType(), user.getSeniorityPct()));
         }
-        return byUserId;
+        return byId;
     }
 
-    /**
-     * Publicly expose the batched {@code userId → active workerType} member map so FOR-06-06's
-     * assembler (task 4.1) can build it once and pass it into {@link #costFor} per report in its
-     * existing loop, avoiding a re-query. Same resolution contract as the private batch used by
-     * {@link #costForProject(Long)}.
-     *
-     * @param projectId the owning project id
-     * @return the {@code userId → active workerType} map for the project's ACTIVE members
-     */
-    public Map<Long, WorkerTypeEntity> activeWorkerTypesByWorkerId(Long projectId) {
-        return activeTypeByWorkerId(projectId);
+    /** The distinct, non-null worker ids present in the reports (insertion-ordered). */
+    private static Set<Long> workerIdsOf(List<WorkReportEntity> reports) {
+        Set<Long> ids = new LinkedHashSet<>();
+        for (WorkReportEntity report : reports) {
+            if (report != null && report.getWorker() != null) {
+                Long id = report.getWorker().getId();
+                if (Objects.nonNull(id)) {
+                    ids.add(id);
+                }
+            }
+        }
+        return ids;
     }
 
     // --- Worker-type tiers ---------------------------------------------------------------------

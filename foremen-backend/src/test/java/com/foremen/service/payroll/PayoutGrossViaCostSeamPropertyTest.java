@@ -5,9 +5,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,7 +22,9 @@ import net.jqwik.api.Provide;
 import net.jqwik.api.Tag;
 
 import com.foremen.dao.WorkReportDao;
+import com.foremen.dao.WorkReportRoomDao;
 import com.foremen.dao.WorkerPayoutDao;
+import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkItemEntity;
@@ -30,94 +32,86 @@ import com.foremen.dao.model.WorkReportEntity;
 import com.foremen.dao.model.WorkReportRoomEntity;
 import com.foremen.dao.model.WorkerPayoutEntity;
 import com.foremen.dao.model.WorkerTypeEntity;
+import com.foremen.service.estimate.margins.WorkerTypeTier;
 import com.foremen.service.payroll.dto.PayoutLineDto;
 import com.foremen.service.payroll.dto.PayoutSuggestionDto;
 import com.foremen.service.workercost.WorkerCostDerivation;
 import com.foremen.service.workercost.WorkerCostService;
-import com.foremen.service.estimate.margins.WorkerTypeTier;
 
 /**
- * FOR-06-11 task 8.1 — <b>Property 1: GrossViaCostSeam</b> (design §Correctness Properties).
+ * <b>GrossViaCostSeam</b> (FOR-06-11 Property 1, reshaped by FOR-07-06 5.1 to the worker-wide,
+ * remainder-based suggestion).
  *
- * <p>For any set of the worker's {@code APPROVED} report lines and any period, the gross computed by
- * {@link PayoutSuggestionService#suggest} equals the sum of the FOR-06-10 {@code Cost_Value} over
- * exactly the <b>unpaid</b> ({@code paidByPayout} null), available lines; an unavailable (null/zero
- * rate) line contributes nothing and is marked excluded, an already-paid line is never offered, and
- * adding an unavailable line leaves the gross unchanged. No second cost formula produces a different
- * number — the expectation re-folds the identical single seam ({@link WorkerCostDerivation}).
+ * <p>For any set of the worker's candidate lines (any project, any partial paid amount), the gross
+ * equals {@code Σ max(0, Cost_Value − paidAmount)} over exactly the lines with an available cost,
+ * where {@code Cost_Value} is re-folded through the single seam ({@link WorkerCostDerivation}); an
+ * unavailable line is marked and contributes nothing, a fully paid line is not listed, and adding an
+ * unavailable line leaves the gross unchanged.
  *
- * <p><b>Validates: Requirements 3.1, 3.4</b>
+ * <p><b>Validates: Requirements 4.2, 4.4</b>
  */
-@Tag("Feature: FOR-06-11-payroll, Property 1: gross == Σ FOR-06-10 Cost_Value over the unpaid in-period available lines; unavailable excluded")
+@Tag("Feature: FOR-07-06-company-payroll, Property: gross == Σ unpaid remainder over available candidate lines")
 class PayoutGrossViaCostSeamPropertyTest {
 
-    private static final Long PROJECT_ID = 42L;
     private static final Long WORKER_ID = 500L;
     private static final LocalDate FROM = LocalDate.of(2026, 1, 1);
     private static final LocalDate TO = LocalDate.of(2026, 1, 31);
     private static final BigDecimal BASE_SHARE = new BigDecimal("0.40");
 
     @Property(tries = 200)
-    @Tag("Feature: FOR-06-11-payroll, Property 1: gross equals the summed single-seam Cost_Value over available unpaid lines")
-    void grossEqualsSummedCostValueOverAvailableUnpaidLines(@ForAll("lineSpecs") List<LineSpec> specs) {
-        List<WorkReportEntity> reports = buildReports(specs);
-        PayoutSuggestionService service = newService(reports);
+    void grossEqualsSummedRemainderOverAvailableLines(@ForAll("lineSpecs") List<LineSpec> specs) {
+        PayoutSuggestionDto dto = newService(buildLines(specs)).suggest(WORKER_ID, FROM, TO, false);
 
-        PayoutSuggestionDto dto = service.suggest(PROJECT_ID, WORKER_ID, FROM, TO, false);
-
-        // Independently re-fold the SINGLE seam over exactly the available, unpaid lines.
         BigDecimal expected = BigDecimal.ZERO;
+        int expectedListed = 0;
         WorkerTypeTier baseTier = WorkerTypeTier.base(BASE_SHARE);
         for (LineSpec s : specs) {
-            if (s.paid) {
-                continue; // an already-paid line is never offered (R6.2)
-            }
             BigDecimal cost = WorkerCostDerivation.costValue(s.rate, baseTier, baseTier, s.quantity);
-            if (cost != null) {
-                expected = expected.add(cost); // only an available line contributes (R3.4)
+            if (cost == null) {
+                expectedListed++; // unavailable: listed, excluded
+                continue;
+            }
+            BigDecimal remainder = cost.subtract(paidOf(s, cost)).max(BigDecimal.ZERO)
+                    .setScale(2, RoundingMode.HALF_UP);
+            if (remainder.signum() > 0) {
+                expected = expected.add(remainder);
+                expectedListed++;
             }
         }
 
-        assertThat(dto.gross())
-                .as("gross == Σ Cost_Value over available unpaid in-period lines (R3.1, R3.4)")
-                .isEqualByComparingTo(expected);
-
-        // Every unavailable line is in the breakdown, marked excluded, with a null cost.
+        assertThat(dto.gross()).isEqualByComparingTo(expected);
+        assertThat(dto.breakdown()).hasSize(expectedListed);
         for (PayoutLineDto line : dto.breakdown()) {
             if (!line.available()) {
-                assertThat(line.costValue())
-                        .as("an unavailable line has a null cost (never a fabricated zero) (R3.4)")
-                        .isNull();
+                assertThat(line.costValue()).isNull();
+                assertThat(line.remainder()).isNull();
+            } else {
+                assertThat(line.remainder()).isPositive();
             }
         }
     }
 
     @Property(tries = 200)
-    @Tag("Feature: FOR-06-11-payroll, Property 1: adding an unavailable line leaves the gross unchanged")
     void addingAnUnavailableLineLeavesGrossUnchanged(
             @ForAll("lineSpecs") List<LineSpec> specs,
             @ForAll("quantity") BigDecimal extraQty) {
 
-        BigDecimal before = newService(buildReports(specs))
-                .suggest(PROJECT_ID, WORKER_ID, FROM, TO, false).gross();
+        BigDecimal before = newService(buildLines(specs)).suggest(WORKER_ID, FROM, TO, false).gross();
 
-        // append one unpaid, zero-rate (unavailable) line.
         List<LineSpec> withUnavailable = new ArrayList<>(specs);
-        withUnavailable.add(new LineSpec(BigDecimal.ZERO, extraQty, false));
-        BigDecimal after = newService(buildReports(withUnavailable))
-                .suggest(PROJECT_ID, WORKER_ID, FROM, TO, false).gross();
+        withUnavailable.add(new LineSpec(BigDecimal.ZERO, extraQty, PaidMode.NONE));
+        BigDecimal after = newService(buildLines(withUnavailable)).suggest(WORKER_ID, FROM, TO, false).gross();
 
-        assertThat(after)
-                .as("adding an unavailable line leaves the gross unchanged (R3.4)")
-                .isEqualByComparingTo(before);
+        assertThat(after).isEqualByComparingTo(before);
     }
 
     // =======================================================================
     // wiring
     // =======================================================================
 
-    private PayoutSuggestionService newService(List<WorkReportEntity> reports) {
+    private PayoutSuggestionService newService(List<WorkReportRoomEntity> lines) {
         WorkReportDao workReportDao = mock(WorkReportDao.class);
+        WorkReportRoomDao workReportRoomDao = mock(WorkReportRoomDao.class);
         WorkerPayoutDao workerPayoutDao = mock(WorkerPayoutDao.class);
         WorkerCostService workerCostService = mock(WorkerCostService.class);
 
@@ -128,19 +122,17 @@ class PayoutGrossViaCostSeamPropertyTest {
         baseType.setTierPct(BASE_SHARE);
         baseType.setCode("BASE");
         lenient().when(workerCostService.findBaseType()).thenReturn(baseType);
-        lenient().when(workerCostService.activeWorkerTypesByWorkerId(PROJECT_ID)).thenReturn(Map.of());
-        lenient().when(workReportDao.findApprovedInPeriodWithRooms(anyLong(), anyLong(), any(), any()))
-                .thenReturn(reports);
-        // no prior payouts -> zero remaining credit, so the credit layer does not perturb the gross.
-        lenient().when(workerPayoutDao.findByProjectAndWorker(anyLong(), anyLong()))
-                .thenReturn(List.<WorkerPayoutEntity>of());
+        lenient().when(workerCostService.workerProfilesById(any())).thenReturn(Map.of());
+        lenient().when(workReportRoomDao.findPayableLines(anyLong(), any())).thenReturn(lines);
+        lenient().when(workerPayoutDao.findByWorker(anyLong())).thenReturn(List.<WorkerPayoutEntity>of());
 
-        return new PayoutSuggestionService(
-                workReportDao, workerPayoutDao, workerCostService, new AdvanceCreditCalculator());
+        return new PayoutSuggestionService(workReportDao, workReportRoomDao, workerPayoutDao,
+                workerCostService, new AdvanceCreditCalculator());
     }
 
-    private static List<WorkReportEntity> buildReports(List<LineSpec> specs) {
-        List<WorkReportEntity> reports = new ArrayList<>();
+    private static List<WorkReportRoomEntity> buildLines(List<LineSpec> specs) {
+        List<WorkReportRoomEntity> lines = new ArrayList<>();
+        WorkerTypeTier baseTier = WorkerTypeTier.base(BASE_SHARE);
         long id = 1;
         for (LineSpec s : specs) {
             WorkReportEntity r = new WorkReportEntity();
@@ -154,6 +146,9 @@ class PayoutGrossViaCostSeamPropertyTest {
             wi.setNamePL("WI");
             wi.setCode("WI");
             r.setWorkItem(wi);
+            ProjectEntity project = new ProjectEntity();
+            project.setId(id % 3 + 1); // several projects: the suggestion is worker-wide
+            r.setProject(project);
 
             WorkReportRoomEntity line = new WorkReportRoomEntity();
             line.setId(id++);
@@ -163,30 +158,37 @@ class PayoutGrossViaCostSeamPropertyTest {
             room.setLabel("Room");
             line.setRoom(room);
             line.setReport(r);
-            if (s.paid) {
-                WorkerPayoutEntity payer = new WorkerPayoutEntity();
-                payer.setId(9000L);
-                line.setPaidByPayout(payer); // an already-paid line (R6.2)
-            }
-            List<WorkReportRoomEntity> rooms = new ArrayList<>();
-            rooms.add(line);
-            r.setRooms(rooms);
-            reports.add(r);
+            BigDecimal cost = WorkerCostDerivation.costValue(s.rate, baseTier, baseTier, s.quantity);
+            line.setPaidAmount(paidOf(s, cost));
+            lines.add(line);
         }
-        return reports;
+        return lines;
+    }
+
+    /** The paid amount for a spec: none, half (rounded down), or the full cost. */
+    private static BigDecimal paidOf(LineSpec s, BigDecimal cost) {
+        if (cost == null) {
+            return BigDecimal.ZERO;
+        }
+        return switch (s.paid) {
+            case NONE -> BigDecimal.ZERO;
+            case PARTIAL -> cost.divide(BigDecimal.valueOf(2), 2, RoundingMode.DOWN);
+            case FULL -> cost;
+        };
     }
 
     // =======================================================================
     // generators
     // =======================================================================
 
-    /** One report line: its rate (0 ⇒ unavailable), reported quantity, and whether it is already paid. */
-    record LineSpec(BigDecimal rate, BigDecimal quantity, boolean paid) {
+    enum PaidMode { NONE, PARTIAL, FULL }
+
+    /** One candidate line: rate (0 ⇒ unavailable), reported quantity, and how much is already paid. */
+    record LineSpec(BigDecimal rate, BigDecimal quantity, PaidMode paid) {
     }
 
     @Provide
     Arbitrary<BigDecimal> rate() {
-        // Include 0 so unavailable lines occur; otherwise a positive two-decimal price.
         Arbitrary<BigDecimal> positive = Arbitraries.longs().between(1L, 100_000L)
                 .map(c -> BigDecimal.valueOf(c, 2));
         return Arbitraries.oneOf(positive, Arbitraries.just(BigDecimal.ZERO));
@@ -199,8 +201,7 @@ class PayoutGrossViaCostSeamPropertyTest {
 
     @Provide
     Arbitrary<LineSpec> lineSpec() {
-        return Combinators.combine(rate(), quantity(), Arbitraries.of(true, false))
-                .as(LineSpec::new);
+        return Combinators.combine(rate(), quantity(), Arbitraries.of(PaidMode.class)).as(LineSpec::new);
     }
 
     @Provide

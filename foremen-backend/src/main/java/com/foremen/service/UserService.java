@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -91,6 +92,8 @@ public class UserService implements AdminService<
         // FOR-02-07 — validate the optional worker type up front (worker-only; unknown/inactive id
         // rejected). The resolved entity is applied onto the user in create(...).
         resolveWorkerType(role, model.workerTypeId());
+        // FOR-07-06 (R3.3) — reject an out-of-range seniority before anything is persisted.
+        resolveSeniority(role, model.seniorityPct());
     }
 
     /**
@@ -116,6 +119,8 @@ public class UserService implements AdminService<
         // FOR-02-07 — validate the optional worker type up front (worker-only; unknown/inactive id
         // rejected). The resolved entity is applied onto the user in update(...).
         resolveWorkerType(targetRole, update.workerTypeId());
+        // FOR-07-06 (R3.3) — reject an out-of-range seniority before any field is changed.
+        resolveSeniority(targetRole, update.seniorityPct());
     }
 
     /**
@@ -132,8 +137,10 @@ public class UserService implements AdminService<
         List<WorkCategoryEntity> categories = resolveWorkCategories(role, model.workCategoryIds());
         // FOR-02-07 — resolve the optional worker type (worker-only; null otherwise).
         WorkerTypeEntity workerType = resolveWorkerType(role, model.workerTypeId());
+        // FOR-07-06 (R3.1–R3.2) — role-gated seniority (0 for a non-WORKER user / no value).
+        BigDecimal seniority = resolveSeniority(role, model.seniorityPct());
         UserServiceExtendedModel created = AdminService.super.create(model);
-        if (!categories.isEmpty() || workerType != null) {
+        if (!categories.isEmpty() || workerType != null || seniority.signum() != 0) {
             UserEntity entity = dao.findById(created.id())
                     .orElseThrow(() -> new ForemenApiException(
                             HttpStatus.INTERNAL_SERVER_ERROR, "error.entity.not.found", created.id()));
@@ -141,6 +148,7 @@ public class UserService implements AdminService<
             entity.getWorkCategories().addAll(categories);
             // FOR-02-07 — set the optional worker type (null for a non-WORKER user / no selection).
             entity.setWorkerType(workerType);
+            entity.setSeniorityPct(seniority);
             dao.save(entity);
             entityManager.flush();
             // Re-read so the returned model carries the persisted categories (R1.5) + worker type.
@@ -170,6 +178,8 @@ public class UserService implements AdminService<
         // FOR-02-07 — replace the optional worker type (worker-only). resolveWorkerType returns null
         // for a non-WORKER user or a WORKER saved with no selection, which clears it (D-worker-only).
         entity.setWorkerType(resolveWorkerType(entity.getRole(), model.workerTypeId()));
+        // FOR-07-06 (R3.1–R3.2) — replace the seniority; a non-WORKER user / no value stores 0.
+        entity.setSeniorityPct(resolveSeniority(entity.getRole(), model.seniorityPct()));
         dao.save(entity);
         entityManager.flush();
         UserServiceExtendedModel result = mapper.toServiceExtendedModel(entity);
@@ -235,6 +245,8 @@ public class UserService implements AdminService<
                 null,
                 // FOR-02-07 — client registration never carries a worker type.
                 null,
+                null,
+                // FOR-07-06 — nor a seniority (a CLIENT user always stores 0).
                 null
         );
         UserServiceExtendedModel created;
@@ -452,6 +464,31 @@ public class UserService implements AdminService<
                     HttpStatus.BAD_REQUEST, "error.user.workerType.invalid", workerTypeId);
         }
         return workerType;
+    }
+
+    /**
+     * FOR-07-06 (R3.1–R3.3) — resolves the seniority supplement (a fraction, e.g. {@code 0.02} for 2%)
+     * to store on a user. Worker-only like {@link #resolveWorkerType}: a non-WORKER (or {@code null})
+     * role stores {@code 0} regardless of the submitted value (R3.2); a WORKER with no value stores
+     * {@code 0}. A WORKER value outside {@code [0, 1]} is rejected with 400 before any change is
+     * persisted (R3.3).
+     *
+     * @param role  the user's resolved role (determines worker-only applicability)
+     * @param value the submitted seniority fraction (optional)
+     * @return the seniority to store, never {@code null}
+     * @throws ForemenApiException 400 {@code error.user.seniorityPct.invalid} for a WORKER value
+     *                             below 0 or above 1
+     */
+    BigDecimal resolveSeniority(RoleEntity role, BigDecimal value) {
+        boolean worker = role != null && WORKER_ROLE_CODE.equals(role.getCode());
+        if (!worker || value == null) {
+            return BigDecimal.ZERO;
+        }
+        if (value.signum() < 0 || value.compareTo(BigDecimal.ONE) > 0) {
+            throw new ForemenApiException(
+                    HttpStatus.BAD_REQUEST, "error.user.seniorityPct.invalid", value);
+        }
+        return value;
     }
 
     /**

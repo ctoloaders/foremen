@@ -22,5 +22,7 @@ public record UserDtoExtendedModel(
         Map<String, Object> displayPreferences,
         List<RefDto> workCategories,
         // FOR-02-07 — OPTIONAL worker-type (id + localized name) for a WORKER user; null otherwise.
-        RefDto workerType
+        RefDto workerType,
+        // FOR-07-06 (R3) — seniority supplement fraction; always 0 for a non-WORKER user.
+        java.math.BigDecimal seniorityPct
 ) {}

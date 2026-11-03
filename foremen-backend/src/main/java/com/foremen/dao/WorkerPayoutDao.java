@@ -1,5 +1,7 @@
 package com.foremen.dao;
 
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.Query;
@@ -9,47 +11,44 @@ import org.springframework.stereotype.Repository;
 import com.foremen.dao.model.WorkerPayoutEntity;
 
 /**
- * FOR-06-11 (design §Components) — DAO for {@link WorkerPayoutEntity}. The generic {@link AdminDao}
- * CRUD + {@code JpaSpecificationExecutor} surface backs the core {@code WorkerPayoutService}, which
- * is a {@code ProjectScopedService}: its LIST reads flow through the inherited specification
- * ({@code addRequiredQuery()} project filter on {@code "project.id"}), and its by-id reads/mutations
- * go through the inherited {@code findById} / {@code save} / {@code delete} with the per-id
- * project-access guard.
+ * FOR-06-11 / FOR-07-06 (design §WorkerPayoutService, §PayrollReadModelService) — DAO for
+ * {@link WorkerPayoutEntity}. The generic {@link AdminDao} CRUD + {@code JpaSpecificationExecutor}
+ * surface backs the company-wide {@code WorkerPayoutService}.
  *
- * <p>Adds the two project-scoped finders the payroll read model and the advance-credit running
- * balance need: all of a project's payouts (with worker fetched) and all of a worker's payouts on a
- * project (fed verbatim to {@code AdvanceCreditCalculator.remaining(...)}).
+ * <p>FOR-07-06: payouts are worker-wide (no project), so the FOR-06-11 project finders were replaced
+ * by worker finders: all payouts of one worker (fed verbatim to
+ * {@code AdvanceCreditCalculator.remaining(...)} for the worker-wide advance credit) and a batched
+ * finder for the read model (payouts of many workers with {@code payout_date <= to}).
  */
 @Repository
 public interface WorkerPayoutDao extends AdminDao<WorkerPayoutEntity, Long> {
 
     /**
-     * All payouts of a project with the {@link WorkerPayoutEntity#getWorker() worker} fetch-joined,
-     * so the payroll read model ({@code PayrollView}) resolves each row's worker display name without
-     * an N+1 over the LAZY association (R11.1). Ordered by {@code (worker, periodFrom, id)} for a
-     * stable list.
+     * All payouts of one worker (any status, any project), fed verbatim to
+     * {@code AdvanceCreditCalculator.remaining(...)} to fold the worker-wide remaining advance credit
+     * (R6.3, R7). Ordered by {@code (periodFrom, id)}.
      *
-     * @param projectId the owning project id
-     * @return the project's payouts with worker fetched, empty when none
+     * @param workerId the worker whose payouts are returned
+     * @return the worker's payouts, empty when none
      */
     @Query("SELECT p FROM WorkerPayoutEntity p "
-            + "JOIN FETCH p.worker "
-            + "WHERE p.project.id = :projectId "
-            + "ORDER BY p.worker.id, p.periodFrom, p.id")
-    List<WorkerPayoutEntity> findByProjectWithWorker(@Param("projectId") Long projectId);
+            + "WHERE p.worker.id = :workerId "
+            + "ORDER BY p.periodFrom, p.id")
+    List<WorkerPayoutEntity> findByWorker(@Param("workerId") Long workerId);
 
     /**
-     * All payouts of a single worker on a project (any status), fed verbatim to
-     * {@code AdvanceCreditCalculator.remaining(...)} to fold the worker's remaining advance credit
-     * running balance (R5.6, R5.8). Ordered by {@code (periodFrom, id)}.
+     * The payouts of the given workers whose {@code payoutDate <= to} (any status), with the worker
+     * fetch-joined — one batched query for the company table / worker card balance chain
+     * (R9.3, R10, R11). Ordered by {@code (worker id, payoutDate, id)}.
      *
-     * @param projectId the owning project id
-     * @param workerId  the worker whose payouts are returned
-     * @return the worker's payouts on the project, empty when none
+     * @param workerIds the worker ids; must not be empty
+     * @param to        inclusive upper bound on {@code payoutDate}
+     * @return the matching payouts, empty when none
      */
     @Query("SELECT p FROM WorkerPayoutEntity p "
-            + "WHERE p.project.id = :projectId AND p.worker.id = :workerId "
-            + "ORDER BY p.periodFrom, p.id")
-    List<WorkerPayoutEntity> findByProjectAndWorker(@Param("projectId") Long projectId,
-                                                    @Param("workerId") Long workerId);
+            + "JOIN FETCH p.worker w "
+            + "WHERE w.id IN :workerIds AND p.payoutDate <= :to "
+            + "ORDER BY w.id, p.payoutDate, p.id")
+    List<WorkerPayoutEntity> findByWorkersAndPayoutDateLte(@Param("workerIds") Collection<Long> workerIds,
+                                                           @Param("to") LocalDate to);
 }

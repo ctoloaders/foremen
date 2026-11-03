@@ -1,0 +1,571 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create changesets 192–197 and register them in `changelog.xml`": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646590
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651656788
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652496439
+      }
+    ],
+    "1.2 Create changeset 198 revoking FOREMAN `PAYROLL`/READ": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646629
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652508071
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652595010
+      }
+    ],
+    "2.1 `EffectiveTier` + `EffectiveTierPropertyTest`": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646661
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652603251
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652848389
+      }
+    ],
+    "2.2 `PayoutDistributor` + `PayoutDistributorPropertyTest`": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646689
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652852501
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652983274
+      }
+    ],
+    "2.3 `MonthAttribution` + `BalanceCalculator` + property tests": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646719
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652987229
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653115992
+      }
+    ],
+    "2.4 `PayrollHintSelector` + `PayrollHintSelectorPropertyTest`": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646751
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653120598
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653208826
+      }
+    ],
+    "2.5 `LinePaymentStatus` / `ReportPaymentStatus` + property test": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646774
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653213177
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653328660
+      }
+    ],
+    "3.1 Entities and DAOs": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646805
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653333417
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793654133438
+      }
+    ],
+    "4.1 `WorkerCostService` resolves the user's worker type + seniority": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646839
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793654137926
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793654695440
+      }
+    ],
+    "4.2 `seniorityPct` on the user API": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646862
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793654699774
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793655037961
+      }
+    ],
+    "5.1 `PayoutSuggestionService` worker-wide": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646895
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793655042555
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793655389551
+      }
+    ],
+    "5.2 `WorkerPayoutService` reshape + `AllocationWriter`": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651646922
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793655393887
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793656471463
+      }
+    ],
+    "5.3 `PayrollLineService`, `PayrollProfileService`": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647154
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793656475738
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793656763235
+      }
+    ],
+    "5.4 `PayrollReadModelService` (table + card)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647213
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793656767821
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657232291
+      }
+    ],
+    "5.5 Payment status on work-report DTOs": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647276
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657237164
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657737591
+      }
+    ],
+    "6.1 `WorkerPayoutController` reshape": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647311
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657742586
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657855163
+      }
+    ],
+    "6.2 `PayrollController` (`/api/payroll`)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647360
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657860475
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658066932
+      }
+    ],
+    "6.3 Backend message bundles": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647413
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658071779
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658155338
+      }
+    ],
+    "7.1 Unit/property test updates": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647456
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658160448
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658348779
+      }
+    ],
+    "7.2 Integration tests": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647496
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658353948
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659316004
+      }
+    ],
+    "8.1 Locale keys PL + RU": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647538
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659321766
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659490890
+      }
+    ],
+    "8.2 Date-range lib + persisted filters hook": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647597
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659496321
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659693098
+      }
+    ],
+    "8.3 Move the payroll module, remove the project tab": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647653
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659698199
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793660325315
+      }
+    ],
+    "8.4 Company API client, hooks, types": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647688
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793660330854
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793660576866
+      }
+    ],
+    "8.5 Company payroll page, filter bar, table": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647726
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793660587750
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793660973046
+      }
+    ],
+    "8.6 Worker payroll card": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647787
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793660978092
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793661540060
+      }
+    ],
+    "8.7 Navigation, router, route permissions": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647840
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793661545878
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793661748206
+      }
+    ],
+    "8.8 Seniority field in the user form": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647879
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793661753419
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793662227314
+      }
+    ],
+    "8.9 Payment-status badges in work reporting": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647912
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793662232978
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793662593476
+      }
+    ],
+    "10. Final checkpoint": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793651647952
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793662599176
+      },
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793697667810
+      }
+    ],
+    "1. Schema (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793652595136
+      }
+    ],
+    "2. Pure collaborators + property tests (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793653329006
+      }
+    ],
+    "3. Persistence (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793654133566
+      }
+    ],
+    "4. Cost seam and user seniority (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793655038017
+      }
+    ],
+    "5. Payroll services (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793657737626
+      }
+    ],
+    "6. Controllers and messages (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793658155453
+      }
+    ],
+    "7. Backend verification (root repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793659316100
+      }
+    ],
+    "8. Frontend (foremen-frontend repo)": [
+      {
+        "executionId": "9f168fe6-5cd3-410b-8c61-0b5b453e0290",
+        "chatSessionId": "sess_581a83af-f7fc-4251-b726-043cb45af6af",
+        "timestamp": 1793662593532
+      }
+    ]
+  }
+}

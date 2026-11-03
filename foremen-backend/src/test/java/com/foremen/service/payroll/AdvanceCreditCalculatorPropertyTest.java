@@ -29,13 +29,21 @@ import net.jqwik.api.Tag;
  * a regular payout decrements the running balance by exactly {@code min(remaining, gross)} and an
  * advance increments it by exactly its amount.
  *
+ * <p><b>FOR-07-06 Property 6 (Worker-wide credit)</b> — payouts are no longer bound to a project, so
+ * the calculator's input is <b>all</b> payouts of a worker (whatever projects their lines came from,
+ * {@code WorkerPayoutDao.findByWorker}). The generated payouts carry an origin-project tag only to
+ * model that history: the remaining credit is one fold over the whole list — never a per-project sum
+ * of separately floored balances — and an advance issued while the worker was on one project offsets
+ * a regular payout whose lines belong to another.
+ *
  * <p>All monetary comparisons use the production {@code NUMERIC(19,2)} / {@link RoundingMode#HALF_UP}
  * normalization so the expectations match the calculator's own scaling. Minimum 100 iterations each,
  * per the design test strategy.
  *
- * <p><b>Validates: Requirements 3.2, 5.5, 5.6</b>
+ * <p><b>Validates: Requirements 3.2, 5.5, 5.6 (FOR-06-11); 7.1, 7.2 (FOR-07-06)</b>
  */
 @Tag("Feature: FOR-06-11-payroll, Property 2 + 3: advance-credit suggested/applied + conserved non-negative running balance")
+@Tag("Feature: FOR-07-06-company-payroll, Property 6: worker-wide advance credit over all the worker's payouts")
 class AdvanceCreditCalculatorPropertyTest {
 
     /** {@code NUMERIC(19,2)} scale, consistent with the production calculator. */
@@ -227,18 +235,88 @@ class AdvanceCreditCalculatorPropertyTest {
     }
 
     // =============================================================================================
+    // FOR-07-06 Property 6 — worker-wide credit (input = all payouts of the worker, any project).
+    // =============================================================================================
+
+    @Property(tries = 200)
+    @Tag("Feature: FOR-07-06-company-payroll, Property 6: worker-wide advance credit over all the worker's payouts")
+    void workerWideCreditIsOneFoldOverAllProjectsNotAPerProjectSum(
+            @ForAll("workerPayouts") List<FakePayout> allPayoutsOfWorker) {
+
+        // Expected: max(0, Σ advances − Σ applied) over the whole worker history (R7.1, R7.2).
+        BigDecimal raw = BigDecimal.ZERO;
+        for (FakePayout p : allPayoutsOfWorker) {
+            raw = p.isAdvance() ? raw.add(p.getAmount()) : raw.subtract(p.getAdvanceApplied());
+        }
+        BigDecimal remaining = calculator.remaining(allPayoutsOfWorker);
+
+        assertThat(remaining)
+                .as("worker-wide credit == max(0, Σ advances − Σ applied) over all projects (R7.1)")
+                .isEqualByComparingTo(scale(raw.max(BigDecimal.ZERO)));
+        assertThat(remaining.signum()).as("worker-wide credit is never negative (R7.2)")
+                .isGreaterThanOrEqualTo(0);
+
+        // The legacy per-(worker, project) view floors each project separately; summing those
+        // floors can only over-state the credit — the worker-wide fold never exceeds it.
+        BigDecimal perProjectSum = BigDecimal.ZERO;
+        for (long project : allPayoutsOfWorker.stream().map(FakePayout::originProject).distinct().toList()) {
+            perProjectSum = perProjectSum.add(calculator.remaining(allPayoutsOfWorker.stream()
+                    .filter(p -> p.originProject() == project).toList()));
+        }
+        assertThat(remaining)
+                .as("the worker-wide credit never exceeds the sum of per-project floored balances")
+                .isLessThanOrEqualTo(perProjectSum);
+    }
+
+    @Property(tries = 200)
+    @Tag("Feature: FOR-07-06-company-payroll, Property 6: worker-wide advance credit over all the worker's payouts")
+    void anAdvanceFromOneProjectOffsetsARegularPayoutOnAnother(
+            @ForAll("money") BigDecimal advanceAmount,
+            @ForAll("money") BigDecimal grossOnOtherProject) {
+
+        // The advance was issued while the worker was on project 1; the regular payout covers lines
+        // of project 2. Worker-wide, the whole advance is available as credit (R7.1).
+        List<FakePayout> history = List.of(FakePayout.advance(advanceAmount, 1L));
+        BigDecimal credit = calculator.remaining(history);
+        BigDecimal applied = calculator.applied(credit, grossOnOtherProject);
+
+        assertThat(credit).isEqualByComparingTo(scale(advanceAmount));
+        assertThat(applied)
+                .as("credit applied to the other project's gross == min(advance, gross) (R7.1)")
+                .isEqualByComparingTo(scale(advanceAmount.min(grossOnOtherProject)));
+
+        List<FakePayout> after = new ArrayList<>(history);
+        after.add(FakePayout.regular(grossOnOtherProject, applied, 2L));
+        assertThat(calculator.remaining(after))
+                .as("the advance is consumed worker-wide by exactly the applied offset")
+                .isEqualByComparingTo(scale(advanceAmount.subtract(applied)));
+    }
+
+    // =============================================================================================
     // A minimal in-memory AdvanceCreditSource.
     // =============================================================================================
 
-    record FakePayout(boolean advance, BigDecimal amount, BigDecimal advanceApplied)
+    /**
+     * A payout of the worker. {@code originProject} is not part of {@link AdvanceCreditSource}
+     * (FOR-07-06 payouts have no project) — it only tags which project's work the history came from.
+     */
+    record FakePayout(boolean advance, BigDecimal amount, BigDecimal advanceApplied, long originProject)
             implements AdvanceCreditSource {
 
         static FakePayout advance(BigDecimal amount) {
-            return new FakePayout(true, amount, BigDecimal.ZERO);
+            return advance(amount, 1L);
+        }
+
+        static FakePayout advance(BigDecimal amount, long originProject) {
+            return new FakePayout(true, amount, BigDecimal.ZERO, originProject);
         }
 
         static FakePayout regular(BigDecimal amount, BigDecimal advanceApplied) {
-            return new FakePayout(false, amount, advanceApplied);
+            return regular(amount, advanceApplied, 1L);
+        }
+
+        static FakePayout regular(BigDecimal amount, BigDecimal advanceApplied, long originProject) {
+            return new FakePayout(false, amount, advanceApplied, originProject);
         }
 
         @Override
@@ -291,6 +369,17 @@ class AdvanceCreditCalculatorPropertyTest {
     @Provide
     Arbitrary<List<FakePayout>> advanceOnlyPayouts() {
         return money().map(FakePayout::advance).list().ofMinSize(0).ofMaxSize(10);
+    }
+
+    /** All payouts of one worker, drawn from up to 4 origin projects (worker-wide input). */
+    @Provide
+    Arbitrary<List<FakePayout>> workerPayouts() {
+        return Combinators.combine(Arbitraries.of(true, false), money(), money(),
+                        Arbitraries.longs().between(1L, 4L))
+                .as((isAdvance, amt, app, project) -> isAdvance
+                        ? FakePayout.advance(amt, project)
+                        : FakePayout.regular(amt, app, project))
+                .list().ofMinSize(0).ofMaxSize(12);
     }
 
     private Arbitrary<FakePayout> anyPayout() {

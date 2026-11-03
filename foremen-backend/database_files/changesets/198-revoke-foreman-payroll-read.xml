@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-07-06 (R14.3; design §Data model, changeset 198): revoke the FOR-06-11 FOREMAN
+         PAYROLL/READ grant seeded by 182-seed-payroll-permissions. Payroll becomes company-wide
+         (no longer project-scoped), so a project-level read grant for FOREMAN no longer fits.
+
+         Resulting PAYROLL matrix (R14.3):
+           ADMIN     -> CREATE, READ, UPDATE, DELETE  (unchanged)
+           MANAGER   -> CREATE, READ, UPDATE, DELETE  (unchanged)
+           FINANCIER -> CREATE, READ, UPDATE, DELETE  (unchanged)
+           FOREMAN   -> deny-by-default (no grant). The foreman still sees whether a work-report
+                        line is paid through the work-report DTO (paymentStatus / paidAmount, R12.2),
+                        which is served by the work-reporting endpoints, not by PAYROLL.
+           CLIENT    -> deny-by-default (no grant, unchanged)
+           WORKER    -> deny-by-default (no grant, unchanged)
+
+         Deletes the FOREMAN role_resource_operations rows first (FK fk_rro_role_resource), then the
+         FOREMAN role_resources row for PAYROLL. Guarded by an onFail="MARK_RAN" precondition that
+         only runs the changeSet while a FOREMAN + PAYROLL role_resources row still exists, so a
+         re-run (or a database where the grant was never seeded) changes nothing.
+         Registered LAST in changelog.xml, after 197. -->
+    <changeSet id="198-revoke-foreman-payroll-read" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <sqlCheck expectedResult="0">
+                    SELECT COUNT(*) FROM role_resources rr
+                    JOIN roles r ON rr.role_id = r.id
+                    JOIN resources res ON rr.resource_id = res.id
+                    WHERE r.code = 'FOREMAN' AND res.code = 'PAYROLL'
+                </sqlCheck>
+            </not>
+        </preConditions>
+
+        <!-- 1. FOREMAN operation rows on PAYROLL (children first) -->
+        <sql>
+            DELETE FROM role_resource_operations
+            WHERE role_resource_id IN (
+                SELECT rr.id FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'PAYROLL'
+            );
+        </sql>
+
+        <!-- 2. FOREMAN role_resources row on PAYROLL -->
+        <sql>
+            DELETE FROM role_resources
+            WHERE id IN (
+                SELECT rr.id FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'PAYROLL'
+            );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

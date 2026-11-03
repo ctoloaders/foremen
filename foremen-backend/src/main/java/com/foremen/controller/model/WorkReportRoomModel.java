@@ -3,6 +3,7 @@ package com.foremen.controller.model;
 import java.math.BigDecimal;
 
 import com.foremen.dao.model.WorkReportInputMode;
+import com.foremen.service.payroll.LinePaymentStatus;
 
 /**
  * FOR-06-01 (Requirements 1.2, 2.1, 2.2, 6.5) — the per-room quantity-split sub-DTO of a work
@@ -25,6 +26,10 @@ import com.foremen.dao.model.WorkReportInputMode;
  * @param quantity     the entered amount (write) / the resolved absolute amount (read)
  * @param planQuantity the Plan_Quantity snapshot (read path; nullable when no plan exists)
  * @param inputMode    how the quantity was entered ({@code ABSOLUTE} | {@code PERCENT})
+ * @param paidAmount    FOR-07-06 R12.1 — Σ payout allocations on the line (read path only; ignored
+ *                      on write). Only the amount is exposed — no payout ids/channels (R12.2).
+ * @param paymentStatus FOR-07-06 R12.1 — the line's payment status (read path only); {@code null}
+ *                      for a non-{@code APPROVED} report
  */
 public record WorkReportRoomModel(
         Long id,
@@ -32,5 +37,19 @@ public record WorkReportRoomModel(
         String roomName,
         BigDecimal quantity,
         BigDecimal planQuantity,
-        WorkReportInputMode inputMode) {
+        WorkReportInputMode inputMode,
+        BigDecimal paidAmount,
+        LinePaymentStatus paymentStatus) {
+
+    /** The pre-FOR-07-06 shape (write-path rows and read rows before payment enrichment). */
+    public WorkReportRoomModel(Long id, Long roomId, String roomName, BigDecimal quantity,
+                               BigDecimal planQuantity, WorkReportInputMode inputMode) {
+        this(id, roomId, roomName, quantity, planQuantity, inputMode, null, null);
+    }
+
+    /** A copy carrying the given payment status (read-path enrichment, R12.1). */
+    public WorkReportRoomModel withPaymentStatus(LinePaymentStatus status) {
+        return new WorkReportRoomModel(id, roomId, roomName, quantity, planQuantity, inputMode,
+                paidAmount, status);
+    }
 }

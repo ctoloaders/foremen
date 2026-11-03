@@ -29,22 +29,19 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.foremen.dao.ProjectMemberDao;
-import com.foremen.dao.WorkReportRoomDao;
+import com.foremen.dao.UserDao;
+import com.foremen.dao.WorkerPayoutAllocationDao;
 import com.foremen.dao.WorkerPayoutDao;
-import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.PaymentChannel;
 import com.foremen.dao.model.PayoutStatus;
-import com.foremen.dao.model.ProjectEntity;
-import com.foremen.dao.model.ProjectMemberEntity;
+import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.dao.model.WorkReportRoomEntity;
 import com.foremen.dao.model.WorkerPayoutEntity;
 import com.foremen.exception.ForemenApiException;
-import com.foremen.service.ProjectAccessCache;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.mapper.WorkerPayoutServiceMapper;
 import com.foremen.service.payroll.dto.CreatePayoutRequest;
-import com.foremen.service.payroll.dto.PayoutSuggestionDto;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
 import com.foremen.service.payroll.dto.mapper.WorkerPayoutDtoMapper;
 
@@ -63,12 +60,16 @@ import jakarta.persistence.EntityManager;
  * delete on it is rejected with {@code error.workerPayout.status.illegalTransition}, changing nothing
  * (R7.1, R7.2, R7.3).
  *
- * <p><b>Validates: Requirements 1.4, 4.2, 7.1, 7.2, 7.3</b>
+ * <p>FOR-07-06 reshape: payouts are worker-wide (no project; {@code payoutDate} set), the payee check is
+ * "is a WORKER user", candidates come from {@code PayoutSuggestionService.payableLines(worker, to)}
+ * across all projects, credit from {@code WorkerPayoutDao.findByWorker}, and a PLANNED regular delete
+ * releases its allocations via {@link AllocationWriter}.
+ *
+ * <p><b>Validates: Requirements 1.4, 4.2, 7.1, 7.2, 7.3 (FOR-06-11); 5.1, 6.1, 6.2 (FOR-07-06)</b>
  */
 @Tag("Feature: FOR-06-11-payroll, Property 7 + 8: suggested snapshot immutability + PLANNED→PAID lifecycle, PAID terminal")
 class WorkerPayoutLifecyclePropertyTest {
 
-    private static final Long PROJECT_ID = 42L;
     private static final Long WORKER_ID = 500L;
     private static final LocalDate FROM = LocalDate.now().minusMonths(1);
     private static final LocalDate REGULAR_TO = LocalDate.now().minusDays(1);
@@ -81,12 +82,10 @@ class WorkerPayoutLifecyclePropertyTest {
     @Tag("Feature: FOR-06-11-payroll, Property 7: amount defaults to the suggested snapshot when no override is supplied")
     void amountDefaultsToSuggestedSnapshotWhenNotOverridden(@ForAll("money") BigDecimal suggested) {
         Fixture f = new Fixture();
-        f.stubSuggest(false, suggested, BigDecimal.ZERO, suggested);
-        when(f.suggestionService.linkableLines(PROJECT_ID, WORKER_ID, FROM, REGULAR_TO))
-                .thenReturn(List.of());
+        f.stubCandidates(suggested); // gross = suggested, no prior credit
 
-        f.service.create(PROJECT_ID, new CreatePayoutRequest(
-                WORKER_ID, FROM, REGULAR_TO, PaymentChannel.CASH, /* amount */ null, null));
+        f.service.create(new CreatePayoutRequest(
+                WORKER_ID, null, FROM, REGULAR_TO, PaymentChannel.CASH, /* amount */ null, null));
 
         WorkerPayoutEntity saved = f.capturedSave();
         assertThat(saved.getSuggestedAmount())
@@ -104,12 +103,10 @@ class WorkerPayoutLifecyclePropertyTest {
             @ForAll("money") BigDecimal override) {
 
         Fixture f = new Fixture();
-        f.stubSuggest(false, suggested, BigDecimal.ZERO, suggested);
-        when(f.suggestionService.linkableLines(PROJECT_ID, WORKER_ID, FROM, REGULAR_TO))
-                .thenReturn(List.of());
+        f.stubCandidates(suggested); // gross = suggested, no prior credit
 
-        f.service.create(PROJECT_ID, new CreatePayoutRequest(
-                WORKER_ID, FROM, REGULAR_TO, PaymentChannel.CASH, override, null));
+        f.service.create(new CreatePayoutRequest(
+                WORKER_ID, null, FROM, REGULAR_TO, PaymentChannel.CASH, override, null));
 
         WorkerPayoutEntity saved = f.capturedSave();
         assertThat(saved.getSuggestedAmount())
@@ -181,7 +178,7 @@ class WorkerPayoutLifecyclePropertyTest {
         assertApiError(() -> f.service.delete(id),
                 HttpStatus.CONFLICT, "error.workerPayout.status.illegalTransition");
         verify(f.workerPayoutDao, never()).deleteById(anyLong());
-        verify(f.reportLineLinker, never()).release(anyLong());
+        verify(f.allocationDao, never()).findByPayoutId(anyLong());
     }
 
     @Property(tries = 200)
@@ -194,7 +191,7 @@ class WorkerPayoutLifecyclePropertyTest {
 
         f.service.delete(id);
 
-        verify(f.reportLineLinker).release(id);
+        verify(f.allocationDao).findByPayoutId(id); // allocations released (AllocationWriter)
         verify(f.workerPayoutDao).deleteById(id);
     }
 
@@ -204,11 +201,9 @@ class WorkerPayoutLifecyclePropertyTest {
 
     private static final class Fixture {
         final WorkerPayoutDao workerPayoutDao = mock(WorkerPayoutDao.class);
-        final WorkReportRoomDao workReportRoomDao = mock(WorkReportRoomDao.class);
-        final ProjectMemberDao projectMemberDao = mock(ProjectMemberDao.class);
-        final ProjectAccessCache projectAccessCache = mock(ProjectAccessCache.class);
+        final WorkerPayoutAllocationDao allocationDao = mock(WorkerPayoutAllocationDao.class);
+        final UserDao userDao = mock(UserDao.class);
         final PayoutSuggestionService suggestionService = mock(PayoutSuggestionService.class);
-        final ReportLineLinker reportLineLinker = mock(ReportLineLinker.class);
         final WorkerPayoutServiceMapper serviceMapper = mock(WorkerPayoutServiceMapper.class);
         final WorkerPayoutDtoMapper dtoMapper = mock(WorkerPayoutDtoMapper.class);
         final AuditLogDao auditLogDao = mock(AuditLogDao.class);
@@ -218,35 +213,40 @@ class WorkerPayoutLifecyclePropertyTest {
 
         Fixture() {
             service = new WorkerPayoutService(
-                    workerPayoutDao, workReportRoomDao, projectMemberDao, projectAccessCache,
-                    suggestionService, reportLineLinker, new AdvanceCreditCalculator(),
+                    workerPayoutDao, allocationDao, userDao, suggestionService,
+                    new AllocationWriter(allocationDao, entityManager), new AdvanceCreditCalculator(),
                     new AdvanceDeriver(), serviceMapper, dtoMapper, auditLogDao, entityManager);
+            lenient().when(allocationDao.findByPayoutId(anyLong())).thenReturn(List.of());
             lenient().when(workerPayoutDao.save(any(WorkerPayoutEntity.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
             lenient().when(entityManager.getReference(any(), any()))
                     .thenAnswer(inv -> referenceStub(inv.getArgument(0), (Long) inv.getArgument(1)));
             lenient().when(dtoMapper.toDto(any(WorkerPayoutEntity.class)))
-                    .thenReturn(new WorkerPayoutDto(1L, WORKER_ID, "W", FROM, REGULAR_TO,
+                    .thenReturn(new WorkerPayoutDto(1L, WORKER_ID, "W", FROM, FROM, REGULAR_TO,
                             BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO,
                             PaymentChannel.CASH, PayoutStatus.PLANNED, false, null, null));
-            ProjectMemberEntity member = new ProjectMemberEntity();
-            member.setAssignmentStatus(AssignmentStatus.ACTIVE);
-            lenient().when(projectMemberDao.findByUserIdAndProjectId(WORKER_ID, PROJECT_ID))
-                    .thenReturn(Optional.of(member));
+            // FOR-07-06: the payee must be a WORKER user (replaces the project-membership check).
+            UserEntity worker = referenceStub(UserEntity.class, WORKER_ID);
+            RoleEntity role = new RoleEntity();
+            role.setCode("WORKER");
+            worker.setRole(role);
+            lenient().when(userDao.findById(WORKER_ID)).thenReturn(Optional.of(worker));
+            lenient().when(workerPayoutDao.findByWorker(WORKER_ID)).thenReturn(List.of());
             authenticate(1L, "ROLE_ADMIN");
         }
 
-        void stubSuggest(boolean advance, BigDecimal gross, BigDecimal applied, BigDecimal suggested) {
-            PayoutSuggestionDto dto = new PayoutSuggestionDto(
-                    gross, BigDecimal.ZERO, applied, suggested, advance, List.of());
-            lenient().when(suggestionService.suggest(eq(PROJECT_ID), eq(WORKER_ID), any(), any(), eq(advance)))
-                    .thenReturn(dto);
+        /** One payable candidate whose remainder is the gross; with no credit, suggested = gross. */
+        void stubCandidates(BigDecimal gross) {
+            WorkReportRoomEntity line = new WorkReportRoomEntity();
+            line.setId(1L);
+            lenient().when(suggestionService.payableLines(eq(WORKER_ID), eq(REGULAR_TO)))
+                    .thenReturn(List.of(new PayoutSuggestionService.PayableCandidate(line, gross)));
         }
 
         WorkerPayoutEntity persistedPlanned() {
             WorkerPayoutEntity p = new WorkerPayoutEntity();
             p.setId(++idSeq);
-            p.setProject(referenceStub(ProjectEntity.class, PROJECT_ID));
+            p.setPayoutDate(FROM); // FOR-07-06 3.1: payouts are worker-wide (no project)
             p.setWorker(referenceStub(UserEntity.class, WORKER_ID));
             p.setStatus(PayoutStatus.PLANNED);
             p.setAdvance(false);

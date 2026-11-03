@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -27,6 +28,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -34,80 +36,82 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.foremen.config.security.JwtTokenProvider;
+import com.foremen.controller.PayrollController;
 import com.foremen.controller.WorkerPayoutController;
-import com.foremen.dao.model.AssignmentStatus;
+import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.OperationEntity;
+import com.foremen.dao.model.PaymentChannel;
+import com.foremen.dao.model.PayoutStatus;
 import com.foremen.dao.model.ProjectEntity;
-import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.ResourceEntity;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.RoleResourceEntity;
+import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.UserStatus;
+import com.foremen.dao.model.WorkCategoryEntity;
+import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.dao.model.WorkReportEntity;
+import com.foremen.dao.model.WorkReportInputMode;
+import com.foremen.dao.model.WorkReportRoomEntity;
+import com.foremen.dao.model.WorkReportStatus;
+import com.foremen.dao.model.WorkerPayoutEntity;
+import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.service.permission.PermissionCache;
+import com.jayway.jsonpath.JsonPath;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 /**
- * FOR-06-11 task 8.2 — payroll ABAC + startup-wiring integration test (design §Testing strategy
- * "ABAC / startup"; Properties <b>P9 RoleMatrix</b>, <b>P13 StartupAnnotationCompleteness</b>; R7.4,
- * R10.3, R10.4, R10.5).
+ * FOR-06-11 task 8.2, reshaped by FOR-07-06 task 7.2 — payroll ABAC + startup-wiring integration
+ * test over the <b>company-wide</b> payroll surface (R14.1, R14.2, R14.3, R17.2).
  *
  * <p>Boots the full application context over the real Spring MVC + Spring Security + ABAC stack
- * against a Testcontainers PostgreSQL, following the repo's established
- * {@code @SpringBootTest(MOCK)} + {@code @AutoConfigureMockMvc} + {@code @Testcontainers} +
- * {@code @ActiveProfiles("integration-test")} pattern (mirroring {@link ProjectReadinessAbacIntegrationTest}).
- * Under the {@code integration-test} profile Liquibase is disabled and Hibernate {@code create-drop}
- * builds the schema, so every matrix row (roles, resources, operations, grants) and every domain
- * fixture (users, project, membership) is created programmatically; each role carries a per-run
- * suffix while the {@code PAYROLL} resource + the {@code CREATE}/{@code READ}/{@code UPDATE}/
- * {@code DELETE} operations carry the exact matrix codes the evaluator matches on.
- *
- * <p><b>P13 — startup annotation completeness (R10.3).</b> The full context registers every
- * {@code @RestController} and runs {@code PermissionAnnotationValidator} (a
- * {@code SmartInitializingSingleton}) at startup; the context loading at all therefore proves the
- * validator found no half-annotated controller across the whole app — including
- * {@link WorkerPayoutController}, which carries class-level {@code @PermissionResource("PAYROLL")}
- * plus a method-level {@code @RequiresPermission} on every in-scope handler. {@link #contextLoads_withWorkerPayoutControllerBean()}
- * resolves the controller bean explicitly to document it was the one exercised.
- *
- * <p><b>P9 / R10.4, R10.5 — the PAYROLL matrix enforced end to end.</b> Each case issues a JWT-bearer
- * request through the real interceptor:
+ * against a Testcontainers PostgreSQL ({@code @SpringBootTest(MOCK)} + {@code @AutoConfigureMockMvc}
+ * + {@code @ActiveProfiles("integration-test")}). Under that profile Liquibase is disabled and
+ * Hibernate {@code create-drop} builds the schema, so the PAYROLL matrix rows are created
+ * programmatically with the <b>real</b> role codes and the grant set the changelog leaves after
+ * changeset 198 (the seeded matrix itself is pinned by {@link CompanyPayrollMigrationIntegrationTest}):
  * <ul>
- *   <li><b>401</b> — an unauthenticated request is rejected at the filter chain;</li>
- *   <li><b>MANAGER with CRUD + membership</b> reaches both the READ list and a CREATE (no 4xx/5xx
- *       from the ABAC gate);</li>
- *   <li><b>FOREMAN with READ only</b> reaches the list (READ) but is denied a CREATE with 403
- *       (read-only; no issuing);</li>
- *   <li><b>CLIENT / WORKER with no PAYROLL grant</b> are denied even the READ list with 403
- *       (deny-by-default);</li>
- *   <li><b>project scope (R10.5)</b> — a MANAGER member of project A requesting project B's payouts
- *       gets a 404 (an out-of-scope project is indistinguishable from a missing one), and a create
- *       against project B is likewise confined/denied.</li>
+ *   <li>MANAGER, FINANCIER — PAYROLL CREATE/READ/UPDATE/DELETE;</li>
+ *   <li>FOREMAN — <b>no PAYROLL grant</b> (revoked by 198), only its unrelated grants;</li>
+ *   <li>WORKER — no PAYROLL grant.</li>
  * </ul>
  *
- * <p>Repeatability: every role/user/project carries a unique per-run suffix and {@link #cleanUp()}
- * removes every row this test created (in FK order) after each test, so the suite re-runs without
- * manual DB cleanup and no stale cached permission or project-access set leaks.
+ * <p><b>Startup (R14.1).</b> The context loading at all proves {@code PermissionAnnotationValidator}
+ * found no half-annotated controller — including the reshaped {@link WorkerPayoutController} and the
+ * new {@link PayrollController}.
  *
- * <p>Validates: Requirements 7.4, 10.3, 10.4, 10.5
+ * <p><b>FOREMAN 403 (R14.3).</b> Every {@code /api/payroll/**} and {@code /api/worker-payouts/**}
+ * handler is denied by the interceptor.
+ *
+ * <p><b>MANAGER / FINANCIER 200 without project filter (R14.2).</b> A caller who is a member of no
+ * project creates a worker-wide payout, lists it, reads its allocations, and reads the company table
+ * and worker card — no project parameter, no project-scope 404.
+ *
+ * <p>Repeatability: every user/project/catalog row carries a unique per-run suffix; {@link #cleanUp()}
+ * removes them in FK order (allocations → report lines → payouts → reports → rooms → projects →
+ * users → catalog → matrix rows) after each test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @AutoConfigureMockMvc
 @Testcontainers
 @ActiveProfiles("integration-test")
-@Tag("Feature: FOR-06-11-payroll, task 8.2: PAYROLL ABAC matrix + startup completeness (P9, P13)")
+@Tag("Feature: FOR-07-06-company-payroll, task 7.2: PAYROLL ABAC matrix (FOREMAN revoked) + startup completeness")
 class PayrollAbacStartupIntegrationTest {
 
-    private static final String PAYROLL_PATH = "/api/worker-payouts";
+    private static final String PAYOUTS = "/api/worker-payouts";
+    private static final String PAYROLL = "/api/payroll";
 
     private static final AtomicLong COUNTER = new AtomicLong();
 
-    /** The exact resource/operation codes the resolved PAYROLL pairs match on. */
-    private static final Set<String> SEEDED_RESOURCE_CODES = Set.of("PAYROLL");
-    private static final Set<String> SEEDED_OPERATION_CODES = Set.of("CREATE", "READ", "UPDATE", "DELETE");
+    /** The real role codes the matrix rows are created with (find-or-create, removed on clean-up). */
+    private static final Set<String> ROLE_CODES = Set.of("MANAGER", "FINANCIER", "FOREMAN", "WORKER");
+    private static final Set<String> RESOURCE_CODES = Set.of("PAYROLL", "WORK_REPORTS", "PROJECTS");
+    private static final Set<String> OPERATION_CODES = Set.of("CREATE", "READ", "UPDATE", "DELETE");
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
@@ -143,59 +147,65 @@ class PayrollAbacStartupIntegrationTest {
     @PersistenceContext
     private EntityManager entityManager;
 
-    private final String runId = UUID.randomUUID().toString().substring(0, 8);
+    private final String runId = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+    private TransactionTemplate tx() {
+        return new TransactionTemplate(transactionManager);
+    }
 
     @AfterEach
     void cleanUp() {
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-            // Payouts (created by the MANAGER create case) reference projects, so they must go
-            // before the projects they belong to. This test seeds no report lines, so a payout's
-            // only blocking FK is project_id.
-            entityManager.createQuery(
-                            "delete from WorkerPayoutEntity p where p.project.id in "
-                                    + "(select pr.id from ProjectEntity pr where pr.name like :p)")
-                    .setParameter("p", "%" + runId + "%")
+        tx().executeWithoutResult(status -> {
+            // Deepest-FK-first. Payouts are worker-wide (no project FK any more): allocations go
+            // first, then report lines, then the payouts of this run's workers.
+            exec("delete from WorkerPayoutAllocationEntity a where a.payout.id in "
+                    + "(select p.id from WorkerPayoutEntity p where p.worker.email like :p)");
+            exec("delete from WorkReportRoomEntity rr where rr.report.id in "
+                    + "(select r.id from WorkReportEntity r where r.project.name like :p)");
+            exec("delete from WorkerPayoutEntity p where p.worker.id in "
+                    + "(select u.id from UserEntity u where u.email like :p)");
+            exec("delete from WorkReportEntity r where r.project.id in "
+                    + "(select pr.id from ProjectEntity pr where pr.name like :p)");
+            exec("delete from RoomEntity rm where rm.project.id in "
+                    + "(select pr.id from ProjectEntity pr where pr.name like :p)");
+            exec("delete from ProjectEntity pr where pr.name like :p");
+            exec("delete from UserEntity u where u.email like :p");
+            exec("delete from WorkItemEntity wi where wi.code like :p");
+            exec("delete from WorkCategoryEntity wc where wc.code like :p");
+            exec("delete from WorkerTypeEntity w where w.code like :p");
+            exec("delete from RoomTypeEntity rt where rt.code like :p");
+            // Matrix rows (this container is private to the class, so the real codes are safe to drop).
+            entityManager.createQuery("delete from RoleResourceEntity rr where rr.role.id in "
+                            + "(select r.id from RoleEntity r where r.code in :codes)")
+                    .setParameter("codes", ROLE_CODES)
                     .executeUpdate();
-            entityManager.createQuery(
-                            "delete from ProjectMemberEntity pm where pm.user.id in "
-                                    + "(select u.id from UserEntity u where u.email like :p)")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
-            entityManager.createQuery("delete from ProjectEntity pr where pr.name like :p")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
-            entityManager.createQuery("delete from UserEntity u where u.email like :p")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
-            entityManager.createQuery(
-                            "delete from RoleResourceEntity rr where rr.role.id in "
-                                    + "(select r.id from RoleEntity r where r.code like :p)")
-                    .setParameter("p", "%" + runId + "%")
-                    .executeUpdate();
-            entityManager.createQuery("delete from RoleEntity r where r.code like :p")
-                    .setParameter("p", "%" + runId + "%")
+            entityManager.createQuery("delete from RoleEntity r where r.code in :codes")
+                    .setParameter("codes", ROLE_CODES)
                     .executeUpdate();
             entityManager.createQuery("delete from ResourceEntity res where res.code in :codes")
-                    .setParameter("codes", SEEDED_RESOURCE_CODES)
+                    .setParameter("codes", RESOURCE_CODES)
                     .executeUpdate();
             entityManager.createQuery("delete from OperationEntity op where op.code in :codes")
-                    .setParameter("codes", SEEDED_OPERATION_CODES)
+                    .setParameter("codes", OPERATION_CODES)
                     .executeUpdate();
         });
+        ROLE_CODES.forEach(permissionCache::invalidate);
+    }
+
+    private void exec(String jpql) {
+        entityManager.createQuery(jpql).setParameter("p", "%" + runId + "%").executeUpdate();
     }
 
     // ------------------------------------------------------------------
-    // P13 — startup annotation completeness (R10.3)
+    // Startup annotation completeness (R14.1)
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("P13: the app context loads with WorkerPayoutController registered — "
-            + "PermissionAnnotationValidator classifies it COMPLETE at startup (R10.3)")
-    void contextLoads_withWorkerPayoutControllerBean() {
-        // The context loading at all (via @SpringBootTest) already proves
-        // PermissionAnnotationValidator found no half-annotated controller across the whole app,
-        // including WorkerPayoutController. Resolving the bean documents it was exercised.
+    @DisplayName("the app context loads with WorkerPayoutController and PayrollController — "
+            + "PermissionAnnotationValidator passes at startup (R14.1)")
+    void contextLoads_withBothPayrollControllers() {
         assertThat(applicationContext.getBean(WorkerPayoutController.class)).isNotNull();
+        assertThat(applicationContext.getBean(PayrollController.class)).isNotNull();
     }
 
     // ------------------------------------------------------------------
@@ -203,124 +213,162 @@ class PayrollAbacStartupIntegrationTest {
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("unauthenticated payroll list yields 401 at the filter chain")
+    @DisplayName("unauthenticated requests to /api/worker-payouts and /api/payroll yield 401")
     void unauthenticated_yields401() throws Exception {
-        long projectId = createProject(ProjectStatus.ACTIVE);
+        assertThat(status(get(PAYOUTS))).as("payout list without a token").isEqualTo(401);
+        assertThat(status(get(PAYROLL + "/company")
+                .param("from", LocalDate.now().withDayOfMonth(1).toString())
+                .param("to", LocalDate.now().toString())))
+                .as("company table without a token").isEqualTo(401);
+    }
 
-        MvcResult result = mockMvc.perform(get(PAYROLL_PATH).param("projectId", String.valueOf(projectId)))
+    // ------------------------------------------------------------------
+    // FOREMAN — PAYROLL revoked by 198 → 403 everywhere (R14.3)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("FOREMAN (PAYROLL revoked) is denied every /api/payroll/** and /api/worker-payouts/** handler with 403")
+    void foreman_deniedEveryPayrollEndpoint() throws Exception {
+        RoleEntity workerRole = ensureRole("WORKER");
+        RoleEntity foremanRole = ensureRole("FOREMAN",
+                grant("WORK_REPORTS", "CREATE", "READ", "UPDATE"), grant("PROJECTS", "READ"));
+        Fixture f = seedWorkerWithLine(workerRole);
+        long payoutId = persistPayout(f.workerId);
+        long foremanId = persistUser("foreman", foremanRole);
+        String auth = bearer(foremanId, foremanRole);
+
+        String from = LocalDate.now().minusDays(10).toString();
+        String to = LocalDate.now().minusDays(1).toString();
+        String month = LocalDate.now().withDayOfMonth(1).toString();
+
+        List<RequestBuilder> requests = List.of(
+                // /api/worker-payouts/**
+                get(PAYOUTS).header("Authorization", auth),
+                get(PAYOUTS + "/suggest").param("workerId", String.valueOf(f.workerId))
+                        .param("from", from).param("to", to).header("Authorization", auth),
+                post(PAYOUTS).header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(createBody(f.workerId)),
+                post(PAYOUTS + "/" + payoutId + "/pay").header("Authorization", auth),
+                delete(PAYOUTS + "/" + payoutId).header("Authorization", auth),
+                get(PAYOUTS + "/" + payoutId + "/allocations").header("Authorization", auth),
+                // /api/payroll/**
+                get(PAYROLL + "/company").param("from", from).param("to", to).header("Authorization", auth),
+                get(PAYROLL + "/workers/" + f.workerId + "/card").param("from", from).param("to", to)
+                        .header("Authorization", auth),
+                get(PAYROLL + "/workers/" + f.workerId + "/hints").param("month", month)
+                        .header("Authorization", auth),
+                post(PAYROLL + "/lines").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(lineBody(f.workerId, month)),
+                put(PAYROLL + "/lines/1").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content(lineBody(f.workerId, month)),
+                delete(PAYROLL + "/lines/1").header("Authorization", auth),
+                put(PAYROLL + "/workers/" + f.workerId + "/opening-balance").header("Authorization", auth)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"openingBalance\":10}"));
+
+        for (RequestBuilder request : requests) {
+            MvcResult result = mockMvc.perform(request).andReturn();
+            assertThat(result.getResponse().getStatus())
+                    .as("FOREMAN must be denied %s %s with 403 (PAYROLL revoked, R14.3)",
+                            result.getRequest().getMethod(), result.getRequest().getRequestURI())
+                    .isEqualTo(403);
+        }
+
+        // Nothing was mutated by the denied writes.
+        Long payouts = tx().execute(s -> entityManager.createQuery(
+                        "select count(p) from WorkerPayoutEntity p where p.worker.id = :w", Long.class)
+                .setParameter("w", f.workerId).getSingleResult());
+        assertThat(payouts).as("the denied create/delete changed no payout").isEqualTo(1L);
+    }
+
+    // ------------------------------------------------------------------
+    // WORKER — no PAYROLL grant → 403 (deny-by-default, R14.3)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("a WORKER (no PAYROLL grant) is denied the payout list and the company table with 403")
+    void worker_deniedRead() throws Exception {
+        RoleEntity workerRole = ensureRole("WORKER", grant("WORK_REPORTS", "CREATE", "READ"));
+        Fixture f = seedWorkerWithLine(workerRole);
+        String auth = bearer(f.workerId, workerRole);
+
+        assertThat(status(get(PAYOUTS).header("Authorization", auth))).isEqualTo(403);
+        assertThat(status(get(PAYROLL + "/company")
+                .param("from", LocalDate.now().minusDays(10).toString())
+                .param("to", LocalDate.now().toString())
+                .header("Authorization", auth))).isEqualTo(403);
+    }
+
+    // ------------------------------------------------------------------
+    // MANAGER / FINANCIER — CRUD, company-wide (no project filter) (R14.2)
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("MANAGER (member of no project) creates, lists and reads payroll company-wide with 200")
+    void manager_companyWideWithoutProjectFilter() throws Exception {
+        issuerReachesCompanyWidePayroll("MANAGER");
+    }
+
+    @Test
+    @DisplayName("FINANCIER (member of no project) creates, lists and reads payroll company-wide with 200")
+    void financier_companyWideWithoutProjectFilter() throws Exception {
+        issuerReachesCompanyWidePayroll("FINANCIER");
+    }
+
+    private void issuerReachesCompanyWidePayroll(String roleCode) throws Exception {
+        RoleEntity workerRole = ensureRole("WORKER");
+        RoleEntity issuerRole = ensureRole(roleCode, grant("PAYROLL", "CREATE", "READ", "UPDATE", "DELETE"));
+        Fixture f = seedWorkerWithLine(workerRole);
+        // The issuer has no project membership at all: the old project scope would have 404'd.
+        long issuerId = persistUser(roleCode.toLowerCase(), issuerRole);
+        String auth = bearer(issuerId, issuerRole);
+        String from = LocalDate.now().minusDays(10).toString();
+        String to = LocalDate.now().minusDays(1).toString();
+
+        MvcResult suggest = mockMvc.perform(get(PAYOUTS + "/suggest")
+                        .param("workerId", String.valueOf(f.workerId))
+                        .param("from", from).param("to", to)
+                        .header("Authorization", auth))
                 .andReturn();
+        assertThat(suggest.getResponse().getStatus()).as("%s suggest", roleCode).isEqualTo(200);
 
-        assertThat(result.getResponse().getStatus())
-                .as("an unauthenticated request to the guarded payroll endpoint must yield 401")
-                .isEqualTo(401);
-    }
-
-    // ------------------------------------------------------------------
-    // MANAGER (CRUD + membership) — reaches READ + CREATE (P9, R10.4)
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("a MANAGER member with PAYROLL CRUD reaches the list (READ) and a create (CREATE) through ABAC")
-    void managerWithCrud_reachesReadAndCreate() throws Exception {
-        long projectId = createProject(ProjectStatus.ACTIVE);
-        RoleEntity role = persistRoleWithGrants(grant("PAYROLL", "CREATE", "READ", "UPDATE", "DELETE"));
-        long workerId = createMember(projectId, role, AssignmentStatus.ACTIVE);
-        String auth = bearer(workerId, role);
-
-        int listStatus = mockMvc.perform(get(PAYROLL_PATH)
-                        .param("projectId", String.valueOf(projectId))
-                        .header("Authorization", auth))
-                .andReturn().getResponse().getStatus();
-        assertThat(listStatus)
-                .as("a MANAGER with PAYROLL READ + membership must pass the ABAC gate for the list")
-                .isLessThan(400);
-
-        int createStatus = mockMvc.perform(post(PAYROLL_PATH)
-                        .param("projectId", String.valueOf(projectId))
+        MvcResult created = mockMvc.perform(post(PAYOUTS)
                         .header("Authorization", auth)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(createBody(workerId)))
-                .andReturn().getResponse().getStatus();
-        assertThat(createStatus)
-                .as("a MANAGER with PAYROLL CREATE + membership must not be denied by the ABAC gate "
-                        + "(no 401/403/5xx)")
-                .isNotIn(401, 403)
-                .isLessThan(500);
-    }
+                        .content(createBody(f.workerId)))
+                .andReturn();
+        assertThat(created.getResponse().getStatus()).as("%s create", roleCode).isEqualTo(200);
+        Number payoutId = JsonPath.read(created.getResponse().getContentAsString(), "$.id");
 
-    // ------------------------------------------------------------------
-    // FOREMAN (READ only) — reads but cannot create (P9, R10.4)
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("a FOREMAN member with PAYROLL READ only reaches the list but is denied a create with 403")
-    void foremanReadOnly_readsButCannotCreate() throws Exception {
-        long projectId = createProject(ProjectStatus.ACTIVE);
-        RoleEntity role = persistRoleWithGrants(grant("PAYROLL", "READ"));
-        long workerId = createMember(projectId, role, AssignmentStatus.ACTIVE);
-        String auth = bearer(workerId, role);
-
-        int listStatus = mockMvc.perform(get(PAYROLL_PATH)
-                        .param("projectId", String.valueOf(projectId))
+        MvcResult list = mockMvc.perform(get(PAYOUTS)
+                        .param("workerId", String.valueOf(f.workerId))
                         .header("Authorization", auth))
-                .andReturn().getResponse().getStatus();
-        assertThat(listStatus)
-                .as("a FOREMAN with PAYROLL READ + membership must pass the ABAC gate for the list")
-                .isLessThan(400);
+                .andReturn();
+        assertThat(list.getResponse().getStatus()).as("%s list without projectId", roleCode).isEqualTo(200);
+        List<Number> listedIds = JsonPath.read(list.getResponse().getContentAsString(), "$[*].id");
+        assertThat(listedIds).extracting(Number::longValue).containsExactly(payoutId.longValue());
 
-        int createStatus = mockMvc.perform(post(PAYROLL_PATH)
-                        .param("projectId", String.valueOf(projectId))
-                        .header("Authorization", auth)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createBody(workerId)))
-                .andReturn().getResponse().getStatus();
-        assertThat(createStatus)
-                .as("a FOREMAN without PAYROLL CREATE must be denied the create by the interceptor (403)")
-                .isEqualTo(403);
-    }
-
-    // ------------------------------------------------------------------
-    // CLIENT / WORKER (no grant) — denied even the READ list (P9, R10.4)
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("a member whose role holds no PAYROLL grant is denied even the list with 403 (deny-by-default)")
-    void noPayrollGrant_deniedList() throws Exception {
-        long projectId = createProject(ProjectStatus.ACTIVE);
-        // Role holds a READ grant on an unrelated resource only — no PAYROLL grant at all.
-        RoleEntity role = persistRoleWithGrants(grant("PROJECTS", "READ"));
-        long workerId = createMember(projectId, role, AssignmentStatus.ACTIVE);
-
-        int status = mockMvc.perform(get(PAYROLL_PATH)
-                        .param("projectId", String.valueOf(projectId))
-                        .header("Authorization", bearer(workerId, role)))
-                .andReturn().getResponse().getStatus();
-        assertThat(status)
-                .as("a caller with no PAYROLL grant must be denied the list by the interceptor (403)")
-                .isEqualTo(403);
-    }
-
-    // ------------------------------------------------------------------
-    // Project scope (R10.5) — another project's payouts are unreachable (404)
-    // ------------------------------------------------------------------
-
-    @Test
-    @DisplayName("a MANAGER member of project A requesting project B's payouts gets 404 — project scope (R10.5)")
-    void managerCannotReachAnotherProjectsPayouts() throws Exception {
-        long memberProjectId = createProject(ProjectStatus.ACTIVE);   // the caller belongs here
-        long otherProjectId = createProject(ProjectStatus.ACTIVE);    // the caller is NOT a member here
-        RoleEntity role = persistRoleWithGrants(grant("PAYROLL", "CREATE", "READ", "UPDATE", "DELETE"));
-        long workerId = createMember(memberProjectId, role, AssignmentStatus.ACTIVE);
-        String auth = bearer(workerId, role);
-
-        int status = mockMvc.perform(get(PAYROLL_PATH)
-                        .param("projectId", String.valueOf(otherProjectId))
+        MvcResult allocations = mockMvc.perform(get(PAYOUTS + "/" + payoutId + "/allocations")
                         .header("Authorization", auth))
-                .andReturn().getResponse().getStatus();
-        assertThat(status)
-                .as("a non-member reaching another project's payouts must get 404 (out-of-scope is "
-                        + "indistinguishable from missing, R10.5)")
-                .isEqualTo(404);
+                .andReturn();
+        assertThat(allocations.getResponse().getStatus()).as("%s allocations", roleCode).isEqualTo(200);
+        List<Number> allocatedProjects = JsonPath.read(
+                allocations.getResponse().getContentAsString(), "$[*].projectId");
+        assertThat(allocatedProjects).extracting(Number::longValue).containsExactly(f.projectId);
+
+        MvcResult company = mockMvc.perform(get(PAYROLL + "/company")
+                        .param("from", from).param("to", LocalDate.now().toString())
+                        .param("workerIds", String.valueOf(f.workerId))
+                        .header("Authorization", auth))
+                .andReturn();
+        assertThat(company.getResponse().getStatus()).as("%s company table", roleCode).isEqualTo(200);
+        List<Number> rowWorkers = JsonPath.read(company.getResponse().getContentAsString(), "$.rows[*].workerId");
+        assertThat(rowWorkers).extracting(Number::longValue).containsExactly(f.workerId);
+
+        MvcResult card = mockMvc.perform(get(PAYROLL + "/workers/" + f.workerId + "/card")
+                        .param("from", from).param("to", LocalDate.now().toString())
+                        .header("Authorization", auth))
+                .andReturn();
+        assertThat(card.getResponse().getStatus()).as("%s worker card", roleCode).isEqualTo(200);
     }
 
     // ------------------------------------------------------------------
@@ -334,14 +382,28 @@ class PayrollAbacStartupIntegrationTest {
         return new Grant(resource, List.of(operations));
     }
 
+    private static final class Fixture {
+        long workerId;
+        long projectId;
+    }
+
+    private int status(RequestBuilder request) throws Exception {
+        return mockMvc.perform(request).andReturn().getResponse().getStatus();
+    }
+
     private String createBody(long workerId) {
         LocalDate from = LocalDate.now().minusDays(10);
-        LocalDate to = LocalDate.now().minusDays(1); // non-advance: periodTo not after today
+        LocalDate to = LocalDate.now().minusDays(1); // regular: periodTo not after today
         return "{\"workerId\":" + workerId
                 + ",\"periodFrom\":\"" + from + "\""
                 + ",\"periodTo\":\"" + to + "\""
                 + ",\"paymentChannel\":\"BANK_TRANSFER\""
-                + ",\"amount\":0}";
+                + ",\"amount\":10.00}";
+    }
+
+    private String lineBody(long workerId, String month) {
+        return "{\"workerId\":" + workerId + ",\"month\":\"" + month + "\",\"name\":\"Bonus "
+                + runId + "\",\"amount\":50.00}";
     }
 
     private String bearer(long userId, RoleEntity role) {
@@ -349,66 +411,26 @@ class PayrollAbacStartupIntegrationTest {
                 userId, role.getCode(), "user" + userId + "+" + runId + "@example.com");
     }
 
-    /** Creates (and commits) a project in the given status with a per-run unique name; returns its id. */
-    private long createProject(ProjectStatus projectStatus) {
-        return new TransactionTemplate(transactionManager).execute(status -> {
-            ProjectEntity project = new ProjectEntity();
-            project.setName("Payroll ABAC " + runId + "-" + COUNTER.incrementAndGet());
-            project.setStatus(projectStatus);
-            entityManager.persist(project);
-            entityManager.flush();
-            return project.getId();
-        });
-    }
-
     /**
-     * Creates (and commits) a user + a membership row linking that user to the project with the
-     * supplied role and assignment status. The returned user id is minted into the caller's JWT
-     * {@code sub}, so {@code ProjectAccessCache} self-loads this project id for the caller and the
-     * service's 404 access gate passes for this project (and fails for any other). The same user
-     * doubles as the payout's target worker, so an ACTIVE membership also satisfies R4.6.
-     *
-     * @return the generated user id (used both as the JWT subject and the payout worker)
+     * Find-or-create a role with the exact matrix code, holding exactly the supplied grants, and
+     * evict its cached permission set.
      */
-    private long createMember(long projectId, RoleEntity role, AssignmentStatus assignmentStatus) {
-        return new TransactionTemplate(transactionManager).execute(status -> {
-            RoleEntity managedRole = entityManager.getReference(RoleEntity.class, role.getId());
-
-            UserEntity user = new UserEntity();
-            long seq = COUNTER.incrementAndGet();
-            user.setName("Member " + runId + "-" + seq);
-            user.setEmail("member" + seq + "+" + runId + "@example.com");
-            user.setRole(managedRole);
-            user.setActive(true);
-            user.setStatus(UserStatus.ACTIVE);
-            user.setLocale(java.util.Locale.forLanguageTag("ru"));
-            entityManager.persist(user);
-
-            ProjectMemberEntity member = new ProjectMemberEntity();
-            member.setUser(user);
-            member.setProjectId(projectId);
-            member.setProjectRole(managedRole);
-            member.setAssignmentStatus(assignmentStatus);
-            entityManager.persist(member);
-            entityManager.flush();
-            return user.getId();
-        });
-    }
-
-    /**
-     * Persists (and commits) a role with a unique per-run code holding exactly the supplied grants.
-     * The evaluator matches on resource + operation <em>code</em>, so the shared resource/operation
-     * rows carry the exact matrix codes (e.g. {@code PAYROLL}/{@code CREATE}); only the role code
-     * carries the per-run suffix (it keys the permission cache).
-     */
-    private RoleEntity persistRoleWithGrants(Grant... grants) {
-        return new TransactionTemplate(transactionManager).execute(status -> {
-            RoleEntity role = new RoleEntity();
-            role.setCode("PAYROLL_ROLE_" + runId + "_" + COUNTER.incrementAndGet());
-            role.setNameRU("Роль payroll");
-            role.setNamePL("Rola payroll");
-            role.setSystem(false);
-
+    private RoleEntity ensureRole(String code, Grant... grants) {
+        RoleEntity role = tx().execute(status -> {
+            List<RoleEntity> existing = entityManager
+                    .createQuery("select r from RoleEntity r where r.code = :c", RoleEntity.class)
+                    .setParameter("c", code)
+                    .getResultList();
+            RoleEntity r;
+            if (existing.isEmpty()) {
+                r = new RoleEntity();
+                r.setCode(code);
+                r.setNameRU("Роль " + code);
+                r.setNamePL("Rola " + code);
+                r.setSystem(true);
+            } else {
+                r = existing.get(0);
+            }
             List<RoleResourceEntity> roleResources = new ArrayList<>();
             for (Grant g : grants) {
                 ResourceEntity resource = getOrCreateResource(g.resource());
@@ -417,21 +439,22 @@ class PayrollAbacStartupIntegrationTest {
                     ops.add(getOrCreateOperation(opCode));
                 }
                 RoleResourceEntity rr = new RoleResourceEntity();
-                rr.setRole(role);
+                rr.setRole(r);
                 rr.setResource(resource);
                 rr.setOperations(ops);
                 roleResources.add(rr);
             }
-            role.getRoleResources().addAll(roleResources);
-
-            entityManager.persist(role);
+            r.getRoleResources().addAll(roleResources);
+            if (r.getId() == null) {
+                entityManager.persist(r);
+            }
             entityManager.flush();
-            permissionCache.invalidate(role.getCode());
-            return role;
+            return r;
         });
+        permissionCache.invalidate(code);
+        return role;
     }
 
-    /** Returns the existing resource row for the code, or creates it (codes must be exact). */
     private ResourceEntity getOrCreateResource(String code) {
         List<ResourceEntity> existing = entityManager
                 .createQuery("select r from ResourceEntity r where r.code = :c", ResourceEntity.class)
@@ -448,7 +471,6 @@ class PayrollAbacStartupIntegrationTest {
         return resource;
     }
 
-    /** Returns the existing operation row for the code, or creates it (codes must be exact). */
     private OperationEntity getOrCreateOperation(String code) {
         List<OperationEntity> existing = entityManager
                 .createQuery("select o from OperationEntity o where o.code = :c", OperationEntity.class)
@@ -463,5 +485,146 @@ class PayrollAbacStartupIntegrationTest {
         operation.setNamePL(code + " PL " + runId);
         entityManager.persist(operation);
         return operation;
+    }
+
+    private long persistUser(String key, RoleEntity role) {
+        return tx().execute(status -> {
+            UserEntity user = newUser(key, entityManager.getReference(RoleEntity.class, role.getId()));
+            entityManager.persist(user);
+            entityManager.flush();
+            return user.getId();
+        });
+    }
+
+    private UserEntity newUser(String key, RoleEntity role) {
+        long seq = COUNTER.incrementAndGet();
+        UserEntity user = new UserEntity();
+        user.setName(key + " " + runId + "-" + seq);
+        user.setEmail(key + seq + "+" + runId + "@example.com");
+        user.setRole(role);
+        user.setActive(true);
+        user.setStatus(UserStatus.ACTIVE);
+        user.setLocale(java.util.Locale.forLanguageTag("pl"));
+        return user;
+    }
+
+    /** A PLANNED regular payout persisted directly (no allocations) for the worker. */
+    private long persistPayout(long workerId) {
+        return tx().execute(status -> {
+            WorkerPayoutEntity payout = new WorkerPayoutEntity();
+            payout.setWorker(entityManager.getReference(UserEntity.class, workerId));
+            payout.setPayoutDate(LocalDate.now());
+            payout.setPeriodFrom(LocalDate.now().minusDays(10));
+            payout.setPeriodTo(LocalDate.now().minusDays(1));
+            payout.setPaymentChannel(PaymentChannel.CASH);
+            payout.setStatus(PayoutStatus.PLANNED);
+            payout.setAdvance(false);
+            payout.setAmount(new BigDecimal("5.00"));
+            payout.setSuggestedAmount(new BigDecimal("5.00"));
+            payout.setAdvanceApplied(BigDecimal.ZERO);
+            entityManager.persist(payout);
+            entityManager.flush();
+            return payout.getId();
+        });
+    }
+
+    /**
+     * Seeds a WORKER user with one APPROVED report line (available cost) on a fresh project the
+     * callers are not members of.
+     */
+    private Fixture seedWorkerWithLine(RoleEntity workerRole) {
+        Fixture f = new Fixture();
+        tx().executeWithoutResult(status -> {
+            MeasurementUnitEntity unit = getOrCreateUnit("m2");
+            WorkerTypeEntity base = new WorkerTypeEntity();
+            base.setCode("WT_BASE_" + runId + "_" + COUNTER.incrementAndGet());
+            base.setTierPct(new BigDecimal("0.40"));
+            base.setBase(true);
+            base.setOrderNo(0);
+            base.setNameRU("Базовый");
+            base.setNamePL("Bazowy");
+            base.setActive(true);
+            entityManager.persist(base);
+
+            WorkCategoryEntity category = new WorkCategoryEntity();
+            category.setCode("CAT_" + runId + "_" + COUNTER.incrementAndGet());
+            category.setOrderNo(1);
+            category.setNameRU("Категория");
+            category.setNamePL("Kategoria");
+            category.setActive(true);
+            entityManager.persist(category);
+
+            WorkItemEntity item = new WorkItemEntity();
+            item.setWorkCategory(category);
+            item.setUnit(unit);
+            item.setCode("WI_" + runId + "_" + COUNTER.incrementAndGet());
+            item.setNameRU("Работа");
+            item.setNamePL("Praca");
+            item.setActive(true);
+            entityManager.persist(item);
+
+            UserEntity worker = newUser("worker", entityManager.getReference(RoleEntity.class, workerRole.getId()));
+            entityManager.persist(worker);
+
+            ProjectEntity project = new ProjectEntity();
+            project.setName("Payroll ABAC " + runId + "-" + COUNTER.incrementAndGet());
+            project.setStatus(ProjectStatus.ACTIVE);
+            entityManager.persist(project);
+
+            RoomTypeEntity roomType = new RoomTypeEntity();
+            roomType.setCode("ROOMTYPE_" + runId + "_" + COUNTER.incrementAndGet());
+            roomType.setNameRU("Комната");
+            roomType.setNamePL("Pokój");
+            roomType.setActive(true);
+            entityManager.persist(roomType);
+
+            RoomEntity room = new RoomEntity();
+            room.setProject(project);
+            room.setRoomType(roomType);
+            room.setLabel("Room " + runId);
+            entityManager.persist(room);
+
+            WorkReportEntity report = new WorkReportEntity();
+            report.setProject(project);
+            report.setWorkItem(item);
+            report.setAuthor(worker);
+            report.setWorker(worker);
+            report.setPerformedFrom(LocalDate.now().minusDays(5));
+            report.setPerformedTo(LocalDate.now().minusDays(4));
+            report.setStatus(WorkReportStatus.APPROVED);
+            report.setClientUnitPrice(new BigDecimal("100.00"));
+            report.setTotalQuantity(new BigDecimal("2.000"));
+            report.setRevenueValue(new BigDecimal("200.00"));
+            entityManager.persist(report);
+
+            WorkReportRoomEntity line = new WorkReportRoomEntity();
+            line.setReport(report);
+            line.setRoom(room);
+            line.setQuantity(new BigDecimal("2.000"));
+            line.setInputMode(WorkReportInputMode.ABSOLUTE);
+            entityManager.persist(line);
+            entityManager.flush();
+
+            f.workerId = worker.getId();
+            f.projectId = project.getId();
+        });
+        return f;
+    }
+
+    private MeasurementUnitEntity getOrCreateUnit(String code) {
+        List<MeasurementUnitEntity> existing = entityManager.createQuery(
+                        "select u from MeasurementUnitEntity u where u.code = :code", MeasurementUnitEntity.class)
+                .setParameter("code", code)
+                .getResultList();
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+        MeasurementUnitEntity unit = new MeasurementUnitEntity();
+        unit.setCode(code);
+        unit.setNameRU("Ед. " + code);
+        unit.setNamePL("Jedn. " + code);
+        unit.setActive(true);
+        entityManager.persist(unit);
+        return unit;
     }
 }

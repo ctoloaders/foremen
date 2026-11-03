@@ -8,6 +8,7 @@ import java.util.List;
 
 import com.foremen.controller.model.WorkReportRoomModel;
 import com.foremen.dao.model.WorkReportStatus;
+import com.foremen.service.payroll.LinePaymentStatus;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -75,6 +76,12 @@ public class WorkReportServiceModel {
      */
     private BigDecimal costValue;
     private BigDecimal margin;
+
+    /**
+     * FOR-07-06 R12.1 — the report's aggregate payment status; {@code null} unless {@code APPROVED}.
+     * Set by {@code WorkReportService} on the read path (no payout data is exposed, R12.2).
+     */
+    private LinePaymentStatus paymentStatus;
 
     private String note;
 

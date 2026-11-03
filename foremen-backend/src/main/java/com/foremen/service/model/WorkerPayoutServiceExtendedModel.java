@@ -20,8 +20,8 @@ import lombok.NoArgsConstructor;
  * {@code create(CreatePayoutRequest)} (derives {@code isAdvance}, snapshots {@code suggestedAmount},
  * applies/links credit), {@code markPaid(id)}, and {@code delete(id)} — not by the generic
  * {@code AdminService} create/update. This model exists only to complete the generic CRUD contract
- * so the inherited by-id read surface compiles and stays project-scoped. On the write path the
- * {@code projectId} / {@code workerId} FKs and the author-supplied scalars are carried; the
+ * so the inherited by-id read surface compiles (FOR-07-06: company-wide, no project). On the write
+ * path the {@code workerId} FK and the author-supplied scalars are carried; the
  * server-derived fields ({@code suggestedAmount}, {@code advanceApplied}, {@code status},
  * {@code isAdvance}, {@code paidAt}) are set by the service, not copied from here.
  */
@@ -32,11 +32,12 @@ public class WorkerPayoutServiceExtendedModel {
 
     private Long id;
 
-    private Long projectId;
-
     private Long workerId;
     /** The worker's localized display name (ru → pl → code); read path only (R8.1). */
     private String workerName;
+
+    /** FOR-07-06: the payout date (payouts are worker-wide, no project). */
+    private LocalDate payoutDate;
 
     private LocalDate periodFrom;
     private LocalDate periodTo;

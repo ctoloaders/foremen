@@ -29,12 +29,14 @@ import lombok.Setter;
  * {@code Σ Cost_Value} over the worker's unpaid {@code APPROVED} report lines in the period, read
  * through the FOR-06-10 {@code WorkerCostService} verbatim; this entity only persists the resulting
  * {@link #amount} / {@link #suggestedAmount} / {@link #advanceApplied} snapshots (no second cost
- * formula). Which report lines a regular payout paid is recorded by the nullable
- * {@link WorkReportRoomEntity#getPaidByPayout() work_report_rooms.paid_by_payout_id} FK
- * (Requirement 6), not a copy table.
+ * formula).
  *
- * <p>Project-scoped on {@code project.id} ({@code getProjectIdPath() = "project.id"}, R10.2). The
- * entity carries <strong>no</strong> {@code nameRU}/{@code namePL} i18n columns — a payout is
+ * <p>FOR-07-06 reshape: the payout is <b>worker-wide</b>. The {@code project_id} column was dropped
+ * (changeset {@code 193}) and {@link #payoutDate} added; which report lines a regular payout paid
+ * (fully or partially) is recorded in {@link WorkerPayoutAllocationEntity} rows, mirrored by
+ * {@link WorkReportRoomEntity#getPaidAmount() work_report_rooms.paid_amount}.
+ *
+ * <p>The entity carries <strong>no</strong> {@code nameRU}/{@code namePL} i18n columns — a payout is
  * transactional, not a dictionary; the worker / work-item / room / tier names are read from the
  * referenced entities with the {@code ru → pl → code} fallback (Requirement 8.1).
  *
@@ -50,15 +52,17 @@ import lombok.Setter;
 @NoArgsConstructor
 public class WorkerPayoutEntity extends BaseEntity implements AdvanceCreditSource {
 
-    /** Owner FK to the project, NOT NULL — drives the project-scope filter ({@code "project.id"}, R10.2). */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "project_id", nullable = false)
-    private ProjectEntity project;
-
     /** The worker being paid, NOT NULL (R1.1). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "worker_id", nullable = false)
     private UserEntity worker;
+
+    /**
+     * FOR-07-06 (R1.3, R5.1): the date the payout is made (default today). Drives the month the
+     * payout is attributed to in the company table and the worker card ({@code MonthAttribution}).
+     */
+    @Column(name = "payout_date", nullable = false)
+    private LocalDate payoutDate;
 
     /** Start of the payout period; {@code periodTo >= periodFrom} enforced at the service + DB (R1.1, R4.5). */
     @Column(name = "period_from", nullable = false)

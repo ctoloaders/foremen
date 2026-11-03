@@ -148,6 +148,7 @@ class InviteCreateAtomicityIntegrationTest {
                 null,
                 null,
                 null,
+                null,
                 null);
     }
 

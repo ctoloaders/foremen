@@ -36,5 +36,8 @@ public record UserServiceExtendedModel(
         // D-worker-only), outbound (id, localized name) ref on the read path. Each is left null on
         // the opposite path, mirroring workCategoryIds / workCategories.
         Long workerTypeId,
-        RefDto workerType
+        RefDto workerType,
+        // FOR-07-06 (R3) — seniority supplement fraction: inbound on the write path (resolved by
+        // UserService.resolveSeniority), outbound from users.seniority_pct on the read path.
+        java.math.BigDecimal seniorityPct
 ) {}

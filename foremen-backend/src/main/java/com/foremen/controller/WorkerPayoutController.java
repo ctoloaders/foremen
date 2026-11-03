@@ -1,6 +1,7 @@
 package com.foremen.controller;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -18,44 +19,46 @@ import com.foremen.config.security.RequiresPermission;
 import com.foremen.dao.model.PayoutStatus;
 import com.foremen.service.payroll.WorkerPayoutService;
 import com.foremen.service.payroll.dto.CreatePayoutRequest;
+import com.foremen.service.payroll.dto.PayoutAllocationDto;
+import com.foremen.service.payroll.dto.PayoutFilter;
 import com.foremen.service.payroll.dto.PayoutSuggestionDto;
-import com.foremen.service.payroll.dto.PayrollFilter;
-import com.foremen.service.payroll.dto.PayrollView;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
 
 import lombok.RequiredArgsConstructor;
 
 /**
- * FOR-06-11 (design §Backend controller; Requirements 4.1, 7.4, 10.1, 10.3, 11.1): the ABAC-wired
- * controller for payroll — the money-OUT counterpart of the FOR-06-07 {@link PaymentScheduleController}.
- * It exposes the project-scoped payout surface of the <b>Rozliczenie wynagrodzeń</b> execution tab:
- * the list + per-worker remaining advance credit, the create-dialog suggestion preview, the create,
- * the mark-paid state transition, and the hard-delete of a {@code PLANNED} payout.
+ * FOR-07-06 (design §Controllers and endpoints; Requirements 4.1, 5.1, 6.1, 14.1, 14.2): the
+ * ABAC-wired controller for <b>company-wide</b> worker payouts. Payouts are no longer tied to a
+ * project: a payout covers the worker's unpaid {@code APPROVED} work across <b>all</b> projects and
+ * its amount is distributed over the oldest unpaid report lines first. No endpoint takes a
+ * {@code projectId} (R4.1, R5.1).
  *
- * <h2>ABAC guarding (R10.3, entity-creation-rules step 3)</h2>
- * The class carries {@link PermissionResource @PermissionResource("PAYROLL")} (the resource seeded by
- * task 7.1); every in-scope handler carries a method-level {@link RequiresPermission @RequiresPermission}
- * that takes precedence over the class default (mirroring {@link PaymentScheduleController} /
- * {@link OfferController}), so the controller is <b>fully annotated</b> and
- * {@code PermissionAnnotationValidator} classifies it COMPLETE at startup — no half-annotated handler
- * fails the boot. The lifecycle actions map onto the <b>standard CRUD</b> operations — <b>no new ABAC
- * operation</b> is introduced (R10.4):
- *
+ * <h2>Endpoints</h2>
  * <ul>
- *   <li>{@code list} / {@code suggest} &rarr; {@code PAYROLL} READ (the tab list + the dialog preview).</li>
- *   <li>{@code create} &rarr; {@code PAYROLL} CREATE (issue a {@code PLANNED} payout, R4).</li>
- *   <li>{@code pay} &rarr; {@code PAYROLL} UPDATE ({@code PLANNED → PAID} is a state transition, R7.1).</li>
- *   <li>{@code delete} &rarr; {@code PAYROLL} DELETE (hard-delete a {@code PLANNED} payout only, R7.3).</li>
+ *   <li>{@code GET /api/worker-payouts?workerId&from&to&status} &rarr; {@code List<WorkerPayoutDto>}
+ *       ({@code PAYROLL} READ).</li>
+ *   <li>{@code GET /api/worker-payouts/suggest?workerId&from&to} &rarr; {@link PayoutSuggestionDto}
+ *       ({@code PAYROLL} READ, R4).</li>
+ *   <li>{@code POST /api/worker-payouts} with {@link CreatePayoutRequest} &rarr; {@link WorkerPayoutDto}
+ *       ({@code PAYROLL} CREATE, R5).</li>
+ *   <li>{@code POST /api/worker-payouts/{id}/pay} &rarr; {@link WorkerPayoutDto}
+ *       ({@code PAYROLL} UPDATE — {@code PLANNED → PAID} is a state transition, R6.1).</li>
+ *   <li>{@code DELETE /api/worker-payouts/{id}} &rarr; 204 ({@code PAYROLL} DELETE, R6.2–R6.4).</li>
+ *   <li>{@code GET /api/worker-payouts/{id}/allocations} &rarr; {@code List<PayoutAllocationDto>}
+ *       ({@code PAYROLL} READ).</li>
  * </ul>
  *
- * <p>The {@code PAYROLL} resource scopes by {@code project.id} via {@link WorkerPayoutService}
- * ({@code ProjectScopedService}); a caller reaches only payouts of projects they belong to (R10.5).
- * Per the seeded matrix (task 7.1): ADMIN / MANAGER / FINANCIER get full CRUD; FOREMAN gets READ
- * only (visibility, no issuing); CLIENT and WORKER have no grant. The {@code PLANNED}-only mutability
- * / delete rules are enforced in the service <b>on top of</b> the ABAC grant (R7).
+ * <h2>ABAC guarding (R14.1, R14.2)</h2>
+ * The class carries {@link PermissionResource @PermissionResource("PAYROLL")} and every handler a
+ * method-level {@link RequiresPermission @RequiresPermission}, so {@code PermissionAnnotationValidator}
+ * classifies the controller COMPLETE at startup. Lifecycle actions map onto the standard CRUD
+ * operations; no new ABAC operation is introduced. {@link WorkerPayoutService} is <b>not</b>
+ * project-scoped: reads are company-wide for any role holding the {@code PAYROLL} grant (ADMIN,
+ * MANAGER, FINANCIER — full CRUD; FOREMAN, CLIENT, WORKER — no grant). The {@code PLANNED}-only
+ * mutability / delete rules are enforced in the service on top of the ABAC grant.
  *
- * <p>Controllers are thin: every lifecycle decision + invariant lives in {@link WorkerPayoutService}
- * and its pure collaborators; this class only maps HTTP to the service calls and renders the DTOs.
+ * <p>The controller is thin: validation, distribution and lifecycle rules live in
+ * {@link WorkerPayoutService} and its collaborators.
  */
 @RestController
 @RequestMapping("/api/worker-payouts")
@@ -71,75 +74,67 @@ public class WorkerPayoutController {
 
     private final WorkerPayoutService workerPayoutService;
 
-    // --- List (R11.1, R5.8) --------------------------------------------------------------------
+    // --- List ----------------------------------------------------------------------------------
 
     /**
-     * The project's payroll read model — the payouts (optionally narrowed by {@code workerId} /
-     * {@code status}) plus each worker's remaining advance credit (R11.1, R5.8). {@code PAYROLL}
-     * READ; the service enforces project scope so another project's payouts are never returned
-     * (R10.5).
+     * Company-wide payout list, optionally narrowed by worker, payout-date window and status.
+     * {@code PAYROLL} READ.
      *
-     * @param projectId the owning project id (project scope is enforced by the service)
-     * @param workerId  narrow to a single worker's payouts, or {@code null} for all
-     * @param status    narrow to {@code PLANNED} / {@code PAID}, or {@code null} for all
+     * @param workerId narrow to a single worker's payouts, or {@code null} for all workers
+     * @param from     payout-date window start (inclusive, ISO date), or {@code null}
+     * @param to       payout-date window end (inclusive, ISO date), or {@code null}
+     * @param status   narrow to {@code PLANNED} / {@code PAID}, or {@code null} for all
      */
     @GetMapping
     @RequiresPermission(resource = PAYROLL_RESOURCE, operation = READ_OPERATION)
-    public ResponseEntity<PayrollView> list(
-            @RequestParam Long projectId,
+    public ResponseEntity<List<WorkerPayoutDto>> list(
             @RequestParam(required = false) Long workerId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
             @RequestParam(required = false) PayoutStatus status) {
-        return ResponseEntity.ok(workerPayoutService.list(projectId, new PayrollFilter(workerId, status)));
+        return ResponseEntity.ok(workerPayoutService.list(new PayoutFilter(workerId, from, to, status)));
     }
 
-    // --- Suggest (R3) --------------------------------------------------------------------------
+    // --- Suggest (R4) --------------------------------------------------------------------------
 
     /**
-     * The create-dialog preview for a worker + period — the gross (Σ FOR-06-10 {@code Cost_Value}
-     * over the unpaid {@code APPROVED} lines, or the planned basis for an advance), the credit
-     * arithmetic, the suggested cash amount, and the per-line breakdown (R3). {@code PAYROLL} READ.
+     * The create-dialog preview for a worker + period across all the worker's projects — gross,
+     * remaining advance credit, credit to apply, suggested amount and the per-line breakdown with
+     * the allocation preview (R4). Takes no project (R4.1). {@code PAYROLL} READ.
      *
-     * @param projectId the owning project id (project scope is enforced by the service)
-     * @param workerId  the worker the preview is for
-     * @param from      the period start (inclusive, ISO date)
-     * @param to        the period end (inclusive, ISO date)
+     * @param workerId the worker the preview is for
+     * @param from     the period start (inclusive, ISO date)
+     * @param to       the period end (inclusive, ISO date)
      */
     @GetMapping("/suggest")
     @RequiresPermission(resource = PAYROLL_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<PayoutSuggestionDto> suggest(
-            @RequestParam Long projectId,
             @RequestParam Long workerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        return ResponseEntity.ok(workerPayoutService.suggest(projectId, workerId, from, to));
+        return ResponseEntity.ok(workerPayoutService.suggest(workerId, from, to));
     }
 
-    // --- Create (R4, R5) -----------------------------------------------------------------------
+    // --- Create (R5) ---------------------------------------------------------------------------
 
     /**
-     * Creates a {@code PLANNED} payout for a worker over a period on the given project — links the
-     * covered unpaid {@code APPROVED} lines + applies advance credit for a regular payout, or adds
-     * worker credit for an advance, all in one transaction (R4, R5). {@code PAYROLL} CREATE. The
-     * owning project is supplied as a request param (the {@link CreatePayoutRequest} body carries no
-     * project id).
+     * Creates a {@code PLANNED} payout and, for a regular payout, distributes
+     * {@code amount + advanceApplied} over the worker's oldest unpaid lines in one transaction (R5).
+     * The body carries no project (R5.1). {@code PAYROLL} CREATE.
      *
-     * @param projectId the owning project id (project scope is enforced by the service)
-     * @param request   the create payload (worker, period, channel, amount, note)
+     * @param request worker, payout date, period, channel, optional amount and note
      */
     @PostMapping
     @RequiresPermission(resource = PAYROLL_RESOURCE, operation = CREATE_OPERATION)
-    public ResponseEntity<WorkerPayoutDto> create(
-            @RequestParam Long projectId,
-            @RequestBody CreatePayoutRequest request) {
-        return ResponseEntity.ok(workerPayoutService.create(projectId, request));
+    public ResponseEntity<WorkerPayoutDto> create(@RequestBody CreatePayoutRequest request) {
+        return ResponseEntity.ok(workerPayoutService.create(request));
     }
 
-    // --- Mark paid (R7.1, R7.2) ----------------------------------------------------------------
+    // --- Mark paid (R6.1) ----------------------------------------------------------------------
 
     /**
-     * Marks a {@code PLANNED} payout {@code PAID}, sets {@code paidAt}, and freezes the record
-     * (R7.1); a non-{@code PLANNED} source is rejected ({@code 409}, R7.2). This is a state
-     * transition, so it maps onto {@code PAYROLL} UPDATE — <b>no</b> new ABAC operation.
+     * Marks a {@code PLANNED} payout {@code PAID} and freezes it (R6.1); a {@code PAID} source is
+     * rejected with 409. {@code PAYROLL} UPDATE.
      *
      * @param id the payout to mark paid
      */
@@ -149,13 +144,11 @@ public class WorkerPayoutController {
         return ResponseEntity.ok(workerPayoutService.markPaid(id));
     }
 
-    // --- Delete (R7.3, R5.7) -------------------------------------------------------------------
+    // --- Delete (R6.2–R6.4) --------------------------------------------------------------------
 
     /**
-     * Hard-deletes a {@code PLANNED} payout — releasing its linked report lines and reversing its
-     * advance-credit effect (R7.3); a {@code PAID} delete and an advance whose credit a later regular
-     * payout already consumed are rejected ({@code 409}, R5.7, R7.2). {@code PAYROLL} DELETE; the
-     * {@code PLANNED}-only rule is enforced in the service on top of the ABAC grant.
+     * Hard-deletes a {@code PLANNED} payout, releasing its allocations (regular) or after the
+     * worker-wide consumed-credit check (advance) (R6.2–R6.4). {@code PAYROLL} DELETE.
      *
      * @param id the {@code PLANNED} payout to delete
      */
@@ -164,5 +157,19 @@ public class WorkerPayoutController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         workerPayoutService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- Allocations ---------------------------------------------------------------------------
+
+    /**
+     * The report-line allocations a payout's amount was distributed over (project, work item, room,
+     * allocated amount); empty for an advance. 404 for an unknown payout. {@code PAYROLL} READ.
+     *
+     * @param id the payout whose allocations are read
+     */
+    @GetMapping("/{id}/allocations")
+    @RequiresPermission(resource = PAYROLL_RESOURCE, operation = READ_OPERATION)
+    public ResponseEntity<List<PayoutAllocationDto>> allocations(@PathVariable Long id) {
+        return ResponseEntity.ok(workerPayoutService.allocations(id));
     }
 }

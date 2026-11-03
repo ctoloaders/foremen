@@ -34,17 +34,16 @@ import liquibase.resource.ClassLoaderResourceAccessor;
  * nothing (P11):
  *
  * <ul>
- *   <li><b>180</b> creates {@code worker_payouts} with the documented columns, NOT NULL FKs to
- *       {@code projects} / {@code users}, the numeric/enum/date columns, the {@code status} default
+ *   <li><b>180</b> creates {@code worker_payouts} with the documented columns (its
+ *       {@code project_id} is dropped by FOR-07-06 changeset 193), a NOT NULL FK to {@code users}, the numeric/enum/date columns, the {@code status} default
  *       {@code PLANNED}, the {@code advance_applied} default 0, and the {@code period_to >=
  *       period_from} CHECK (R1.1, R1.3, R4.5);</li>
- *   <li><b>181</b> adds the nullable {@code work_report_rooms.paid_by_payout_id} FK column — the
- *       paid-by marker — WITHOUT touching any other FOR-06-01 column (R1.3, R6.1; regression R12.2:
- *       the FOR-06-01 {@code work_report_rooms} shape + {@code work_reports.status} machine are
- *       otherwise unchanged);</li>
- *   <li><b>182</b> seeds the project-scoped {@code PAYROLL} resource and the per-role ABAC matrix —
- *       <b>P9</b>: ADMIN / MANAGER / FINANCIER CRUD; FOREMAN READ only; CLIENT + WORKER no grant
- *       (deny-by-default) (R7.4, R10.4);</li>
+ *   <li><b>181</b> added the nullable {@code work_report_rooms.paid_by_payout_id} marker; FOR-07-06
+ *       changeset 192 drops it again (replaced by {@code paid_amount}), so this test only pins that
+ *       the other FOR-06-01 columns stay intact (regression R12.2);</li>
+ *   <li><b>182</b> seeds the {@code PAYROLL} resource and the per-role ABAC matrix — <b>P9</b>:
+ *       ADMIN / MANAGER / FINANCIER CRUD; FOREMAN's READ grant is revoked by FOR-07-06 changeset
+ *       198; CLIENT + WORKER no grant (deny-by-default) (R7.4, R10.4);</li>
  *   <li><b>P11 idempotency</b> — a second application of the full changelog inserts no duplicate
  *       table / column / resource / grant and errors nowhere (guarded by {@code NOT tableExists} /
  *       {@code NOT columnExists} / {@code sqlCheck COUNT(*)=0} + {@code onFail="MARK_RAN"} and the
@@ -150,11 +149,14 @@ class PayrollMigrationIntegrationTest {
     void workerPayoutsTableCreated() throws Exception {
         assertThat(tableExists("worker_payouts")).as("180 must create worker_payouts").isTrue();
         assertColumns("worker_payouts",
-                "id", "project_id", "worker_id", "period_from", "period_to", "amount",
+                "id", "worker_id", "period_from", "period_to", "amount",
                 "suggested_amount", "advance_applied", "payment_channel", "status", "is_advance",
                 "paid_at", "note");
-        // The two owner FKs are NOT NULL (R1.1).
-        assertThat(isNullable("worker_payouts", "project_id")).as("project_id NOT NULL").isFalse();
+        // FOR-07-06: project_id is dropped by changeset 193 (payouts are worker-wide); the full
+        // 192–198 end state is pinned by CompanyPayrollMigrationIntegrationTest.
+        assertThat(columnExists("worker_payouts", "project_id"))
+                .as("project_id is dropped by FOR-07-06 changeset 193").isFalse();
+        // The owner FK is NOT NULL (R1.1).
         assertThat(isNullable("worker_payouts", "worker_id")).as("worker_id NOT NULL").isFalse();
         assertThat(isNullable("worker_payouts", "period_from")).as("period_from NOT NULL").isFalse();
         assertThat(isNullable("worker_payouts", "period_to")).as("period_to NOT NULL").isFalse();
@@ -187,16 +189,17 @@ class PayrollMigrationIntegrationTest {
                         .containsIgnoringCase("period_from"));
     }
 
-    // --- 181: the paid_by_payout_id FK column on the FOR-06-01 report line (regression R12.2) ---
+    // --- 181 (superseded by FOR-07-06 192): the FOR-06-01 report line (regression R12.2) --------
 
     @Test
-    @DisplayName("181 adds the nullable work_report_rooms.paid_by_payout_id FK column, leaving FOR-06-01 columns intact")
-    void paidByPayoutColumnAdded() throws Exception {
+    @DisplayName("181's paid_by_payout_id is superseded by 192 (dropped); FOR-06-01 report-line columns stay intact")
+    void reportLineColumnsIntactAfterPaidMarkerReplaced() throws Exception {
         assertThat(tableExists("work_report_rooms")).as("the FOR-06-01 report-line table must exist").isTrue();
+        // FOR-07-06 changeset 192 replaced the single-payout marker with a partial paid amount.
         assertThat(columnExists("work_report_rooms", "paid_by_payout_id"))
-                .as("181 must add the paid_by_payout_id FK column").isTrue();
-        assertThat(isNullable("work_report_rooms", "paid_by_payout_id"))
-                .as("the paid-by marker is nullable (a line is payable iff null, R6.1)").isTrue();
+                .as("181's paid_by_payout_id is dropped by FOR-07-06 changeset 192").isFalse();
+        assertThat(columnExists("work_report_rooms", "paid_amount"))
+                .as("192 adds paid_amount in its place").isTrue();
 
         // Regression (R12.2): the FOR-06-01 work_report_rooms columns are otherwise unchanged — the
         // original columns are all still present and the status machine lives on work_reports.status,
@@ -228,9 +231,10 @@ class PayrollMigrationIntegrationTest {
         assertThat(operationsFor("FINANCIER", "PAYROLL"))
                 .as("FINANCIER holds full CRUD on PAYROLL (issue, mark paid = UPDATE, delete-planned = DELETE)")
                 .containsExactlyInAnyOrder("CREATE", "READ", "UPDATE", "DELETE");
+        // FOR-07-06 changeset 198 revokes the FOR-06-11 FOREMAN READ grant (R14.3).
         assertThat(operationsFor("FOREMAN", "PAYROLL"))
-                .as("FOREMAN holds READ only on PAYROLL (visibility, no issuing)")
-                .containsExactly("READ");
+                .as("FOREMAN holds no PAYROLL grant after FOR-07-06 changeset 198")
+                .isEmpty();
     }
 
     @Test
@@ -292,9 +296,9 @@ class PayrollMigrationIntegrationTest {
                 .as("re-run must not change ADMIN grants").isEqualTo(adminBefore);
         assertThat(operationsFor("FOREMAN", "PAYROLL").size())
                 .as("re-run must not change FOREMAN grants").isEqualTo(foremanBefore);
-        // The table + the added FK column remain single.
+        // The table remains; the FOR-06-11 paid marker stays dropped (FOR-07-06 192).
         assertThat(tableExists("worker_payouts")).isTrue();
-        assertThat(columnExists("work_report_rooms", "paid_by_payout_id")).isTrue();
+        assertThat(columnExists("work_report_rooms", "paid_by_payout_id")).isFalse();
     }
 
     // --- helpers ---------------------------------------------------------------------------------

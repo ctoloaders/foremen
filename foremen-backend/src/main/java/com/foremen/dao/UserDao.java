@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +38,18 @@ public interface UserDao extends AdminDao<UserEntity, Long> {
      * resolve the existing ADMIN user (if any).
      */
     List<UserEntity> findByRoleCode(String roleCode);
+
+    /**
+     * FOR-07-06 R2.1 (design §Cost seam) — batch-load the worker users backing a cost derivation with
+     * their {@code workerType} eagerly fetched (LEFT JOIN FETCH — a user without a type is still
+     * returned), so the cost seam resolves every worker's own type + {@code seniorityPct} in one
+     * query (no N+1). The caller MUST NOT pass an empty collection.
+     *
+     * @param ids the worker user ids (non-empty)
+     * @return the matching users, each with {@code workerType} initialized (possibly {@code null})
+     */
+    @Query("SELECT u FROM UserEntity u LEFT JOIN FETCH u.workerType WHERE u.id IN :ids")
+    List<UserEntity> findWorkerProfiles(@Param("ids") Collection<Long> ids);
 
     /**
      * FOR-05-09 Req 11 (task 10.1) — the candidate search backing

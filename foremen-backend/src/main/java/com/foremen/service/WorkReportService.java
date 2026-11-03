@@ -17,6 +17,9 @@ import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -54,6 +57,9 @@ import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.WorkReportServiceExtendedModel;
 import com.foremen.service.model.WorkReportServiceModel;
 import com.foremen.service.model.mapper.WorkReportServiceMapper;
+import com.foremen.service.payroll.LinePaymentStatus;
+import com.foremen.service.payroll.WorkReportPaymentStatusResolver;
+import com.foremen.service.payroll.WorkReportPaymentStatusResolver.ReportPayment;
 
 import jakarta.persistence.EntityManager;
 
@@ -128,6 +134,7 @@ public class WorkReportService
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
+    private final WorkReportPaymentStatusResolver paymentStatusResolver;
 
     public WorkReportService(WorkReportDao workReportDao,
                              ProjectMemberDao projectMemberDao,
@@ -137,7 +144,9 @@ public class WorkReportService
                              WorkReportServiceMapper serviceMapper,
                              AuditLogDao auditLogDao,
                              EntityManager entityManager,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher,
+                             WorkReportPaymentStatusResolver paymentStatusResolver) {
+        this.paymentStatusResolver = paymentStatusResolver;
         this.workReportDao = workReportDao;
         this.projectMemberDao = projectMemberDao;
         this.estimateLineDao = estimateLineDao;
@@ -463,7 +472,90 @@ public class WorkReportService
         WorkReportEntity existing = workReportDao.findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
         assertCallerOwnsIfWorker(existing);
-        return serviceMapper.toServiceExtendedModel(existing);
+        return toExtendedWithPayment(existing);
+    }
+
+    // --- Payment status on read DTOs (FOR-07-06 R12.1, R12.2) ---------------------------------
+
+    /**
+     * Paged LIST read enriched with the report aggregate {@code paymentStatus} (FOR-07-06 R12.1).
+     * Mirrors {@link ReadOnlyAdminService#find(Pageable, String)} (same sort processing, the
+     * project-scope + WORKER own-records {@link #addRequiredQuery()} spec, admin-field masking) but
+     * keeps the page's entities so the whole page is costed in <b>one</b> resolver call (one
+     * base-type + one worker-profile query per page, no N+1). Only {@code APPROVED} reports get a
+     * status; no payout data is exposed (R12.2).
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkReportServiceModel> find(Pageable pageable, String rawQuery) {
+        Page<WorkReportEntity> page = findEntityPage(pageable, rawQuery);
+        Map<Long, ReportPayment> payments = paymentStatusResolver.resolve(page.getContent());
+        return page.map(entity -> {
+            WorkReportServiceModel model = serviceMapper.toServiceModel(entity);
+            if (model != null) {
+                ReportPayment payment = payments.get(entity.getId());
+                model.setPaymentStatus(payment == null ? null : payment.status());
+                model.setRooms(withLineStatuses(model.getRooms(), payment));
+                maskAdminOnlyFields(model);
+            }
+            return model;
+        });
+    }
+
+    /**
+     * Paged extended LIST read enriched with the aggregate and per-room payment status
+     * (FOR-07-06 R12.1); costed once per page like {@link #find(Pageable, String)}.
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<WorkReportServiceExtendedModel> findExtended(Pageable pageable, String rawQuery) {
+        Page<WorkReportEntity> page = findEntityPage(pageable, rawQuery);
+        Map<Long, ReportPayment> payments = paymentStatusResolver.resolve(page.getContent());
+        return page.map(entity -> applyPayment(serviceMapper.toServiceExtendedModel(entity),
+                payments.get(entity.getId())));
+    }
+
+    private Page<WorkReportEntity> findEntityPage(Pageable pageable, String rawQuery) {
+        Pageable processed = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
+                processSort(pageable.getSort()));
+        return workReportDao.findAll(buildFinalSpecification(rawQuery), processed);
+    }
+
+    /** Single-report extended projection with its payment status (R12.1). */
+    private WorkReportServiceExtendedModel toExtendedWithPayment(WorkReportEntity entity) {
+        Map<Long, ReportPayment> payments = paymentStatusResolver.resolve(List.of(entity));
+        return applyPayment(serviceMapper.toServiceExtendedModel(entity), payments.get(entity.getId()));
+    }
+
+    private static WorkReportServiceExtendedModel applyPayment(WorkReportServiceExtendedModel model,
+                                                               ReportPayment payment) {
+        if (model == null) {
+            return null;
+        }
+        model.setPaymentStatus(payment == null ? null : payment.status());
+        model.setRooms(withLineStatuses(model.getRooms(), payment));
+        return model;
+    }
+
+    /**
+     * Copies the per-room statuses onto the read rows by persisted row id. A non-APPROVED report
+     * ({@code payment == null}) leaves every row's status {@code null} (R12.1).
+     */
+    private static List<WorkReportRoomModel> withLineStatuses(List<WorkReportRoomModel> rooms,
+                                                              ReportPayment payment) {
+        if (rooms == null || payment == null) {
+            return rooms;
+        }
+        List<WorkReportRoomModel> out = new ArrayList<>(rooms.size());
+        for (WorkReportRoomModel row : rooms) {
+            if (row == null) {
+                out.add(null);
+                continue;
+            }
+            LinePaymentStatus status = row.id() == null ? null : payment.lines().get(row.id());
+            out.add(row.withPaymentStatus(status));
+        }
+        return out;
     }
 
     // --- Progress matrix read projection (A1, R14) --------------------------------------------
@@ -766,7 +858,7 @@ public class WorkReportService
         saveAuditWithSnapshot(before, saved, "UPDATE");
         // R9.2 — notify the author of the approval.
         publishNotification(WorkReportNotificationEvent.Trigger.APPROVED, saved, null);
-        return serviceMapper.toServiceExtendedModel(saved);
+        return toExtendedWithPayment(saved);
     }
 
     /**
@@ -787,7 +879,7 @@ public class WorkReportService
         saveAuditWithSnapshot(before, saved, "UPDATE");
         // R9.3 — notify the author of the rejection, carrying the reason.
         publishNotification(WorkReportNotificationEvent.Trigger.REJECTED, saved, saved.getRejectionReason());
-        return serviceMapper.toServiceExtendedModel(saved);
+        return toExtendedWithPayment(saved);
     }
 
     /**
@@ -810,7 +902,7 @@ public class WorkReportService
         // R9.4 — notify the author that changes were requested, carrying the reason.
         publishNotification(
                 WorkReportNotificationEvent.Trigger.CHANGES_REQUESTED, saved, saved.getRejectionReason());
-        return serviceMapper.toServiceExtendedModel(saved);
+        return toExtendedWithPayment(saved);
     }
 
     // --- Assembly: validation + row resolution + revenue freeze -------------------------------

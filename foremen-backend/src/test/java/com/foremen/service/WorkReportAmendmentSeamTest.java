@@ -115,7 +115,9 @@ class WorkReportAmendmentSeamTest {
     void setUp() {
         service = new WorkReportService(
                 workReportDao, projectMemberDao, estimateLineDao, amendmentLineDao, projectAccessCache,
-                serviceMapper, auditLogDao, entityManager, eventPublisher);
+                serviceMapper, auditLogDao, entityManager, eventPublisher,
+                new com.foremen.service.payroll.WorkReportPaymentStatusResolver(
+                        org.mockito.Mockito.mock(com.foremen.service.workercost.WorkerCostService.class)));
         lenient().when(workReportDao.save(any(WorkReportEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
         lenient().when(entityManager.getReference(any(), any()))

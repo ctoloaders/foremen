@@ -22,6 +22,7 @@ import com.foremen.dao.model.PayoutStatus;
  * @param id              the payout id
  * @param workerId        the paid worker's user id
  * @param workerName      the worker's localized name ({@code ru → pl → code} fallback)
+ * @param payoutDate      FOR-07-06: the payout date (month attribution of Paid, R5.1)
  * @param periodFrom      start of the payout period
  * @param periodTo        end of the payout period
  * @param amount          the cash amount paid (defaults to {@code suggestedAmount}, overridable, R1.4)
@@ -37,6 +38,7 @@ public record WorkerPayoutDto(
         Long id,
         Long workerId,
         String workerName,
+        LocalDate payoutDate,
         LocalDate periodFrom,
         LocalDate periodTo,
         BigDecimal amount,

@@ -53,8 +53,15 @@ import com.foremen.dao.model.WorkReportInputMode;
 import com.foremen.dao.model.WorkReportStatus;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.exception.WorkReportBatchItemException;
+import com.foremen.dao.model.WorkReportRoomEntity;
 import com.foremen.service.model.WorkReportServiceExtendedModel;
+import com.foremen.service.model.WorkReportServiceModel;
 import com.foremen.service.model.mapper.WorkReportServiceMapper;
+import com.foremen.service.payroll.LinePaymentStatus;
+import com.foremen.service.payroll.WorkReportPaymentStatusResolver;
+import com.foremen.service.workercost.WorkerCostDerivation;
+import com.foremen.service.workercost.WorkerCostService;
+import com.foremen.service.workercost.WorkerProfile;
 
 import jakarta.persistence.EntityManager;
 
@@ -114,6 +121,8 @@ class WorkReportServiceTest {
     private EntityManager entityManager;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private WorkerCostService workerCostService;
 
     private WorkReportService service;
 
@@ -121,7 +130,8 @@ class WorkReportServiceTest {
     void setUp() {
         service = new WorkReportService(
                 workReportDao, projectMemberDao, estimateLineDao, amendmentLineDao, projectAccessCache,
-                serviceMapper, auditLogDao, entityManager, eventPublisher);
+                serviceMapper, auditLogDao, entityManager, eventPublisher,
+                new WorkReportPaymentStatusResolver(workerCostService));
         // save() echoes its argument so the committed entity is the one under test.
         lenient().when(workReportDao.save(any(WorkReportEntity.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -365,6 +375,137 @@ class WorkReportServiceTest {
             assertApiError(() -> service.create(model),
                     HttpStatus.FORBIDDEN, "error.workReport.worker.notSelf");
             verify(workReportDao, never()).save(any());
+        }
+    }
+
+    // =======================================================================
+    // FOR-07-06 R12.1 / R12.2 — payment status on the read DTOs
+    // =======================================================================
+
+    @Nested
+    @DisplayName("payment status on read DTOs (FOR-07-06 R12.1/R12.2)")
+    class PaymentStatus {
+
+        /** Line cost exactly as PayoutSuggestionService.lineCost computes it (no profile, no base type). */
+        private BigDecimal expectedCost(String quantity) {
+            return WorkerCostDerivation.costValue(UNIT_PRICE, WorkerProfile.resolve(null, null).tier(),
+                    null, new BigDecimal(quantity));
+        }
+
+        @Test
+        @DisplayName("APPROVED by-id read: per-room UNPAID / PAID (paid = cost) / PARTIAL and aggregate PARTIAL")
+        void approvedByIdCarriesLineAndAggregateStatus() {
+            authenticate(1L, "ROLE_ADMIN");
+            WorkReportEntity report = persistedReport(WorkReportStatus.APPROVED);
+            BigDecimal paidCost = expectedCost("2.000");
+            report.getRooms().add(roomLine(report, 11L, "1.000", BigDecimal.ZERO));
+            report.getRooms().add(roomLine(report, 12L, "2.000", paidCost));
+            report.getRooms().add(roomLine(report, 13L, "2.000", paidCost.subtract(new BigDecimal("0.01"))));
+            when(workReportDao.findById(report.getId())).thenReturn(Optional.of(report));
+            when(serviceMapper.toServiceExtendedModel(report)).thenReturn(extendedOf(report));
+
+            WorkReportServiceExtendedModel result = service.findById(report.getId());
+
+            assertThat(result.getPaymentStatus()).isEqualTo(LinePaymentStatus.PARTIAL);
+            assertThat(result.getRooms()).extracting(WorkReportRoomModel::paymentStatus)
+                    .containsExactly(LinePaymentStatus.UNPAID, LinePaymentStatus.PAID, LinePaymentStatus.PARTIAL);
+            assertThat(result.getRooms()).extracting(WorkReportRoomModel::paidAmount)
+                    .containsExactly(BigDecimal.ZERO, paidCost, paidCost.subtract(new BigDecimal("0.01")));
+        }
+
+        @Test
+        @DisplayName("APPROVED report with no available rate → every line and the aggregate UNAVAILABLE")
+        void approvedWithoutRateIsUnavailable() {
+            authenticate(1L, "ROLE_ADMIN");
+            WorkReportEntity report = persistedReport(WorkReportStatus.APPROVED);
+            report.setClientUnitPrice(null);
+            report.getRooms().add(roomLine(report, 11L, "1.000", BigDecimal.ZERO));
+            when(workReportDao.findById(report.getId())).thenReturn(Optional.of(report));
+            when(serviceMapper.toServiceExtendedModel(report)).thenReturn(extendedOf(report));
+
+            WorkReportServiceExtendedModel result = service.findById(report.getId());
+
+            assertThat(result.getPaymentStatus()).isEqualTo(LinePaymentStatus.UNAVAILABLE);
+            assertThat(result.getRooms().get(0).paymentStatus()).isEqualTo(LinePaymentStatus.UNAVAILABLE);
+        }
+
+        @Test
+        @DisplayName("non-APPROVED report → no payment status (report + rooms) and no cost lookup")
+        void nonApprovedHasNoStatus() {
+            authenticate(1L, "ROLE_ADMIN");
+            WorkReportEntity report = persistedReport(WorkReportStatus.SUBMITTED);
+            report.getRooms().add(roomLine(report, 11L, "1.000", BigDecimal.ZERO));
+            when(workReportDao.findById(report.getId())).thenReturn(Optional.of(report));
+            when(serviceMapper.toServiceExtendedModel(report)).thenReturn(extendedOf(report));
+
+            WorkReportServiceExtendedModel result = service.findById(report.getId());
+
+            assertThat(result.getPaymentStatus()).isNull();
+            assertThat(result.getRooms().get(0).paymentStatus()).isNull();
+            verify(workerCostService, never()).findBaseType();
+            verify(workerCostService, never()).workerProfilesById(any());
+        }
+
+        @Test
+        @DisplayName("LIST page: aggregate per APPROVED report, null otherwise; profiles batched once per page")
+        @SuppressWarnings("unchecked")
+        void listPageIsCostedOnce() {
+            authenticate(1L, "ROLE_ADMIN");
+            WorkReportEntity paid = persistedReport(WorkReportStatus.APPROVED);
+            paid.setId(901L);
+            paid.getRooms().add(roomLine(paid, 21L, "1.000", new BigDecimal("1000.00")));
+            WorkReportEntity unpaid = persistedReport(WorkReportStatus.APPROVED);
+            unpaid.setId(902L);
+            unpaid.getRooms().add(roomLine(unpaid, 22L, "1.000", BigDecimal.ZERO));
+            WorkReportEntity submitted = persistedReport(WorkReportStatus.SUBMITTED);
+            submitted.setId(903L);
+            List<WorkReportEntity> content = List.of(paid, unpaid, submitted);
+            when(workReportDao.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+                    any(org.springframework.data.domain.Pageable.class)))
+                    .thenReturn(new org.springframework.data.domain.PageImpl<>(content));
+            when(serviceMapper.toServiceModel(any(WorkReportEntity.class))).thenAnswer(inv -> {
+                WorkReportEntity e = inv.getArgument(0);
+                WorkReportServiceModel m = new WorkReportServiceModel();
+                m.setId(e.getId());
+                m.setStatus(e.getStatus());
+                return m;
+            });
+
+            List<WorkReportServiceModel> page = service
+                    .find(org.springframework.data.domain.PageRequest.of(0, 20), null).getContent();
+
+            assertThat(page).extracting(WorkReportServiceModel::getPaymentStatus)
+                    .containsExactly(LinePaymentStatus.PAID, LinePaymentStatus.UNPAID, null);
+            verify(workerCostService, org.mockito.Mockito.times(1)).findBaseType();
+            ArgumentCaptor<java.util.Collection<Long>> ids = ArgumentCaptor.forClass(java.util.Collection.class);
+            verify(workerCostService, org.mockito.Mockito.times(1)).workerProfilesById(ids.capture());
+            assertThat(ids.getValue()).containsExactly(WORKER_ID);
+        }
+
+        private WorkReportRoomEntity roomLine(WorkReportEntity report, Long id, String quantity,
+                                              BigDecimal paidAmount) {
+            WorkReportRoomEntity line = new WorkReportRoomEntity();
+            line.setId(id);
+            line.setReport(report);
+            line.setRoom(referenceStub(RoomEntity.class, ROOM_A + id));
+            line.setQuantity(new BigDecimal(quantity));
+            line.setInputMode(WorkReportInputMode.ABSOLUTE);
+            line.setPaidAmount(paidAmount);
+            return line;
+        }
+
+        /** The read rows the real mapper would produce (id + paidAmount, no status yet). */
+        private WorkReportServiceExtendedModel extendedOf(WorkReportEntity report) {
+            WorkReportServiceExtendedModel model = new WorkReportServiceExtendedModel();
+            model.setId(report.getId());
+            model.setStatus(report.getStatus());
+            List<WorkReportRoomModel> rows = new ArrayList<>();
+            for (WorkReportRoomEntity line : report.getRooms()) {
+                rows.add(new WorkReportRoomModel(line.getId(), line.getRoom().getId(), null,
+                        line.getQuantity(), null, line.getInputMode(), line.getPaidAmount(), null));
+            }
+            model.setRooms(rows);
+            return model;
         }
     }
 

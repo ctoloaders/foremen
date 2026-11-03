@@ -3,9 +3,12 @@ package com.foremen.service.payroll;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.doThrow;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -33,20 +36,17 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.foremen.dao.MeasurementUnitDao;
 import com.foremen.dao.ProjectDao;
-import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.WorkCategoryDao;
 import com.foremen.dao.WorkItemDao;
 import com.foremen.dao.WorkReportDao;
 import com.foremen.dao.WorkReportRoomDao;
+import com.foremen.dao.WorkerPayoutAllocationDao;
 import com.foremen.dao.WorkerPayoutDao;
-import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.PaymentChannel;
-import com.foremen.dao.model.PayoutStatus;
 import com.foremen.dao.model.ProjectEntity;
-import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
@@ -59,12 +59,13 @@ import com.foremen.dao.model.WorkReportStatus;
 import com.foremen.dao.model.WorkerPayoutEntity;
 import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.exception.ForemenApiException;
-import com.foremen.service.ProjectAccessCache;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.audit.AuditLogEntity;
 import com.foremen.service.payroll.dto.CreatePayoutRequest;
-import com.foremen.service.payroll.dto.PayrollFilter;
-import com.foremen.service.payroll.dto.PayrollView;
+import com.foremen.service.payroll.dto.PayoutAllocationDto;
+import com.foremen.service.payroll.dto.PayoutFilter;
+import com.foremen.service.payroll.dto.PayoutLineDto;
+import com.foremen.service.payroll.dto.PayoutSuggestionDto;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
 import com.foremen.service.workercost.WorkerCostService;
 
@@ -72,47 +73,30 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 /**
- * FOR-06-11 task 8.2 — payroll service-level integration tests against a real PostgreSQL
- * (Testcontainers), driving the Spring-wired {@link WorkerPayoutService} end to end over genuine
- * transactions, the {@code ProjectScopedService} access gate, and the existing audit mechanism
- * (design §Testing strategy "Integration tests"; R4.7, R10.5, R12.1, R12.2).
+ * FOR-06-11 task 8.2, reshaped by FOR-07-06 task 5.2 — service-level integration tests for the
+ * <b>company-wide</b> {@link WorkerPayoutService} against a real PostgreSQL (Testcontainers), over
+ * genuine transactions and the existing audit mechanism.
  *
- * <p>Harness mirrors {@code WorkerCostServiceIntegrationTest} / {@code ProjectActionNoPartialMutationIntegrationTest}:
- * {@code @SpringBootTest(MOCK)} + {@code @Testcontainers} + {@code @ActiveProfiles("integration-test")}
- * (Liquibase disabled, Hibernate {@code create-drop}). Every fixture row carries a unique per-run id
- * and the caller is authenticated by setting the {@code SecurityContext} principal to the member's
- * numeric id (as the JWT layer does), with the member's project wired into {@link ProjectAccessCache}
- * via a real {@code project_members} row, so the service's 404 project gate reads its allowed set
- * exactly as production.
- *
- * <p>Cases:
  * <ul>
- *   <li><b>Transactional create (R4.7).</b> A regular create with a linkable APPROVED line has its
- *       {@link ReportLineLinker#link} step forced to throw (via a {@link MockitoSpyBean}); the whole
- *       create rolls back — <b>no payout row persists, the report line's {@code paidByPayout} FK
- *       stays null, and the worker's remaining advance credit does not drift</b>.</li>
- *   <li><b>Project scope (R10.5).</b> A member of project A never sees project B's payouts on a read,
- *       and a {@code list}/{@code suggest} against project B is denied with a 404.</li>
- *   <li><b>Audit (R12.1).</b> A create, a mark-paid, and a delete each write an audit row for
- *       {@code WorkerPayoutEntity} via the existing mechanism.</li>
- *   <li><b>Stage reachability (R10.1, surface).</b> A payout is creatable+listable on an
- *       {@code ACTIVE} and a {@code COMPLETED} project (the backend payroll surface is reachable);
- *       the {@code DRAFT}-hides-the-tab gate is a frontend tab-resolver concern (task 10.2).</li>
- *   <li><b>Regression smoke (R12.2).</b> The FOR-06-10 {@code WorkerCostService} and the FOR-06-06
- *       {@code MarginMatrixService} beans still load, and {@code WorkerCostService.costForProject}
- *       still derives cost over a project whose report line now carries the new {@code paidByPayout}
- *       FK — payroll added the FK + the {@code PAYROLL} resource without altering their behaviour.</li>
+ *   <li><b>Transactional create (R5.8).</b> {@link AllocationWriter#write} forced to throw → no payout
+ *       row, no allocation, {@code paid_amount} unchanged.</li>
+ *   <li><b>Worker-wide distribution + reversal (R5.3, R5.4, R6.2).</b> One worker, lines on two
+ *       projects: the payout fills the older line and partially pays the newer one; {@code list} is
+ *       not project-scoped for a non-ADMIN caller; {@code allocations} lists both lines; delete
+ *       restores {@code paid_amount = 0}.</li>
+ *   <li><b>Audit (R6.4).</b> Create, mark-paid, and delete each write a {@code WorkerPayoutEntity}
+ *       audit row (for a non-ADMIN caller — no project scoping any more).</li>
+ *   <li><b>Regression smoke.</b> {@code WorkerCostService} / {@code MarginMatrixService} still load
+ *       and cost a project whose line carries a paid amount.</li>
  * </ul>
  *
- * <p>Repeatability: {@link #cleanUp()} removes every row this test created (deepest-FK-first) and
- * clears the security context + the project-access cache after each test.
- *
- * <p>Validates: Requirements 4.7, 10.1, 10.5, 12.1, 12.2
+ * <p>Repeatability: per-run ids ({@code runId}) on every row; {@link #cleanUp()} deletes them
+ * deepest-FK-first after each test.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
 @Testcontainers
 @ActiveProfiles("integration-test")
-@Tag("Feature: FOR-06-11-payroll, task 8.2: service integration — transactional/scope/audit/regression")
+@Tag("Feature: FOR-07-06-company-payroll, task 5.2: service integration — transactional/distribution/audit/regression")
 class WorkerPayoutServiceIntegrationTest {
 
     private static final AtomicLong COUNTER = new AtomicLong();
@@ -136,24 +120,20 @@ class WorkerPayoutServiceIntegrationTest {
     @Autowired
     private WorkerPayoutService workerPayoutService;
 
-    /** Spy on the sole paid-by-FK mutator so the transactional test can force a mid-create failure. */
+    /** Spy on the sole allocation mutator so the transactional test can force a mid-create failure. */
     @MockitoSpyBean
-    private ReportLineLinker reportLineLinker;
+    private AllocationWriter allocationWriter;
 
     @Autowired
     private ApplicationContext applicationContext;
-
     @Autowired
     private WorkerCostService workerCostService;
-
-    @Autowired
-    private ProjectAccessCache projectAccessCache;
-
     @Autowired
     private AuditLogDao auditLogDao;
-
     @Autowired
     private WorkerPayoutDao workerPayoutDao;
+    @Autowired
+    private WorkerPayoutAllocationDao allocationDao;
     @Autowired
     private WorkReportRoomDao workReportRoomDao;
     @Autowired
@@ -169,10 +149,7 @@ class WorkerPayoutServiceIntegrationTest {
     @Autowired
     private UserDao userDao;
     @Autowired
-    private ProjectMemberDao projectMemberDao;
-    @Autowired
     private WorkReportDao workReportDao;
-
     @Autowired
     private PlatformTransactionManager transactionManager;
 
@@ -189,20 +166,17 @@ class WorkerPayoutServiceIntegrationTest {
     void cleanUp() {
         SecurityContextHolder.clearContext();
         tx().executeWithoutResult(status -> {
-            // Delete deepest-first in FK order. work_report_rooms references BOTH work_reports
-            // (report_id) AND worker_payouts (paid_by_payout_id), so the report lines must go before
-            // either parent; worker_payouts references projects, so payouts precede projects; rooms
-            // reference projects, so rooms precede projects too.
+            // Deepest-FK-first: allocations → report lines → payouts → reports → rooms → projects → users.
+            exec("delete from WorkerPayoutAllocationEntity a where a.payout.id in "
+                    + "(select p.id from WorkerPayoutEntity p where p.worker.email like :p)");
             exec("delete from WorkReportRoomEntity rr where rr.report.id in "
                     + "(select r.id from WorkReportEntity r where r.project.id in "
                     + "(select pr.id from ProjectEntity pr where pr.name like :p))");
-            exec("delete from WorkerPayoutEntity p where p.project.id in "
-                    + "(select pr.id from ProjectEntity pr where pr.name like :p)");
+            exec("delete from WorkerPayoutEntity p where p.worker.id in "
+                    + "(select u.id from UserEntity u where u.email like :p)");
             exec("delete from WorkReportEntity r where r.project.id in "
                     + "(select pr.id from ProjectEntity pr where pr.name like :p)");
             exec("delete from RoomEntity rm where rm.project.id in "
-                    + "(select pr.id from ProjectEntity pr where pr.name like :p)");
-            exec("delete from ProjectMemberEntity m where m.projectId in "
                     + "(select pr.id from ProjectEntity pr where pr.name like :p)");
             exec("delete from ProjectEntity pr where pr.name like :p");
             exec("delete from UserEntity u where u.email like :p");
@@ -211,7 +185,6 @@ class WorkerPayoutServiceIntegrationTest {
             exec("delete from WorkCategoryEntity wc where wc.code like :p");
             exec("delete from WorkerTypeEntity w where w.code like :p");
             exec("delete from RoomTypeEntity rt where rt.code like :p");
-            exec("delete from RoleEntity r where r.code like :p");
         });
     }
 
@@ -220,226 +193,151 @@ class WorkerPayoutServiceIntegrationTest {
     }
 
     // =====================================================================================
-    // Transactional create (R4.7)
+    // Transactional create (R5.8)
     // =====================================================================================
 
     @Test
-    @DisplayName("A mid-create failure rolls the whole create back — no payout, no FK change, no credit drift (R4.7)")
+    @DisplayName("A mid-create failure rolls the whole create back — no payout, no allocation, paid_amount unchanged (R5.8)")
     void transactionalCreateRollsBackEverythingOnFailure() {
-        Fixture f = seedProjectWithApprovedLine(ProjectStatus.ACTIVE);
-        authenticate(f.memberUserId);
+        Fixture f = seedWorkerWithLines(1);
+        authenticateAs(f.workerUserId, "ROLE_MANAGER");
 
-        // Force the link step (invoked only for a regular payout, after the payout row is flushed)
-        // to throw, simulating a mid-create failure strictly after the row + before commit.
         doThrow(new ForemenApiException(org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR,
                 "error.test.injected"))
-                .when(reportLineLinker).link(any(WorkerPayoutEntity.class), any());
+                .when(allocationWriter).write(any(WorkerPayoutEntity.class), anyList(), anyMap());
 
         long payoutsBefore = workerPayoutDao.count();
+        long allocationsBefore = allocationDao.count();
 
-        assertThatThrownBy(() -> workerPayoutService.create(f.projectId, regularRequest(f.workerUserId)))
+        assertThatThrownBy(() -> workerPayoutService.create(regularRequest(f.workerUserId, null)))
                 .isInstanceOf(ForemenApiException.class)
                 .satisfies(ex -> assertThat(((ForemenApiException) ex).getMessageCode())
                         .isEqualTo("error.test.injected"));
 
-        // No payout row persisted — the flushed row was rolled back with the transaction.
-        assertThat(workerPayoutDao.count())
-                .as("the payout row must be rolled back on a mid-create failure (R4.7)")
-                .isEqualTo(payoutsBefore);
-        assertThat(payoutsForProject(f.projectId))
-                .as("no payout exists for the project after the rolled-back create")
-                .isEmpty();
-
-        // The report line's paid-by FK is still null — the line was never linked (R4.7).
-        WorkReportRoomEntity line = workReportRoomDao.findById(f.reportLineId).orElseThrow();
-        assertThat(line.getPaidByPayout())
-                .as("the report line's paidByPayout FK must stay null after the rolled-back create")
-                .isNull();
-
-        // The worker's remaining advance credit did not drift (no payout rows ⇒ balance 0).
-        PayrollView view = readAsMember(f);
-        assertThat(remainingCreditFor(view, f.workerUserId))
-                .as("the worker's remaining advance credit must not drift after the rolled-back create")
-                .isEqualByComparingTo("0");
+        assertThat(workerPayoutDao.count()).as("no payout row survives (R5.8)").isEqualTo(payoutsBefore);
+        assertThat(allocationDao.count()).as("no allocation row survives (R5.8)").isEqualTo(allocationsBefore);
+        assertThat(workReportRoomDao.findById(f.lineIds.get(0)).orElseThrow().getPaidAmount())
+                .as("paid_amount stays 0 after the rolled-back create")
+                .isEqualByComparingTo(BigDecimal.ZERO);
     }
 
     // =====================================================================================
-    // Project scope (R10.5)
+    // Worker-wide distribution + reversal (R5.3, R5.4, R6.2, R14.2)
     // =====================================================================================
 
     @Test
-    @DisplayName("A read never returns another project's payouts; a read of an out-of-scope project is 404 (R10.5)")
-    void readsAreConfinedToTheResolvedProject() {
-        Fixture a = seedProjectWithApprovedLine(ProjectStatus.ACTIVE);
-        Fixture b = seedProjectWithApprovedLine(ProjectStatus.ACTIVE);
+    @DisplayName("A payout fills the older line, partially pays the newer one across projects; delete reverses it")
+    void distributesAcrossProjectsAndDeleteReverses() {
+        Fixture f = seedWorkerWithLines(2);
+        authenticateAs(f.workerUserId, "ROLE_FINANCIER");
 
-        // The caller is a member of project A only.
-        authenticate(a.memberUserId);
+        PayoutSuggestionDto preview = workerPayoutService.suggest(
+                f.workerUserId, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1));
+        assertThat(preview.breakdown()).extracting(PayoutLineDto::workReportRoomId)
+                .as("candidates span both projects, oldest report first (R4.2, R4.3)")
+                .containsExactlyElementsOf(f.lineIds);
+        BigDecimal first = preview.breakdown().get(0).remainder();
+        BigDecimal second = preview.breakdown().get(1).remainder();
+        assertThat(first.signum()).isPositive();
+        BigDecimal half = second.divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
 
-        // Create a payout on project A (as the member) so A has a row to (not) leak.
-        WorkerPayoutDto created = workerPayoutService.create(a.projectId, regularRequest(a.workerUserId));
-        assertThat(created.id()).isNotNull();
+        WorkerPayoutDto created = workerPayoutService.create(regularRequest(f.workerUserId, first.add(half)));
 
-        // A read of project A returns only A's payouts — never B's.
-        PayrollView aView = workerPayoutService.list(a.projectId, new PayrollFilter(null, null));
-        assertThat(aView.projectId()).isEqualTo(a.projectId);
-        assertThat(aView.payouts())
-                .as("project A's read model carries only its own payout")
-                .extracting(WorkerPayoutDto::id)
-                .containsExactly(created.id());
+        assertThat(paidOf(f.lineIds.get(0))).as("older line fully paid").isEqualByComparingTo(first);
+        assertThat(paidOf(f.lineIds.get(1))).as("newer line partially paid (R5.4)").isEqualByComparingTo(half);
+        assertThat(created.payoutDate()).isEqualTo(LocalDate.now());
 
-        // A read of project B (the caller is NOT a member) is denied with a 404 — out-of-scope is
-        // indistinguishable from missing (R10.5).
-        assertThatThrownBy(() -> workerPayoutService.list(b.projectId, new PayrollFilter(null, null)))
-                .isInstanceOf(ForemenApiException.class)
-                .satisfies(ex -> assertThat(((ForemenApiException) ex).getStatus())
-                        .isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND));
+        List<PayoutAllocationDto> allocations = workerPayoutService.allocations(created.id());
+        assertThat(allocations).extracting(PayoutAllocationDto::lineId).containsExactlyElementsOf(f.lineIds);
+        assertThat(allocations).extracting(PayoutAllocationDto::projectId)
+                .as("one payout, two projects").doesNotHaveDuplicates();
 
-        // A suggest against the out-of-scope project is likewise confined/denied (write-path gate).
-        assertThatThrownBy(() -> workerPayoutService.suggest(
-                b.projectId, b.workerUserId, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1)))
-                .isInstanceOf(ForemenApiException.class)
-                .satisfies(ex -> assertThat(((ForemenApiException) ex).getStatus())
-                        .isEqualTo(org.springframework.http.HttpStatus.NOT_FOUND));
+        // R14.2 — a non-ADMIN reads company-wide (no project scoping).
+        assertThat(workerPayoutService.list(new PayoutFilter(f.workerUserId, null, null, null)))
+                .extracting(WorkerPayoutDto::id).containsExactly(created.id());
+
+        workerPayoutService.delete(created.id());
+
+        assertThat(paidOf(f.lineIds.get(0))).as("delete restores paid_amount (R6.2)").isEqualByComparingTo("0");
+        assertThat(paidOf(f.lineIds.get(1))).isEqualByComparingTo("0");
+        assertThat(allocationDao.findByPayoutId(created.id())).isEmpty();
+        assertThat(workerPayoutDao.findById(created.id())).isEmpty();
     }
 
     // =====================================================================================
-    // Audit (R12.1)
+    // Audit (R6.4)
     // =====================================================================================
 
     @Test
-    @DisplayName("A create, a mark-paid, and a delete each write a WorkerPayout audit row (R12.1)")
+    @DisplayName("A create, a mark-paid, and a delete each write a WorkerPayout audit row (R6.4)")
     void createPayDeleteEachWriteAnAuditRow() {
-        Fixture f = seedProjectWithApprovedLine(ProjectStatus.ACTIVE);
-        authenticate(f.memberUserId);
+        Fixture f = seedWorkerWithLines(1);
+        authenticateAs(f.workerUserId, "ROLE_MANAGER");
 
-        // CREATE → one CREATE audit row.
-        WorkerPayoutDto created = workerPayoutService.create(f.projectId, regularRequest(f.workerUserId));
+        WorkerPayoutDto created = workerPayoutService.create(regularRequest(f.workerUserId, null));
         List<AuditLogEntity> afterCreate = auditRowsFor(created.id());
-        assertThat(afterCreate)
-                .as("a create must write exactly one WorkerPayout audit row (R12.1)")
-                .hasSize(1);
+        assertThat(afterCreate).as("a create writes exactly one audit row").hasSize(1);
         assertThat(afterCreate.get(0).getOperation()).isEqualTo("CREATE");
         assertThat(afterCreate.get(0).getEntityClass()).isEqualTo("WorkerPayoutEntity");
 
-        // MARK PAID → a second (UPDATE) audit row.
         workerPayoutService.markPaid(created.id());
-        assertThat(auditRowsFor(created.id()))
-                .as("a mark-paid must add an UPDATE audit row (R12.1)")
-                .extracting(AuditLogEntity::getOperation)
+        assertThat(auditRowsFor(created.id())).extracting(AuditLogEntity::getOperation)
                 .contains("CREATE", "UPDATE");
 
-        // A PAID payout cannot be deleted; create a fresh PLANNED payout to exercise DELETE audit.
-        WorkerPayoutDto advance = workerPayoutService.create(f.projectId, advanceRequest(f.workerUserId));
+        WorkerPayoutDto advance = workerPayoutService.create(advanceRequest(f.workerUserId));
         workerPayoutService.delete(advance.id());
-        assertThat(auditRowsFor(advance.id()))
-                .as("a delete must write a DELETE audit row (R12.1)")
-                .extracting(AuditLogEntity::getOperation)
+        assertThat(auditRowsFor(advance.id())).extracting(AuditLogEntity::getOperation)
                 .contains("DELETE");
     }
 
     // =====================================================================================
-    // Stage reachability (R10.1, backend surface)
+    // Regression smoke
     // =====================================================================================
 
     @Test
-    @DisplayName("The payroll surface is reachable on ACTIVE and COMPLETED projects (R10.1, surface)")
-    void payrollSurfaceReachableOnActiveAndCompleted() {
-        Fixture active = seedProjectWithApprovedLine(ProjectStatus.ACTIVE);
-        authenticate(active.memberUserId);
-        WorkerPayoutDto onActive = workerPayoutService.create(active.projectId, regularRequest(active.workerUserId));
-        assertThat(onActive.id()).as("a payout is creatable on an ACTIVE project").isNotNull();
-        assertThat(workerPayoutService.list(active.projectId, new PayrollFilter(null, null)).payouts())
-                .as("the payroll list is reachable on an ACTIVE project").isNotEmpty();
-
-        Fixture completed = seedProjectWithApprovedLine(ProjectStatus.COMPLETED);
-        authenticate(completed.memberUserId);
-        WorkerPayoutDto onCompleted =
-                workerPayoutService.create(completed.projectId, regularRequest(completed.workerUserId));
-        assertThat(onCompleted.id()).as("a payout is creatable on a COMPLETED project").isNotNull();
-        assertThat(workerPayoutService.list(completed.projectId, new PayrollFilter(null, null)).payouts())
-                .as("the payroll list is reachable on a COMPLETED project").isNotEmpty();
-        // The DRAFT-hides-the-tab stage gate (P10) is enforced at the frontend tab resolver
-        // (workspaceTabs `stageOf` + `resolveWorkspaceTabs`), covered by task 10.2 — the backend
-        // payroll surface itself is not project-status-gated.
-    }
-
-    // =====================================================================================
-    // Regression smoke (R12.2)
-    // =====================================================================================
-
-    @Test
-    @DisplayName("FOR-06-10 WorkerCostService + FOR-06-06 MarginMatrixService still load and derive "
-            + "cost over a project whose line now carries the paidByPayout FK (regression R12.2)")
+    @DisplayName("WorkerCostService + MarginMatrixService still load and cost a project whose line carries a paid amount")
     void regressionReusedServicesStillWork() {
-        // The reused beans still wire (the new FK/resource did not break their context wiring).
-        assertThat(applicationContext.containsBean("workerCostService")
-                || !applicationContext.getBeansOfType(WorkerCostService.class).isEmpty())
-                .as("the FOR-06-10 WorkerCostService bean still loads").isTrue();
+        assertThat(applicationContext.getBeansOfType(WorkerCostService.class)).isNotEmpty();
         assertThat(applicationContext.getBeansOfType(
-                com.foremen.service.execution.marginmatrix.MarginMatrixService.class))
-                .as("the FOR-06-06 MarginMatrixService bean still loads").isNotEmpty();
+                com.foremen.service.execution.marginmatrix.MarginMatrixService.class)).isNotEmpty();
 
-        Fixture f = seedProjectWithApprovedLine(ProjectStatus.ACTIVE);
-        authenticate(f.memberUserId);
+        Fixture f = seedWorkerWithLines(1);
+        authenticateAs(f.workerUserId, "ROLE_MANAGER");
 
-        // Create a regular payout so the covered APPROVED line gets its paidByPayout FK set.
-        WorkerPayoutDto created = workerPayoutService.create(f.projectId, regularRequest(f.workerUserId));
+        WorkerPayoutDto created = workerPayoutService.create(regularRequest(f.workerUserId, null));
         assertThat(created.id()).isNotNull();
-        WorkReportRoomEntity linked = workReportRoomDao.findById(f.reportLineId).orElseThrow();
-        assertThat(linked.getPaidByPayout())
-                .as("the regular payout linked the covered line (sets paidByPayout)").isNotNull();
+        assertThat(paidOf(f.lineIds.get(0))).as("the line now carries a positive paid amount").isPositive();
 
-        // FOR-06-10 WorkerCostService still derives the project's cost read model — it reads
-        // APPROVED reports and the worker-tier/cost core, ignoring the payroll paid-by FK entirely.
-        var costModel = workerCostService.costForProject(f.projectId);
-        assertThat(costModel).as("WorkerCostService still returns a read model after payroll linkage").isNotNull();
-        assertThat(costModel.lines())
-                .as("the APPROVED line is still costed by FOR-06-10 regardless of its paidByPayout FK "
-                        + "— the FOR-06-01 status machine is unchanged (R12.2)")
-                .isNotEmpty();
+        var costModel = workerCostService.costForProject(f.projectIds.get(0));
+        assertThat(costModel).isNotNull();
+        assertThat(costModel.lines()).as("the APPROVED line is still costed").isNotEmpty();
     }
 
     // =====================================================================================
-    // Helpers: auth, requests, reads
+    // Helpers
     // =====================================================================================
 
-    private void authenticate(Long userId) {
+    private void authenticateAs(Long userId, String authority) {
         SecurityContextHolder.clearContext();
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(
-                        String.valueOf(userId), "n/a",
-                        List.of(new SimpleGrantedAuthority("ROLE_MANAGER"))));
+                        String.valueOf(userId), "n/a", List.of(new SimpleGrantedAuthority(authority))));
     }
 
-    private CreatePayoutRequest regularRequest(Long workerId) {
-        // A non-advance period (periodTo strictly before today) with amount defaulting to suggested.
+    private CreatePayoutRequest regularRequest(Long workerId, BigDecimal amount) {
         return new CreatePayoutRequest(
-                workerId, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1),
-                PaymentChannel.BANK_TRANSFER, null, "regular " + runId);
+                workerId, null, LocalDate.now().minusDays(10), LocalDate.now().minusDays(1),
+                PaymentChannel.BANK_TRANSFER, amount, "regular " + runId);
     }
 
     private CreatePayoutRequest advanceRequest(Long workerId) {
-        // A forward-looking period (periodTo after today) ⇒ derived advance; a fixed amount.
         return new CreatePayoutRequest(
-                workerId, LocalDate.now(), LocalDate.now().plusDays(30),
+                workerId, null, LocalDate.now(), LocalDate.now().plusDays(30),
                 PaymentChannel.CASH, new BigDecimal("100.00"), "advance " + runId);
     }
 
-    private PayrollView readAsMember(Fixture f) {
-        return workerPayoutService.list(f.projectId, new PayrollFilter(null, null));
-    }
-
-    private BigDecimal remainingCreditFor(PayrollView view, Long workerId) {
-        return view.workers().stream()
-                .filter(w -> workerId.equals(w.workerId()))
-                .map(w -> w.remainingAdvanceCredit())
-                .findFirst()
-                .orElse(BigDecimal.ZERO);
-    }
-
-    private List<WorkerPayoutEntity> payoutsForProject(Long projectId) {
-        return workerPayoutDao.findByProjectWithWorker(projectId);
+    private BigDecimal paidOf(Long lineId) {
+        return workReportRoomDao.findById(lineId).orElseThrow().getPaidAmount();
     }
 
     private List<AuditLogEntity> auditRowsFor(Long payoutId) {
@@ -451,44 +349,54 @@ class WorkerPayoutServiceIntegrationTest {
     // =====================================================================================
 
     private static final class Fixture {
-        Long projectId;
-        Long workerUserId;   // the worker being paid (an ACTIVE member)
-        Long memberUserId;   // the authenticated caller (same user — an ACTIVE member)
-        Long reportLineId;   // the APPROVED work_report_rooms line (available cost, linkable)
+        Long workerUserId;
+        List<Long> projectIds;
+        List<Long> lineIds; // in distribution order (oldest report first)
     }
 
     /**
-     * Seeds a self-contained project graph in one committed transaction: a base WorkerType, a role,
-     * a unit + category + work item, an ACTIVE member/worker, and one APPROVED work report with a
-     * single room line carrying an available (positive-rate) cost so the regular-payout gross is
-     * non-zero and the line is linkable. The member's project is pushed into the ProjectAccessCache
-     * so the service's project gate grants it.
+     * Seeds one WORKER user and {@code projects} projects, each with one APPROVED report (older
+     * project first) carrying a single line with an available cost. Committed in one transaction.
      */
-    private Fixture seedProjectWithApprovedLine(ProjectStatus projectStatus) {
+    private Fixture seedWorkerWithLines(int projects) {
         Fixture f = new Fixture();
         tx().executeWithoutResult(status -> {
             MeasurementUnitEntity m2 = persistUnit("m2");
-            WorkerTypeEntity base = persistWorkerType("WT_BASE_" + runId + "_" + COUNTER.incrementAndGet(),
-                    "0.40", true);
-            RoleEntity role = persistRole("PAY_ROLE_" + runId + "_" + COUNTER.incrementAndGet());
+            persistWorkerType("WT_BASE_" + runId + "_" + COUNTER.incrementAndGet(), "0.40", true);
+            RoleEntity workerRole = workerRole();
             WorkCategoryEntity cat = persistCategory("CAT_" + runId + "_" + COUNTER.incrementAndGet());
             WorkItemEntity work = persistWorkItem("WI_" + runId + "_" + COUNTER.incrementAndGet(), cat, m2);
+            UserEntity worker = persistUser("worker-" + runId + "-" + COUNTER.incrementAndGet(), workerRole);
 
-            ProjectEntity project = persistProject("Payroll Service IT", projectStatus);
-            UserEntity worker = persistUser("worker-" + runId + "-" + COUNTER.incrementAndGet(), role);
-            persistMember(worker, project.getId(), role, base, AssignmentStatus.ACTIVE);
-
-            WorkReportEntity report = persistApprovedReport(project, work, worker, "100.00");
-            WorkReportRoomEntity line = persistReportLine(report, project, "2.000");
-
-            f.projectId = project.getId();
+            List<Long> projectIds = new java.util.ArrayList<>();
+            List<Long> lineIds = new java.util.ArrayList<>();
+            for (int i = 0; i < projects; i++) {
+                ProjectEntity project = persistProject("Payroll Service IT",
+                        i == 0 ? ProjectStatus.ACTIVE : ProjectStatus.COMPLETED);
+                LocalDate performedFrom = LocalDate.now().minusDays(8 - i * 3L);
+                WorkReportEntity report = persistApprovedReport(project, work, worker, "100.00",
+                        performedFrom, performedFrom.plusDays(1));
+                WorkReportRoomEntity line = persistReportLine(report, project, "2.000");
+                projectIds.add(project.getId());
+                lineIds.add(line.getId());
+            }
             f.workerUserId = worker.getId();
-            f.memberUserId = worker.getId();
-            f.reportLineId = line.getId();
+            f.projectIds = projectIds;
+            f.lineIds = lineIds;
         });
-        // Grant the caller access to its project exactly as production resolves it.
-        projectAccessCache.invalidate(f.memberUserId);
         return f;
+    }
+
+    /** The shared WORKER role (find-or-create; not deleted on clean-up). */
+    private RoleEntity workerRole() {
+        return roleDao.findByCode("WORKER").orElseGet(() -> {
+            RoleEntity role = new RoleEntity();
+            role.setCode("WORKER");
+            role.setNameRU("Работник");
+            role.setNamePL("Pracownik");
+            role.setSystem(true);
+            return roleDao.save(role);
+        });
     }
 
     private MeasurementUnitEntity persistUnit(String code) {
@@ -517,15 +425,6 @@ class WorkerPayoutServiceIntegrationTest {
         entity.setNamePL("Bazowy " + code);
         entity.setActive(true);
         return entityManager.merge(entity);
-    }
-
-    private RoleEntity persistRole(String code) {
-        RoleEntity role = new RoleEntity();
-        role.setCode(code);
-        role.setNameRU("Роль " + runId);
-        role.setNamePL("Rola " + runId);
-        role.setSystem(false);
-        return roleDao.save(role);
     }
 
     private WorkCategoryEntity persistCategory(String code) {
@@ -566,26 +465,16 @@ class WorkerPayoutServiceIntegrationTest {
         return userDao.save(user);
     }
 
-    private void persistMember(UserEntity user, Long projectId, RoleEntity role, WorkerTypeEntity workerType,
-                               AssignmentStatus assignmentStatus) {
-        ProjectMemberEntity member = new ProjectMemberEntity();
-        member.setUser(user);
-        member.setProjectId(projectId);
-        member.setProjectRole(role);
-        member.setWorkerType(workerType);
-        member.setAssignmentStatus(assignmentStatus);
-        projectMemberDao.save(member);
-    }
-
     private WorkReportEntity persistApprovedReport(ProjectEntity project, WorkItemEntity workItem,
-                                                   UserEntity worker, String clientUnitPrice) {
+                                                   UserEntity worker, String clientUnitPrice,
+                                                   LocalDate performedFrom, LocalDate performedTo) {
         WorkReportEntity report = new WorkReportEntity();
         report.setProject(project);
         report.setWorkItem(workItem);
         report.setAuthor(worker);
         report.setWorker(worker);
-        report.setPerformedFrom(LocalDate.now().minusDays(8));
-        report.setPerformedTo(LocalDate.now().minusDays(2));
+        report.setPerformedFrom(performedFrom);
+        report.setPerformedTo(performedTo);
         report.setStatus(WorkReportStatus.APPROVED);
         report.setClientUnitPrice(new BigDecimal(clientUnitPrice));
         report.setTotalQuantity(new BigDecimal("2.000"));

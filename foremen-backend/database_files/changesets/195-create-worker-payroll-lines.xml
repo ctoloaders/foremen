@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-06 (Requirements 1.5, 1.8): additional payroll lines — manual per-month bonuses
+        (positive) and deductions (negative) on a worker's monthly payroll, outside reported work.
+
+        Columns:
+          - id        : BIGSERIAL PK (BaseEntity).
+          - worker_id : FK -> users(id), NOT NULL, RESTRICT — a user with payroll lines cannot be
+                        hard-deleted.
+          - month     : DATE NOT NULL — always the first day of the month (normalized by the
+                        service).
+          - name      : VARCHAR(255) NOT NULL — line label.
+          - amount    : NUMERIC(19,2) NOT NULL, CHECK amount <> 0 — signed amount.
+          - note      : TEXT, NULL.
+        Plus the four BaseEntity audit columns.
+
+        Index ix_worker_payroll_lines_worker_month (worker_id, month) serves the per-worker,
+        per-month reads of the balance chain and the previous-month hints.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN. Registered LAST in
+        changelog.xml, after 194.
+    -->
+
+    <changeSet id="195-create-worker-payroll-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="worker_payroll_lines"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="worker_payroll_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- The worker the line belongs to. -->
+            <column name="worker_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- First day of the payroll month. -->
+            <column name="month" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <!-- Signed amount: bonus > 0, deduction < 0; never zero. -->
+            <column name="amount" type="NUMERIC(19,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="TEXT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            constraintName="fk_worker_payroll_lines_worker"
+            baseTableName="worker_payroll_lines"
+            baseColumnNames="worker_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+
+        <createIndex tableName="worker_payroll_lines" indexName="ix_worker_payroll_lines_worker_month">
+            <column name="worker_id"/>
+            <column name="month"/>
+        </createIndex>
+
+        <sql>
+            ALTER TABLE worker_payroll_lines
+                ADD CONSTRAINT ck_worker_payroll_lines_amount_non_zero CHECK (amount &lt;&gt; 0);
+        </sql>
+        <rollback>
+            <dropTable tableName="worker_payroll_lines"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

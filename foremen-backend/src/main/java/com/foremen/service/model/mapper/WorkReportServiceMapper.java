@@ -179,7 +179,10 @@ public abstract class WorkReportServiceMapper
                         resolveRoomName(row.getRoom(), ru),
                         row.getQuantity(),
                         row.getPlanQuantity(),
-                        row.getInputMode()));
+                        row.getInputMode(),
+                        // FOR-07-06 R12.1 — paid amount only; status is set by WorkReportService.
+                        row.getPaidAmount(),
+                        null));
             }
         }
         target.setRooms(rows);
@@ -228,7 +231,10 @@ public abstract class WorkReportServiceMapper
                         resolveRoomName(row.getRoom(), ru),
                         row.getQuantity(),
                         row.getPlanQuantity(),
-                        row.getInputMode()));
+                        row.getInputMode(),
+                        // FOR-07-06 R12.1 — paid amount only; status is set by WorkReportService.
+                        row.getPaidAmount(),
+                        null));
             }
         }
         target.setRooms(rows);

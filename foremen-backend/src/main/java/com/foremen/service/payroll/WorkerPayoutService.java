@@ -1,119 +1,108 @@
 package com.foremen.service.payroll;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.AdminDao;
-import com.foremen.dao.ProjectMemberDao;
-import com.foremen.dao.WorkReportRoomDao;
+import com.foremen.dao.UserDao;
+import com.foremen.dao.WorkerPayoutAllocationDao;
 import com.foremen.dao.WorkerPayoutDao;
-import com.foremen.dao.model.AssignmentStatus;
-import com.foremen.dao.model.PaymentChannel;
 import com.foremen.dao.model.PayoutStatus;
 import com.foremen.dao.model.ProjectEntity;
-import com.foremen.dao.model.ProjectMemberEntity;
+import com.foremen.dao.model.RoleEntity;
+import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.dao.model.WorkReportEntity;
 import com.foremen.dao.model.WorkReportRoomEntity;
+import com.foremen.dao.model.WorkerPayoutAllocationEntity;
 import com.foremen.dao.model.WorkerPayoutEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
-import com.foremen.service.ProjectAccessCache;
-import com.foremen.service.ProjectScopedService;
+import com.foremen.service.AdminService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.WorkerPayoutServiceExtendedModel;
 import com.foremen.service.model.WorkerPayoutServiceModel;
 import com.foremen.service.model.mapper.WorkerPayoutServiceMapper;
+import com.foremen.service.payroll.PayoutDistributor.Distribution;
+import com.foremen.service.payroll.PayoutSuggestionService.PayableCandidate;
 import com.foremen.service.payroll.dto.CreatePayoutRequest;
+import com.foremen.service.payroll.dto.PayoutAllocationDto;
+import com.foremen.service.payroll.dto.PayoutFilter;
 import com.foremen.service.payroll.dto.PayoutSuggestionDto;
-import com.foremen.service.payroll.dto.PayrollFilter;
-import com.foremen.service.payroll.dto.PayrollView;
-import com.foremen.service.payroll.dto.WorkerCreditDto;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
 import com.foremen.service.payroll.dto.mapper.WorkerPayoutDtoMapper;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.Predicate;
 
 /**
- * FOR-06-11 (Requirements 1.4, 4.x, 5.x, 6.3, 7.x, 10.2, 11.1; design §WorkerPayoutService) — the
- * lifecycle service behind payroll. It is the money-OUT counterpart of the FOR-06-07 client payment:
- * a FINANCIER / MANAGER / ADMIN issues a {@code WorkerPayout} to a worker for the work performed (or,
- * for an advance, to be performed) on an {@code ACTIVE} / {@code COMPLETED} project, then marks it
- * paid.
+ * FOR-07-06 (Requirements 5, 6, 7; design §WorkerPayoutService) — the <b>company-wide</b> worker
+ * payout lifecycle service. A payout belongs to a worker, not a project: its amount is distributed
+ * oldest-first over the worker's unpaid {@code APPROVED} report lines on <b>all</b> projects, the
+ * last line touched possibly ending partially paid.
  *
- * <p>Following the FOR-03-04a single-contract shape (mirrors {@link com.foremen.service.WorkReportService}),
- * it implements exactly one CRUD contract — {@link ProjectScopedService} — supplies the standard
- * CRUD plumbing ({@link #getDao()}, {@link #getMapper()}, {@link #getEntityManager()},
- * {@link #getDaoModelClass()}, {@link #getAuditLogDao()}), the single mandatory per-entity override
- * {@link #getProjectIdPath()} &rarr; {@code "project.id"} (entity-creation-rules step 4; R10.2), and
- * wires {@link #allowedProjectIds(Long)} to {@link ProjectAccessCache} (R10.5). Every inherited LIST
- * read is project-filtered and every by-id read/mutation runs the per-id project-access guard.
- *
- * <p>Beyond the generic CRUD it owns the payout lifecycle, delegating the input-varying arithmetic to
- * pure collaborators (the cost is <b>never</b> re-derived — the gross folds FOR-06-10's
- * {@code Cost_Value} verbatim via {@link PayoutSuggestionService}, Non-Goal / R3.1):
+ * <p>Implements the plain {@link AdminService} CRUD plumbing (the FOR-06-11
+ * {@code ProjectScopedService} scoping is gone, R14.2): reads are company-wide for every caller the
+ * {@code PAYROLL} ABAC grant lets through. The lifecycle:
  * <ul>
- *   <li>{@link #suggest} — the create-dialog preview; derives {@code isAdvance} via
- *       {@link AdvanceDeriver} and delegates to {@link PayoutSuggestionService} (R3);</li>
- *   <li>{@link #create} — validates (period R4.5, channel R2.2, amount R4.4, ACTIVE membership
- *       R4.6), derives {@code isAdvance} (R5.3), snapshots {@code suggestedAmount}, defaults
- *       {@code amount} to it (R1.4), and — in <b>one transaction</b> — for a <b>regular</b> payout
- *       records {@code advanceApplied = min(remaining, gross)} and links every covered unpaid
- *       {@code APPROVED} line via {@link ReportLineLinker} (R4.2, R4.3, R6.1); for an <b>advance</b>
- *       records {@code advanceApplied = 0}, links no line, and lets its amount increase the running
- *       credit (R5.5);</li>
- *   <li>{@link #markPaid} — {@code PLANNED → PAID}, sets {@code paidAt}, freezes the record (R7.1,
- *       R7.2);</li>
- *   <li>{@link #delete} — hard-deletes a {@code PLANNED} payout, releasing its linked lines via
- *       {@link ReportLineLinker} and reversing its credit effect; a {@code PAID} delete and an
- *       advance whose credit a later regular payout already consumed are rejected (R5.7, R7.2,
- *       R7.3);</li>
- *   <li>{@link #list} — the {@code PayrollView} (payouts + per-worker remaining advance credit,
- *       R11.1, R5.8).</li>
+ *   <li>{@link #suggest} — validates period + worker, derives {@code isAdvance} via
+ *       {@link AdvanceDeriver}, delegates to {@link PayoutSuggestionService} (R4);</li>
+ *   <li>{@link #create} — validates (period, channel, amount, worker — in that order, R5.7), derives
+ *       {@code isAdvance}, and in <b>one transaction</b> (R5.8): for a regular payout locks the
+ *       candidate lines, computes gross / worker-wide credit / applied / suggested on them, saves the
+ *       payout ({@code PLANNED}, {@code payoutDate}), distributes {@code amount + advanceApplied} via
+ *       {@link PayoutDistributor} and persists the allocations + {@code paid_amount +=} via
+ *       {@link AllocationWriter} (R5.2–R5.5, R5.9); an advance uses the planned-basis suggestion,
+ *       applies no credit, and allocates nothing (R5.6); audit;</li>
+ *   <li>{@link #markPaid} — {@code PLANNED → PAID}, sets {@code paidAt} (R6.1);</li>
+ *   <li>{@link #delete} — {@code PLANNED} only; an advance passes the worker-wide consumed-credit
+ *       check (R6.3); a regular payout's allocations are released ({@code paid_amount -=}, R6.2);
+ *       audit; hard delete (R6.4);</li>
+ *   <li>{@link #list(PayoutFilter)} and {@link #allocations(Long)} — company-wide reads.</li>
  * </ul>
  *
  * <p>The remaining advance credit is never stored: it is folded on read by the pure
- * {@link AdvanceCreditCalculator} over the worker's payouts, so an advance create (amount added), a
- * regular create ({@code advanceApplied} subtracted), and a delete (either reversed) all move the
- * balance implicitly through the persisted {@code isAdvance} / {@code amount} / {@code advanceApplied}
- * columns — there is no separate balance row to drift (R5.6). This service emits <b>no</b>
- * notifications (R9.1).
+ * {@link AdvanceCreditCalculator} over <b>all</b> the worker's payouts (R7.1, R7.2). No notification
+ * is emitted (R13).
  */
 @Service
 @Transactional
 public class WorkerPayoutService
-        implements ProjectScopedService<WorkerPayoutServiceModel, WorkerPayoutServiceExtendedModel,
+        implements AdminService<WorkerPayoutServiceModel, WorkerPayoutServiceExtendedModel,
         WorkerPayoutEntity, Long> {
 
-    // --- Message codes (bundle wiring is task 10.1) ---
     static final String NOT_FOUND_MESSAGE = "error.entity.not.found";
     static final String PERIOD_INVALID = "error.workerPayout.period.invalid";
     static final String CHANNEL_REQUIRED = "error.workerPayout.channel.required";
     static final String AMOUNT_INVALID = "error.workerPayout.amount.invalid";
-    static final String WORKER_NOT_MEMBER = "error.workerPayout.worker.notMember";
+    static final String WORKER_INVALID = "error.workerPayout.worker.invalid";
     static final String STATUS_ILLEGAL_TRANSITION = "error.workerPayout.status.illegalTransition";
     static final String ADVANCE_ALREADY_APPLIED = "error.workerPayout.advance.alreadyApplied";
 
-    private static final String ADMIN_ROLE_CODE = "ADMIN";
+    private static final String WORKER_ROLE_CODE = "WORKER";
+    private static final int SCALE = 2;
 
     private final WorkerPayoutDao workerPayoutDao;
-    private final WorkReportRoomDao workReportRoomDao;
-    private final ProjectMemberDao projectMemberDao;
-    private final ProjectAccessCache projectAccessCache;
+    private final WorkerPayoutAllocationDao allocationDao;
+    private final UserDao userDao;
     private final PayoutSuggestionService suggestionService;
-    private final ReportLineLinker reportLineLinker;
+    private final AllocationWriter allocationWriter;
     private final AdvanceCreditCalculator advanceCreditCalculator;
     private final AdvanceDeriver advanceDeriver;
     private final WorkerPayoutServiceMapper serviceMapper;
@@ -122,11 +111,10 @@ public class WorkerPayoutService
     private final EntityManager entityManager;
 
     public WorkerPayoutService(WorkerPayoutDao workerPayoutDao,
-                               WorkReportRoomDao workReportRoomDao,
-                               ProjectMemberDao projectMemberDao,
-                               ProjectAccessCache projectAccessCache,
+                               WorkerPayoutAllocationDao allocationDao,
+                               UserDao userDao,
                                PayoutSuggestionService suggestionService,
-                               ReportLineLinker reportLineLinker,
+                               AllocationWriter allocationWriter,
                                AdvanceCreditCalculator advanceCreditCalculator,
                                AdvanceDeriver advanceDeriver,
                                WorkerPayoutServiceMapper serviceMapper,
@@ -134,11 +122,10 @@ public class WorkerPayoutService
                                AuditLogDao auditLogDao,
                                EntityManager entityManager) {
         this.workerPayoutDao = workerPayoutDao;
-        this.workReportRoomDao = workReportRoomDao;
-        this.projectMemberDao = projectMemberDao;
-        this.projectAccessCache = projectAccessCache;
+        this.allocationDao = allocationDao;
+        this.userDao = userDao;
         this.suggestionService = suggestionService;
-        this.reportLineLinker = reportLineLinker;
+        this.allocationWriter = allocationWriter;
         this.advanceCreditCalculator = advanceCreditCalculator;
         this.advanceDeriver = advanceDeriver;
         this.serviceMapper = serviceMapper;
@@ -147,7 +134,7 @@ public class WorkerPayoutService
         this.entityManager = entityManager;
     }
 
-    // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---
+    // --- CRUD plumbing (AdminService) -----------------------------------------------------------
 
     @Override
     public AdminDao<WorkerPayoutEntity, Long> getDao() {
@@ -175,85 +162,36 @@ public class WorkerPayoutService
         return WorkerPayoutEntity.class;
     }
 
-    // --- ProjectScopedService overrides ---
-
-    /** The single mandatory per-entity override (entity-creation-rules step 4; R10.2). */
-    @Override
-    public String getProjectIdPath() {
-        return "project.id";
-    }
-
-    /** Wires the allowed-project-ids lookup to the production cache (R10.5). */
-    @Override
-    public Set<Long> allowedProjectIds(Long userId) {
-        return projectAccessCache.get(userId);
-    }
-
-    // --- Suggest (R3) --------------------------------------------------------------------------
+    // --- Suggest (R4) ---------------------------------------------------------------------------
 
     /**
-     * The create-dialog preview for a worker + period (R3). Derives {@code isAdvance} from
-     * {@code to} vs. {@code today} via {@link AdvanceDeriver} (R5.3) and delegates to
-     * {@link PayoutSuggestionService#suggest(Long, Long, LocalDate, LocalDate, boolean)} — a
-     * non-advance period folds {@code Σ Cost_Value} over the worker's unpaid {@code APPROVED} lines
-     * and applies the credit arithmetic (R3.1–R3.4); an advance period uses the planned basis with no
-     * credit deduction (R3.5). Project scope is enforced before the read (R10.5).
-     *
-     * @param projectId the owning project id (must be in the caller's accessible set unless ADMIN)
-     * @param workerId  the worker the preview is for
-     * @param from      the period start (inclusive)
-     * @param to        the period end (inclusive)
-     * @return the {@link PayoutSuggestionDto} preview; never {@code null}
+     * The worker-wide create-dialog preview (R4). Rejects an invalid period
+     * ({@link #PERIOD_INVALID}) and an unknown / non-WORKER worker ({@link #WORKER_INVALID}), both
+     * 422 (R4.8), then delegates to {@link PayoutSuggestionService}.
      */
     @Transactional(readOnly = true)
-    public PayoutSuggestionDto suggest(Long projectId, Long workerId, LocalDate from, LocalDate to) {
-        assertProjectRead(projectId);
+    public PayoutSuggestionDto suggest(Long workerId, LocalDate from, LocalDate to) {
+        assertPeriod(from, to);
+        assertWorker(workerId);
         boolean advance = advanceDeriver.isAdvance(to, LocalDate.now());
-        return suggestionService.suggest(projectId, workerId, from, to, advance);
+        return suggestionService.suggest(workerId, from, to, advance);
     }
 
-    // --- Create (R4, R5) -----------------------------------------------------------------------
+    // --- Create (R5) ----------------------------------------------------------------------------
 
     /**
-     * Creates a {@code PLANNED} payout for a worker over a period, validating and persisting the
-     * whole effect (the payout row, the report-line FK links, and the advance-credit change) in one
-     * transaction (R4.7):
+     * Creates a {@code PLANNED} worker-wide payout, writing the payout, its allocations, and the
+     * {@code paid_amount} updates in one transaction (R5.8).
      *
-     * <ol>
-     *   <li>enforce project scope ({@link #assertProjectRead(Long)}, R10.5) and validate the inputs:
-     *       the period ({@code periodTo >= periodFrom}, else {@link #PERIOD_INVALID} / 422, R4.5), the
-     *       channel (required, else {@link #CHANNEL_REQUIRED} / 422, R2.2), the amount (when supplied,
-     *       {@code >= 0}, else {@link #AMOUNT_INVALID} / 422, R4.4), and ACTIVE membership of the
-     *       worker (else {@link #WORKER_NOT_MEMBER} / 422, R4.6);</li>
-     *   <li>derive {@code isAdvance = periodTo > createdDate} via {@link AdvanceDeriver} (R5.3) and
-     *       build the preview for the resolved branch to obtain the gross + credit figures;</li>
-     *   <li>snapshot {@code suggestedAmount} to the computed suggestion (R1.4) and default
-     *       {@code amount} to it when the request amount is {@code null} (an overridable cash figure,
-     *       independent of linkage/credit, R4.4);</li>
-     *   <li>for a <b>regular</b> payout set {@code advanceApplied = min(remaining, gross)} and, after
-     *       persisting, link every covered unpaid {@code APPROVED} line to this payout via
-     *       {@link ReportLineLinker} (R4.2, R4.3, R6.1); for an <b>advance</b> set
-     *       {@code advanceApplied = 0} and link no line (R5.5, R6.4).</li>
-     * </ol>
-     *
-     * <p>The remaining advance credit is not stored; it is folded on read from the persisted
-     * {@code isAdvance} / {@code amount} / {@code advanceApplied} columns, so this create moves the
-     * worker's balance implicitly (an advance by {@code +amount}, a regular by
-     * {@code −advanceApplied}, R5.6). No notification is emitted (R9.1).
-     *
-     * @param projectId the owning project id (project scope is enforced here)
-     * @param req       the create payload (worker, period, channel, amount, note)
-     * @return the persisted payout as a {@link WorkerPayoutDto}
+     * @param req the create payload
+     * @return the persisted payout
      */
     @Transactional
-    public WorkerPayoutDto create(Long projectId, CreatePayoutRequest req) {
-        assertProjectRead(projectId);
-
+    public WorkerPayoutDto create(CreatePayoutRequest req) {
+        // R5.7 — validation order: period, channel, amount, worker.
         LocalDate from = req.periodFrom();
         LocalDate to = req.periodTo();
-        if (from == null || to == null || to.isBefore(from)) {
-            throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, PERIOD_INVALID);
-        }
+        assertPeriod(from, to);
         if (req.paymentChannel() == null) {
             throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, CHANNEL_REQUIRED);
         }
@@ -261,23 +199,37 @@ public class WorkerPayoutService
             throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, AMOUNT_INVALID);
         }
         Long workerId = req.workerId();
-        assertActiveMember(projectId, workerId);
+        UserEntity worker = assertWorker(workerId);
 
-        // R5.3 — classify from the dates alone (the sole rule); never a caller-supplied flag.
-        boolean advance = advanceDeriver.isAdvance(to, LocalDate.now());
+        LocalDate today = LocalDate.now();
+        boolean advance = advanceDeriver.isAdvance(to, today);
 
-        // The preview folds FOR-06-10 Cost_Value verbatim (R3.1) and the credit arithmetic (R3.2);
-        // the SAME selection path resolves the linkable lines below, so gross == linked-set cost.
-        PayoutSuggestionDto preview = suggestionService.suggest(projectId, workerId, from, to, advance);
-
-        BigDecimal suggested = preview.suggested();
-        BigDecimal amount = req.amount() != null ? req.amount() : suggested; // R1.4 default
-        // R5.5 — an advance applies no credit; a regular payout applies min(remaining, gross).
-        BigDecimal advanceApplied = advance ? BigDecimal.ZERO : preview.appliedCredit();
+        BigDecimal suggested;
+        BigDecimal advanceApplied;
+        List<PayableCandidate> candidates;
+        if (advance) {
+            // R5.6 — the FOR-06-11 planned basis; no credit applied, nothing allocated.
+            PayoutSuggestionDto preview = suggestionService.suggest(workerId, from, to, true);
+            suggested = scale(preview.suggested());
+            advanceApplied = scale(BigDecimal.ZERO);
+            candidates = List.of();
+        } else {
+            // R5.8 — lock the candidate lines first; gross / credit are computed on the locked set so
+            // the distributed set is exactly the costed one and concurrent creates serialize.
+            candidates = suggestionService.payableLines(workerId, to);
+            BigDecimal gross = BigDecimal.ZERO;
+            for (PayableCandidate c : candidates) {
+                gross = gross.add(c.remainder());
+            }
+            BigDecimal remaining = advanceCreditCalculator.remaining(workerPayoutDao.findByWorker(workerId));
+            advanceApplied = advanceCreditCalculator.applied(remaining, gross);       // R5.2
+            suggested = advanceCreditCalculator.suggested(gross, remaining);
+        }
+        BigDecimal amount = req.amount() != null ? scale(req.amount()) : suggested;
 
         WorkerPayoutEntity payout = new WorkerPayoutEntity();
-        payout.setProject(entityManager.getReference(ProjectEntity.class, projectId));
-        payout.setWorker(entityManager.getReference(UserEntity.class, workerId));
+        payout.setWorker(worker);
+        payout.setPayoutDate(req.payoutDate() != null ? req.payoutDate() : today);   // R5.1
         payout.setPeriodFrom(from);
         payout.setPeriodTo(to);
         payout.setPaymentChannel(req.paymentChannel());
@@ -291,35 +243,32 @@ public class WorkerPayoutService
         WorkerPayoutEntity saved = workerPayoutDao.save(payout);
         entityManager.flush();
 
-        // R4.3, R6.1 — a regular payout links every covered unpaid APPROVED line in the SAME
-        // transaction (an advance links none, R6.4). The linkable set is resolved via the identical
-        // path the gross used, so the linked lines exactly back the gross (R3.4 excludes unavailable).
-        if (!advance) {
-            List<WorkReportRoomEntity> lines =
-                    suggestionService.linkableLines(projectId, workerId, from, to);
-            reportLineLinker.link(saved, lines);
+        if (!advance && !candidates.isEmpty()) {
+            // R5.3–R5.5 — distribute D = amount + advanceApplied oldest-first; surplus stays unallocated.
+            Distribution distribution = PayoutDistributor.distribute(
+                    amount.add(advanceApplied),
+                    candidates.stream().map(PayableCandidate::toPayableLine).toList());
+            Map<Long, WorkReportRoomEntity> linesById = new LinkedHashMap<>();
+            for (PayableCandidate c : candidates) {
+                linesById.put(c.line().getId(), c.line());
+            }
+            allocationWriter.write(saved, distribution.allocations(), linesById);
+            entityManager.flush();
         }
 
         saveAudit(null, saved, "CREATE");
         return dtoMapper.toDto(saved);
     }
 
-    // --- Mark paid (R7.1, R7.2) ----------------------------------------------------------------
+    // --- Mark paid (R6.1) -----------------------------------------------------------------------
 
     /**
-     * Transitions a {@code PLANNED} payout to {@code PAID}, sets {@code paidAt}, and freezes the
-     * record (R7.1). A non-{@code PLANNED} source (i.e. already {@code PAID}) is rejected with
-     * {@link #STATUS_ILLEGAL_TRANSITION} / 409, changing nothing — {@code PAID} is terminal (R7.2).
-     * Project scope is enforced first via the inherited by-id access guard.
-     *
-     * @param id the payout to mark paid
-     * @return the updated payout as a {@link WorkerPayoutDto}
+     * {@code PLANNED → PAID}, sets {@code paidAt}. Any action on a {@code PAID} payout is rejected
+     * with {@link #STATUS_ILLEGAL_TRANSITION} / 409 (R6.1).
      */
     @Transactional
     public WorkerPayoutDto markPaid(Long id) {
-        assertProjectAccess(id);
-        WorkerPayoutEntity payout = workerPayoutDao.findById(id)
-                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+        WorkerPayoutEntity payout = findPayout(id);
         if (payout.getStatus() != PayoutStatus.PLANNED) {
             throw new ForemenApiException(HttpStatus.CONFLICT, STATUS_ILLEGAL_TRANSITION);
         }
@@ -332,177 +281,139 @@ public class WorkerPayoutService
         return dtoMapper.toDto(saved);
     }
 
-    // --- Delete (R7.3, R5.7) -------------------------------------------------------------------
+    // --- Delete (R6.2–R6.4) ---------------------------------------------------------------------
 
     /**
-     * Hard-deletes a {@code PLANNED} payout, reversing its whole effect in one transaction (R7.3):
-     *
+     * Hard-deletes a {@code PLANNED} payout, reversing its whole effect in one transaction:
      * <ul>
-     *   <li>a {@code PAID} payout cannot be deleted ({@link #STATUS_ILLEGAL_TRANSITION} / 409, R7.2);</li>
-     *   <li>a <b>regular</b> payout's linked report lines are released (their {@code paidByPayout} FK
-     *       cleared) via {@link ReportLineLinker}, becoming payable again (R6.3); removing the row
-     *       removes its {@code advanceApplied} from the running credit implicitly (R5.6);</li>
-     *   <li>an <b>advance</b> whose added credit a <b>later regular payout already consumed</b> cannot
-     *       be deleted ({@link #ADVANCE_ALREADY_APPLIED} / 409, R5.7) — removing it would make an
-     *       already-applied balance inconsistent; otherwise the advance's credit is simply removed by
-     *       deleting the row.</li>
+     *   <li>{@code PAID} → {@link #STATUS_ILLEGAL_TRANSITION} / 409 (R6.1);</li>
+     *   <li>advance → rejected with {@link #ADVANCE_ALREADY_APPLIED} / 409 when the worker's regular
+     *       payouts already consumed more credit than the remaining advances cover (R6.3);</li>
+     *   <li>regular → every allocation is released, lowering each line's {@code paid_amount} (R6.2).</li>
      * </ul>
-     *
-     * Project scope is enforced first via the inherited by-id access guard.
-     *
-     * @param id the {@code PLANNED} payout to delete
      */
     @Override
     @Transactional
     public void deleteById(Long id) {
-        assertProjectAccess(id);
-        WorkerPayoutEntity payout = workerPayoutDao.findById(id)
-                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+        WorkerPayoutEntity payout = findPayout(id);
         if (payout.getStatus() != PayoutStatus.PLANNED) {
-            // R7.2 — a PAID payout is terminal: it cannot be deleted.
             throw new ForemenApiException(HttpStatus.CONFLICT, STATUS_ILLEGAL_TRANSITION);
         }
-
         if (payout.isAdvance()) {
-            // R5.7 — reversing this advance's credit must not make an already-drawn balance
-            // inconsistent: refuse when the worker's OTHER payouts have consumed more credit than
-            // would remain without this advance.
             assertAdvanceNotConsumed(payout);
         } else {
-            // R6.3 — release every line this regular payout paid, making them payable again.
-            reportLineLinker.release(id);
+            allocationWriter.release(id);
         }
-
         saveAudit(payout, null, "DELETE");
         workerPayoutDao.deleteById(id);
         entityManager.flush();
     }
 
-    /** Public alias for the lifecycle {@code delete} (mirrors the design §WorkerPayoutService signature). */
+    /** The lifecycle {@code delete} (design §WorkerPayoutService signature). */
     @Transactional
     public void delete(Long id) {
         deleteById(id);
     }
 
-    // --- List (R11.1, R5.8) --------------------------------------------------------------------
+    // --- Reads ----------------------------------------------------------------------------------
 
     /**
-     * The project's payroll read model (R11.1): the payouts (optionally narrowed by the
-     * {@link PayrollFilter}) plus, per worker, their remaining advance credit as a
-     * {@link WorkerCreditDto} (R5.8). The remaining credit is folded on read by the pure
-     * {@link AdvanceCreditCalculator} over each worker's payouts — it is never stored. Project scope
-     * is enforced before the read (R10.5).
-     *
-     * @param projectId the owning project id (must be in the caller's accessible set unless ADMIN)
-     * @param filter    the optional worker / status narrowing ({@code null} fields impose no constraint)
-     * @return the {@link PayrollView}; never {@code null}
+     * The company-wide payout list, optionally narrowed by worker, {@code payoutDate} range, and
+     * status; newest first. Not project-filtered (R14.2).
      */
     @Transactional(readOnly = true)
-    public PayrollView list(Long projectId, PayrollFilter filter) {
-        assertProjectRead(projectId);
-
-        List<WorkerPayoutEntity> all = workerPayoutDao.findByProjectWithWorker(projectId);
-
-        Long workerFilter = filter == null ? null : filter.workerId();
-        PayoutStatus statusFilter = filter == null ? null : filter.status();
-
-        // Per-worker remaining credit folds EVERY payout of the worker (unfiltered), so the running
-        // balance is correct regardless of the list narrowing (R5.8). The payout rows honor the filter.
-        Map<Long, List<WorkerPayoutEntity>> byWorker = new LinkedHashMap<>();
-        List<WorkerPayoutDto> payouts = new ArrayList<>();
-        for (WorkerPayoutEntity payout : all) {
-            UserEntity worker = payout.getWorker();
-            Long workerId = worker == null ? null : worker.getId();
-            byWorker.computeIfAbsent(workerId, k -> new ArrayList<>()).add(payout);
-
-            if (workerFilter != null && !workerFilter.equals(workerId)) {
-                continue;
+    public List<WorkerPayoutDto> list(PayoutFilter filter) {
+        Specification<WorkerPayoutEntity> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            if (filter != null) {
+                if (filter.workerId() != null) {
+                    predicates.add(cb.equal(root.get("worker").get("id"), filter.workerId()));
+                }
+                if (filter.from() != null) {
+                    predicates.add(cb.greaterThanOrEqualTo(root.<LocalDate>get("payoutDate"), filter.from()));
+                }
+                if (filter.to() != null) {
+                    predicates.add(cb.lessThanOrEqualTo(root.<LocalDate>get("payoutDate"), filter.to()));
+                }
+                if (filter.status() != null) {
+                    predicates.add(cb.equal(root.get("status"), filter.status()));
+                }
             }
-            if (statusFilter != null && payout.getStatus() != statusFilter) {
-                continue;
-            }
-            payouts.add(dtoMapper.toDto(payout));
-        }
-
-        List<WorkerCreditDto> workers = new ArrayList<>();
-        for (Map.Entry<Long, List<WorkerPayoutEntity>> entry : byWorker.entrySet()) {
-            List<WorkerPayoutEntity> workerPayouts = entry.getValue();
-            String workerName = workerPayouts.isEmpty() || workerPayouts.get(0).getWorker() == null
-                    ? null : workerPayouts.get(0).getWorker().getName();
-            BigDecimal remaining = advanceCreditCalculator.remaining(workerPayouts);
-            workers.add(new WorkerCreditDto(entry.getKey(), workerName, remaining));
-        }
-
-        return new PayrollView(projectId, payouts, workers);
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+        List<WorkerPayoutEntity> payouts = workerPayoutDao.findAll(spec,
+                Sort.by(Sort.Order.desc("payoutDate"), Sort.Order.desc("id")));
+        return payouts == null ? List.of() : dtoMapper.toDtos(payouts);
     }
 
-    // --- Validation helpers --------------------------------------------------------------------
-
     /**
-     * R4.6 — the chosen worker must be an ACTIVE member of the project, else
-     * {@link #WORKER_NOT_MEMBER} / 422, changing nothing.
+     * The allocations of a payout onto report lines, in distribution order (an advance has none).
+     * Unknown id → 404.
      */
-    private void assertActiveMember(Long projectId, Long workerId) {
-        ProjectMemberEntity member = workerId == null ? null
-                : projectMemberDao.findByUserIdAndProjectId(workerId, projectId).orElse(null);
-        if (member == null || member.getAssignmentStatus() != AssignmentStatus.ACTIVE) {
-            throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, WORKER_NOT_MEMBER);
+    @Transactional(readOnly = true)
+    public List<PayoutAllocationDto> allocations(Long id) {
+        findPayout(id);
+        boolean ru = isRussianLocale();
+        List<PayoutAllocationDto> result = new ArrayList<>();
+        for (WorkerPayoutAllocationEntity a : allocationDao.findByPayoutId(id)) {
+            WorkReportRoomEntity line = a.getWorkReportRoom();
+            WorkReportEntity report = line == null ? null : line.getReport();
+            ProjectEntity project = report == null ? null : report.getProject();
+            result.add(new PayoutAllocationDto(
+                    line == null ? null : line.getId(),
+                    project == null ? null : project.getId(),
+                    project == null ? null : project.getName(),
+                    report == null ? null : workItemName(report.getWorkItem(), ru),
+                    line == null ? null : roomName(line.getRoom(), ru),
+                    a.getAmount()));
+        }
+        return result;
+    }
+
+    // --- Validation helpers ---------------------------------------------------------------------
+
+    private static void assertPeriod(LocalDate from, LocalDate to) {
+        if (from == null || to == null || to.isBefore(from)) {
+            throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, PERIOD_INVALID);
         }
     }
 
+    /** R4.8 / R5.7 — the worker must be an existing user with the {@code WORKER} role. */
+    private UserEntity assertWorker(Long workerId) {
+        UserEntity user = workerId == null ? null : userDao.findById(workerId).orElse(null);
+        RoleEntity role = user == null ? null : user.getRole();
+        if (role == null || role.getCode() == null
+                || !WORKER_ROLE_CODE.equalsIgnoreCase(role.getCode().trim())) {
+            throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, WORKER_INVALID);
+        }
+        return user;
+    }
+
+    private WorkerPayoutEntity findPayout(Long id) {
+        return workerPayoutDao.findById(id)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
+    }
+
     /**
-     * R5.7 — refuse deleting an advance whose added credit a later regular payout already consumed.
-     * The worker's remaining credit WITHOUT this advance is the folded balance over their other
-     * payouts; if that balance is negative (the regular payouts' {@code advanceApplied} already
-     * exceeds the other advances), removing this advance would make the balance inconsistent, so the
-     * delete is rejected with {@link #ADVANCE_ALREADY_APPLIED} / 409, changing nothing.
+     * R6.3 — worker-wide: without this advance, the worker's regular payouts' Σ {@code advanceApplied}
+     * must not exceed Σ amounts of the remaining advances; otherwise its credit was already consumed.
      */
     private void assertAdvanceNotConsumed(WorkerPayoutEntity advance) {
-        Long projectId = advance.getProject() == null ? null : advance.getProject().getId();
         Long workerId = advance.getWorker() == null ? null : advance.getWorker().getId();
-        List<WorkerPayoutEntity> others = new ArrayList<>(
-                workerPayoutDao.findByProjectAndWorker(projectId, workerId));
-        others.removeIf(p -> p.getId() != null && p.getId().equals(advance.getId()));
-
-        // The folded balance over the OTHER payouts: Σ(other advances) − Σ(advanceApplied of
-        // regulars). If removing THIS advance would drop the real balance below what regulars have
-        // already drawn, the credit was already consumed. The calculator floors at 0, so compute the
-        // unfloored balance of the others' advances minus their applied offsets.
         BigDecimal otherAdvances = BigDecimal.ZERO;
         BigDecimal appliedByRegulars = BigDecimal.ZERO;
-        for (WorkerPayoutEntity p : others) {
+        for (WorkerPayoutEntity p : workerPayoutDao.findByWorker(workerId)) {
+            if (p == null || (p.getId() != null && p.getId().equals(advance.getId()))) {
+                continue;
+            }
             if (p.isAdvance()) {
                 otherAdvances = otherAdvances.add(nz(p.getAmount()));
             } else {
                 appliedByRegulars = appliedByRegulars.add(nz(p.getAdvanceApplied()));
             }
         }
-        // Without this advance the available credit is `otherAdvances`; the regulars already consumed
-        // `appliedByRegulars`. If that exceeds what is left without this advance, this advance's
-        // credit was (partly) already drawn down — refuse the delete (R5.7).
         if (appliedByRegulars.compareTo(otherAdvances) > 0) {
             throw new ForemenApiException(HttpStatus.CONFLICT, ADVANCE_ALREADY_APPLIED);
-        }
-    }
-
-    /**
-     * Project-scope READ guard for the project-id-level reads ({@link #list} / {@link #suggest} /
-     * {@link #create}): ADMIN bypasses; otherwise the {@code projectId} must be in the caller's
-     * accessible project set (the same source the LIST filter and {@code assertProjectAccess} use).
-     * Denied uniformly with a 404 so an out-of-scope project is not revealed, consistent with
-     * {@link ProjectScopedService#assertProjectAccess} (R10.5).
-     */
-    private void assertProjectRead(Long projectId) {
-        if (isCallerAdmin()) {
-            return;
-        }
-        Long callerId = callerUserId();
-        if (callerId == null) {
-            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, projectId);
-        }
-        Set<Long> allowed = allowedProjectIds(callerId);
-        if (allowed == null || projectId == null || !allowed.contains(projectId)) {
-            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, projectId);
         }
     }
 
@@ -510,37 +421,50 @@ public class WorkerPayoutService
         return value == null ? BigDecimal.ZERO : value;
     }
 
-    // --- Caller / role resolution (mirrors WorkReportService) ----------------------------------
-
-    /** True iff the authenticated caller carries the exact ADMIN authority. */
-    private static boolean isCallerAdmin() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
-            return false;
-        }
-        for (GrantedAuthority ga : auth.getAuthorities()) {
-            String a = ga.getAuthority();
-            if (("ROLE_" + ADMIN_ROLE_CODE).equals(a) || ADMIN_ROLE_CODE.equals(a)) {
-                return true;
-            }
-        }
-        return false;
+    private static BigDecimal scale(BigDecimal value) {
+        return nz(value).setScale(SCALE, RoundingMode.HALF_UP);
     }
 
-    /** The authenticated caller's numeric user id, or {@code null} when it cannot be resolved. */
-    private static Long callerUserId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated()) {
+    // --- localized-name helpers (ru → pl → code) ------------------------------------------------
+
+    private static String workItemName(WorkItemEntity workItem, boolean ru) {
+        if (workItem == null) {
             return null;
         }
-        String name = auth.getName();
-        if (name == null || name.isBlank()) {
+        return firstNonBlank(
+                ru ? workItem.getNameRU() : workItem.getNamePL(),
+                ru ? workItem.getNamePL() : workItem.getNameRU(),
+                workItem.getCode());
+    }
+
+    private static String roomName(RoomEntity room, boolean ru) {
+        if (room == null) {
             return null;
         }
-        try {
-            return Long.valueOf(name.trim());
-        } catch (NumberFormatException e) {
+        if (room.getLabel() != null && !room.getLabel().isBlank()) {
+            return room.getLabel();
+        }
+        RoomTypeEntity type = room.getRoomType();
+        if (type == null) {
             return null;
         }
+        return firstNonBlank(
+                ru ? type.getNameRU() : type.getNamePL(),
+                ru ? type.getNamePL() : type.getNameRU(),
+                type.getCode());
+    }
+
+    private static String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private static boolean isRussianLocale() {
+        Locale locale = LocaleContextHolder.getLocale();
+        return locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
     }
 }

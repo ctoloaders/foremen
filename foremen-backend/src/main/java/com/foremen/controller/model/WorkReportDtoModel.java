@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 import com.foremen.dao.model.WorkReportStatus;
+import com.foremen.service.payroll.LinePaymentStatus;
 
 /**
  * FOR-06-01 (Requirements 6.5, 11.1) — list-row DTO for a {@code WorkReport} (design §4.3), the
@@ -32,5 +33,7 @@ public record WorkReportDtoModel(
         BigDecimal totalQuantity,
         BigDecimal revenueValue,
         BigDecimal costValue,
-        BigDecimal margin) {
+        BigDecimal margin,
+        /* FOR-07-06 R12.1 — aggregate payment status; null unless APPROVED (no payout data, R12.2). */
+        LinePaymentStatus paymentStatus) {
 }

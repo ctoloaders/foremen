@@ -173,7 +173,7 @@ class WorkerCostAggregationPropertyTest {
             BigDecimal cost = WorkerCostDerivation.costValue(r.rate(), tier, BASE_TIER, r.quantity());
             lines.add(new WorkerCostLineDto(
                     null, r.workerId(), "w" + r.workerId(), r.workItemId(), "i" + r.workItemId(),
-                    null, "t", r.base(), r.rate(), r.quantity(), unit, cost));
+                    null, "t", r.base(), BigDecimal.ZERO, r.rate(), r.quantity(), unit, cost));
         }
         return lines;
     }

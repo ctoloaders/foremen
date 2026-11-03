@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-06 (Requirements 1.1, 1.2, 1.8, 1.9): replace the FOR-06-11 single-payout paid marker
+        on a report line with a partial paid amount.
+
+        FOR-06-11 recorded "this line was fully paid by payout X" through the nullable
+        work_report_rooms.paid_by_payout_id FK (changeset 181). FOR-07-06 lets one line be paid
+        partially by many worker-wide payouts: the per-payout split lives in
+        worker_payout_allocations (changeset 194) and the running total on the line itself:
+
+          paid_amount NUMERIC(19,2) NOT NULL DEFAULT 0, CHECK paid_amount >= 0
+                      — Σ allocations.amount for the line; 0 = unpaid.
+
+        No data conversion (R1.9): the old FK column is dropped and every existing line starts at
+        paid_amount = 0.
+
+        Idempotent: the drop runs only while the old column exists (columnExists), the add only
+        while the new column is absent (NOT columnExists), each changeSet MARK_RAN, so a re-run
+        against an already-migrated database makes no schema change. Registered LAST in
+        changelog.xml, after 191.
+    -->
+
+    <changeSet id="192-drop-work-report-room-paid-by-payout" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <columnExists tableName="work_report_rooms" columnName="paid_by_payout_id"/>
+        </preConditions>
+        <!-- IF EXISTS keeps the drop safe if the FK was already removed out of band. -->
+        <sql>
+            ALTER TABLE work_report_rooms
+                DROP CONSTRAINT IF EXISTS fk_work_report_rooms_paid_by_payout;
+        </sql>
+        <dropColumn tableName="work_report_rooms" columnName="paid_by_payout_id"/>
+        <rollback>
+            <addColumn tableName="work_report_rooms">
+                <column name="paid_by_payout_id" type="BIGINT"/>
+            </addColumn>
+            <addForeignKeyConstraint
+                constraintName="fk_work_report_rooms_paid_by_payout"
+                baseTableName="work_report_rooms"
+                baseColumnNames="paid_by_payout_id"
+                referencedTableName="worker_payouts"
+                referencedColumnNames="id"
+                onDelete="SET NULL"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="192-add-work-report-room-paid-amount" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="work_report_rooms" columnName="paid_amount"/>
+            </not>
+        </preConditions>
+        <!-- Running paid total of the line (Σ allocations); 0 for every existing line (R1.9). -->
+        <addColumn tableName="work_report_rooms">
+            <column name="paid_amount" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            ALTER TABLE work_report_rooms
+                ADD CONSTRAINT ck_work_report_rooms_paid_amount_nonneg CHECK (paid_amount &gt;= 0);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE work_report_rooms DROP CONSTRAINT IF EXISTS ck_work_report_rooms_paid_amount_nonneg;
+            </sql>
+            <dropColumn tableName="work_report_rooms" columnName="paid_amount"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

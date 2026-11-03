@@ -13,12 +13,11 @@ import lombok.NoArgsConstructor;
 
 /**
  * FOR-06-11 (design §Components) — read-path service model for a {@code WorkerPayout}, satisfying
- * the {@code ProjectScopedService}/{@code AdminService} CRUD contract {@code WorkerPayoutService}
- * implements (entity-creation-rules step 4).
+ * the company-wide {@code AdminService} CRUD contract {@code WorkerPayoutService} implements
+ * (FOR-07-06: no project scoping).
  *
- * <p>The Payroll tab does not consume the generic {@code AdminService} list/read projection — it
- * reads the richer {@code PayrollView} (payouts + per-worker remaining advance credit) built by
- * {@code WorkerPayoutService.list}. This model exists only to complete the generic CRUD contract
+ * <p>The payroll UI does not consume the generic {@code AdminService} list/read projection — it
+ * reads {@code WorkerPayoutService.list(PayoutFilter)} and the payroll card. This model exists only to complete the generic CRUD contract
  * (so the inherited {@code find}/{@code findById}/paging surface compiles and stays available); it
  * is a flat projection of the entity carrying the FK ids, the localized {@code workerName}
  * ({@code ru → pl → code} fallback, R8.1), and the stored scalars. The {@code paymentChannel} /
@@ -32,11 +31,12 @@ public class WorkerPayoutServiceModel {
 
     private Long id;
 
-    private Long projectId;
-
     private Long workerId;
     /** The worker's localized display name (ru → pl → code), resolved in the service mapper (R8.1). */
     private String workerName;
+
+    /** FOR-07-06: the payout date (payouts are worker-wide, no project). */
+    private LocalDate payoutDate;
 
     private LocalDate periodFrom;
     private LocalDate periodTo;

@@ -94,7 +94,7 @@ class AdminRoleProhibitionPropertyTest {
     private static UserServiceExtendedModel model(long roleId) {
         return new UserServiceExtendedModel(
                 null, "Test User", "unique@example.com", null, roleId,
-                null, true, "ru", null, null, null, null, null);
+                null, true, "ru", null, null, null, null, null, null);
     }
 
     // Feature: FOR-03-01-jwt-auth, Property 25 (create branch)

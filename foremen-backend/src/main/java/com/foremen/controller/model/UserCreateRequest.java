@@ -27,5 +27,8 @@ public record UserCreateRequest(
         List<Long> workCategoryIds,
         // FOR-02-07 — OPTIONAL worker-type id, applied only when the resolved role is WORKER
         // (D-worker-only); null/omitted means "no worker type". Validation lives in UserService.
-        Long workerTypeId
+        Long workerTypeId,
+        // FOR-07-06 (R3.1–R3.3) — OPTIONAL seniority supplement as a fraction (0.02 = 2%), applied
+        // only for a WORKER user; null/omitted = 0, outside [0, 1] -> 400. Validation in UserService.
+        java.math.BigDecimal seniorityPct
 ) {}

@@ -8,7 +8,8 @@ import java.math.BigDecimal;
  *
  * <p>One line per {@code APPROVED} {@code WorkReport} on a project. The figures are a pure derivation
  * over existing read models (no cost column is persisted on {@code WorkReport}): the resolved worker
- * type (via {@code ProjectMember.workerType} with a base-tier fallback), the project work-item rate
+ * type (FOR-07-06: the worker user's own {@code workerType} + {@code seniorityPct}, with a base-tier
+ * fallback), the project work-item rate
  * read as-is from {@code clientUnitPrice} (R1.4), the reported quantity, the unit
  * {@code Worker_Service_Cost}, and the total {@code Cost_Value = unitServiceCost × totalQuantity}.
  *
@@ -24,7 +25,9 @@ import java.math.BigDecimal;
  * @param workerTypeId     the resolved {@code WorkerType} id
  * @param workerTypeName   the resolved {@code WorkerType} localized name
  * @param baseTierFallback {@code true} when the base tier was used via fallback (Uncategorized /
- *                         missing / inactive), {@code false} for an explicit active membership tier (R2.4)
+ *                         missing / inactive user type), {@code false} for an active user type (FOR-07-06 R2.2)
+ * @param seniorityPct     FOR-07-06 R2.3 — the worker user's seniority fraction folded into the unit cost
+ *                         ({@code Base_Cost × (1 + tierUplift + seniorityPct)}); never {@code null}, 0 by default
  * @param workItemRate     the project work-item rate ({@code = clientUnitPrice}, read as-is, R1.4)
  * @param totalQuantity    the FOR-06-01 derived reported quantity
  * @param unitServiceCost  the unit {@code Worker_Service_Cost}; {@code null} ⇒ unavailable (R1.5)
@@ -39,6 +42,7 @@ public record WorkerCostLineDto(
         Long workerTypeId,
         String workerTypeName,
         boolean baseTierFallback,
+        BigDecimal seniorityPct,
         BigDecimal workItemRate,
         BigDecimal totalQuantity,
         BigDecimal unitServiceCost,

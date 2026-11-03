@@ -14,7 +14,8 @@ import org.springframework.stereotype.Component;
  * "conserved, non-negative running balance") are property-testable in isolation. The service layer
  * is a thin apply-layer over this collaborator.
  *
- * <p>A worker's <b>remaining advance credit</b> on a project is a running balance:
+ * <p>A worker's <b>remaining advance credit</b> (worker-wide since FOR-07-06 — over all the worker's
+ * payouts, not per project) is a running balance:
  * {@code Σ(advance payout amounts) − Σ(advanceApplied on regular payouts)}, floored at 0 — advances
  * <b>increase</b> it, regular payouts <b>decrease</b> it by the applied offset, and it never goes
  * negative (glossary; Requirement 5.6).
@@ -30,8 +31,8 @@ public final class AdvanceCreditCalculator {
     private static final int SCALE = 2;
 
     /**
-     * Compute a worker's remaining advance credit from the full set of that worker's payouts on a
-     * project (Requirements 5.5, 5.6).
+     * Compute a worker's remaining advance credit from the full set of that worker's payouts across
+     * all projects (FOR-06-11 Requirements 5.5, 5.6; FOR-07-06 Requirement 7).
      *
      * <p>The balance is {@code Σ(amount of advances) − Σ(advanceApplied of regular payouts)},
      * floored at 0 so it is never negative. An advance contributes its {@link
@@ -39,7 +40,7 @@ public final class AdvanceCreditCalculator {
      * {@code −}{@link AdvanceCreditSource#getAdvanceApplied() advanceApplied}. {@code null} payout
      * amounts are treated as zero.
      *
-     * @param payouts the worker's payouts on the project (any order; an empty or {@code null} list
+     * @param payouts all of the worker's payouts (any order; an empty or {@code null} list
      *     yields {@code 0.00}). {@code null} elements are ignored.
      * @return the remaining advance credit, scaled to 2 decimals, {@code >= 0}
      */

@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import com.foremen.dao.model.WorkReportStatus;
+import com.foremen.service.payroll.LinePaymentStatus;
 
 /**
  * FOR-06-01 (Requirements 6.5, 11.1, 11.3) — detail DTO for a single {@code WorkReport} (design
@@ -41,5 +42,8 @@ public record WorkReportDtoExtendedModel(
         BigDecimal margin,
         String note,
         List<WorkReportRoomModel> rooms,
-        List<String> mediaRefs) {
+        List<String> mediaRefs,
+        /* FOR-07-06 R12.1 — aggregate payment status; null unless APPROVED. Per-room paidAmount +
+           paymentStatus ride on rooms. No payout ids/channels/balances are exposed (R12.2). */
+        LinePaymentStatus paymentStatus) {
 }

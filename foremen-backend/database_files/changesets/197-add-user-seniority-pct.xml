@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-06 (Requirements 1.7, 1.8): the worker's seniority uplift on the USER record.
+
+          seniority_pct NUMERIC(6,4) NOT NULL DEFAULT 0, CHECK 0 <= seniority_pct <= 1
+                        — a fraction (0.05 = 5 %) added to the tier uplift in the FOR-06-10 cost
+                          seam: Rate = Base × (1 + tierUplift + seniorityPct).
+
+        No backfill: every existing user gets 0 from the column default.
+
+        Idempotent: the column (and its CHECK) is added only when absent (NOT columnExists) +
+        MARK_RAN. Registered LAST in changelog.xml, after 196.
+    -->
+
+    <changeSet id="197-add-user-seniority-pct" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="users" columnName="seniority_pct"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="users">
+            <column name="seniority_pct" type="NUMERIC(6,4)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <sql>
+            ALTER TABLE users
+                ADD CONSTRAINT ck_users_seniority_pct_range
+                CHECK (seniority_pct &gt;= 0 AND seniority_pct &lt;= 1);
+        </sql>
+        <rollback>
+            <sql>
+                ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_seniority_pct_range;
+            </sql>
+            <dropColumn tableName="users" columnName="seniority_pct"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

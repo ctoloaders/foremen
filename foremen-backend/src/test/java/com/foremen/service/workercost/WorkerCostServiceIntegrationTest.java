@@ -331,6 +331,10 @@ class WorkerCostServiceIntegrationTest {
             UserEntity inactiveWorker = persistUser("ina-" + runId, "Piotr", workerRole);
             UserEntity noMemberWorker = persistUser("nom-" + runId, "Anna", workerRole);
 
+            // FOR-07-06 R2.1: the tier now follows the worker USER's own type, so each user carries
+            // the same type as its membership (firm / null / inactive; noMemberWorker has none).
+            firmWorker.setWorkerType(firm);
+            inactiveWorker.setWorkerType(dead);
             persistMember(firmWorker, project.getId(), workerRole, firm, AssignmentStatus.ACTIVE);
             persistMember(uncategorizedWorker, project.getId(), workerRole, null, AssignmentStatus.ACTIVE);
             persistMember(inactiveWorker, project.getId(), workerRole, dead, AssignmentStatus.ACTIVE);
@@ -380,6 +384,7 @@ class WorkerCostServiceIntegrationTest {
 
             ProjectEntity project = persistProject("Worker Cost IT OTHER");
             UserEntity worker = persistUser("other-" + runId, "Other", workerRole);
+            worker.setWorkerType(firm); // FOR-07-06 R2.1: user-level type drives the tier
             persistMember(worker, project.getId(), workerRole, firm, AssignmentStatus.ACTIVE);
             f.otherReportId = persistReport(project, work, worker,
                     WorkReportStatus.APPROVED, "100.00", "1").getId();

@@ -90,7 +90,9 @@ class WorkReportRevenuePropertyTest {
 
     private final WorkReportService service = new WorkReportService(
             workReportDao, projectMemberDao, estimateLineDao, amendmentLineDao, projectAccessCache,
-            serviceMapper, auditLogDao, entityManager, eventPublisher);
+            serviceMapper, auditLogDao, entityManager, eventPublisher,
+            new com.foremen.service.payroll.WorkReportPaymentStatusResolver(
+                    mock(com.foremen.service.workercost.WorkerCostService.class)));
 
     {
         when(workReportDao.save(any(WorkReportEntity.class))).thenAnswer(inv -> inv.getArgument(0));

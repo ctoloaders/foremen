@@ -44,6 +44,15 @@ public class UserEntity extends BaseEntity {
     @JoinColumn(name = "worker_type_id")
     private WorkerTypeEntity workerType;
 
+    /**
+     * FOR-07-06 (R1.7, R3) — manually edited seniority supplement as a fraction (e.g. {@code 0.02} for
+     * 2 %), added to the worker-type tier uplift in the cost seam. Meaningful only for WORKER users;
+     * stored as 0 for every other role. DB: {@code NUMERIC(6,4) NOT NULL DEFAULT 0}, CHECK {@code 0..1}
+     * (changeset 197).
+     */
+    @Column(name = "seniority_pct", nullable = false, precision = 6, scale = 4)
+    private java.math.BigDecimal seniorityPct = java.math.BigDecimal.ZERO;
+
     @Column(nullable = false)
     private boolean active = true;
 

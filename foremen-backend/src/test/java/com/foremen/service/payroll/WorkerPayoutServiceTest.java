@@ -13,10 +13,10 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,28 +27,32 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.foremen.dao.AdminDao;
-import com.foremen.dao.ProjectMemberDao;
-import com.foremen.dao.WorkReportRoomDao;
+import com.foremen.dao.UserDao;
+import com.foremen.dao.WorkerPayoutAllocationDao;
 import com.foremen.dao.WorkerPayoutDao;
-import com.foremen.dao.model.AssignmentStatus;
 import com.foremen.dao.model.PaymentChannel;
 import com.foremen.dao.model.PayoutStatus;
-import com.foremen.dao.model.ProjectMemberEntity;
+import com.foremen.dao.model.ProjectEntity;
+import com.foremen.dao.model.RoleEntity;
+import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.UserEntity;
+import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.dao.model.WorkReportEntity;
 import com.foremen.dao.model.WorkReportRoomEntity;
+import com.foremen.dao.model.WorkerPayoutAllocationEntity;
 import com.foremen.dao.model.WorkerPayoutEntity;
 import com.foremen.exception.ForemenApiException;
-import com.foremen.service.ProjectAccessCache;
+import com.foremen.service.ProjectScopedService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.mapper.WorkerPayoutServiceMapper;
+import com.foremen.service.payroll.PayoutSuggestionService.PayableCandidate;
 import com.foremen.service.payroll.dto.CreatePayoutRequest;
-import com.foremen.service.payroll.dto.PayoutLineDto;
+import com.foremen.service.payroll.dto.PayoutAllocationDto;
+import com.foremen.service.payroll.dto.PayoutFilter;
 import com.foremen.service.payroll.dto.PayoutSuggestionDto;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
 import com.foremen.service.payroll.dto.mapper.WorkerPayoutDtoMapper;
@@ -56,48 +60,40 @@ import com.foremen.service.payroll.dto.mapper.WorkerPayoutDtoMapper;
 import jakarta.persistence.EntityManager;
 
 /**
- * FOR-06-11 task 8.1 — plain Mockito unit tests for {@link WorkerPayoutService}, the money-OUT
- * payout lifecycle service (design §WorkerPayoutService). The DAOs, pure collaborators (stubbed where
- * their arithmetic is exercised elsewhere), mapper, and {@link EntityManager} are mocked; the caller
- * user id / role authority is driven through {@link SecurityContextHolder}, mirroring
- * {@code WorkReportServiceTest}.
+ * FOR-07-06 task 5.2 — Mockito unit tests for the company-wide {@link WorkerPayoutService}
+ * (design §WorkerPayoutService). DAOs, the suggestion service, mappers, and the {@link EntityManager}
+ * are mocked; the {@link AllocationWriter}, {@link PayoutDistributor}, {@link AdvanceCreditCalculator},
+ * and {@link AdvanceDeriver} are real, so the distribution / credit / paid-amount figures are the
+ * production ones.
  *
- * <p>Covers the unit cases of the design §Testing Strategy:
  * <ul>
- *   <li><b>create happy paths</b> — a regular payout links the covered lines, applies the credit, and
- *       is persisted {@code PLANNED} (R4.2); an advance adds credit, applies none, and links no line
- *       (R5.5);</li>
- *   <li><b>error edges</b> — missing channel (R2.2), negative amount (R4.4), invalid period (R4.5),
- *       non-member worker (R4.6), an illegal transition on a {@code PAID} payout (R7.2), and an
- *       advance-already-applied delete (R5.7);</li>
- *   <li><b>no-notification assertion</b> — {@link WorkerPayoutService} declares <b>no</b> notification
- *       collaborator at all, and create / pay / delete complete without one (R9.1).</li>
+ *   <li>create — oldest-first distribution with a partial last line, credit applied worker-wide,
+ *       surplus unallocated, payout date default/override, advance allocates nothing (R5.1–R5.6);</li>
+ *   <li>create — validation order and codes (R5.7);</li>
+ *   <li>suggest — period/worker validation and delegation without a project (R4.1, R4.8);</li>
+ *   <li>lifecycle — mark-paid, PAID terminal, regular delete releases allocations, worker-wide
+ *       consumed-advance check (R6.1–R6.4);</li>
+ *   <li>reads — list filter + allocations; not project-scoped (R14.2); no notification seam (R13).</li>
  * </ul>
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class WorkerPayoutServiceTest {
 
-    private static final Long PROJECT_ID = 42L;
     private static final Long WORKER_ID = 500L;
-    private static final Long ADMIN_ID = 1L;
 
     private static final LocalDate FROM = LocalDate.now().minusMonths(1);
-    private static final LocalDate TO = LocalDate.now().minusDays(1); // past -> regular (non-advance)
-    private static final LocalDate ADVANCE_TO = LocalDate.now().plusMonths(1); // future -> advance
+    private static final LocalDate TO = LocalDate.now().minusDays(1);          // regular
+    private static final LocalDate ADVANCE_TO = LocalDate.now().plusMonths(1); // advance
 
     @Mock
     private WorkerPayoutDao workerPayoutDao;
     @Mock
-    private WorkReportRoomDao workReportRoomDao;
+    private WorkerPayoutAllocationDao allocationDao;
     @Mock
-    private ProjectMemberDao projectMemberDao;
-    @Mock
-    private ProjectAccessCache projectAccessCache;
+    private UserDao userDao;
     @Mock
     private PayoutSuggestionService suggestionService;
-    @Mock
-    private ReportLineLinker reportLineLinker;
     @Mock
     private WorkerPayoutServiceMapper serviceMapper;
     @Mock
@@ -107,329 +103,380 @@ class WorkerPayoutServiceTest {
     @Mock
     private EntityManager entityManager;
 
-    // The advance-credit arithmetic is pure (covered by AdvanceCreditCalculatorPropertyTest); the
-    // service composes the REAL calculator so the credit figures are the production ones.
-    private final AdvanceCreditCalculator advanceCreditCalculator = new AdvanceCreditCalculator();
-    private final AdvanceDeriver advanceDeriver = new AdvanceDeriver();
-
+    private final List<WorkerPayoutAllocationEntity> savedAllocations = new ArrayList<>();
     private WorkerPayoutService service;
 
     @BeforeEach
     void setUp() {
         service = new WorkerPayoutService(
-                workerPayoutDao, workReportRoomDao, projectMemberDao, projectAccessCache,
-                suggestionService, reportLineLinker, advanceCreditCalculator, advanceDeriver,
+                workerPayoutDao, allocationDao, userDao, suggestionService,
+                new AllocationWriter(allocationDao, entityManager),
+                new AdvanceCreditCalculator(), new AdvanceDeriver(),
                 serviceMapper, dtoMapper, auditLogDao, entityManager);
-        // save() echoes its argument so the committed entity is the one under test.
-        lenient().when(workerPayoutDao.save(any(WorkerPayoutEntity.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
-        // getReference(type, id) returns a lightweight stub carrying only its id.
-        lenient().when(entityManager.getReference(any(), any()))
-                .thenAnswer(inv -> referenceStub(inv.getArgument(0), (Long) inv.getArgument(1)));
-        // The read mapping is not under test; echo a trivial dto so create()/markPaid() return non-null.
-        lenient().when(dtoMapper.toDto(any(WorkerPayoutEntity.class)))
-                .thenReturn(sampleDto());
-    }
-
-    @AfterEach
-    void clearContext() {
-        SecurityContextHolder.clearContext();
+        lenient().when(workerPayoutDao.save(any(WorkerPayoutEntity.class))).thenAnswer(inv -> {
+            WorkerPayoutEntity p = inv.getArgument(0);
+            if (p.getId() == null) {
+                p.setId(9000L);
+            }
+            return p;
+        });
+        lenient().when(allocationDao.save(any(WorkerPayoutAllocationEntity.class))).thenAnswer(inv -> {
+            savedAllocations.add(inv.getArgument(0));
+            return inv.getArgument(0);
+        });
+        lenient().when(dtoMapper.toDto(any(WorkerPayoutEntity.class))).thenReturn(sampleDto());
+        lenient().when(workerPayoutDao.findByWorker(WORKER_ID)).thenReturn(List.of());
+        stubWorker("WORKER");
     }
 
     // =======================================================================
-    // create — happy paths (R4.2, R5.5)
+    // create — distribution (R5.1–R5.6)
     // =======================================================================
 
     @Nested
-    @DisplayName("create — happy paths (R4.2, R5.5)")
-    class CreateHappyPaths {
+    @DisplayName("create — worker-wide distribution (R5.1–R5.6)")
+    class CreateDistribution {
 
         @Test
-        @DisplayName("a regular payout links the covered lines, applies the credit, and is PLANNED (R4.2)")
-        void regularPayoutLinksLinesAppliesCreditAndIsPlanned() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            stubActiveMember();
-            // gross 300, remaining credit 100 -> appliedCredit 100, suggested 200.
-            stubSuggest(false, bd("300"), bd("100"), bd("100"), bd("200"));
-            List<WorkReportRoomEntity> lines = List.of(line(10L), line(11L));
-            when(suggestionService.linkableLines(PROJECT_ID, WORKER_ID, FROM, TO)).thenReturn(lines);
+        @DisplayName("distributes amount + advanceApplied oldest-first; the last touched line is partial (R5.3, R5.4)")
+        void distributesOldestFirstWithPartialLastLine() {
+            // three lines (any projects) with remainders 100 / 50 / 80; prior advance credit 30.
+            WorkReportRoomEntity a = line(10L, "0");
+            WorkReportRoomEntity b = line(11L, "20");
+            WorkReportRoomEntity c = line(12L, "0");
+            when(suggestionService.payableLines(WORKER_ID, TO)).thenReturn(List.of(
+                    new PayableCandidate(a, bd("100.00")),
+                    new PayableCandidate(b, bd("50.00")),
+                    new PayableCandidate(c, bd("80.00"))));
+            WorkerPayoutEntity priorAdvance = advancePayout(bd("30.00"));
+            when(workerPayoutDao.findByWorker(WORKER_ID)).thenReturn(List.of(priorAdvance));
 
-            service.create(PROJECT_ID, new CreatePayoutRequest(
-                    WORKER_ID, FROM, TO, PaymentChannel.BANK_TRANSFER, null, "ok"));
+            // override amount 140 ⇒ D = 140 + applied 30 = 170 ⇒ 100 / 50 / 20 (c partial).
+            service.create(request(TO, bd("140"), null));
 
             WorkerPayoutEntity saved = capturedSave();
             assertThat(saved.getStatus()).isEqualTo(PayoutStatus.PLANNED);
             assertThat(saved.isAdvance()).isFalse();
-            assertThat(saved.getSuggestedAmount()).isEqualByComparingTo("200"); // snapshot (R1.4)
-            assertThat(saved.getAmount()).isEqualByComparingTo("200");          // defaults to suggested
-            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("100");  // min(remaining, gross)
-            assertThat(saved.getPaymentChannel()).isEqualTo(PaymentChannel.BANK_TRANSFER);
-            // the covered unpaid lines are linked in-transaction (R4.3, R6.1).
-            verify(reportLineLinker).link(eq(saved), eq(lines));
-            verify(reportLineLinker, never()).release(anyLong());
+            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("30");   // min(credit 30, gross 230)
+            assertThat(saved.getSuggestedAmount()).isEqualByComparingTo("200"); // gross 230 − credit 30
+            assertThat(saved.getAmount()).isEqualByComparingTo("140");
+
+            assertThat(savedAllocations).extracting(x -> x.getWorkReportRoom().getId())
+                    .containsExactly(10L, 11L, 12L);
+            assertThat(savedAllocations).extracting(WorkerPayoutAllocationEntity::getAmount)
+                    .usingElementComparator(BigDecimal::compareTo)
+                    .containsExactly(bd("100"), bd("50"), bd("20"));
+            assertThat(savedAllocations).allMatch(x -> x.getPayout() == saved);
+            // paid_amount += allocation (R5.3, R5.9)
+            assertThat(a.getPaidAmount()).isEqualByComparingTo("100");
+            assertThat(b.getPaidAmount()).isEqualByComparingTo("70");
+            assertThat(c.getPaidAmount()).isEqualByComparingTo("20");
         }
 
         @Test
-        @DisplayName("an advance adds credit, applies none, and links no line (R5.5)")
-        void advancePayoutAddsCreditAndLinksNoLine() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            stubActiveMember();
-            // advance: planned-basis gross 400, no credit deduction (appliedCredit 0).
-            stubSuggest(true, bd("400"), BigDecimal.ZERO, BigDecimal.ZERO, bd("400"));
+        @DisplayName("defaults amount to the suggestion and payoutDate to today (R5.1, R5.2)")
+        void defaultsAmountAndPayoutDate() {
+            when(suggestionService.payableLines(WORKER_ID, TO)).thenReturn(List.of(
+                    new PayableCandidate(line(10L, "0"), bd("75.50"))));
 
-            service.create(PROJECT_ID, new CreatePayoutRequest(
-                    WORKER_ID, FROM, ADVANCE_TO, PaymentChannel.CASH, null, null));
+            service.create(request(TO, null, null));
 
             WorkerPayoutEntity saved = capturedSave();
-            assertThat(saved.getStatus()).isEqualTo(PayoutStatus.PLANNED);
+            assertThat(saved.getAmount()).isEqualByComparingTo("75.50");
+            assertThat(saved.getSuggestedAmount()).isEqualByComparingTo("75.50");
+            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("0");
+            assertThat(saved.getPayoutDate()).isEqualTo(LocalDate.now());
+            assertThat(savedAllocations).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("an explicit payoutDate is stored as given (R5.1)")
+        void explicitPayoutDateIsStored() {
+            when(suggestionService.payableLines(WORKER_ID, TO)).thenReturn(List.of());
+            LocalDate date = LocalDate.of(2026, 7, 15);
+
+            service.create(request(TO, bd("10"), date));
+
+            assertThat(capturedSave().getPayoutDate()).isEqualTo(date);
+        }
+
+        @Test
+        @DisplayName("a surplus over the gross stays unallocated and is not turned into credit (R5.5)")
+        void surplusStaysUnallocated() {
+            WorkReportRoomEntity a = line(10L, "0");
+            when(suggestionService.payableLines(WORKER_ID, TO)).thenReturn(List.of(
+                    new PayableCandidate(a, bd("40.00"))));
+
+            service.create(request(TO, bd("100"), null));
+
+            WorkerPayoutEntity saved = capturedSave();
+            assertThat(saved.getAmount()).isEqualByComparingTo("100");     // counts in full
+            assertThat(saved.isAdvance()).isFalse();                       // not converted to credit
+            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("0");
+            assertThat(savedAllocations).hasSize(1);
+            assertThat(a.getPaidAmount()).isEqualByComparingTo("40");
+        }
+
+        @Test
+        @DisplayName("an advance uses the planned-basis suggestion, applies no credit, allocates nothing (R5.6)")
+        void advanceAllocatesNothing() {
+            when(suggestionService.suggest(eq(WORKER_ID), any(), any(), eq(true))).thenReturn(
+                    new PayoutSuggestionDto(bd("400"), bd("0"), bd("0"), bd("400"), true, List.of()));
+
+            service.create(request(ADVANCE_TO, null, null));
+
+            WorkerPayoutEntity saved = capturedSave();
             assertThat(saved.isAdvance()).isTrue();
-            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("0"); // an advance applies no credit
-            assertThat(saved.getAmount()).isEqualByComparingTo("400");       // defaults to planned-basis suggestion
-            // an advance links NO report line (R6.4) and never resolves a linkable set.
-            verify(reportLineLinker, never()).link(any(), any());
-            verify(suggestionService, never()).linkableLines(anyLong(), anyLong(), any(), any());
+            assertThat(saved.getAmount()).isEqualByComparingTo("400");
+            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("0");
+            verify(suggestionService, never()).payableLines(anyLong(), any());
+            verify(allocationDao, never()).save(any());
         }
 
         @Test
-        @DisplayName("an overridden cash amount does not change the linked set or advanceApplied (R4.4)")
-        void overrideAmountDoesNotChangeLinkageOrCredit() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            stubActiveMember();
-            stubSuggest(false, bd("300"), bd("100"), bd("100"), bd("200"));
-            List<WorkReportRoomEntity> lines = List.of(line(10L));
-            when(suggestionService.linkableLines(PROJECT_ID, WORKER_ID, FROM, TO)).thenReturn(lines);
-
-            // override the cash amount to 999 (independent of linkage / credit).
-            service.create(PROJECT_ID, new CreatePayoutRequest(
-                    WORKER_ID, FROM, TO, PaymentChannel.CASH, bd("999"), null));
-
-            WorkerPayoutEntity saved = capturedSave();
-            assertThat(saved.getAmount()).isEqualByComparingTo("999");          // override honored
-            assertThat(saved.getSuggestedAmount()).isEqualByComparingTo("200"); // snapshot unchanged
-            assertThat(saved.getAdvanceApplied()).isEqualByComparingTo("100");  // follows gross, not override
-            verify(reportLineLinker).link(eq(saved), eq(lines));               // linked set follows gross
+        @DisplayName("create writes one CREATE audit row")
+        void createIsAudited() {
+            when(suggestionService.payableLines(WORKER_ID, TO)).thenReturn(List.of());
+            service.create(request(TO, bd("1"), null));
+            verify(auditLogDao, times(1)).save(any());
         }
     }
 
     // =======================================================================
-    // create — error edges (R2.2, R4.4, R4.5, R4.6)
+    // create — validation (R5.7)
     // =======================================================================
 
     @Nested
-    @DisplayName("create — error edges (R2.2, R4.4, R4.5, R4.6)")
-    class CreateErrorEdges {
+    @DisplayName("create — validation order and codes (R5.7)")
+    class CreateValidation {
 
         @Test
-        @DisplayName("a missing channel is rejected 422 error.workerPayout.channel.required (R2.2)")
-        void missingChannelRejected() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            stubActiveMember();
-
-            assertApiError(() -> service.create(PROJECT_ID, new CreatePayoutRequest(
-                            WORKER_ID, FROM, TO, null, bd("10"), null)),
-                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.channel.required");
-            verify(workerPayoutDao, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("a negative amount is rejected 422 error.workerPayout.amount.invalid (R4.4)")
-        void negativeAmountRejected() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            stubActiveMember();
-
-            assertApiError(() -> service.create(PROJECT_ID, new CreatePayoutRequest(
-                            WORKER_ID, FROM, TO, PaymentChannel.CASH, bd("-1"), null)),
-                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.amount.invalid");
-            verify(workerPayoutDao, never()).save(any());
-        }
-
-        @Test
-        @DisplayName("an invalid period (to < from) is rejected 422 error.workerPayout.period.invalid (R4.5)")
-        void invalidPeriodRejected() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-
-            assertApiError(() -> service.create(PROJECT_ID, new CreatePayoutRequest(
-                            WORKER_ID, TO, FROM, PaymentChannel.CASH, bd("10"), null)),
+        @DisplayName("invalid period → 422 period.invalid, checked before the channel")
+        void invalidPeriodFirst() {
+            assertApiError(() -> service.create(new CreatePayoutRequest(
+                            WORKER_ID, null, TO, FROM, null, bd("-1"), null)),
                     HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.period.invalid");
             verify(workerPayoutDao, never()).save(any());
         }
 
         @Test
-        @DisplayName("a non-ACTIVE-member worker is rejected 422 error.workerPayout.worker.notMember (R4.6)")
-        void nonMemberWorkerRejected() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            // No membership row -> not a member.
-            when(projectMemberDao.findByUserIdAndProjectId(WORKER_ID, PROJECT_ID))
-                    .thenReturn(Optional.empty());
+        @DisplayName("missing channel → 422 channel.required, checked before the amount")
+        void missingChannelBeforeAmount() {
+            assertApiError(() -> service.create(new CreatePayoutRequest(
+                            WORKER_ID, null, FROM, TO, null, bd("-1"), null)),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.channel.required");
+        }
 
-            assertApiError(() -> service.create(PROJECT_ID, new CreatePayoutRequest(
-                            WORKER_ID, FROM, TO, PaymentChannel.CASH, bd("10"), null)),
-                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.worker.notMember");
+        @Test
+        @DisplayName("negative amount → 422 amount.invalid, checked before the worker")
+        void negativeAmountBeforeWorker() {
+            stubWorker("FOREMAN");
+            assertApiError(() -> service.create(new CreatePayoutRequest(
+                            WORKER_ID, null, FROM, TO, PaymentChannel.CASH, bd("-1"), null)),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.amount.invalid");
+        }
+
+        @Test
+        @DisplayName("a non-WORKER user → 422 worker.invalid")
+        void nonWorkerRejected() {
+            stubWorker("FOREMAN");
+            assertApiError(() -> service.create(request(TO, bd("1"), null)),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.worker.invalid");
             verify(workerPayoutDao, never()).save(any());
         }
 
         @Test
-        @DisplayName("an INACTIVE member is also rejected error.workerPayout.worker.notMember (R4.6)")
-        void inactiveMemberRejected() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            ProjectMemberEntity member = new ProjectMemberEntity();
-            member.setAssignmentStatus(AssignmentStatus.INACTIVE);
-            when(projectMemberDao.findByUserIdAndProjectId(WORKER_ID, PROJECT_ID))
-                    .thenReturn(Optional.of(member));
-
-            assertApiError(() -> service.create(PROJECT_ID, new CreatePayoutRequest(
-                            WORKER_ID, FROM, TO, PaymentChannel.CASH, bd("10"), null)),
-                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.worker.notMember");
-            verify(workerPayoutDao, never()).save(any());
+        @DisplayName("an unknown user → 422 worker.invalid")
+        void unknownWorkerRejected() {
+            when(userDao.findById(WORKER_ID)).thenReturn(Optional.empty());
+            assertApiError(() -> service.create(request(TO, bd("1"), null)),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.worker.invalid");
         }
     }
 
     // =======================================================================
-    // markPaid / delete — lifecycle (R7.1, R7.2, R5.7)
+    // suggest (R4.1, R4.8)
     // =======================================================================
 
     @Nested
-    @DisplayName("lifecycle — markPaid / delete (R7.1, R7.2, R5.7)")
+    @DisplayName("suggest — worker-wide (R4.1, R4.8)")
+    class Suggest {
+
+        @Test
+        @DisplayName("delegates without a project; a past period is regular, a future one an advance")
+        void delegatesWorkerWide() {
+            service.suggest(WORKER_ID, FROM, TO);
+            service.suggest(WORKER_ID, FROM, ADVANCE_TO);
+            verify(suggestionService).suggest(WORKER_ID, FROM, TO, false);
+            verify(suggestionService).suggest(WORKER_ID, FROM, ADVANCE_TO, true);
+        }
+
+        @Test
+        @DisplayName("rejects to < from and a non-WORKER with 422")
+        void rejectsInvalidInput() {
+            assertApiError(() -> service.suggest(WORKER_ID, TO, FROM),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.period.invalid");
+            stubWorker("CLIENT");
+            assertApiError(() -> service.suggest(WORKER_ID, FROM, TO),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.worker.invalid");
+        }
+    }
+
+    // =======================================================================
+    // lifecycle (R6.1–R6.4)
+    // =======================================================================
+
+    @Nested
+    @DisplayName("lifecycle — markPaid / delete (R6.1–R6.4)")
     class Lifecycle {
 
         @Test
-        @DisplayName("marking a PLANNED payout paid sets PAID + paidAt (R7.1)")
-        void markPaidTransitionsPlannedToPaid() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            WorkerPayoutEntity payout = persisted(PayoutStatus.PLANNED, false);
-            when(workerPayoutDao.findById(payout.getId())).thenReturn(Optional.of(payout));
-
-            service.markPaid(payout.getId());
-
-            assertThat(payout.getStatus()).isEqualTo(PayoutStatus.PAID);
-            assertThat(payout.getPaidAt()).isNotNull();
+        @DisplayName("mark-paid moves PLANNED → PAID and sets paidAt (R6.1)")
+        void markPaid() {
+            WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
+            service.markPaid(p.getId());
+            assertThat(p.getStatus()).isEqualTo(PayoutStatus.PAID);
+            assertThat(p.getPaidAt()).isNotNull();
+            verify(auditLogDao).save(any());
         }
 
         @Test
-        @DisplayName("marking an already-PAID payout paid is refused 409 illegalTransition (R7.2)")
-        void markPaidOnPaidIsIllegal() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            WorkerPayoutEntity payout = persisted(PayoutStatus.PAID, false);
-            when(workerPayoutDao.findById(payout.getId())).thenReturn(Optional.of(payout));
-
-            assertApiError(() -> service.markPaid(payout.getId()),
+        @DisplayName("mark-paid / delete on a PAID payout → 409 illegalTransition (R6.1)")
+        void paidIsTerminal() {
+            WorkerPayoutEntity p = persisted(PayoutStatus.PAID, false);
+            assertApiError(() -> service.markPaid(p.getId()),
                     HttpStatus.CONFLICT, "error.workerPayout.status.illegalTransition");
-            assertThat(payout.getStatus()).isEqualTo(PayoutStatus.PAID); // unchanged
-        }
-
-        @Test
-        @DisplayName("deleting a PAID payout is refused 409 illegalTransition (R7.2)")
-        void deletePaidIsIllegal() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            WorkerPayoutEntity payout = persisted(PayoutStatus.PAID, false);
-            when(workerPayoutDao.findById(payout.getId())).thenReturn(Optional.of(payout));
-
-            assertApiError(() -> service.delete(payout.getId()),
+            assertApiError(() -> service.delete(p.getId()),
                     HttpStatus.CONFLICT, "error.workerPayout.status.illegalTransition");
             verify(workerPayoutDao, never()).deleteById(any());
-            verify(reportLineLinker, never()).release(anyLong());
+            verify(allocationDao, never()).findByPayoutId(anyLong());
         }
 
         @Test
-        @DisplayName("deleting a PLANNED regular payout releases its linked lines (R6.3, R7.3)")
-        void deletePlannedRegularReleasesLines() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            WorkerPayoutEntity payout = persisted(PayoutStatus.PLANNED, false);
-            when(workerPayoutDao.findById(payout.getId())).thenReturn(Optional.of(payout));
-
-            service.delete(payout.getId());
-
-            verify(reportLineLinker).release(payout.getId());
-            verify(workerPayoutDao).deleteById(payout.getId());
+        @DisplayName("unknown id → 404")
+        void unknownId() {
+            when(workerPayoutDao.findById(1L)).thenReturn(Optional.empty());
+            assertApiError(() -> service.markPaid(1L), HttpStatus.NOT_FOUND, "error.entity.not.found");
         }
 
         @Test
-        @DisplayName("deleting an advance whose credit a later regular payout consumed is refused (R5.7)")
-        void deleteAdvanceAlreadyAppliedIsRefused() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
+        @DisplayName("deleting a PLANNED regular payout releases its allocations: paid_amount −= a (R6.2, R6.4)")
+        void deleteRegularReleasesAllocations() {
+            WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
+            WorkReportRoomEntity a = line(10L, "100");
+            WorkReportRoomEntity b = line(11L, "35");
+            List<WorkerPayoutAllocationEntity> rows = List.of(allocation(p, a, "100"), allocation(p, b, "20"));
+            when(allocationDao.findByPayoutId(p.getId())).thenReturn(rows);
+
+            service.delete(p.getId());
+
+            assertThat(a.getPaidAmount()).isEqualByComparingTo("0");
+            assertThat(b.getPaidAmount()).isEqualByComparingTo("15");
+            verify(allocationDao).deleteAll(rows);
+            verify(workerPayoutDao).deleteById(p.getId());
+            verify(auditLogDao).save(any()); // DELETE audit
+        }
+
+        @Test
+        @DisplayName("deleting an advance whose credit regular payouts consumed → 409 alreadyApplied (R6.3)")
+        void deleteConsumedAdvanceRejected() {
             WorkerPayoutEntity advance = persisted(PayoutStatus.PLANNED, true);
             advance.setAmount(bd("100"));
-            when(workerPayoutDao.findById(advance.getId())).thenReturn(Optional.of(advance));
-            // The worker's OTHER payouts: a regular that already applied 100 of credit, but the OTHER
-            // advances only total 0 -> removing THIS advance would leave the applied offset uncovered.
-            WorkerPayoutEntity regular = persisted(PayoutStatus.PLANNED, false);
-            regular.setAdvanceApplied(bd("100"));
-            when(workerPayoutDao.findByProjectAndWorker(PROJECT_ID, WORKER_ID))
-                    .thenReturn(List.of(advance, regular));
+            WorkerPayoutEntity regular = persisted(PayoutStatus.PAID, false);
+            regular.setAdvanceApplied(bd("60"));
+            WorkerPayoutEntity otherAdvance = persisted(PayoutStatus.PAID, true);
+            otherAdvance.setAmount(bd("50"));
+            when(workerPayoutDao.findByWorker(WORKER_ID)).thenReturn(List.of(advance, regular, otherAdvance));
 
             assertApiError(() -> service.delete(advance.getId()),
                     HttpStatus.CONFLICT, "error.workerPayout.advance.alreadyApplied");
             verify(workerPayoutDao, never()).deleteById(any());
-            verify(reportLineLinker, never()).release(anyLong());
         }
 
         @Test
-        @DisplayName("deleting an advance whose credit is NOT yet consumed removes it (R5.7)")
-        void deleteAdvanceNotConsumedSucceeds() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
+        @DisplayName("deleting an advance whose credit is still covered by other advances succeeds (R6.3)")
+        void deleteCoveredAdvanceSucceeds() {
             WorkerPayoutEntity advance = persisted(PayoutStatus.PLANNED, true);
             advance.setAmount(bd("100"));
-            when(workerPayoutDao.findById(advance.getId())).thenReturn(Optional.of(advance));
-            // No regular payout has drawn any credit -> safe to delete.
-            when(workerPayoutDao.findByProjectAndWorker(PROJECT_ID, WORKER_ID))
-                    .thenReturn(List.of(advance));
+            WorkerPayoutEntity regular = persisted(PayoutStatus.PAID, false);
+            regular.setAdvanceApplied(bd("50"));
+            WorkerPayoutEntity otherAdvance = persisted(PayoutStatus.PAID, true);
+            otherAdvance.setAmount(bd("50"));
+            when(workerPayoutDao.findByWorker(WORKER_ID)).thenReturn(List.of(advance, regular, otherAdvance));
 
             service.delete(advance.getId());
 
             verify(workerPayoutDao).deleteById(advance.getId());
-            // an advance linked no line, so release is never invoked for it (R6.4).
-            verify(reportLineLinker, never()).release(anyLong());
+            verify(allocationDao, never()).findByPayoutId(anyLong()); // an advance has no allocations
         }
     }
 
     // =======================================================================
-    // no-notification assertion (R9.1)
+    // reads + structure (R14.2, R13)
     // =======================================================================
 
     @Nested
-    @DisplayName("no notifications — create / pay / delete emit none (R9.1)")
-    class NoNotifications {
+    @DisplayName("reads and structure (R14.2, R13)")
+    class Reads {
 
         @Test
-        @DisplayName("WorkerPayoutService declares no notification collaborator at all (R9.1)")
-        void serviceHasNoNotificationDependency() {
-            // Structural guarantee: no constructor parameter type references a notification / event
-            // publisher. Since the service literally has no such seam, create/pay/delete cannot emit.
+        @SuppressWarnings("unchecked")
+        @DisplayName("list queries the company-wide payouts newest first and maps them")
+        void listMapsPayouts() {
+            List<WorkerPayoutEntity> rows = List.of(persisted(PayoutStatus.PLANNED, false));
+            when(workerPayoutDao.findAll(any(Specification.class), any(Sort.class))).thenReturn(rows);
+            when(dtoMapper.toDtos(rows)).thenReturn(List.of(sampleDto()));
+
+            List<WorkerPayoutDto> result = service.list(new PayoutFilter(WORKER_ID, FROM, TO, PayoutStatus.PLANNED));
+
+            assertThat(result).hasSize(1);
+            ArgumentCaptor<Sort> sort = ArgumentCaptor.forClass(Sort.class);
+            verify(workerPayoutDao).findAll(any(Specification.class), sort.capture());
+            assertThat(sort.getValue().getOrderFor("payoutDate").isDescending()).isTrue();
+        }
+
+        @Test
+        @DisplayName("allocations lists each line with project, work item, room, and amount")
+        void allocationsListed() {
+            WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
+            WorkReportRoomEntity l = line(10L, "40");
+            ProjectEntity project = new ProjectEntity();
+            project.setId(7L);
+            project.setName("Project A");
+            WorkItemEntity item = new WorkItemEntity();
+            item.setCode("WI");
+            item.setNamePL("Malowanie");
+            WorkReportEntity report = new WorkReportEntity();
+            report.setProject(project);
+            report.setWorkItem(item);
+            l.setReport(report);
+            RoomEntity room = new RoomEntity();
+            room.setLabel("Kuchnia");
+            l.setRoom(room);
+            when(allocationDao.findByPayoutId(p.getId())).thenReturn(List.of(allocation(p, l, "40")));
+
+            List<PayoutAllocationDto> result = service.allocations(p.getId());
+
+            assertThat(result).singleElement().satisfies(d -> {
+                assertThat(d.lineId()).isEqualTo(10L);
+                assertThat(d.projectId()).isEqualTo(7L);
+                assertThat(d.projectName()).isEqualTo("Project A");
+                assertThat(d.workItemName()).isEqualTo("Malowanie");
+                assertThat(d.roomName()).isEqualTo("Kuchnia");
+                assertThat(d.amount()).isEqualByComparingTo("40");
+            });
+        }
+
+        @Test
+        @DisplayName("the service is not project-scoped and has no notification seam (R14.2, R13)")
+        void structure() {
+            assertThat(ProjectScopedService.class.isAssignableFrom(WorkerPayoutService.class)).isFalse();
             boolean hasNotificationSeam = java.util.Arrays
                     .stream(WorkerPayoutService.class.getDeclaredConstructors())
                     .flatMap(c -> java.util.Arrays.stream(c.getParameterTypes()))
                     .map(Class::getName)
                     .anyMatch(n -> n.contains("Notification") || n.contains("ApplicationEventPublisher"));
-            assertThat(hasNotificationSeam)
-                    .as("WorkerPayoutService has no NotificationService / event-publisher dependency (R9.1)")
-                    .isFalse();
-        }
-
-        @Test
-        @DisplayName("a full create -> pay -> delete cycle completes with no notification seam (R9.1)")
-        void createPayDeleteCycleEmitsNothing() {
-            authenticate(ADMIN_ID, "ROLE_ADMIN");
-            stubActiveMember();
-            stubSuggest(false, bd("100"), BigDecimal.ZERO, BigDecimal.ZERO, bd("100"));
-            when(suggestionService.linkableLines(PROJECT_ID, WORKER_ID, FROM, TO))
-                    .thenReturn(List.of(line(10L)));
-
-            service.create(PROJECT_ID, new CreatePayoutRequest(
-                    WORKER_ID, FROM, TO, PaymentChannel.CASH, null, null));
-
-            WorkerPayoutEntity payout = persisted(PayoutStatus.PLANNED, false);
-            when(workerPayoutDao.findById(payout.getId())).thenReturn(Optional.of(payout));
-            service.markPaid(payout.getId());
-
-            WorkerPayoutEntity toDelete = persisted(PayoutStatus.PLANNED, false);
-            when(workerPayoutDao.findById(toDelete.getId())).thenReturn(Optional.of(toDelete));
-            when(workerPayoutDao.findByProjectAndWorker(PROJECT_ID, WORKER_ID))
-                    .thenReturn(List.of(toDelete));
-            service.delete(toDelete.getId());
-
-            // Only the expected collaborators were touched — the audit log and the FK linker — never a
-            // notification. (The suite has no notification mock because the service has no such field.)
-            verify(auditLogDao, times(3)).save(any()); // one per create / pay / delete (R12.1)
+            assertThat(hasNotificationSeam).isFalse();
         }
     }
 
@@ -437,19 +484,17 @@ class WorkerPayoutServiceTest {
     // helpers
     // =======================================================================
 
-    private void stubActiveMember() {
-        ProjectMemberEntity member = new ProjectMemberEntity();
-        member.setAssignmentStatus(AssignmentStatus.ACTIVE);
-        lenient().when(projectMemberDao.findByUserIdAndProjectId(WORKER_ID, PROJECT_ID))
-                .thenReturn(Optional.of(member));
+    private void stubWorker(String roleCode) {
+        UserEntity user = new UserEntity();
+        user.setId(WORKER_ID);
+        RoleEntity role = new RoleEntity();
+        role.setCode(roleCode);
+        user.setRole(role);
+        lenient().when(userDao.findById(WORKER_ID)).thenReturn(Optional.of(user));
     }
 
-    private void stubSuggest(boolean advance, BigDecimal gross, BigDecimal remaining,
-                             BigDecimal applied, BigDecimal suggested) {
-        PayoutSuggestionDto dto = new PayoutSuggestionDto(
-                gross, remaining, applied, suggested, advance, List.of());
-        lenient().when(suggestionService.suggest(eq(PROJECT_ID), eq(WORKER_ID), any(), any(), eq(advance)))
-                .thenReturn(dto);
+    private static CreatePayoutRequest request(LocalDate to, BigDecimal amount, LocalDate payoutDate) {
+        return new CreatePayoutRequest(WORKER_ID, payoutDate, FROM, to, PaymentChannel.BANK_TRANSFER, amount, null);
     }
 
     private WorkerPayoutEntity capturedSave() {
@@ -458,58 +503,55 @@ class WorkerPayoutServiceTest {
         return captor.getValue();
     }
 
+    private long idSeq = 1000L;
+
     private WorkerPayoutEntity persisted(PayoutStatus status, boolean advance) {
         WorkerPayoutEntity p = new WorkerPayoutEntity();
-        p.setId(nextId());
-        p.setProject(referenceStub(com.foremen.dao.model.ProjectEntity.class, PROJECT_ID));
-        p.setWorker(referenceStub(UserEntity.class, WORKER_ID));
+        p.setId(++idSeq);
+        UserEntity worker = new UserEntity();
+        worker.setId(WORKER_ID);
+        p.setWorker(worker);
+        p.setPayoutDate(FROM);
         p.setStatus(status);
         p.setAdvance(advance);
         p.setPeriodFrom(FROM);
         p.setPeriodTo(advance ? ADVANCE_TO : TO);
         p.setAmount(bd("100"));
         p.setSuggestedAmount(bd("100"));
-        p.setAdvanceApplied(advance ? BigDecimal.ZERO : bd("0"));
+        p.setAdvanceApplied(BigDecimal.ZERO);
         p.setPaymentChannel(PaymentChannel.CASH);
+        lenient().when(workerPayoutDao.findById(p.getId())).thenReturn(Optional.of(p));
         return p;
     }
 
-    private static WorkReportRoomEntity line(Long id) {
+    private WorkerPayoutEntity advancePayout(BigDecimal amount) {
+        WorkerPayoutEntity p = persisted(PayoutStatus.PAID, true);
+        p.setAmount(amount);
+        return p;
+    }
+
+    private static WorkReportRoomEntity line(Long id, String paid) {
         WorkReportRoomEntity l = new WorkReportRoomEntity();
         l.setId(id);
+        l.setPaidAmount(bd(paid));
         return l;
     }
 
+    private static WorkerPayoutAllocationEntity allocation(WorkerPayoutEntity p, WorkReportRoomEntity l, String amount) {
+        WorkerPayoutAllocationEntity a = new WorkerPayoutAllocationEntity();
+        a.setPayout(p);
+        a.setWorkReportRoom(l);
+        a.setAmount(bd(amount));
+        return a;
+    }
+
     private static WorkerPayoutDto sampleDto() {
-        return new WorkerPayoutDto(1L, WORKER_ID, "Worker", FROM, TO, bd("100"), bd("100"),
+        return new WorkerPayoutDto(1L, WORKER_ID, "Worker", LocalDate.now(), FROM, TO, bd("100"), bd("100"),
                 BigDecimal.ZERO, PaymentChannel.CASH, PayoutStatus.PLANNED, false, null, null);
-    }
-
-    private long idSeq = 1000L;
-
-    private long nextId() {
-        return ++idSeq;
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T> T referenceStub(Class<?> type, Long id) {
-        try {
-            Object stub = type.getDeclaredConstructor().newInstance();
-            type.getMethod("setId", Long.class).invoke(stub, id);
-            return (T) stub;
-        } catch (Exception e) {
-            throw new IllegalStateException("cannot build reference stub for " + type, e);
-        }
     }
 
     private static BigDecimal bd(String v) {
         return new BigDecimal(v);
-    }
-
-    private static void authenticate(Long userId, String authority) {
-        UsernamePasswordAuthenticationToken token = new UsernamePasswordAuthenticationToken(
-                String.valueOf(userId), "pw", List.of(new SimpleGrantedAuthority(authority)));
-        SecurityContextHolder.getContext().setAuthentication(token);
     }
 
     private static void assertApiError(Runnable action, HttpStatus status, String code) {

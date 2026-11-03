@@ -1,7 +1,10 @@
 package com.foremen.service.payroll;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -11,235 +14,286 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.WorkReportDao;
+import com.foremen.dao.WorkReportRoomDao;
 import com.foremen.dao.WorkerPayoutDao;
+import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
-import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.dao.model.WorkReportEntity;
 import com.foremen.dao.model.WorkReportRoomEntity;
 import com.foremen.dao.model.WorkerTypeEntity;
 import com.foremen.service.estimate.margins.WorkerTypeTier;
+import com.foremen.service.payroll.PayoutDistributor.Allocation;
+import com.foremen.service.payroll.PayoutDistributor.PayableLine;
 import com.foremen.service.payroll.dto.PayoutLineDto;
 import com.foremen.service.payroll.dto.PayoutSuggestionDto;
 import com.foremen.service.workercost.WorkerCostDerivation;
 import com.foremen.service.workercost.WorkerCostDerivation.ResolvedTier;
 import com.foremen.service.workercost.WorkerCostService;
-
-import java.time.LocalDate;
+import com.foremen.service.workercost.WorkerProfile;
 
 /**
- * FOR-06-11 (Requirement 3, design §PayoutSuggestionService) — the read-only create-dialog preview
- * builder: it folds the FOR-06-10 {@code WorkerCostService} per-line {@code Cost_Value}
- * <strong>verbatim</strong> over the worker's unpaid {@code APPROVED} report lines in the chosen
- * period and layers the pure {@link AdvanceCreditCalculator} credit arithmetic on top. It adds
- * <strong>no</strong> cost formula of its own — the unit {@code Worker_Service_Cost} and the per-line
- * {@code Cost_Value} come from exactly one derivation ({@link WorkerCostDerivation}, the same seam
- * {@code WorkerCostService} uses), scaled by each report line's own quantity (Non-Goal / R3.1).
+ * FOR-07-06 (Requirement 4, 7.1; design §PayoutSuggestionService) — the <b>worker-wide</b>
+ * create-dialog preview builder. It folds the single cost seam ({@link WorkerCostDerivation}, rate =
+ * the report's {@code clientUnitPrice}, tier = the worker user's {@link WorkerProfile} resolved via
+ * {@code EffectiveTier}) over the worker's report lines on <b>all</b> projects and layers the pure
+ * {@link AdvanceCreditCalculator} credit arithmetic on top. No project is taken (R4.1).
  *
  * <p>Two branches:
  * <ul>
- *   <li><b>Non-advance</b> period (R3.1–R3.4): read the worker's unpaid ({@code paidByPayout} null)
- *       {@code APPROVED} report lines whose report overlaps {@code [from, to]}, cost each line
- *       through the single seam, sum the <b>available</b> {@code Cost_Value} into {@code gross},
- *       compute {@code appliedCredit = min(remainingCredit, gross)} and
- *       {@code suggested = max(0, gross − remainingCredit)}, and build the per-line breakdown. An
- *       <b>unavailable</b> (null/zero-rate) line is <b>marked</b> unavailable in the breakdown and
- *       <b>excluded</b> from the gross — never a fabricated zero — and is never linked (R3.4);</li>
- *   <li><b>Advance</b> period (R3.5): the basis is the worker's <b>planned</b> work (costed through
- *       the same seam by the planned quantity) and <b>no</b> advance-credit deduction applies
- *       ({@code appliedCredit = 0}) — an advance creates credit, it does not consume it.</li>
+ *   <li><b>Regular</b> period (R4.2–R4.6): candidates are
+ *       {@code WorkReportRoomDao.findPayableLines(workerId, periodTo)} — every {@code APPROVED} line
+ *       with report {@code performedFrom <= periodTo}, in distribution order ({@code periodFrom}
+ *       never excludes older unpaid lines). Per line {@code cost = costValue(rate, tier, baseTier,
+ *       quantity)} and {@code remainder = max(0, cost − paidAmount)}; lines with remainder 0 are
+ *       dropped; a {@code null} cost marks the line <b>unavailable</b> (listed, excluded from the
+ *       gross). {@code gross = Σ remainder}; the credit is worker-wide (all the worker's payouts,
+ *       R7.1); {@code applied = min(credit, gross)}; {@code suggested = max(0, gross − credit)}; each
+ *       available line carries the {@link PayoutDistributor} allocation preview of
+ *       {@code suggested + applied}.</li>
+ *   <li><b>Advance</b> period (R4.7): the FOR-06-11 planned basis without the project filter —
+ *       {@code plan_quantity} of the worker's {@code APPROVED} lines whose report overlaps
+ *       {@code [from, to]} on any project; no credit applied, nothing allocated.</li>
  * </ul>
  *
- * <p>This service persists nothing and emits no notifications. The set of lines a regular payout
- * actually links is resolved by {@link #linkableLines(Long, Long, LocalDate, LocalDate)} and handed
- * to {@link ReportLineLinker} by {@code WorkerPayoutService} inside the create transaction — the two
- * use the identical selection path, so the breakdown's gross and the linked set are consistent.
+ * <p>Persists nothing. {@link #payableLines(Long, LocalDate)} exposes the identical candidate
+ * selection (locked) for payout create, so the distributed set matches the previewed one.
  */
 @Service
 public class PayoutSuggestionService {
 
+    private static final int SCALE = 2;
+
     private final WorkReportDao workReportDao;
+    private final WorkReportRoomDao workReportRoomDao;
     private final WorkerPayoutDao workerPayoutDao;
     private final WorkerCostService workerCostService;
     private final AdvanceCreditCalculator advanceCreditCalculator;
 
     public PayoutSuggestionService(WorkReportDao workReportDao,
+                                   WorkReportRoomDao workReportRoomDao,
                                    WorkerPayoutDao workerPayoutDao,
                                    WorkerCostService workerCostService,
                                    AdvanceCreditCalculator advanceCreditCalculator) {
         this.workReportDao = workReportDao;
+        this.workReportRoomDao = workReportRoomDao;
         this.workerPayoutDao = workerPayoutDao;
         this.workerCostService = workerCostService;
         this.advanceCreditCalculator = advanceCreditCalculator;
     }
 
     /**
-     * Build the create-dialog preview for a worker + period, deciding the branch from {@code advance}
-     * (the caller derives it via {@code AdvanceDeriver}: {@code periodTo} after the creation date,
-     * R5.3). For a non-advance period the gross is {@code Σ Cost_Value} over the unpaid in-period
-     * available lines and the credit arithmetic applies (R3.1–R3.4); for an advance the basis is the
-     * worker's planned work and no credit is deducted (R3.5).
+     * One payable candidate line: the report line and its positive unpaid remainder
+     * ({@code max(0, cost − paidAmount)}, scale 2). Only lines with an available cost and a
+     * remainder {@code > 0} are candidates.
+     */
+    public record PayableCandidate(WorkReportRoomEntity line, BigDecimal remainder) {
+
+        /** The {@link PayoutDistributor} input for this candidate. */
+        public PayableLine toPayableLine() {
+            return new PayableLine(line.getId(), remainder);
+        }
+    }
+
+    /**
+     * Build the create-dialog preview for a worker + period. The caller derives {@code advance} via
+     * {@code AdvanceDeriver} ({@code periodTo} after today).
      *
-     * @param projectId the owning project id (project scope is enforced by the caller /
-     *                  {@code WorkerPayoutService} before this read)
-     * @param workerId  the worker the payout preview is for
-     * @param from      the period start (inclusive)
-     * @param to        the period end (inclusive)
-     * @param advance   {@code true} for an advance period (planned basis, no credit), else the
-     *                  reports-based gross
+     * @param workerId the worker the preview is for
+     * @param from     the period start (inclusive; only the advance basis uses it)
+     * @param to       the period end (inclusive)
+     * @param advance  {@code true} for an advance period (planned basis, no credit, no preview)
      * @return the {@link PayoutSuggestionDto} preview; never {@code null}
      */
     @Transactional(readOnly = true)
-    public PayoutSuggestionDto suggest(Long projectId, Long workerId,
-                                       LocalDate from, LocalDate to, boolean advance) {
-        boolean ru = isRussianLocale();
-        CostContext ctx = loadCostContext(projectId);
-        List<WorkReportEntity> reports =
-                workReportDao.findApprovedInPeriodWithRooms(projectId, workerId, from, to);
+    public PayoutSuggestionDto suggest(Long workerId, LocalDate from, LocalDate to, boolean advance) {
+        CostContext ctx = loadCostContext(workerId);
+        BigDecimal remainingCredit = advanceCreditCalculator.remaining(
+                workerPayoutDao.findByWorker(workerId));
+        return advance
+                ? advanceSuggestion(workerId, from, to, ctx, remainingCredit)
+                : regularSuggestion(workerId, to, ctx, remainingCredit);
+    }
 
-        List<PayoutLineDto> breakdown = new ArrayList<>();
-        BigDecimal gross = BigDecimal.ZERO;
-
-        for (WorkReportEntity report : reports) {
-            if (report == null) {
+    /**
+     * The <b>locked</b> ({@code PESSIMISTIC_WRITE}) payable candidates of a regular payout in
+     * distribution order — the same selection {@link #suggest} folds into the gross (available
+     * cost, remainder {@code > 0}). Must run inside the payout-create transaction (R5.8).
+     *
+     * @param workerId the worker the payout is for
+     * @param periodTo the payout period end (inclusive)
+     * @return the candidates in distribution order, empty when none
+     */
+    @Transactional
+    public List<PayableCandidate> payableLines(Long workerId, LocalDate periodTo) {
+        CostContext ctx = loadCostContext(workerId);
+        List<PayableCandidate> candidates = new ArrayList<>();
+        for (WorkReportRoomEntity line : workReportRoomDao.findPayableLinesForUpdate(workerId, periodTo)) {
+            if (line == null || line.getReport() == null) {
                 continue;
             }
-            ResolvedTier resolved = resolveTier(report, ctx);
-            String tierName = tierName(resolved, ctx, ru);
-            String workItemName = workItemName(report.getWorkItem(), ru);
+            BigDecimal remainder = remainder(lineCost(line, ctx), line.getPaidAmount());
+            if (remainder != null && remainder.signum() > 0) {
+                candidates.add(new PayableCandidate(line, remainder));
+            }
+        }
+        return candidates;
+    }
 
+    // --- branches -------------------------------------------------------------------------------
+
+    private PayoutSuggestionDto regularSuggestion(Long workerId, LocalDate to, CostContext ctx,
+                                                  BigDecimal remainingCredit) {
+        boolean ru = isRussianLocale();
+        List<LineRow> rows = new ArrayList<>();
+        List<PayableLine> payable = new ArrayList<>();
+        BigDecimal gross = BigDecimal.ZERO.setScale(SCALE);
+
+        for (WorkReportRoomEntity line : workReportRoomDao.findPayableLines(workerId, to)) {
+            if (line == null || line.getReport() == null) {
+                continue;
+            }
+            BigDecimal cost = lineCost(line, ctx);
+            BigDecimal remainder = remainder(cost, line.getPaidAmount());
+            if (remainder != null && remainder.signum() <= 0) {
+                continue; // fully paid (R4.2)
+            }
+            rows.add(new LineRow(line, line.getQuantity(), cost, remainder));
+            if (remainder != null) {
+                gross = gross.add(remainder); // only available lines contribute (R4.4)
+                payable.add(new PayableLine(line.getId(), remainder));
+            }
+        }
+
+        BigDecimal applied = advanceCreditCalculator.applied(remainingCredit, gross);
+        BigDecimal suggested = advanceCreditCalculator.suggested(gross, remainingCredit);
+
+        Map<Long, BigDecimal> preview = new HashMap<>();
+        for (Allocation a : PayoutDistributor.distribute(suggested.add(applied), payable).allocations()) {
+            preview.put(a.lineId(), a.amount());
+        }
+
+        List<PayoutLineDto> breakdown = new ArrayList<>(rows.size());
+        for (LineRow row : rows) {
+            BigDecimal allocation = row.remainder() == null
+                    ? BigDecimal.ZERO.setScale(SCALE)
+                    : preview.getOrDefault(row.line().getId(), BigDecimal.ZERO.setScale(SCALE));
+            breakdown.add(toDto(row, allocation, ctx, ru));
+        }
+        return new PayoutSuggestionDto(gross, remainingCredit, applied, suggested, false, breakdown);
+    }
+
+    private PayoutSuggestionDto advanceSuggestion(Long workerId, LocalDate from, LocalDate to,
+                                                  CostContext ctx, BigDecimal remainingCredit) {
+        boolean ru = isRussianLocale();
+        List<PayoutLineDto> breakdown = new ArrayList<>();
+        BigDecimal gross = BigDecimal.ZERO.setScale(SCALE);
+
+        for (WorkReportEntity report
+                : workReportDao.findApprovedForWorkerInPeriodWithRooms(workerId, from, to)) {
+            if (report == null || report.getRooms() == null) {
+                continue;
+            }
             for (WorkReportRoomEntity line : report.getRooms()) {
                 if (line == null) {
                     continue;
                 }
-                // Advance basis uses the planned quantity snapshot; the regular basis uses the
-                // reported (actual) quantity. Both are costed through the single FOR-06-10 formula.
-                BigDecimal quantity = advance ? line.getPlanQuantity() : line.getQuantity();
-                // A non-advance payout only ever offers an UNPAID line (paidByPayout null, R6.2); an
-                // already-linked line is filtered out so it is never paid twice.
-                if (!advance && line.getPaidByPayout() != null) {
-                    continue;
-                }
-
-                BigDecimal unitServiceCost = WorkerCostDerivation.unitServiceCost(
-                        report.getClientUnitPrice(), resolved.tier(), ctx.baseTier());
-                BigDecimal costValue = WorkerCostDerivation.costValue(
-                        report.getClientUnitPrice(), resolved.tier(), ctx.baseTier(), quantity);
-                boolean available = costValue != null;
-
-                breakdown.add(new PayoutLineDto(
-                        line.getId(),
-                        workItemName,
-                        roomName(line.getRoom(), ru),
-                        report.getPerformedFrom(),
-                        report.getPerformedTo(),
-                        tierName,
-                        resolved.baseTierFallback(),
-                        quantity,
-                        unitServiceCost,
-                        costValue,
-                        available));
-
-                // Only an available line contributes to the gross — an unavailable (null/zero-rate)
-                // line is marked and excluded, never a fabricated zero (R3.4).
-                if (available) {
-                    gross = gross.add(costValue);
+                // The advance basis is the planned quantity (FOR-06-11 R3.5, FOR-07-06 R4.7).
+                BigDecimal cost = WorkerCostDerivation.costValue(report.getClientUnitPrice(),
+                        ctx.resolved().tier(), ctx.baseTier(), line.getPlanQuantity());
+                LineRow row = new LineRow(line, line.getPlanQuantity(), cost, null);
+                breakdown.add(toDto(row, BigDecimal.ZERO.setScale(SCALE), ctx, ru));
+                if (cost != null) {
+                    gross = gross.add(cost);
                 }
             }
         }
-
-        if (advance) {
-            // An advance creates credit, it does not consume it: no deduction (R3.5). The suggested
-            // amount is the planned-basis gross; appliedCredit is 0.
-            BigDecimal suggested = gross.max(BigDecimal.ZERO);
-            BigDecimal remaining = advanceCreditCalculator.remaining(
-                    workerPayoutDao.findByProjectAndWorker(projectId, workerId));
-            return new PayoutSuggestionDto(
-                    gross, remaining, BigDecimal.ZERO, suggested, true, breakdown);
-        }
-
-        BigDecimal remainingCredit = advanceCreditCalculator.remaining(
-                workerPayoutDao.findByProjectAndWorker(projectId, workerId));
-        BigDecimal appliedCredit = advanceCreditCalculator.applied(remainingCredit, gross);
-        BigDecimal suggested = advanceCreditCalculator.suggested(gross, remainingCredit);
-        return new PayoutSuggestionDto(
-                gross, remainingCredit, appliedCredit, suggested, false, breakdown);
+        // An advance creates credit, it does not consume it: no deduction, nothing allocated.
+        return new PayoutSuggestionDto(gross, remainingCredit, BigDecimal.ZERO.setScale(SCALE),
+                gross.max(BigDecimal.ZERO), true, breakdown);
     }
 
-    /**
-     * Resolve the exact unpaid, in-period, <b>available</b> report lines a <b>regular</b> payout
-     * covers — the lines {@code WorkerPayoutService} hands to {@link ReportLineLinker} to link
-     * inside the create transaction (R4.3, R6.1). This is the same selection path {@link #suggest}
-     * folds into the gross, so the linked set equals the gross-contributing set (an unavailable line
-     * is excluded and never linked, R3.4). Never call this for an advance — an advance links no line
-     * (R6.4).
-     *
-     * @param projectId the owning project id
-     * @param workerId  the worker the payout is for
-     * @param from      the period start (inclusive)
-     * @param to        the period end (inclusive)
-     * @return the covered unpaid available report lines, empty when none
-     */
-    @Transactional(readOnly = true)
-    public List<WorkReportRoomEntity> linkableLines(Long projectId, Long workerId,
-                                                    LocalDate from, LocalDate to) {
-        CostContext ctx = loadCostContext(projectId);
-        List<WorkReportEntity> reports =
-                workReportDao.findApprovedInPeriodWithRooms(projectId, workerId, from, to);
-        List<WorkReportRoomEntity> lines = new ArrayList<>();
-        for (WorkReportEntity report : reports) {
-            if (report == null) {
-                continue;
-            }
-            ResolvedTier resolved = resolveTier(report, ctx);
-            for (WorkReportRoomEntity line : report.getRooms()) {
-                if (line == null || line.getPaidByPayout() != null) {
-                    continue; // only unpaid lines are linkable (R6.2)
-                }
-                BigDecimal costValue = WorkerCostDerivation.costValue(
-                        report.getClientUnitPrice(), resolved.tier(), ctx.baseTier(), line.getQuantity());
-                if (costValue != null) {
-                    lines.add(line); // an unavailable line is never linked (R3.4)
-                }
-            }
-        }
-        return lines;
+    // --- cost seam (single derivation, no second formula) --------------------------------------
+
+    /** The line's {@code Cost_Value} on its reported quantity; {@code null} ⇒ unavailable. */
+    private static BigDecimal lineCost(WorkReportRoomEntity line, CostContext ctx) {
+        return WorkerCostDerivation.costValue(line.getReport().getClientUnitPrice(),
+                ctx.resolved().tier(), ctx.baseTier(), line.getQuantity());
     }
 
-    // --- cost-seam plumbing (reused verbatim from FOR-06-10, no second formula) -----------------
+    /** {@code max(0, cost − paid)} at scale 2; {@code null} when the cost is unavailable. */
+    private static BigDecimal remainder(BigDecimal cost, BigDecimal paid) {
+        if (cost == null) {
+            return null;
+        }
+        BigDecimal p = paid == null ? BigDecimal.ZERO : paid;
+        return cost.subtract(p).max(BigDecimal.ZERO).setScale(SCALE, RoundingMode.HALF_UP);
+    }
 
-    /** The per-project cost inputs resolved once: the active base worker type + its tier, and the
-     *  {@code userId → active workerType} member map — all from the FOR-06-10 seam (R3.1). */
-    private CostContext loadCostContext(Long projectId) {
+    /** All cost inputs for one worker, resolved once from the worker user's profile (R2.1). */
+    private CostContext loadCostContext(Long workerId) {
         WorkerTypeEntity baseType = workerCostService.findBaseType();
         WorkerTypeTier baseTier = baseType == null ? null : WorkerTypeTier.base(baseType.getTierPct());
-        Map<Long, WorkerTypeEntity> activeTypeByWorkerId =
-                workerCostService.activeWorkerTypesByWorkerId(projectId);
-        return new CostContext(baseType, baseTier, activeTypeByWorkerId);
+        Map<Long, WorkerProfile> profiles = workerId == null
+                ? Map.of()
+                : workerCostService.workerProfilesById(List.of(workerId));
+        WorkerProfile profile = profiles == null ? null : profiles.get(workerId);
+        ResolvedTier resolved = WorkerProfile.resolve(profile, baseType);
+        return new CostContext(baseType, baseTier, profile, resolved);
     }
 
-    private static ResolvedTier resolveTier(WorkReportEntity report, CostContext ctx) {
-        UserEntity worker = report.getWorker();
-        Long workerId = worker == null ? null : worker.getId();
-        return WorkerCostDerivation.tierFor(workerId, ctx.activeTypeByWorkerId(), ctx.baseType());
+    private record CostContext(WorkerTypeEntity baseType,
+                               WorkerTypeTier baseTier,
+                               WorkerProfile profile,
+                               ResolvedTier resolved) {
+
+        BigDecimal seniorityPct() {
+            return profile == null ? BigDecimal.ZERO : profile.seniorityPct();
+        }
     }
 
-    private String tierName(ResolvedTier resolved, CostContext ctx, boolean ru) {
-        if (resolved.baseTierFallback()) {
+    /** A breakdown row before DTO mapping. {@code remainder} is {@code null} when unavailable / advance. */
+    private record LineRow(WorkReportRoomEntity line, BigDecimal quantity, BigDecimal cost,
+                           BigDecimal remainder) {
+    }
+
+    private PayoutLineDto toDto(LineRow row, BigDecimal allocation, CostContext ctx, boolean ru) {
+        WorkReportRoomEntity line = row.line();
+        WorkReportEntity report = line.getReport();
+        ProjectEntity project = report.getProject();
+        BigDecimal unitServiceCost = WorkerCostDerivation.unitServiceCost(
+                report.getClientUnitPrice(), ctx.resolved().tier(), ctx.baseTier());
+        BigDecimal paid = line.getPaidAmount() == null ? BigDecimal.ZERO : line.getPaidAmount();
+        return new PayoutLineDto(
+                line.getId(),
+                project == null ? null : project.getId(),
+                project == null ? null : project.getName(),
+                workItemName(report.getWorkItem(), ru),
+                roomName(line.getRoom(), ru),
+                report.getPerformedFrom(),
+                report.getPerformedTo(),
+                tierName(ctx, ru),
+                ctx.resolved().baseTierFallback(),
+                ctx.seniorityPct(),
+                row.quantity(),
+                unitServiceCost,
+                row.cost(),
+                paid,
+                row.remainder(),
+                allocation,
+                row.cost() != null);
+    }
+
+    private static String tierName(CostContext ctx, boolean ru) {
+        if (ctx.resolved().baseTierFallback()) {
             return ctx.baseType() == null ? null : workerTypeName(ctx.baseType(), ru);
         }
-        WorkerTypeEntity type = ctx.activeTypeByWorkerId().get(resolved.workerTypeId());
+        WorkerTypeEntity type = ctx.profile() == null ? null : ctx.profile().workerType();
         return type == null ? null : workerTypeName(type, ru);
     }
 
-    /** The per-project cost inputs resolved once (the FOR-06-10 base tier + member-type map). */
-    private record CostContext(WorkerTypeEntity baseType,
-                               WorkerTypeTier baseTier,
-                               Map<Long, WorkerTypeEntity> activeTypeByWorkerId) {
-    }
-
-    // --- localized-name helpers (ru → pl → code), mirroring WorkerCostService (R8.1) -----------
+    // --- localized-name helpers (ru → pl → code) -----------------------------------------------
 
     private static String workItemName(WorkItemEntity workItem, boolean ru) {
         if (workItem == null) {
@@ -258,10 +312,7 @@ public class PayoutSuggestionService {
                 type.getCode());
     }
 
-    /**
-     * The room's localized display name: its free-form {@code label} when set, else the room type's
-     * localized name ({@code ru → pl → code}) — the room carries no own i18n name columns (R8.1).
-     */
+    /** The room's free-form {@code label} when set, else the room type's localized name. */
     private static String roomName(RoomEntity room, boolean ru) {
         if (room == null) {
             return null;

@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-06 (Requirements 1.6, 1.8): the worker payroll profile — one row per worker holding
+        the opening balance that seeds the monthly balance chain (the debt/credit carried in from
+        before the system).
+
+        Columns:
+          - id              : BIGSERIAL PK (BaseEntity).
+          - worker_id       : FK -> users(id), NOT NULL, UNIQUE (uq_worker_payroll_profiles_worker),
+                              RESTRICT — a user with a profile cannot be hard-deleted.
+          - opening_balance : NUMERIC(19,2) NOT NULL DEFAULT 0 — signed; no CHECK.
+        Plus the four BaseEntity audit columns.
+
+        Idempotent: the createTable is guarded by NOT tableExists + MARK_RAN. Registered LAST in
+        changelog.xml, after 195.
+    -->
+
+    <changeSet id="196-create-worker-payroll-profiles" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="worker_payroll_profiles"/>
+            </not>
+        </preConditions>
+
+        <createTable tableName="worker_payroll_profiles">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- One profile per worker. -->
+            <column name="worker_id" type="BIGINT">
+                <constraints nullable="false" unique="true"
+                             uniqueConstraintName="uq_worker_payroll_profiles_worker"/>
+            </column>
+            <!-- Signed opening balance; seeds the monthly balance chain. -->
+            <column name="opening_balance" type="NUMERIC(19,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <addForeignKeyConstraint
+            constraintName="fk_worker_payroll_profiles_worker"
+            baseTableName="worker_payroll_profiles"
+            baseColumnNames="worker_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+    </changeSet>
+
+</databaseChangeLog>
