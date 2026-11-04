@@ -387,7 +387,11 @@ public class PurchaseLineReconciliationService
         assertProjectAccess(lineId);
         ProcurementLineEntity line = lineDao.findById(lineId)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, lineId));
-        assertProjectActive(projectIdOf(line));
+        Long projectId = projectIdOf(line);
+        // A company-level document (project == null) has no project stage to gate (FOR-07-03 R1.5, R11.2).
+        if (projectId != null) {
+            assertProjectActive(projectId);
+        }
         return line;
     }
 

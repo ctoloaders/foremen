@@ -914,4 +914,19 @@
     <!-- FOR-07-04 (R21.2): ABAC resource BANK_LEDGER + ADMIN/FINANCIER/MANAGER CRUD grants.
          Idempotent (MARK_RAN + NOT EXISTS). Registered LAST, after 205. -->
     <include file="database_files/changesets/206-seed-bank-ledger-resource.xml"/>
+    <!-- FOR-07-03 (R1.1, R3.1, R14.1): procurement_documents.project_id becomes nullable.
+         Registered LAST, after 206. -->
+    <include file="database_files/changesets/207-procurement-documents-project-nullable.xml"/>
+    <!-- FOR-07-03 (R3.1, R14.1): expense_category_id + category/uploaded_at indexes.
+         Registered LAST, after 207. -->
+    <include file="database_files/changesets/208-procurement-documents-expense-category.xml"/>
+
+    <!-- FOR-07-03 (R10.1): ABAC resource COMPANY_PURCHASES + ADMIN/FINANCIER R/U/D, MANAGER R grants.
+         Registered LAST, after 208. -->
+    <include file="database_files/changesets/209-seed-company-purchases-resource.xml"/>
+
+    <!-- FOR-07-03 (R10.2): ABAC resource EXPENSE_UPLOAD + READ/CREATE grants for ADMIN, FINANCIER,
+         MANAGER, FOREMAN, WORKER. Registered LAST, after 209. -->
+    <include file="database_files/changesets/210-seed-expense-upload-resource.xml"/>
+
 </databaseChangeLog>

@@ -116,12 +116,47 @@ public class ProcurementDocumentController {
     public ResponseEntity<ProcurementDocumentUploadResponse> upload(
             @RequestParam("projectId") Long projectId,
             @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "expenseCategoryId", required = false) Long expenseCategoryId,
             @RequestParam(value = "paymentChoice", required = false) ProcurementPaymentChoice paymentChoice,
             @RequestParam(value = "cashAccountId", required = false) Long cashAccountId,
             @RequestParam(value = "cashAmount", required = false) BigDecimal cashAmount,
             @RequestParam(value = "cashDate", required = false)
                     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate cashDate) {
         // FOR-07-04 (R28.1) — optional payment choice; absent ⇒ NOT_LINKED (backward compatible).
+        // FOR-07-03 (R7.7) — optional expense category.
+        ProcurementDocumentServiceExtendedModel uploaded = service.upload(projectId, file, expenseCategoryId,
+                new ProcurementDocumentService.UploadPaymentRequest(
+                        paymentChoice, cashAccountId, cashAmount, cashDate));
+        return ResponseEntity.ok(controllerMapper.toUploadResponse(uploaded));
+    }
+
+    /**
+     * FOR-07-03 (Requirements 7.7, 8.7; design §Upload endpoint compatibility) — ledger upload with an
+     * <b>optional</b> project, used by the FOR-07-04 upload dialog when no project is chosen. Unlike
+     * {@link #upload} the {@code projectId} is optional (absent ⇒ company-wide, no-project document),
+     * and every {@code paymentChoice} including {@code LINKED_FROM_LEDGER} is accepted. The literal
+     * {@code /company} segment does not clash with the {@code /{id}...} mappings (all other
+     * {@code POST}s carry a trailing segment after the id). Resolves to
+     * {@code PURCHASES}/{@code CREATE}.
+     *
+     * @param projectId     optional owning {@code ACTIVE} project
+     * @param file          the uploaded image or PDF
+     * @param paymentChoice payment choice; {@code null} → {@code NOT_LINKED}
+     * @param cashAccountId cash account for {@code PAID_CASH}
+     * @param cashAmount    paid amount for {@code PAID_CASH}
+     * @param cashDate      payment date for {@code PAID_CASH}
+     * @return the uploaded document projection
+     */
+    @PostMapping(value = "/company", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RequiresPermission(resource = RESOURCE, operation = CREATE)
+    public ResponseEntity<ProcurementDocumentUploadResponse> uploadCompany(
+            @RequestParam(value = "projectId", required = false) Long projectId,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "paymentChoice", required = false) ProcurementPaymentChoice paymentChoice,
+            @RequestParam(value = "cashAccountId", required = false) Long cashAccountId,
+            @RequestParam(value = "cashAmount", required = false) BigDecimal cashAmount,
+            @RequestParam(value = "cashDate", required = false)
+                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate cashDate) {
         ProcurementDocumentServiceExtendedModel uploaded = service.upload(projectId, file,
                 new ProcurementDocumentService.UploadPaymentRequest(
                         paymentChoice, cashAccountId, cashAmount, cashDate));

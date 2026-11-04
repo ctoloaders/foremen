@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-03 (R10.1, R10.2; entity-creation-rules steps 1-2): company-wide procurement resource. ADMIN/FINANCIER -> READ,UPDATE,DELETE; MANAGER -> READ.
+        Idempotent: resource insert guarded by onFail="MARK_RAN"; every grant is INSERT ... SELECT
+        ... WHERE NOT EXISTS. Registered LAST in changelog.xml, after 208.
+    -->
+
+    <changeSet id="209-seed-company-purchases-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'COMPANY_PURCHASES'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="COMPANY_PURCHASES"/>
+            <column name="name_ru" value="Закупки компании"/>
+            <column name="name_pl" value="Zakupy firmy"/>
+            <column name="description_ru" value="Сквозной список закупочных документов по всем проектам и без проекта"/>
+            <column name="description_pl" value="Przekrojowa lista dokumentów zakupowych ze wszystkich projektów i bez projektu"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="209-seed-company-purchases-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'COMPANY_PURCHASES'</sqlCheck>
+        </preConditions>
+
+        <!-- ADMIN x COMPANY_PURCHASES role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_PURCHASES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ADMIN' AND res2.code = 'COMPANY_PURCHASES'
+              );
+        </sql>
+
+        <!-- ADMIN x COMPANY_PURCHASES operations: READ, UPDATE, DELETE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'COMPANY_PURCHASES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FINANCIER x COMPANY_PURCHASES role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'COMPANY_PURCHASES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FINANCIER' AND res2.code = 'COMPANY_PURCHASES'
+              );
+        </sql>
+
+        <!-- FINANCIER x COMPANY_PURCHASES operations: READ, UPDATE, DELETE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'FINANCIER' AND res.code = 'COMPANY_PURCHASES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER x COMPANY_PURCHASES role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'COMPANY_PURCHASES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'MANAGER' AND res2.code = 'COMPANY_PURCHASES'
+              );
+        </sql>
+
+        <!-- MANAGER x COMPANY_PURCHASES operations: READ. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'MANAGER' AND res.code = 'COMPANY_PURCHASES'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>

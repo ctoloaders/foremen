@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-03 (R10.1, R10.2; entity-creation-rules steps 1-2): universal expense upload resource. ADMIN/FINANCIER/MANAGER/FOREMAN/WORKER -> READ,CREATE.
+        Idempotent: resource insert guarded by onFail="MARK_RAN"; every grant is INSERT ... SELECT
+        ... WHERE NOT EXISTS. Registered LAST in changelog.xml, after 209.
+    -->
+
+    <changeSet id="210-seed-expense-upload-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'EXPENSE_UPLOAD'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="EXPENSE_UPLOAD"/>
+            <column name="name_ru" value="Загрузка расходов"/>
+            <column name="name_pl" value="Przesyłanie wydatków"/>
+            <column name="description_ru" value="Универсальная загрузка расходного документа (с проектом или без)"/>
+            <column name="description_pl" value="Uniwersalne przesyłanie dokumentu kosztowego (z projektem lub bez)"/>
+        </insert>
+    </changeSet>
+
+    <changeSet id="210-seed-expense-upload-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'EXPENSE_UPLOAD'</sqlCheck>
+        </preConditions>
+
+        <!-- ADMIN x EXPENSE_UPLOAD role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ADMIN' AND res2.code = 'EXPENSE_UPLOAD'
+              );
+        </sql>
+
+        <!-- ADMIN x EXPENSE_UPLOAD operations: READ, CREATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE')
+            WHERE r.code = 'ADMIN' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FINANCIER x EXPENSE_UPLOAD role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FINANCIER' AND res2.code = 'EXPENSE_UPLOAD'
+              );
+        </sql>
+
+        <!-- FINANCIER x EXPENSE_UPLOAD operations: READ, CREATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE')
+            WHERE r.code = 'FINANCIER' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- MANAGER x EXPENSE_UPLOAD role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'MANAGER' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'MANAGER' AND res2.code = 'EXPENSE_UPLOAD'
+              );
+        </sql>
+
+        <!-- MANAGER x EXPENSE_UPLOAD operations: READ, CREATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE')
+            WHERE r.code = 'MANAGER' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- FOREMAN x EXPENSE_UPLOAD role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FOREMAN' AND res2.code = 'EXPENSE_UPLOAD'
+              );
+        </sql>
+
+        <!-- FOREMAN x EXPENSE_UPLOAD operations: READ, CREATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE')
+            WHERE r.code = 'FOREMAN' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+        <!-- WORKER x EXPENSE_UPLOAD role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'WORKER' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'WORKER' AND res2.code = 'EXPENSE_UPLOAD'
+              );
+        </sql>
+
+        <!-- WORKER x EXPENSE_UPLOAD operations: READ, CREATE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ', 'CREATE')
+            WHERE r.code = 'WORKER' AND res.code = 'EXPENSE_UPLOAD'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+
+    </changeSet>
+
+</databaseChangeLog>

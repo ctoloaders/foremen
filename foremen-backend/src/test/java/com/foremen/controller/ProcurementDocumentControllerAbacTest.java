@@ -80,7 +80,9 @@ class ProcurementDocumentControllerAbacTest {
     private static final String UPDATE = "UPDATE";
     private static final String DELETE = "DELETE";
 
-    private static final Class<?>[] UPLOAD_PARAMS = {Long.class, MultipartFile.class,
+    private static final Class<?>[] UPLOAD_PARAMS = {Long.class, MultipartFile.class, Long.class,
+            ProcurementPaymentChoice.class, Long.class, BigDecimal.class, LocalDate.class};
+    private static final Class<?>[] UPLOAD_COMPANY_PARAMS = {Long.class, MultipartFile.class,
             ProcurementPaymentChoice.class, Long.class, BigDecimal.class, LocalDate.class};
     private static final Class<?>[] PAID_IN_CASH_PARAMS = {Long.class, ProcurementPaidInCashRequest.class};
 
@@ -119,6 +121,33 @@ class ProcurementDocumentControllerAbacTest {
     @DisplayName("POST / (upload) → (PURCHASES, CREATE)")
     void uploadIsPurchasesCreate() {
         assertResolvesTo(handlerFor("upload", UPLOAD_PARAMS), PURCHASES, CREATE);
+    }
+
+    @Test
+    @DisplayName("POST /company (ledger upload, optional project) → (PURCHASES, CREATE), COMPLETE")
+    void uploadCompanyIsPurchasesCreate() {
+        HandlerMethod handler = handlerFor("uploadCompany", UPLOAD_COMPANY_PARAMS);
+        assertResolvesTo(handler, PURCHASES, CREATE);
+        assertComplete(handler);
+    }
+
+    @Test
+    @DisplayName("POST /company without projectId accepts LINKED_FROM_LEDGER and passes null project")
+    void uploadCompanyWithoutProject() throws Exception {
+        ProcurementDocumentService service = mock(ProcurementDocumentService.class);
+        when(service.upload(isNull(), any(MultipartFile.class),
+                any(ProcurementDocumentService.UploadPaymentRequest.class))).thenReturn(paidModel());
+        MockMvc mvc = mockMvc(service);
+
+        mvc.perform(multipart("/api/procurement-documents/company")
+                        .file(new MockMultipartFile("file", "r.jpg", "image/jpeg", new byte[] {1}))
+                        .param("paymentChoice", "LINKED_FROM_LEDGER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(11));
+
+        verify(service).upload(isNull(), any(MultipartFile.class),
+                eq(new ProcurementDocumentService.UploadPaymentRequest(
+                        ProcurementPaymentChoice.LINKED_FROM_LEDGER, null, null, null)));
     }
 
     @Test
@@ -212,7 +241,7 @@ class ProcurementDocumentControllerAbacTest {
     @DisplayName("upload binds paymentChoice + cash fields and echoes paymentStatus / ledgerEntries")
     void uploadBindsPaymentChoice() throws Exception {
         ProcurementDocumentService service = mock(ProcurementDocumentService.class);
-        when(service.upload(eq(7L), any(MultipartFile.class), any(ProcurementDocumentService.UploadPaymentRequest.class)))
+        when(service.upload(eq(7L), any(MultipartFile.class), isNull(), any(ProcurementDocumentService.UploadPaymentRequest.class)))
                 .thenReturn(paidModel());
         MockMvc mvc = mockMvc(service);
 
@@ -229,7 +258,7 @@ class ProcurementDocumentControllerAbacTest {
                 .andExpect(jsonPath("$.ledgerEntries[0].transactionId").value(501))
                 .andExpect(jsonPath("$.ledgerEntries[0].channel").value("CASH"));
 
-        verify(service).upload(eq(7L), any(MultipartFile.class), eq(new ProcurementDocumentService.UploadPaymentRequest(
+        verify(service).upload(eq(7L), any(MultipartFile.class), isNull(), eq(new ProcurementDocumentService.UploadPaymentRequest(
                 ProcurementPaymentChoice.PAID_CASH, 3L, new BigDecimal("123.45"), LocalDate.of(2026, 7, 15))));
     }
 
@@ -237,7 +266,7 @@ class ProcurementDocumentControllerAbacTest {
     @DisplayName("upload without payment fields stays backward compatible (null choice ⇒ NOT_LINKED)")
     void uploadWithoutPaymentFields() throws Exception {
         ProcurementDocumentService service = mock(ProcurementDocumentService.class);
-        when(service.upload(eq(7L), any(MultipartFile.class), any(ProcurementDocumentService.UploadPaymentRequest.class)))
+        when(service.upload(eq(7L), any(MultipartFile.class), isNull(), any(ProcurementDocumentService.UploadPaymentRequest.class)))
                 .thenReturn(paidModel());
         MockMvc mvc = mockMvc(service);
 
@@ -246,7 +275,7 @@ class ProcurementDocumentControllerAbacTest {
                         .param("projectId", "7"))
                 .andExpect(status().isOk());
 
-        verify(service).upload(eq(7L), any(MultipartFile.class),
+        verify(service).upload(eq(7L), any(MultipartFile.class), isNull(),
                 eq(new ProcurementDocumentService.UploadPaymentRequest(null, null, null, null)));
         assertThat(new ProcurementDocumentService.UploadPaymentRequest(null, null, null, null).effectiveChoice())
                 .isEqualTo(ProcurementPaymentChoice.NOT_LINKED);

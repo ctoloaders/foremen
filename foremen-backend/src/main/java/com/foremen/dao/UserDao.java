@@ -40,6 +40,13 @@ public interface UserDao extends AdminDao<UserEntity, Long> {
     List<UserEntity> findByRoleCode(String roleCode);
 
     /**
+     * FOR-07-03 R12.3 - the Company_Role code of a user, read without touching the lazy {@code role}
+     * association (usable outside a transaction, e.g. from the OCR worker thread).
+     */
+    @Query("SELECT u.role.code FROM UserEntity u WHERE u.id = :id")
+    Optional<String> findRoleCodeById(@Param("id") Long id);
+
+    /**
      * FOR-07-06 R2.1 (design §Cost seam) — batch-load the worker users backing a cost derivation with
      * their {@code workerType} eagerly fetched (LEFT JOIN FETCH — a user without a type is still
      * returned), so the cost seam resolves every worker's own type + {@code seniorityPct} in one

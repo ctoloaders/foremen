@@ -23,8 +23,10 @@ import lombok.Setter;
 
 /**
  * FOR-06-03 (Requirements 1.1, 1.3) — the ProcurementDocument persistence root (design §4.1): the
- * project-scoped anchor an authorized user (FINANCIER / MANAGER / FOREMAN) creates when uploading a
- * primary procurement document (a receipt or invoice, image or PDF) on an {@code ACTIVE} project.
+ * anchor an authorized user (FINANCIER / MANAGER / FOREMAN) creates when uploading a primary
+ * procurement document (a receipt or invoice, image or PDF). The document is project-scoped when
+ * {@link #project} is set (an {@code ACTIVE} project); since FOR-07-03 the project is optional and
+ * a company-level document may have none, optionally tagged with an {@link #expenseCategory}.
  * Its per-line extracted items live in the owned child collection {@link #lines}
  * ({@link ProcurementLineEntity}). Maps the {@code procurement_documents} table (changeset
  * {@code 167-create-procurement-documents.xml}).
@@ -42,10 +44,21 @@ import lombok.Setter;
 @NoArgsConstructor
 public class ProcurementDocumentEntity extends BaseEntity {
 
-    /** Owner FK to the project, NOT NULL — drives the project-scope filter ({@code "project.id"}, R7.2). */
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "project_id", nullable = false)
+    /**
+     * Owner FK to the project; nullable since FOR-07-03 (R1.2) — a company-level document (no
+     * project) is allowed. Still drives the project-scope filter ({@code "project.id"}, R7.2).
+     */
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
+    @JoinColumn(name = "project_id")
     private ProjectEntity project;
+
+    /**
+     * FOR-07-03 (R3.1): optional document-level expense category ({@code expense_category_id} →
+     * {@code unplanned_expense_categories}, {@code ON DELETE SET NULL}); nullable.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "expense_category_id")
+    private UnplannedExpenseCategoryEntity expenseCategory;
 
     /** Who uploaded the document (R2.1). */
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

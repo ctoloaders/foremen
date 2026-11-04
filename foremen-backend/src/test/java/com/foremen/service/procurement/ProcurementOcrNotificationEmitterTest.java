@@ -8,6 +8,9 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,8 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import com.foremen.dao.UserDao;
 import com.foremen.dao.model.ProcessingStatus;
 import com.foremen.service.offer.NotificationService;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
 
 /**
  * FOR-06-03 Amendment A1 (R17) — plain Mockito unit tests for
@@ -40,11 +45,40 @@ class ProcurementOcrNotificationEmitterTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private UserDao userDao;
+    @Mock
+    private ForemenPermissionEvaluator permissionEvaluator;
+
     private ProcurementOcrNotificationEmitter emitter;
 
     @BeforeEach
     void setUp() {
-        emitter = new ProcurementOcrNotificationEmitter(notificationService);
+        emitter = new ProcurementOcrNotificationEmitter(notificationService, userDao, permissionEvaluator);
+    }
+
+    @Test
+    @DisplayName("no-project document: company deep-link when the recipient holds COMPANY_PURCHASES/READ (R12.3)")
+    void noProjectCompanyLink() {
+        when(userDao.findRoleCodeById(UPLOADER_UID)).thenReturn(Optional.of("FINANCIER"));
+        when(permissionEvaluator.isAllowed("FINANCIER", "COMPANY_PURCHASES", "READ")).thenReturn(true);
+
+        emitter.emitTerminal(ProcessingStatus.PARSED, UPLOADER_UID, null, DOCUMENT_ID, null);
+
+        verify(notificationService).create(eq(UPLOADER_UID),
+                eq("notification.procurement.ocr.parsed"), isNull(), eq("/company/procurement?doc=500"));
+    }
+
+    @Test
+    @DisplayName("no-project document: null deep-link when the recipient lacks COMPANY_PURCHASES/READ (R12.3)")
+    void noProjectNoLink() {
+        when(userDao.findRoleCodeById(UPLOADER_UID)).thenReturn(Optional.of("WORKER"));
+        when(permissionEvaluator.isAllowed("WORKER", "COMPANY_PURCHASES", "READ")).thenReturn(false);
+
+        emitter.emitTerminal(ProcessingStatus.PARSED, UPLOADER_UID, null, DOCUMENT_ID, null);
+
+        verify(notificationService).create(eq(UPLOADER_UID),
+                eq("notification.procurement.ocr.parsed"), isNull(), isNull());
     }
 
     @Test

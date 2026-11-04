@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-07-03 (Requirements 3.1, 14.1): document-level expense category on procurement documents.
+          - expense_category_id : BIGINT NULL, FK to unplanned_expense_categories(id) ON DELETE SET NULL
+          - ix_procurement_documents_category    : index on expense_category_id
+          - ix_procurement_documents_uploaded_at : index on uploaded_at (when absent)
+        Idempotent: each changeset is guarded by NOT columnExists / foreignKeyConstraintExists /
+        indexExists + onFail="MARK_RAN".
+    -->
+    <changeSet id="208-procurement-documents-expense-category-column" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="procurement_documents" columnName="expense_category_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="procurement_documents">
+            <column name="expense_category_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+    <changeSet id="208-procurement-documents-expense-category-fk" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyTableName="procurement_documents"
+                                            foreignKeyName="fk_procurement_documents_expense_category"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_procurement_documents_expense_category"
+                                 baseTableName="procurement_documents"
+                                 baseColumnNames="expense_category_id"
+                                 referencedTableName="unplanned_expense_categories"
+                                 referencedColumnNames="id"
+                                 onDelete="SET NULL"/>
+    </changeSet>
+    <changeSet id="208-procurement-documents-category-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="procurement_documents"
+                             indexName="ix_procurement_documents_category"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="procurement_documents" indexName="ix_procurement_documents_category">
+            <column name="expense_category_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet id="208-procurement-documents-uploaded-at-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="procurement_documents"
+                             indexName="ix_procurement_documents_uploaded_at"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="procurement_documents" indexName="ix_procurement_documents_uploaded_at">
+            <column name="uploaded_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

@@ -29,6 +29,7 @@ import com.foremen.dao.model.ProcurementDocumentEntity;
 import com.foremen.dao.model.ProcurementLineEntity;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectStatus;
+import com.foremen.dao.model.UnplannedExpenseCategoryEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
@@ -44,6 +45,7 @@ import com.foremen.service.ocr.OcrService;
 import com.foremen.service.ocr.OcrUnavailableException;
 import com.foremen.service.ocr.ParsedLine;
 import com.foremen.service.ocr.ProcessedPage;
+import com.foremen.service.procurement.ExpenseCategoryApplier;
 import com.foremen.service.procurement.ExtractedLine;
 import com.foremen.service.procurement.MatchEngine;
 import com.foremen.service.procurement.MatchResult;
@@ -90,6 +92,7 @@ public class ProcurementDocumentService
 
     // --- Message codes (bundle wiring is task 9.1) ---
     static final String NOT_FOUND_MESSAGE = "error.entity.not.found";
+    static final String EXPENSE_CATEGORY_UNKNOWN = "error.expense.category.unknown";
     static final String UPLOAD_STORAGE_UNAVAILABLE = "error.procurement.upload.storageUnavailable";
     static final String UPLOAD_UNSUPPORTED_TYPE = "error.procurement.upload.unsupportedType";
     static final String UPLOAD_TOO_LARGE = "error.procurement.upload.tooLarge";
@@ -117,9 +120,6 @@ public class ProcurementDocumentService
     /** Fallback max upload size when {@code foremen.image-storage.max-upload-size} is unset (mirrors GcsImageStorage). */
     private static final DataSize DEFAULT_MAX_UPLOAD_SIZE = DataSize.ofMegabytes(5);
 
-    /** Signed-download-URL TTL for the raw/processed renditions resolved on the read path. */
-    private static final long IMAGE_URL_TTL_SECONDS = 600L;
-
     /**
      * FOR-06-04 R5.1 — a disjoint temporary {@code line_no} band used while re-numbering a re-processed
      * document's preserved manual lines, so shifting them to their final contiguous positions never
@@ -140,6 +140,8 @@ public class ProcurementDocumentService
     private final ReprocessLinePartitioner reprocessLinePartitioner;
     private final ApplicationEventPublisher eventPublisher;
     private final DataSize maxUploadSize;
+    /** FOR-07-03 4.3 - read-field resolution shared with the company layer. */
+    private final ProcurementReadFields readFields;
 
     /**
      * FOR-07-04 (R28.1, R28.4) — the cash-ledger seam. Optional: until the cash ledger contributes a
@@ -177,6 +179,7 @@ public class ProcurementDocumentService
         this.candidateProvider = candidateProvider;
         this.reprocessLinePartitioner = reprocessLinePartitioner;
         this.eventPublisher = eventPublisher;
+        this.readFields = new ProcurementReadFields(serviceMapper, imageStorage, candidateProvider);
         this.maxUploadSize = parseMaxUploadSize(
                 imageStorageProperties == null ? null : imageStorageProperties.maxUploadSize());
     }
@@ -236,9 +239,7 @@ public class ProcurementDocumentService
         assertProjectAccess(id);
         ProcurementDocumentEntity entity = documentDao.findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
-        ProcurementDocumentServiceExtendedModel model = serviceMapper.toServiceExtendedModel(entity);
-        resolveReadFields(model, entity);
-        return model;
+        return readFields.toReadModel(entity);
     }
 
     /**
@@ -327,13 +328,26 @@ public class ProcurementDocumentService
     @Transactional
     public ProcurementDocumentServiceExtendedModel upload(Long projectId, MultipartFile file,
                                                           UploadPaymentRequest payment) {
+        return upload(projectId, file, null, payment);
+    }
+
+    /**
+     * FOR-07-03 (R2, R3.2, R7.2) - the upload with an optional project ({@code null} = company
+     * expense: no stage gate, {@code procurement/company/} namespace) and an optional document-level
+     * expense category (must exist and be active, else 400 {@link #EXPENSE_CATEGORY_UNKNOWN};
+     * validated before anything is stored).
+     */
+    @Transactional
+    public ProcurementDocumentServiceExtendedModel upload(Long projectId, MultipartFile file,
+                                                          Long expenseCategoryId,
+                                                          UploadPaymentRequest payment) {
         UploadPaymentRequest choice = payment == null ? UploadPaymentRequest.NOT_LINKED : payment;
         boolean paidCash = choice.effectiveChoice() == ProcurementPaymentChoice.PAID_CASH;
         if (paidCash) {
             // R28.1 — the amount is required in the dialog until OCR provides documentTotal.
             requirePositiveCashAmount(choice.cashAmount());
         }
-        ProcurementDocumentServiceExtendedModel uploaded = uploadDocument(projectId, file);
+        ProcurementDocumentServiceExtendedModel uploaded = uploadDocument(projectId, file, expenseCategoryId);
         if (paidCash) {
             LocalDate date = choice.cashDate() != null
                     ? choice.cashDate()
@@ -423,8 +437,12 @@ public class ProcurementDocumentService
     }
 
     /** The FOR-06-03 upload body (validation, storage, persist, audit, OCR enqueue). */
-    private ProcurementDocumentServiceExtendedModel uploadDocument(Long projectId, MultipartFile file) {
-        assertProjectActive(projectId);
+    private ProcurementDocumentServiceExtendedModel uploadDocument(Long projectId, MultipartFile file,
+                                                                  Long expenseCategoryId) {
+        if (projectId != null) {
+            assertProjectActive(projectId);
+        }
+        UnplannedExpenseCategoryEntity category = resolveActiveCategory(expenseCategoryId);
 
         // R2.4 — object store not configured: reject gracefully, storing nothing, creating no document.
         if (!imageStorage.isConfigured()) {
@@ -445,12 +463,13 @@ public class ProcurementDocumentService
         }
 
         // R2.1 — store the raw bytes.
-        String rawObjectKey = imageStorage.storeObject(file, "procurement/" + projectId + "/");
+        String rawObjectKey = imageStorage.storeObject(file, projectNamespace(projectId));
 
         // A1 R14.4 — when the OCR provider is disabled the document rests UPLOADED and is not enqueued.
         boolean ocrEnabled = ocrService.isEnabled();
         ProcurementDocumentEntity document = new ProcurementDocumentEntity();
         document.setProject(reference(ProjectEntity.class, projectId));
+        document.setExpenseCategory(category);
         document.setUploadedBy(requireCaller());
         document.setRawObjectKey(rawObjectKey);
         document.setSourceMimeType(contentType);
@@ -487,11 +506,32 @@ public class ProcurementDocumentService
     @Transactional
     public ProcurementDocumentServiceExtendedModel reprocess(Long id) {
         assertProjectAccess(id);
+        return reprocessInternal(id);
+    }
+
+    /**
+     * FOR-07-03 (R4.7, R6.3, R14.2) - re-process for the company layer: skips the project-scope access
+     * check (authorization is the ABAC grant on the company endpoint) and the project stage gate.
+     * The status guard, re-enqueue and REPROCESS audit row are kept.
+     */
+    @Transactional
+    public ProcurementDocumentServiceExtendedModel reprocessUnchecked(Long id) {
+        return reprocessInternal(id, false);
+    }
+
+    private ProcurementDocumentServiceExtendedModel reprocessInternal(Long id) {
+        return reprocessInternal(id, true);
+    }
+
+    private ProcurementDocumentServiceExtendedModel reprocessInternal(Long id, boolean stageGate) {
         ProcurementDocumentEntity document = documentDao.findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
 
-        // R7.1 — re-process is a mutation; refuse it unless the project is ACTIVE.
-        assertProjectActive(document.getProject() == null ? null : document.getProject().getId());
+        // R7.1 — re-process is a mutation; refuse it unless the project is ACTIVE. The gate applies
+        // only on the project-scoped path and only when the document has a project (FOR-07-03).
+        if (stageGate && document.getProject() != null) {
+            assertProjectActive(document.getProject().getId());
+        }
 
         // R8.1 — only FAILED or PARSED documents are re-processable.
         if (document.getStatus() != ProcessingStatus.FAILED
@@ -576,6 +616,20 @@ public class ProcurementDocumentService
     @Transactional
     public void deleteById(Long id) {
         assertProjectAccess(id);
+        deleteInternal(id);
+    }
+
+    /**
+     * FOR-07-03 (R4.7, R6.3, R14.2) - delete for the company layer: skips the project-scope access
+     * check (authorization is the ABAC grant on the company endpoint) but keeps the cascade,
+     * object-key cleanup and the DELETE audit row.
+     */
+    @Transactional
+    public void deleteUnchecked(Long id) {
+        deleteInternal(id);
+    }
+
+    private void deleteInternal(Long id) {
         ProcurementDocumentEntity document = documentDao.findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE, id));
         String rawKey = document.getRawObjectKey();
@@ -616,7 +670,7 @@ public class ProcurementDocumentService
     void process(ProcurementDocumentEntity document, byte[] rawBytes,
                  java.util.function.Consumer<ProcessingStatus> stageSink) {
         Long projectId = document.getProject() == null ? null : document.getProject().getId();
-        String keyNamespace = "procurement/" + projectId + "/processed/";
+        String keyNamespace = projectNamespace(projectId) + "processed/";
 
         // Map the OCR layer's internal phases onto the persisted processing stages (A1 R15).
         OcrStageListener listener = phase -> stageSink.accept(switch (phase) {
@@ -667,8 +721,11 @@ public class ProcurementDocumentService
         }
 
         // R5/R4 — match each extracted line against the project's planned-material candidate set.
-        List<PlannedMaterial> candidates = candidateProvider.candidatesFor(projectId);
+        List<PlannedMaterial> candidates = projectId == null
+                ? List.of() : candidateProvider.candidatesFor(projectId);
         List<ProcurementLineEntity> freshLines = buildLines(document, result.lines(), candidates);
+        // FOR-07-03 R3.3 - the document category goes onto fresh unmatched lines only.
+        ExpenseCategoryApplier.apply(document.getExpenseCategory(), freshLines);
 
         // FOR-06-04 R5.1 — preserve the manually reconciled lines, replace only the automatic ones.
         // The pure ReprocessLinePartitioner splits the document's prior lines into preserve
@@ -826,6 +883,16 @@ public class ProcurementDocumentService
         persistLifecycle(document, "PROCESS");
     }
 
+    /** FOR-07-03 5.x - flat audit snapshot of a document (taken before a relink mutates it). */
+    public String auditSnapshot(ProcurementDocumentEntity document) {
+        return serializeEntity(document);
+    }
+
+    /** FOR-07-03 R11.1 - writes the UPDATE audit row of a relink from a pre-captured snapshot. */
+    public void auditUpdate(String beforeSnapshot, ProcurementDocumentEntity after) {
+        saveAuditWithSnapshot(beforeSnapshot, after, "UPDATE");
+    }
+
     /** Saves a lifecycle transition and writes an audit row (R11.1). */
     private void persistLifecycle(ProcurementDocumentEntity document, String operation) {
         ProcurementDocumentEntity saved = documentDao.save(document);
@@ -836,101 +903,28 @@ public class ProcurementDocumentService
     // --- Read-field resolution -----------------------------------------------------------------
 
     private ProcurementDocumentServiceExtendedModel findReadModel(ProcurementDocumentEntity entity) {
-        ProcurementDocumentServiceExtendedModel model = serviceMapper.toServiceExtendedModel(entity);
-        resolveReadFields(model, entity);
-        return model;
-    }
-
-    /**
-     * Fills the read fields the mapper deliberately left {@code null}: the uploader display name, the
-     * resolved raw + processed image URLs ({@link ImageStorage#toCdnUrl}, falling back to a signed
-     * download URL for a private bucket), and each line's matched-material localized name from the
-     * candidate projection ({@code ru → pl → code}).
-     */
-    private void resolveReadFields(ProcurementDocumentServiceExtendedModel model,
-                                   ProcurementDocumentEntity entity) {
-        if (entity.getUploadedBy() != null) {
-            model.setUploaderName(entity.getUploadedBy().getName());
-        }
-        model.setRawImageUrl(resolveImageUrl(entity.getRawObjectKey()));
-        model.setProcessedImageUrl(resolveImageUrl(entity.getProcessedObjectKey()));
-        fillMatchedMaterialNames(model, entity);
-    }
-
-    /**
-     * Resolves a procurement image (raw / processed rendition) to a short-lived, one-time V4 signed
-     * download URL. The procurement media bucket is PRIVATE (it holds receipts/invoices, served the
-     * same way as the FOR-05-08 signable documents, not public CDN assets) — the configured
-     * {@code cdn-base} exists only to satisfy the ImageStorage "configured" gate, NOT to serve bytes.
-     * Returning the public {@code toCdnUrl} here made the viewer load a public
-     * {@code storage.googleapis.com/...} link that an anonymous caller cannot read (403 AccessDenied)
-     * against the private bucket. We therefore ALWAYS sign the download (keyless IAM signBlob),
-     * mirroring {@code SignableDocumentService}. A {@code null} key yields a {@code null} URL.
-     */
-    private String resolveImageUrl(String objectKey) {
-        if (objectKey == null || objectKey.isBlank()) {
-            return null;
-        }
-        return imageStorage.signedDownloadUrl(objectKey, IMAGE_URL_TTL_SECONDS);
-    }
-
-    /**
-     * Replaces each read-line's {@code matchedMaterialName} (left {@code null} by the mapper) with the
-     * matched material's localized display name, resolved from the project's candidate projection
-     * (the same {@code ru → pl → code} source the engine matched over). An unmatched line keeps a
-     * {@code null} name.
-     */
-    private void fillMatchedMaterialNames(ProcurementDocumentServiceExtendedModel model,
-                                          ProcurementDocumentEntity entity) {
-        if (model.getLines() == null || model.getLines().isEmpty()) {
-            return;
-        }
-        Long projectId = entity.getProject() == null ? null : entity.getProject().getId();
-        Map<Long, String> namesById = matchedNamesById(projectId);
-        List<com.foremen.controller.model.ProcurementLineModel> resolved =
-                new ArrayList<>(model.getLines().size());
-        for (com.foremen.controller.model.ProcurementLineModel line : model.getLines()) {
-            String name = line.matchedMaterialId() == null
-                    ? null
-                    : namesById.get(line.matchedMaterialId());
-            resolved.add(new com.foremen.controller.model.ProcurementLineModel(
-                    line.lineNo(), line.rawName(), line.quantity(), line.unitHint(),
-                    line.unitPrice(), line.lineTotal(), line.manufacturerHint(),
-                    line.matchedMaterialId(), name, line.matchTier(), line.matchPercent(),
-                    line.matchStatus()));
-        }
-        model.setLines(resolved);
-    }
-
-    /** The candidate materials' display names keyed by material id (the engine's primary name). */
-    private Map<Long, String> matchedNamesById(Long projectId) {
-        Map<Long, String> byId = new HashMap<>();
-        if (projectId == null) {
-            return byId;
-        }
-        for (PlannedMaterial candidate : candidateProvider.candidatesFor(projectId)) {
-            if (candidate == null || candidate.materialId() == null) {
-                continue;
-            }
-            byId.put(candidate.materialId(), primaryName(candidate));
-        }
-        return byId;
-    }
-
-    /** The candidate's display name: first non-blank localized name, else {@code null}. */
-    private static String primaryName(PlannedMaterial candidate) {
-        if (candidate.names() == null) {
-            return null;
-        }
-        for (String name : candidate.names()) {
-            if (name != null && !name.isBlank()) {
-                return name;
-            }
-        }
-        return null;
+        return readFields.toReadModel(entity);
     }
 
     // --- Stage gate + caller helpers -----------------------------------------------------------
+
+    /** Storage namespace: {@code procurement/{projectId}/} or {@code procurement/company/} (never "null"). */
+    private static String projectNamespace(Long projectId) {
+        return projectId == null ? "procurement/company/" : "procurement/" + projectId + "/";
+    }
+
+    /** Null id -> null; otherwise the category must exist and be active (400 otherwise). */
+    private UnplannedExpenseCategoryEntity resolveActiveCategory(Long categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        UnplannedExpenseCategoryEntity category =
+                entityManager.find(UnplannedExpenseCategoryEntity.class, categoryId);
+        if (category == null || !category.isActive()) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, EXPENSE_CATEGORY_UNKNOWN, categoryId);
+        }
+        return category;
+    }
 
     /** Refuses a mutation (upload / re-process) unless the owning project is {@code ACTIVE} (R7.1). */
     private void assertProjectActive(Long projectId) {

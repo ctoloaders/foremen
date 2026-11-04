@@ -308,6 +308,21 @@ class BankLinkServiceTest {
         assertThat(rule.getSupplierNip()).isEqualTo("5260250995");
     }
 
+    /** FOR-07-03 4.2 (R1.5, 11.2, 11.4): a company-level document (project == null) can be linked and learned from. */
+    @Test
+    void procurementLinkToCompanyDocumentWithoutProjectIsAccepted() {
+        ProcurementDocumentEntity doc = f.document(pln("300.00"));
+        doc.setProject(null);
+        BankTransactionEntity line = f.bankLine("-100.00");
+
+        service.createLink(line.getId(), LinkRequest.of(LinkKind.PROCUREMENT, null)
+                .withProcurementDocument(doc.getId()), true);
+
+        assertThat(DocumentPaymentStatusDeriver.derive(doc.getDocumentTotal(), amountsOf(doc)))
+                .isEqualTo(DocumentPaymentStatus.PARTIALLY_PAID);
+        assertThat(f.rules.get(line.getCounterpartyKey()).getSupplierNip()).isEqualTo("5260250995");
+    }
+
     @Test
     void otherKindsHaveNoExternalEffects() {
         BankTransactionEntity expense = f.bankLine("-90.00");

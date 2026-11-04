@@ -179,6 +179,20 @@ class PurchaseLineReconciliationServiceTest {
         verify(auditLogDao, times(1)).save(any(AuditLogEntity.class));
     }
 
+    /** FOR-07-03 4.2 (R1.5, 11.2): a line of a company document (project == null) must not NPE. */
+    @Test
+    void clearClassificationOnCompanyDocumentWithoutProjectDoesNotFail() {
+        line.getDocument().setProject(null);
+        line.setMatchStatus(MatchStatus.MANUAL_UNMATCHED);
+        line.setMatchTier(MatchTier.NONE);
+        line.setUnplannedCategory(activeCategory());
+
+        PurchaseLineServiceModel result = service.clearClassification(LINE_ID);
+
+        assertThat(line.getUnplannedCategory()).isNull();
+        assertThat(result.matchStatus()).isEqualTo(MatchStatus.MANUAL_UNMATCHED);
+    }
+
     // --- classify unknown / inactive category (R3.4) -------------------------------------------
 
     @Test

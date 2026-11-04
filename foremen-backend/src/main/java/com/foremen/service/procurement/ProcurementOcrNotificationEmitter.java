@@ -2,8 +2,10 @@ package com.foremen.service.procurement;
 
 import org.springframework.stereotype.Component;
 
+import com.foremen.dao.UserDao;
 import com.foremen.dao.model.ProcessingStatus;
 import com.foremen.service.offer.NotificationService;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,10 +32,18 @@ public class ProcurementOcrNotificationEmitter {
     /** The Procurement tab slug the deep-link targets. */
     private static final String PROCUREMENT_TAB = "procurement";
 
-    private final NotificationService notificationService;
+    /** Company procurement screen deep-link base (FOR-07-03 R12.3). */
+    private static final String COMPANY_PROCUREMENT_PATH = "/company/procurement";
 
-    public ProcurementOcrNotificationEmitter(NotificationService notificationService) {
+    private final NotificationService notificationService;
+    private final UserDao userDao;
+    private final ForemenPermissionEvaluator permissionEvaluator;
+
+    public ProcurementOcrNotificationEmitter(NotificationService notificationService, UserDao userDao,
+                                             ForemenPermissionEvaluator permissionEvaluator) {
         this.notificationService = notificationService;
+        this.userDao = userDao;
+        this.permissionEvaluator = permissionEvaluator;
     }
 
     /**
@@ -53,8 +63,9 @@ public class ProcurementOcrNotificationEmitter {
         }
         String type = terminalStatus == ProcessingStatus.PARSED ? TYPE_PARSED : TYPE_FAILED;
         String body = terminalStatus == ProcessingStatus.FAILED ? failureReason : null;
-        String deepLink = deepLink(projectId, documentId);
         try {
+            String deepLink = deepLink(projectId, documentId,
+                    projectId != null || recipientCanReadCompany(recipientUserId));
             notificationService.create(recipientUserId, type, body, deepLink);
         } catch (Exception e) {
             // A1 R17.3 — log-only on failure: never block or alter the committed terminal state.
@@ -64,15 +75,24 @@ public class ProcurementOcrNotificationEmitter {
     }
 
     /**
-     * The Procurement tab deep-link for a document
-     * ({@code /projects/{projectId}/procurement?doc={documentId}}, A1 R17.1). Returns {@code null}
-     * when the project id is unknown (a non-interactive notification).
+     * The deep-link for a document. Project document: {@code /projects/{projectId}/procurement?doc=}
+     * (A1 R17.1). No-project document (FOR-07-03 R12.3): {@code /company/procurement?doc=} when the
+     * recipient holds {@code COMPANY_PURCHASES/READ}, else {@code null} (non-clickable notification).
      */
-    private static String deepLink(Long projectId, Long documentId) {
+    static String deepLink(Long projectId, Long documentId, boolean recipientCanReadCompany) {
         if (projectId == null) {
-            return null;
+            if (!recipientCanReadCompany) {
+                return null;
+            }
+            return documentId == null ? COMPANY_PROCUREMENT_PATH
+                    : COMPANY_PROCUREMENT_PATH + "?doc=" + documentId;
         }
         String base = "/projects/" + projectId + "/" + PROCUREMENT_TAB;
         return documentId == null ? base : base + "?doc=" + documentId;
+    }
+
+    private boolean recipientCanReadCompany(Long recipientUserId) {
+        String roleCode = userDao.findRoleCodeById(recipientUserId).orElse(null);
+        return roleCode != null && permissionEvaluator.isAllowed(roleCode, "COMPANY_PURCHASES", "READ");
     }
 }
