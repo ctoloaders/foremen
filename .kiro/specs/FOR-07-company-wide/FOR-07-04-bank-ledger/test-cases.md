@@ -25,7 +25,7 @@
   синхронизаций, правила контрагентов, поддерживаемые банки);
 - меню **Банковские операции / Operacje bankowe** (раздел «Компания / Firma»: реестр, фильтры, итоги,
   карточка операции, записи по кассе);
-- выбор способа оплаты при загрузке счёта (закупки проекта) и ссылки на реестр в зарплатах.
+- галочка «Оплачено наличными» при загрузке счёта (закупки проекта) и ссылки на реестр в зарплатах.
 
 **Часть C — ручной сценарий Salt Edge на окружении** (базовый URL из env, режим CLIENT / PARTNER).
 
@@ -130,8 +130,8 @@
 | `POST /api/bank/transactions/{id}/payout {workerId, amount?, note?, remember?}` | BANK_LEDGER CREATE + PAYROLL CREATE | `201`; выплата из операции |
 | `POST /api/bank/transactions/detect {ids? , filter?, includeAi?}` | UPDATE | `{processed, autoLinked, suggested, aiQueued, toReview, skipped}` |
 | `POST /api/bank/transactions/bulk/confirm {ids, remember}` | UPDATE | `{confirmed, skipped, failed[]}` |
-| `POST /api/procurement-documents` (multipart: `file, projectId, paymentChoice?, cashAccountId?, cashAmount?, cashDate?`) | PURCHASES CREATE | `200`, документ с `paymentStatus`, `ledgerEntries` |
-| `POST /api/procurement-documents/{id}/paid-in-cash {cashAccountId?, amount?, date?}` | PURCHASES UPDATE | `200`; `409 error.procurement.payment.notUnmatched` |
+| `POST /api/procurement-documents` (multipart: `file, projectId`; API также принимает `paymentChoice?, cashAccountId?, cashAmount?, cashDate?`, UI их не отправляет) | PURCHASES CREATE | `200`, документ с `paymentStatus`, `ledgerEntries` |
+| `POST /api/procurement-documents/{id}/paid-in-cash {cashAccountId?, amount?, date?}` | PURCHASES UPDATE | `200`; `400 error.procurement.cash.amountRequired` (нет ни суммы, ни итога OCR); `409 error.procurement.payment.notUnmatched`. Галочка UI шлёт `{}`, диалог строки — только `amount` + `date` |
 | `GET /api/worker-payouts?workerId…` / `POST /api/worker-payouts` (→ `200`) / `POST …/{id}/pay` | PAYROLL READ / CREATE / UPDATE | `WorkerPayoutDto` с `ledgerEntries[]` |
 | `POST /api/bank-feed/saltedge/callbacks/{success\|fail\|notify\|destroy}` | permitAll + подпись | `200 {}`; `401` / `404` / `413` |
 
@@ -551,20 +551,25 @@ _Покрывает:_ R27.2, R27.4, R27.6 (Property 11).
 
 _Покрывает:_ R27.1, R27.3, R27.6.
 
-### A10. Закупки: способ оплаты [ocr]
+### A10. Закупки: «Оплачено наличными» и привязка к операции [ocr]
 
 **Повторяемость:** документы в проекте `Bank07 {run-id}`; суммы уникальны.
 
-#### TC-API-PRC-01 — Загрузка с «Оплачено наличными» и «Отметить как оплаченное наличными»
+#### TC-API-PRC-01 — Галочка «Оплачено наличными» (как её выполняет UI) и «Отметить как оплаченное наличными» [ocr]
+
+UI отправляет загрузку без полей оплаты. Если галочка стоит, после `PARSED` UI вызывает `paid-in-cash` с пустым телом.
+Сумма берётся из итога OCR, дата — из даты счёта (иначе дата загрузки), касса — по умолчанию.
 
 | Шаг | Запрос | Ожидание |
 |-----|--------|----------|
-| 1 | `POST /api/procurement-documents` (multipart: `file`, `projectId`, `paymentChoice=PAID_CASH`, `cashAmount=C3`, `cashDate=today−1`) | `200`; `paymentStatus = PARTIALLY_PAID` (сумма документа ещё неизвестна, Σ > 0); `ledgerEntries` — 1 запись |
-| 2 | `GET /api/bank/transactions/{ledgerEntries[0].transactionId}` | `channel = CASH`, `origin = SYSTEM`, `systemSource = PROCUREMENT_CASH`, `amount = -C3`, `bookingDate = today−1` |
-| 3 | `PAID_CASH` без `cashAmount` | `400 error.procurement.cash.amountRequired` |
-| 4 | Для распознанного документа `UNMATCHED` с итогом `T`: `POST /api/procurement-documents/{id}/paid-in-cash {}` | `200`, `paymentStatus = PAID`, сумма записи `= -T` (по умолчанию — итог документа) |
-| 5 | Повторный `POST …/paid-in-cash` | `409 error.procurement.payment.notUnmatched` |
-| 6 | Документ `UNMATCHED` в проекте, переведённом в `COMPLETED`: `POST …/paid-in-cash {amount: C4}` | **`200`** — на завершённом проекте действие разрешено (нет stage-gate) |
+| 1 | `POST /api/procurement-documents` (multipart: `file` — фикстура-счёт на `T1` с датой `D1`, `projectId`; без `paymentChoice`) | `200`; `paymentStatus = UNMATCHED`; `ledgerEntries = []` |
+| 2 | Опрашивать `GET /api/procurement-documents/{id}/status` до `PARSED`, затем `GET …/{id}` | `documentTotal = T1`, `invoiceDate = D1` |
+| 3 | `POST /api/procurement-documents/{id}/paid-in-cash {}` | `200`; `paymentStatus = PAID`; `ledgerEntries` — 1 запись `channel = CASH` |
+| 4 | `GET /api/bank/transactions/{ledgerEntries[0].transactionId}` | `origin = SYSTEM`, `systemSource = PROCUREMENT_CASH`, `amount = -T1`, `bookingDate = D1`, касса по умолчанию |
+| 5 | Повторный `POST …/paid-in-cash {}` | `409 error.procurement.payment.notUnmatched` |
+| 6 | Документ `PARSED` без итога OCR (`documentTotal = null`): `POST …/paid-in-cash {}` | `400 error.procurement.cash.amountRequired`; записи по кассе нет |
+| 7 | Тот же документ: `POST …/paid-in-cash {amount: C3, date: today−1}` (диалог строки) | `200`; запись `-C3`, `bookingDate = today−1`, касса по умолчанию |
+| 8 | Документ `UNMATCHED` в проекте, переведённом в `COMPLETED`: `POST …/paid-in-cash {amount: C4}` | **`200`** — на завершённом проекте действие разрешено (нет stage-gate) |
 
 _Покрывает:_ R28.1, R28.4, R28.5.
 
@@ -763,16 +768,21 @@ _Покрывает:_ R27.3, R27.5, R27.6, R20.8.
 
 _Покрывает:_ R16.4, R16.5, R18.
 
-### B10. Закупки проекта: способ оплаты [ocr]
+### B10. Закупки проекта: галочка «Оплачено наличными» [ocr]
 
 | Шаг | Действие | Ожидание |
 |-----|----------|----------|
-| 1 | Проект `Bank07 {run-id}` → закупки → загрузка счёта | поле «Как оплачено?»: «Пока не связано (сопоставим при импорте из банка)» (по умолчанию), «Оплачено наличными», «Найти банковскую операцию» |
-| 2 | «Оплачено наличными» → «Сумма», «Касса» → загрузить | у документа бейдж «Частично оплачен» (до OCR итог неизвестен) и ссылка в «Операции» |
-| 3 | Документ «Не сопоставлен» → «Отметить как оплаченное наличными» → подтвердить | бейдж «Оплачен»; в «Операции» ссылка на запись по кассе |
-| 4 | Документ «Не сопоставлен» → «Найти банковскую операцию» → «Выберите операцию для счёта» → выбрать | бейдж «Оплачен» / «Частично оплачен»; операция в реестре привязана «Закупка материалов» |
-| 5 | Проект в статусе `COMPLETED`, документ «Не сопоставлен» | действие «Отметить как оплаченное наличными» **доступно** и выполняется успешно |
-| 6 | Пользователь без `BANK_LEDGER` (FOREMAN с доступом к закупкам проекта) | «Найти банковскую операцию» не показывается |
+| 1 | Проект `Bank07 {run-id}` → закупки | у кнопки «Загрузить» только галочка «Оплачено наличными» (по умолчанию снята); нет «Как оплачено?», «Сумма», «Дата», «Касса», «Найти банковскую операцию» |
+| 2 | Поставить галочку → загрузить читаемый счёт на `T1` | идёт распознавание; после `PARSED` — строка «Оплачено наличными» с зелёной отметкой; галочка снова снята |
+| 3 | Строка документа в списке | бейдж «Оплачен»; в «Операции» ссылка на запись по кассе на `T1` с датой счёта (касса по умолчанию) |
+| 4 | Без галочки загрузить ещё один счёт | после `PARSED` бейдж «Не сопоставлен»; записи по кассе нет |
+| 5 | С галочкой загрузить нечитаемый файл | «Не удалось распознать счёт»; записи по кассе нет, бейдж «Не сопоставлен» |
+| 6 | С галочкой загрузить счёт, где OCR не нашёл итог | под загрузкой ошибка «сумма обязательна»; документ «Не сопоставлен» |
+| 7 | Строка «Не сопоставлен» → «Отметить как оплаченное наличными» | в диалоге только «Сумма» (итог OCR) и «Дата» (дата счёта), поля «Касса» нет; после сохранения — «Оплачен» |
+| 8 | Строка «Не сопоставлен» → «Найти банковскую операцию» → выбрать операцию | бейдж «Оплачен» / «Частично оплачен»; операция привязана «Закупка материалов» |
+| 9 | Проект `COMPLETED`, документ «Не сопоставлен» | загрузки нет; «Отметить как оплаченное наличными» **доступно** и выполняется |
+| 10 | FOREMAN без `BANK_LEDGER` | «Найти банковскую операцию» в строке не показывается |
+| 11 | Пользователь только с `PURCHASES` READ | ни загрузки, ни галочки, ни «Отметить как оплаченное наличными» |
 
 _Покрывает:_ R28.1, R28.4, R28.5.
 
@@ -858,6 +868,7 @@ _Покрывает:_ R8–R12 (end-to-end), R1.6, R9.2, R19.9.
 | REG-06 | Старт backend с `SALTEDGE_ENABLED=false`, `FOREMEN_BANK_STUB_ENABLED=false`, пустым `FOREMEN_PUBLIC_BASE_URL` и без `FOREMEN_BANK_SECRETS_KEY` | приложение стартует; `GET /api/bank/providers` → `[]`; `/api/bank/stub/**` → `404`; callback → `401` |
 | REG-07 | Повторное применение changelog (liquibase) на существующей БД | changesets 201–206 не вставляют дублей (`MARK_RAN`) |
 | REG-08 | `PermissionAnnotationValidator` при старте | старт без ошибок; `SaltEdgeCallbackController` без permission-аннотаций (намеренно) |
+| REG-09 | Упрощённая загрузка в закупках (после выкатки): только галочка «Оплачено наличными»; с галочкой → после `PARSED` запись по кассе на итог OCR, касса по умолчанию; без галочки — «Не сопоставлен»; в диалоге строки нет «Касса» | как в B10 шаги 1–4 и 7 |
 
 ## Шаблон MD-репорта прогона
 

@@ -604,10 +604,14 @@ mutually independent; a wave starts only after every earlier wave has completed.
     - _Requirements: 16.1, 16.2, 16.5, 16.8, 17.1, 17.2, 17.3, 17.5, 17.6, 20.5, 20.8, 20.9, 27.3, 27.6_
     - _Depends on: 9.4_
   - [x] 9.8 Procurement + payroll UI extensions
-    - FOR-06-03/04 upload dialog: `PaymentChoiceField` (Not linked yet default / Paid in cash with
-      amount + cash account / Find bank transaction → `FindBankTransactionDialog`).
+    - FOR-06-03/04 upload: a single "Paid in cash" checkbox (unchecked by default, resets after each
+      upload). Checked → plain upload, then on `PARSED` `POST …/{id}/paid-in-cash {}` (OCR total +
+      invoice date, default cash account); nothing on `FAILED` / `UPLOADED`. No amount / date /
+      cash account inputs and no "Find bank transaction" option at upload (simplified after rollout;
+      `PaymentChoiceField` and `CashAccountSelect` removed).
     - Document list / detail: `PaymentStatusBadge`, `LedgerLinksCell`, actions "Mark paid in cash" /
-      "Find bank transaction" on `UNMATCHED`.
+      "Find bank transaction" on `UNMATCHED` ("Mark paid in cash" dialog: amount + date only, no cash
+      account).
     - FOR-07-06 payroll card / payout rows: `PayoutLedgerLinks` → `/company/bank-transactions?
       transactionId=`.
     - _Requirements: 16.3, 28.1, 28.4, 28.5_

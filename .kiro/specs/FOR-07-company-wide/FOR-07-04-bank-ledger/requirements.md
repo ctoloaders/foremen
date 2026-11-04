@@ -80,11 +80,11 @@ The spec delivers, in one place:
   Upload has two entry points:
   - **from a ledger line** — the line already exists, so the uploaded document becomes its linked
     entity immediately;
-  - **from the procurement screens** — the uploader chooses how the document was paid:
-    - (a) **paid in cash**: a linked cash entry is created;
-    - (b) **find a bank transaction**: an existing unlinked expense line is linked;
-    - (c) **not linked yet**, the default: the document stays unmatched until the matcher links it
-      during a later bank import (Requirement 28).
+  - **from the procurement screens** — the upload shows a single **"Paid in cash"** checkbox:
+    - checked: once OCR has parsed the document, a linked cash entry is created with the OCR amount
+      and date on the default cash account (nothing is typed);
+    - unchecked (default): the document stays unmatched until the matcher links it during a later
+      bank import; a bank transaction can still be linked from the document row (Requirement 28).
 - **FOR-07-03-company-procurement (not yet implemented)** — will make
   `procurement_documents.project_id` nullable. Until it lands, uploading an invoice requires
   choosing a project, and a no-project purchase is recorded as an **other expense**. This spec
@@ -747,7 +747,7 @@ payments, so that I don't record the same payment twice.
    existing FOR-06-03 upload endpoint (project selection required until FOR-07-03 makes the project
    optional). The new document SHALL be linked to the already existing ledger line immediately, and
    the document status SHALL be shown live as the OCR pipeline proceeds. The link SHALL be kept when
-   OCR fails (the user can reprocess). No payment choice is asked here (Requirement 28 does not
+   OCR fails (the user can reprocess). No "Paid in cash" checkbox is shown here (Requirement 28 does not
    apply).
 6. `CLIENT_PAYMENT`: applying the link SHALL record a `CONFIRMED` `PaymentTransaction` on the chosen
    schedule through a new `PaymentTransactionService.recordBankTransfer(scheduleId,
@@ -998,7 +998,7 @@ text appears.
    data; categories reuse `UnplannedExpenseCategory`, which is already localized.
 2. THE frontend SHALL localize in **PL and RU** with full parity. This covers navigation items, Bank
    tab labels, every table column, filter, button, dialog, placeholder, empty state, confirmation,
-   toast, tooltip, validation and error message, the cash-entry form, the procurement payment choice,
+   toast, tooltip, validation and error message, the cash-entry form, the procurement "Paid in cash" checkbox,
    the holder-verification badges and override dialog, the Supported banks tab (columns, filters,
    empty and error states), and the five notification titles. The key set is listed in the design (`bank.*`,
    `bankTransactions.*`, `nav.bank`, `nav.bankTransactions`, `notification.bank.*`, `error.bank.*`).
@@ -1006,7 +1006,7 @@ text appears.
    `Bank_Account.type`, `Sync_Run.trigger`, `Sync_Run.status`, `Bank_Transaction.status`, `channel`,
    `origin`, `Direction`, `Link_Status`, link `kind`, `Detection_Source`, `Document_Payment_Status`,
    `Holder_Match`, the Supported_Bank access mode and account types,
-   the procurement payment choice, and the connector error class.
+   the procurement "Paid in cash" checkbox, and the connector error class.
 4. Backend error codes (`error.bank.*`) SHALL be resolvable in the backend message bundles (PL, RU,
    default), consistent with existing `error.*` handling.
 5. Amounts and dates SHALL be formatted with the active locale; IBANs SHALL be displayed in groups of
@@ -1056,7 +1056,7 @@ break money data.
    - ABAC per role;
    - idempotent re-sync.
 4. Frontend tests (vitest) SHALL cover the two pages, the drawer actions, the cash-entry form, the
-   procurement payment choice, the filters persistence and locale parity.
+   procurement "Paid in cash" checkbox, the filters persistence and locale parity.
 5. `test-cases.md` SHALL describe API scenarios against the Docker stack (STUB connector) and
    browser scenarios, with a run-id strategy and an MD report template.
 
@@ -1119,20 +1119,24 @@ operations, so that every money flow of the company — bank or cash — is visi
 ### Requirement 28: Procurement documents uploaded outside the ledger
 
 **User Story:** As a FINANCIER or MANAGER uploading an invoice in the procurement screens, I want to
-say how it was paid, so that the document is linked to its money flow now or automatically later.
+tick "Paid in cash" when it was paid in cash, so that the document is linked to its money flow
+now (amount and date taken from OCR) or automatically later.
 
 #### Acceptance Criteria
 
 1. WHEN a procurement document is uploaded from the procurement screens (FOR-06-03/04, not from a
-   ledger line), the upload dialog SHALL ask for a **payment choice**:
-   - **Paid in cash** — THE System SHALL create a `SYSTEM` cash entry (expense) on the selected (or
-     default) cash account and link it `PROCUREMENT` to the document:
-     - amount = the user-entered amount, prefilled with `documentTotal` once OCR is done; until then
-       it is required in the dialog;
-     - date = invoice date when known, else the upload date.
-   - **Find bank transaction** — THE System SHALL show unlinked / partially linked expense lines (bank
-     or cash) ranked by the matcher's procurement scoring, and link the chosen one.
-   - **Not linked yet** (default) — the document stays `UNMATCHED`.
+   ledger line), the upload control SHALL offer only a **"Paid in cash"** checkbox (unchecked by
+   default). It SHALL NOT ask for an amount, a date, a cash account or any other payment choice.
+   - **Checked** — the document is uploaded as a plain upload. WHEN its OCR pipeline reaches
+     `PARSED`, THE System SHALL mark it paid in cash with no user input: it creates a `SYSTEM` cash
+     entry (expense) on the **default** cash account and links it `PROCUREMENT` to the document:
+     - amount = the OCR `documentTotal`;
+     - date = the OCR invoice date when known, else the upload date.
+     IF OCR ends `FAILED` / `UPLOADED` (OCR disabled), no cash entry SHALL be created. IF OCR found
+               the request SHALL be refuse   ith `error.procurement.cash.amountRequired`, shown
+     inline; the user can then use "Mark paid in cash" on the document row (criterion 4).
+   - **Unchecked** (default) —    - **Unchecked** (default) —    - **Unchecked** (default) —    - **Unchecked** (default) —    y to a caller with
+     `PURCHASES`/UPDATE.
 2. WHEN the OCR pipeline finishes for an `UNMATCHED` document (`PARSED`), THE System SHALL run reverse
    matching against existing `UNLINKED` / `PARTIALLY_LINKED` expense lines. It SHALL use the
    Requirement 14.6 scoring and thresholds: auto-link at ≥ auto-threshold with margin, otherwise
@@ -1141,6 +1145,10 @@ say how it was paid, so that the document is linked to its money flow now or aut
    they are eventually linked automatically or suggested for confirmation.
 4. The procurement document list and detail SHALL show the `Document_Payment_Status` (Unmatched /
    Partially paid / Paid) and links to the ledger line(s), and SHALL offer "Find bank transaction" /
-   "Mark paid in cash" actions on `UNMATCHED` documents.
+   "Mark paid in cash" actions on `UNMATCHED` documents. "Find bank transaction" shows unlinked /
+   partially linked expense lines (bank or cash) ranked by the matcher's procurement scoring and
+   links the chosen one. "Mark paid in cash" asks only for the amount (prefilled with
+   `documentTotal`) and the date (prefilled with the invoice date); the entry is always booked on
+   the default cash account (no cash account is chosen).
 5. A document uploaded from a ledger line (Requirement 16.5) is linked to that line at creation and
-   skips the payment choice.
+   shows no "Paid in cash" checkbox.

@@ -32,7 +32,7 @@ What is **new**:
 | FOR-07-06 seams | `WorkerPayoutPaidEvent` published by `markPaid`; `markPaidFromLedger(id, paidAt, channel)`; payout DTO `ledgerEntries` |
 | FOR-06-03/04 seams | OCR prompt/parser + fields `supplierNip`, `invoiceNumber`, `invoiceDate`; `ProcurementDocumentParsedEvent`; upload `paymentChoice`; derived `paymentStatus` + `ledgerEntries` on document DTOs; "mark paid in cash" action |
 | ABAC | `BANK_CONNECTIONS` (ADMIN, FINANCIER CRUD), `BANK_LEDGER` (ADMIN, FINANCIER, MANAGER CRUD) |
-| Frontend | `features/bank` (Bank page in the **system / administration** section, 5 tabs + return route), `features/bank-transactions` (ledger list + drawer + cash entry form, **company** section), procurement upload payment choice + payment status, payroll card ledger links, locales |
+| Frontend | `features/bank` (Bank page in the **system / administration** section, 5 tabs + return route), `features/bank-transactions` (ledger list + drawer + cash entry form, **company** section), procurement upload "Paid in cash" checkbox + payment status, payroll card ledger links, locales |
 
 **Spans two git repos** (`.kiro/steering/git-repo-structure.md`): changesets, backend, message
 bundles and this spec in the root repo; `features/bank*`, procurement / payroll UI changes,
@@ -995,20 +995,26 @@ Frontend `UploadInvoiceDialog`:
 
 ### Procurement upload outside the ledger (FOR-06-03/04 seam)
 
-`POST /api/procurement-documents` gains optional multipart fields:
+`POST /api/procurement-documents` gains optional multipart fields (backend API, kept for
+compatibility; the procurement UI no longer sends them):
 - `paymentChoice` = `NOT_LINKED` (default) | `PAID_CASH` | `FIND_BANK_TRANSACTION` |
   `LINKED_FROM_LEDGER`;
 - `cashAccountId`, `cashAmount`, `cashDate` for `PAID_CASH`.
 
-Handling:
-- `PAID_CASH` → `ProcurementCashHook` in the upload transaction;
-- `FIND_BANK_TRANSACTION` → the frontend opens a ledger-line picker
-  (`GET /api/bank/transactions/link-candidates?procurementDocumentId={id}`, ranked by the
-  procurement scorer) and creates the link through the ledger API;
-- `NOT_LINKED` → nothing; reverse matching runs after OCR.
+Upload UI (simplified): the procurement upload shows only a **"Paid in cash"** checkbox. The
+frontend always uploads with no payment fields (`NOT_LINKED`). When the box was checked, the
+upload control remembers the new document id, follows its status poll, and on `PARSED` calls
+`POST /api/procurement-documents/{id}/paid-in-cash {}`. The server then books the OCR
+`documentTotal` on the invoice date (else the upload date) on the default cash account. On
+`FAILED` / `UPLOADED` nothing is booked. A `FAILED` / `UPLetu`FAILED` error`FAILED` / `UPLsh.amountRequired`, shown inline. The box resets after each upload.
+"Find bank tra"Find bank tra"Find bank tra"Find bank tra"Find bank tra"Findaction."Find bank tra"Find bank tra"Find bank tra"Find bank tra"Find bank tra"Findaction."Find bank tn;
+- `FIND_BANK_TRANSACTION` → no server action (the client links through the ledger API, using
+  `GET /api/bank/transactions/link-candidates?proc  `GET /api/bntId={id}`)  `GET /api/bank/transactions/link-candidates?procs after OCR.
 
 New `POST /api/procurement-documents/{id}/paid-in-cash {cashAccountId?, amount, date?}`
 (`PURCHASES`/UPDATE). The document list / detail DTOs carry `paymentStatus` + `ledgerEntries`.
+The row dialog "Mark paid in cash" sends only `amount` + `date`; `cashAccountId` is always
+null (default cash account, no picker).
 
 ## REST API
 
@@ -1057,7 +1063,7 @@ All under `/api`, JSON, pageable lists (`page`, `size`, `sort`).
 | `POST /bank/transactions/bulk/confirm` | UPDATE | `{ids[]}` |
 | `POST /bank-feed/saltedge/callbacks/{type}` | permitAll + signature | Salt Edge |
 | `POST /bank/stub/connections/{id}/data` | BANK_CONNECTIONS UPDATE, stub only | seed stub data |
-| `POST /procurement-documents` (+ `paymentChoice`, `cash*`) | PURCHASES CREATE (existing) | upload with payment choice |
+| `POST /procurement-documents` (+ `paymentChoice`, `cash*`) | PURCHASES CREATE (existing) | upload (UI sends no payment fields) |
 | `POST /procurement-documents/{id}/paid-in-cash` | PURCHASES UPDATE | mark paid in cash |
 
 Ledger filter params: `from`, `to`, `channel`, `direction`, `connectionId`, `accountId`,
@@ -1094,7 +1100,7 @@ features/bank-transactions/
         (KindPicker + TargetPicker per kind + amount), UploadInvoiceDialog.tsx,
         CreatePayoutFromTxnDialog.tsx, IgnoreDialog.tsx
 features/project-execution/procurement/ (FOR-06-03/04, extended)
-  PaymentChoiceField.tsx (upload dialog), PaymentStatusBadge.tsx, LedgerLinksCell.tsx,
+  DocumentUpload.tsx ("Paid in cash" checkbox), PaymentStatusBadge.tsx, LedgerLinksCell.tsx,
   MarkPaidInCashDialog.tsx, FindBankTransactionDialog.tsx
 features/company-payroll/ (FOR-07-06, extended)
   PayoutLedgerLinks.tsx (payroll card / payout rows)
@@ -1508,7 +1514,7 @@ for their inner fields.
   - holder badges + override dialog, cash accounts;
   - ledger filters persistence (incl. channel), cash entry dialog, drawer actions (confirm, link,
     override, remove, ignore, locked, edit / delete cash);
-  - procurement payment choice + payment status badge, payroll ledger links;
+  - procurement "Paid in cash" checkbox (mark paid on PARSED) + payment status badge, payroll ledger links;
   - locale parity for `bank*`, `procurement.payment*`, `notification.bank.*`, `error.bank.*`.
 - **Docker E2E:** `test-cases.md` (STUB connector + optional Salt Edge fake provider manual run on
   the dev environment).
