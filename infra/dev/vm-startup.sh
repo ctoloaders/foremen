@@ -78,8 +78,10 @@ fi
 FOREMEN_OCR_ENABLED="false"
 FOREMEN_OCR_LLM_API_KEY=""
 FOREMEN_OCR_LLM_MODEL="gemini-3.8-flash"
-if [ -n "${SECRET_OCR_GEMINI_KEY}" ] && gcloud secrets describe "${SECRET_OCR_GEMINI_KEY}" >/dev/null 2>&1; then
-  FOREMEN_OCR_LLM_API_KEY="$(sm "${SECRET_OCR_GEMINI_KEY}")"
+# Fetch directly with `versions access` (NOT `secrets describe`, which the VM SA's
+# secretAccessor role does not allow); the non-empty metadata pointer is the guard.
+if [ -n "${SECRET_OCR_GEMINI_KEY}" ]; then
+  FOREMEN_OCR_LLM_API_KEY="$(sm "${SECRET_OCR_GEMINI_KEY}" 2>/dev/null || true)"
   [ -n "${FOREMEN_OCR_LLM_API_KEY}" ] && FOREMEN_OCR_ENABLED="true"
 fi
 # FOR-08 loaders-bot (reconciled from the live startup-script metadata). The
