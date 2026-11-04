@@ -11,6 +11,7 @@
 #   scripts/saltedge-fake-connections.sh customer         # create (or reuse) the test customer
 #   scripts/saltedge-fake-connections.sh connect [N]      # open N Connect sessions (default 10)
 #   scripts/saltedge-fake-connections.sh status           # list connections + count active ones
+#   scripts/saltedge-fake-connections.sh delete <id>|all  # remove connection(s) to free fake slots
 #
 # `connect` opens each Connect URL in the browser and waits for you to finish it in the widget
 # (credentials for fake banks are shown in the widget's "Instructions" field).
@@ -148,6 +149,22 @@ cmd_status() {
   echo "Total: $(jq 'length' <<< "$all"), active: $(jq '[.[] | select(.status == "active")] | length' <<< "$all")"
 }
 
+# Remove connections to free fake-connection slots (FakeConnectionsLimitReached).
+#   delete <id>  - one connection;  delete all - every connection of the test customer.
+cmd_delete() {
+  local target="${1:-}" cid ids
+  [ -n "$target" ] || die "usage: delete <connection_id>|all"
+  if [ "$target" = "all" ]; then
+    cid="$(customer_id)"
+    ids="$(api GET "/connections?customer_id=$cid" | jq -r ".data[].id")"
+  else
+    ids="$target"
+  fi
+  for id in $ids; do
+    api DELETE "/connections/$id" >/dev/null && echo "deleted: $id"
+  done
+}
+
 case "${1:-}" in
   check) cmd_check ;;
   providers) cmd_providers ;;
@@ -155,5 +172,6 @@ case "${1:-}" in
   connect) cmd_connect "${2:-10}" ;;
   url) cmd_url "${2:-}" ;;
   status) cmd_status ;;
-  *) sed -n '2,17p' "$0"; exit 1 ;;
+  delete) cmd_delete "${2:-}" ;;
+  *) sed -n '2,18p' "$0"; exit 1 ;;
 esac
