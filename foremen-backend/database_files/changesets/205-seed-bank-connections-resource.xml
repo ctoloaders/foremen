@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-07-04 (R21.1, R21.3; entity-creation-rules steps 1-2; design §ABAC): seed the
+        BANK_CONNECTIONS ABAC resource covering bank connections, bank and cash accounts, sync runs,
+        credentials and counterparty rules. Not project-scoped (company-wide money administration).
+        Matrix:
+          ADMIN     -> CREATE, READ, UPDATE, DELETE (matrix completeness; evaluator bypasses ADMIN)
+          FINANCIER -> CREATE, READ, UPDATE, DELETE
+          all other roles -> deny-by-default (no grant row seeded)
+        Idempotency: the resource insert is guarded by onFail="MARK_RAN" on
+        resources.code = 'BANK_CONNECTIONS'; every grant block is an INSERT ... SELECT ...
+        WHERE NOT EXISTS (the 187-seed-company-schedule-resource.xml pattern), so a re-run against
+        an already-seeded database inserts nothing. Registered LAST in changelog.xml, after 204.
+    -->
+    <!-- changeSet 1: insert the BANK_CONNECTIONS resource row (idempotent). -->
+    <changeSet id="205-seed-bank-connections-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'BANK_CONNECTIONS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="BANK_CONNECTIONS"/>
+            <column name="name_ru" value="Банковские подключения"/>
+            <column name="name_pl" value="Połączenia bankowe"/>
+            <column name="description_ru" value="Подключения к банкам, банковские и кассовые счета, синхронизации, учётные данные и правила контрагентов"/>
+            <column name="description_pl" value="Połączenia z bankami, rachunki bankowe i kasowe, synchronizacje, dane uwierzytelniające i reguły kontrahentów"/>
+        </insert>
+    </changeSet>
+    <!-- changeSet 2: ADMIN + FINANCIER -> CREATE, READ, UPDATE, DELETE.
+         Each role_resources + role_resource_operations insert is self-guarded by NOT EXISTS. -->
+    <changeSet id="205-seed-bank-connections-grants-admin-financier" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'BANK_CONNECTIONS'</sqlCheck>
+        </preConditions>
+        <!-- ADMIN x BANK_CONNECTIONS role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'BANK_CONNECTIONS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'ADMIN' AND res2.code = 'BANK_CONNECTIONS'
+              );
+        </sql>
+        <!-- ADMIN x BANK_CONNECTIONS operations: CREATE, READ, UPDATE, DELETE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'BANK_CONNECTIONS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+        <!-- FINANCIER x BANK_CONNECTIONS role_resources row. -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'BANK_CONNECTIONS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FINANCIER' AND res2.code = 'BANK_CONNECTIONS'
+              );
+        </sql>
+        <!-- FINANCIER x BANK_CONNECTIONS operations: CREATE, READ, UPDATE, DELETE. -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'FINANCIER' AND res.code = 'BANK_CONNECTIONS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -1,0 +1,901 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create changesets 201–204 and register them in `changelog.xml`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969412
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731982101
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732300394
+      }
+    ],
+    "1.2 Create ABAC seeds 205–206": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969477
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733097629
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733842261
+      }
+    ],
+    "2.1 `IbanNormalizer`, `CounterpartyExtractor`, `NameSimilarity` + tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969516
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731982453
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732301546
+      }
+    ],
+    "2.2 `BalanceContinuityChecker` + property test": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969643
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731982683
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732302726
+      }
+    ],
+    "2.3 `LinkStatusDeriver` + property test": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969716
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731983845
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732303945
+      }
+    ],
+    "2.4 `RuleMatcher` + `MatchCandidate` / `TxnFacts` / `Decision` + property tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969765
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733097756
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733842594
+      }
+    ],
+    "2.5 `BankTransactionClassifier` interface + `ClassifierAnswerValidator` + tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969803
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731984785
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732305213
+      }
+    ],
+    "2.6 `SaltEdgeRequestSigner` + `SaltEdgeCallbackVerifier` + property tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969874
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732315382
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732738274
+      }
+    ],
+    "2.7 `BankSecretCipher` (AES-256-GCM) + tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969912
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732316581
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732739372
+      }
+    ],
+    "2.8 `HolderMatcher` + property test": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731969975
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732317790
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732740536
+      }
+    ],
+    "2.9 `DocumentPaymentStatusDeriver` + property test": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970062
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732318959
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732741876
+      }
+    ],
+    "3.1 JPA entities, enums and DAOs for the bank tables + procurement fields": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970094
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733098051
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733844065
+      }
+    ],
+    "4.1 SPI types, registry and errors": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970130
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732319745
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732742501
+      }
+    ],
+    "4.2 `StubConnector` + `StubDataStore` + `StubProperties`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970165
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733098861
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733845258
+      }
+    ],
+    "5.1 `SaltEdgeProperties`, `PublicBaseUrl`, `SaltEdgeClient`, `SaltEdgeErrorMapper`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970197
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733100134
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733846431
+      }
+    ],
+    "5.2 `SaltEdgeMapper` + fixture tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970231
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733851530
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734251332
+      }
+    ],
+    "5.3 `SaltEdgeConnector`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970265
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735870675
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793737032868
+      }
+    ],
+    "5.4 `SaltEdgeConnectorTest` (MockRestServiceServer + fixtures, both modes)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970310
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793737040105
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793738113981
+      }
+    ],
+    "5.5 `SaltEdgeModeApi` + `ClientModeApi` + `PartnerModeApi`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970364
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734260158
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735857235
+      }
+    ],
+    "6.1 `BankConnectionSecretService`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970400
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734260195
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735857366
+      }
+    ],
+    "6.2 `BankConnectionService`, `BankAccountService` (+ holder match), `SupportedBanksService`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970431
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793737041586
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793738115066
+      }
+    ],
+    "6.3 `BankTransactionIngestService`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970463
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734261270
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735857447
+      }
+    ],
+    "6.4 `BankSyncOrchestrator`, `BankSyncExecutorConfig`, `BankSyncScheduler`, `BankConsentSweep`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970498
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793741605645
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742388171
+      }
+    ],
+    "6.5 FOR-06-07 seam: `PaymentTransactionService.recordBankTransfer`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970593
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732761192
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733087514
+      }
+    ],
+    "6.6 FOR-07-06 seams: payout paid event, `markPaidFromLedger`, `ledgerEntries`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970648
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732762218
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733088780
+      }
+    ],
+    "6.7 `BankLinkService`, `LinkEffects`, `CounterpartyRuleService`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970681
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735871220
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793737034177
+      }
+    ],
+    "6.8 `DetectionService` + candidate providers + `ReverseDocumentMatcher`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970725
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793738122827
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793741599011
+      }
+    ],
+    "6.9 `GeminiBankTransactionClassifier` + `DisabledBankTransactionClassifier` + `BankAiProperties`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970778
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733852568
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734252492
+      }
+    ],
+    "6.10 `BankNotificationEmitter` + events": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970813
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734262854
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735858639
+      }
+    ],
+    "6.11 Procurement seams (FOR-06-03/04)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970859
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793734263732
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793735859642
+      }
+    ],
+    "6.12 `CashLedgerService` + `PayoutCashHook` + `ProcurementCashHook`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970899
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793737042638
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793738116332
+      }
+    ],
+    "7.1 Bank administration controllers (+ stub controller)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970947
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742410800
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793743366999
+      }
+    ],
+    "7.2 `BankTransactionController` (ledger)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731970982
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742410910
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793744651579
+      }
+    ],
+    "7.3 `SaltEdgeCallbackController` + `SecurityConfig`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971015
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742411713
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793743367482
+      }
+    ],
+    "7.4 Backend message bundles": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971061
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793744669117
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745597288
+      }
+    ],
+    "7.5 Configuration (environment-specific, externalized)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971103
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742412929
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793743368833
+      }
+    ],
+    "7.6 Procurement / payroll controller extensions": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971147
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742414012
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793743369680
+      }
+    ],
+    "8.1 Testcontainers integration + ABAC": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971183
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745609904
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747199272
+      }
+    ],
+    "9.1 Locale keys (PL + RU)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971224
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793732763074
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733086541
+      }
+    ],
+    "9.2 Bank API client, hooks, types, `lib/iban.ts`": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971260
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793744669527
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745598260
+      }
+    ],
+    "9.3 Bank page with tabs (administration section)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971295
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745609975
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747200273
+      }
+    ],
+    "9.4 Ledger API + `BankTransactionsPage` (company section)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971331
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793744670811
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745599355
+      }
+    ],
+    "9.5 `TransactionDrawer`, `CashEntryDialog` and actions": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971364
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745610740
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747201456
+      }
+    ],
+    "9.6 Navigation, router, route-permissions": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971400
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747212157
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747400614
+      }
+    ],
+    "9.7 Frontend tests": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971444
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747404138
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747595667
+      }
+    ],
+    "9.8 Procurement + payroll UI extensions": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971481
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745611796
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747202267
+      }
+    ],
+    "10. Author / re-sync test-cases.md": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971513
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747599289
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793748443572
+      }
+    ],
+    "11. Environment rollout + Salt Edge dashboard": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971547
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793773820496
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793785570081
+      }
+    ],
+    "12. Final checkpoint": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793731971586
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793785572894
+      },
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793785941074
+      }
+    ],
+    "1. Schema (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733842343
+      }
+    ],
+    "2. Pure collaborators + tests (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733842648
+      }
+    ],
+    "3. Entities and DAOs (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733844099
+      }
+    ],
+    "4. Connector SPI (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793733845291
+      }
+    ],
+    "5. Salt Edge connector (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793738114072
+      }
+    ],
+    "6. Backend services (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793742388237
+      }
+    ],
+    "7. Controllers and configuration (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793745597345
+      }
+    ],
+    "8. Backend integration tests (root repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747199350
+      }
+    ],
+    "9. Frontend (foremen-frontend repo)": [
+      {
+        "executionId": "9566aba7-56e0-481b-9281-391dd271869e",
+        "chatSessionId": "sess_530a3196-42b6-48b5-b0be-6d134617de9e",
+        "timestamp": 1793747595714
+      }
+    ]
+  }
+}

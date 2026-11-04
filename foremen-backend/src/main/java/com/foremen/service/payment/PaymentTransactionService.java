@@ -2,6 +2,8 @@ package com.foremen.service.payment;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.Optional;
 
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.jpa.domain.Specification;
@@ -18,6 +20,7 @@ import com.foremen.dao.model.PaymentScheduleEntity;
 import com.foremen.dao.model.PaymentTransactionEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.payment.dto.BankTransferInput;
 import com.foremen.service.payment.dto.ManualTxnInput;
 import com.foremen.service.payment.dto.PaymentTransactionDto;
 import com.foremen.service.payment.dto.mapper.PaymentDtoMapper;
@@ -129,26 +132,46 @@ public class PaymentTransactionService {
             return;
         }
 
-        // R5.8: idempotent for an already-recorded (schedule, BANK_TRANSFER, externalRef) line.
-        if (alreadyRecorded(schedule.getId(), PaymentChannel.BANK_TRANSFER, txn.externalRef())) {
-            return;
+        // R8.3 + R5.8: idempotent CONFIRMED record + reconcile through the shared path.
+        recordConfirmedIdempotent(schedule, PaymentChannel.BANK_TRANSFER, txn.externalRef(),
+                txn.amount(),
+                txn.receivedAt() == null ? OffsetDateTime.now()
+                        : txn.receivedAt().atOffset(OffsetDateTime.now().getOffset()),
+                null);
+    }
+
+    // --- Company money-ledger seam (FOR-07-04 R16.6) ---
+
+    /**
+     * FOR-07-04 (Requirement 16.6): records a {@code CONFIRMED} client payment on a schedule from a
+     * company money-ledger line linked as {@code CLIENT_PAYMENT}, then reconciles it through the
+     * unchanged FOR-06-07 cascade. Channel is {@code BANK_TRANSFER} for a bank line and
+     * {@code MANUAL} for a cash line; {@code receivedAt} is the line's booking date.
+     *
+     * <p>Idempotent by {@code (schedule, channel, externalRef)} (R5.8): a repeated call with the same
+     * key records nothing and does not re-allocate; it returns the id of the already-recorded row.
+     * Shares its code path with the correlated branch of {@link #ingestBankTransaction}.
+     *
+     * @param scheduleId the schedule to record the payment against
+     * @param in         the ledger-line payload
+     * @return the id of the recorded (or already-recorded) {@code PaymentTransaction}
+     * @throws ForemenApiException      404 when {@code scheduleId} does not resolve to a schedule
+     * @throws IllegalArgumentException when the input is missing or the channel is not
+     *                                  {@code BANK_TRANSFER} / {@code MANUAL}
+     */
+    public Long recordBankTransfer(Long scheduleId, BankTransferInput in) {
+        if (in == null || (in.channel() != PaymentChannel.BANK_TRANSFER && in.channel() != PaymentChannel.MANUAL)) {
+            throw new IllegalArgumentException(
+                    "recordBankTransfer requires channel BANK_TRANSFER or MANUAL");
         }
+        PaymentScheduleEntity schedule = paymentScheduleDao.findById(scheduleId)
+                .orElseThrow(() -> notFound(scheduleId));
 
-        PaymentTransactionEntity confirmed = new PaymentTransactionEntity();
-        confirmed.setSchedule(schedule);
-        confirmed.setChannel(PaymentChannel.BANK_TRANSFER);
-        confirmed.setExternalRef(txn.externalRef());
-        confirmed.setAmountGross(scale(txn.amount()));
-        confirmed.setFeeGross(BigDecimal.ZERO);
-        confirmed.setReceivedAt(txn.receivedAt() == null ? OffsetDateTime.now()
-                : txn.receivedAt().atOffset(OffsetDateTime.now().getOffset()));
-        confirmed.setStatus(TransactionStatus.CONFIRMED);
+        OffsetDateTime receivedAt = in.bookingDate() == null ? OffsetDateTime.now()
+                : in.bookingDate().atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
 
-        PaymentTransactionEntity saved = paymentTransactionDao.save(confirmed);
-        entityManager.flush();
-
-        // R8.3: a confirmed bank transfer settles tranches through the shared reconciliation cascade.
-        reconciliationService.reconcile(saved);
+        return recordConfirmedIdempotent(schedule, in.channel(), in.externalRef(), in.amount(),
+                receivedAt, in.title()).getId();
     }
 
     // --- Online webhook (R7.3, R7.4) ---
@@ -274,14 +297,42 @@ public class PaymentTransactionService {
         return paymentScheduleDao.findByProjectId(projectId).orElse(null);
     }
 
-    /** True iff a transaction is already recorded for this {@code (schedule, channel, externalRef)} (R5.8). */
-    private boolean alreadyRecorded(Long scheduleId, PaymentChannel channel, String externalRef) {
-        if (externalRef == null) {
-            return false; // no provider reference -> not idempotency-deduplicated.
+    /**
+     * Shared path of the correlated bank-feed ingest (R8.3) and the FOR-07-04 ledger seam (R16.6):
+     * idempotent by {@code (schedule, channel, externalRef)} (R5.8) — an already-recorded key returns
+     * the existing row untouched and is not re-allocated; otherwise saves a {@code CONFIRMED} row and
+     * runs {@link ReconciliationService#reconcile(PaymentTransactionEntity)}.
+     */
+    private PaymentTransactionEntity recordConfirmedIdempotent(PaymentScheduleEntity schedule,
+                                                               PaymentChannel channel,
+                                                               String externalRef,
+                                                               BigDecimal amount,
+                                                               OffsetDateTime receivedAt,
+                                                               String note) {
+        if (externalRef != null) {
+            Optional<PaymentTransactionEntity> existing = paymentTransactionDao
+                    .findByScheduleIdAndChannelAndExternalRef(schedule.getId(), channel, externalRef);
+            if (existing.isPresent()) {
+                return existing.get();
+            }
         }
-        return paymentTransactionDao
-                .findByScheduleIdAndChannelAndExternalRef(scheduleId, channel, externalRef)
-                .isPresent();
+
+        PaymentTransactionEntity confirmed = new PaymentTransactionEntity();
+        confirmed.setSchedule(schedule);
+        confirmed.setChannel(channel);
+        confirmed.setExternalRef(externalRef);
+        confirmed.setAmountGross(scale(amount));
+        confirmed.setFeeGross(BigDecimal.ZERO);
+        confirmed.setReceivedAt(receivedAt);
+        confirmed.setStatus(TransactionStatus.CONFIRMED);
+        confirmed.setNote(note);
+
+        PaymentTransactionEntity saved = paymentTransactionDao.save(confirmed);
+        entityManager.flush();
+
+        // A confirmed payment settles tranches through the shared reconciliation cascade.
+        reconciliationService.reconcile(saved);
+        return saved;
     }
 
     /**

@@ -1,0 +1,61 @@
+{
+  "data": [
+    {
+      "id": "1180000000000000001",
+      "connection_id": "1170000000000000001",
+      "name": "Firmowe PLN",
+      "nature": "account",
+      "balance": 10250.55,
+      "currency_code": "PLN",
+      "extra": {
+        "iban": "PL61109010140000071219812874",
+        "swift": "WBKPPLPP",
+        "status": "active",
+        "client_name": "Foremen Sp. z o.o.",
+        "holder_name": "FOREMEN SPOLKA Z OGRANICZONA ODPOWIEDZIALNOSCIA",
+        "account_number": "61109010140000071219812874",
+        "available_amount": 9800.00,
+        "current_date": "2026-11-05",
+        "current_time": "06:30:00",
+        "transactions_count": { "posted": 6, "pending": 1 },
+        "updated_on_last_attempt": true
+      },
+      "created_at": "2026-11-01T10:00:00Z",
+      "updated_at": "2026-11-05T06:30:12Z"
+    },
+    {
+      "id": "1180000000000000002",
+      "connection_id": "1170000000000000001",
+      "name": "Karta firmowa",
+      "nature": "card",
+      "balance": -120.4,
+      "currency_code": "eur",
+      "extra": {
+        "holder_name": "Jan Kowalski",
+        "cards": ["1234....5678"]
+      },
+      "created_at": "2026-11-01T10:00:00Z",
+      "updated_at": "not-a-timestamp"
+    },
+    {
+      "id": "1180000000000000003",
+      "connection_id": "1170000000000000001",
+      "name": "Bare savings",
+      "nature": "savings",
+      "balance": null,
+      "currency_code": "PLN"
+    },
+    {
+      "id": "1180000000000000004",
+      "connection_id": "1170000000000000001",
+      "name": "Malformed: no currency",
+      "nature": "account",
+      "balance": 1.00,
+      "extra": {}
+    }
+  ],
+  "meta": {
+    "next_id": null,
+    "next_page": null
+  }
+}

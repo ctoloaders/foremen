@@ -73,6 +73,27 @@ services:
       REDIS_PORT: 6379
       # FOR-03-10: Google OAuth client id (from .env; blank disables Google login)
       FOREMEN_GOOGLE_CLIENT_ID: ${FOREMEN_GOOGLE_CLIENT_ID:-}
+      # FOR-07-04 bank ledger (from .env / shell; real Salt Edge values live in .secrets/saltedge.env).
+      # Local stack: STUB on, public base URL = local frontend; Salt Edge + AI off unless set.
+      FOREMEN_PUBLIC_BASE_URL: ${FOREMEN_PUBLIC_BASE_URL:-http://localhost:3000}
+      FOREMEN_BANK_STUB_ENABLED: ${FOREMEN_BANK_STUB_ENABLED:-true}
+      FOREMEN_BANK_SECRETS_KEY: ${FOREMEN_BANK_SECRETS_KEY:-}
+      SALTEDGE_ENABLED: ${SALTEDGE_ENABLED:-false}
+      SALTEDGE_MODE: ${SALTEDGE_MODE:-CLIENT}
+      SALTEDGE_BASE_URL: ${SALTEDGE_BASE_URL:-}
+      SALTEDGE_APP_ID: ${SALTEDGE_APP_ID:-}
+      SALTEDGE_SECRET: ${SALTEDGE_SECRET:-}
+      SALTEDGE_PRIVATE_KEY_PATH: ${SALTEDGE_PRIVATE_KEY_PATH:-}
+      SALTEDGE_CALLBACK_PUBLIC_KEY: ${SALTEDGE_CALLBACK_PUBLIC_KEY:-}
+      SALTEDGE_CUSTOMER_IDENTIFIER: ${SALTEDGE_CUSTOMER_IDENTIFIER:-foremen-company}
+      SALTEDGE_LEAD_EMAIL: ${SALTEDGE_LEAD_EMAIL:-}
+      SALTEDGE_INCLUDE_FAKE: ${SALTEDGE_INCLUDE_FAKE:-true}
+      BANK_AI_ENABLED: ${BANK_AI_ENABLED:-false}
+      BANK_AI_MODEL: ${BANK_AI_MODEL:-gemini-3.8-flash}
+      BANK_AI_PROJECT: ${BANK_AI_PROJECT:-}
+      BANK_AI_LOCATION: ${BANK_AI_LOCATION:-europe-central2}
+      BANK_AI_API_KEY: ${BANK_AI_API_KEY:-}
+      BANK_AI_CREDENTIALS: ${BANK_AI_CREDENTIALS:-}
     depends_on:
       postgres:
         condition: service_healthy

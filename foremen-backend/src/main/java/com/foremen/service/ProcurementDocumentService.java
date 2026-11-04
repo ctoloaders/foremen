@@ -1,5 +1,6 @@
 package com.foremen.service;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -20,8 +21,10 @@ import org.springframework.web.multipart.MultipartFile;
 import com.foremen.config.image.ImageStorageProperties;
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.ProcurementDocumentDao;
+import com.foremen.dao.model.DocumentPaymentStatus;
 import com.foremen.dao.model.MatchTier;
 import com.foremen.dao.model.ProcessingStatus;
+import com.foremen.dao.model.ProcurementPaymentChoice;
 import com.foremen.dao.model.ProcurementDocumentEntity;
 import com.foremen.dao.model.ProcurementLineEntity;
 import com.foremen.dao.model.ProjectEntity;
@@ -47,6 +50,9 @@ import com.foremen.service.procurement.MatchResult;
 import com.foremen.service.procurement.PlannedMaterial;
 import com.foremen.service.ocr.OcrStageListener;
 import com.foremen.service.procurement.PlannedMaterialCandidateProvider;
+import com.foremen.service.procurement.ProcurementCashPayment;
+import com.foremen.service.procurement.ProcurementCashPaymentHandler;
+import com.foremen.service.procurement.ProcurementDocumentParsedEvent;
 import com.foremen.service.procurement.ProcurementOcrRequested;
 import com.foremen.service.procurement.ReprocessLinePartitioner;
 
@@ -88,6 +94,10 @@ public class ProcurementDocumentService
     static final String UPLOAD_UNSUPPORTED_TYPE = "error.procurement.upload.unsupportedType";
     static final String UPLOAD_TOO_LARGE = "error.procurement.upload.tooLarge";
     static final String STAGE_NOT_ACTIVE = "error.procurement.stage.notActive";
+    // FOR-07-04 (R28.1, R28.4) — paid-in-cash validation (bundle wiring is FOR-07-04 task 7.4).
+    static final String CASH_AMOUNT_REQUIRED = "error.procurement.cash.amountRequired";
+    static final String CASH_AMOUNT_INVALID = "error.procurement.cash.amountInvalid";
+    static final String PAYMENT_NOT_UNMATCHED = "error.procurement.payment.notUnmatched";
 
     // --- Stable failure reason codes surfaced to the UI on FAILED (R3.4/R3.5; A1 R18.1) ---
     static final String FAILURE_OCR_DISABLED = "procurement.ocr.disabled";
@@ -130,6 +140,19 @@ public class ProcurementDocumentService
     private final ReprocessLinePartitioner reprocessLinePartitioner;
     private final ApplicationEventPublisher eventPublisher;
     private final DataSize maxUploadSize;
+
+    /**
+     * FOR-07-04 (R28.1, R28.4) — the cash-ledger seam. Optional: until the cash ledger contributes a
+     * bean (task 6.12, {@code ProcurementCashHook}) — or when the service is built directly in unit
+     * tests — {@link ProcurementCashPaymentHandler#NONE} is a no-op.
+     */
+    private ProcurementCashPaymentHandler cashPaymentHandler = ProcurementCashPaymentHandler.NONE;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setCashPaymentHandler(ProcurementCashPaymentHandler cashPaymentHandler) {
+        this.cashPaymentHandler = cashPaymentHandler == null
+                ? ProcurementCashPaymentHandler.NONE : cashPaymentHandler;
+    }
 
     public ProcurementDocumentService(ProcurementDocumentDao documentDao,
                                       ProjectAccessCache projectAccessCache,
@@ -280,6 +303,127 @@ public class ProcurementDocumentService
      */
     @Transactional
     public ProcurementDocumentServiceExtendedModel upload(Long projectId, MultipartFile file) {
+        return upload(projectId, file, UploadPaymentRequest.NOT_LINKED);
+    }
+
+    /**
+     * FOR-07-04 (Requirements 28.1, 28.5, 16.5) — the upload with the procurement-screen
+     * <b>payment choice</b>. Behaves exactly like {@link #upload(Long, MultipartFile)} and then:
+     * <ul>
+     *   <li>{@code PAID_CASH} — validates the cash amount ({@code > 0}, required while the document
+     *       total is unknown, i.e. always at upload) and, in the same transaction, delegates to the
+     *       {@link ProcurementCashPaymentHandler} (date = {@code cashDate}, else the upload date);</li>
+     *   <li>{@code NOT_LINKED} (default, also for a {@code null} choice), {@code FIND_BANK_TRANSACTION}
+     *       (the client links through the ledger API) and {@code LINKED_FROM_LEDGER} (the ledger line
+     *       links it) — nothing more here.</li>
+     * </ul>
+     * The cash amount is validated BEFORE anything is stored.
+     *
+     * @param projectId the owning {@code ACTIVE} project
+     * @param file      the uploaded image or PDF
+     * @param payment   the payment choice + optional cash fields ({@code null} → {@code NOT_LINKED})
+     * @return the persisted document as a read-extended model
+     */
+    @Transactional
+    public ProcurementDocumentServiceExtendedModel upload(Long projectId, MultipartFile file,
+                                                          UploadPaymentRequest payment) {
+        UploadPaymentRequest choice = payment == null ? UploadPaymentRequest.NOT_LINKED : payment;
+        boolean paidCash = choice.effectiveChoice() == ProcurementPaymentChoice.PAID_CASH;
+        if (paidCash) {
+            // R28.1 — the amount is required in the dialog until OCR provides documentTotal.
+            requirePositiveCashAmount(choice.cashAmount());
+        }
+        ProcurementDocumentServiceExtendedModel uploaded = uploadDocument(projectId, file);
+        if (paidCash) {
+            LocalDate date = choice.cashDate() != null
+                    ? choice.cashDate()
+                    : (uploaded.getUploadedAt() == null ? LocalDate.now()
+                            : uploaded.getUploadedAt().toLocalDate());
+            cashPaymentHandler.payInCash(new ProcurementCashPayment(
+                    uploaded.getId(), choice.cashAccountId(), choice.cashAmount(), date));
+            ProcurementDocumentEntity saved = documentDao.findById(uploaded.getId()).orElse(null);
+            if (saved != null) {
+                return findReadModel(saved);
+            }
+        }
+        return uploaded;
+    }
+
+    /**
+     * FOR-07-04 (Requirements 28.1, 28.4; design §Procurement upload outside the ledger) — "Mark paid
+     * in cash" on an {@code UNMATCHED} document: resolves {@code amount} (else the document total;
+     * 400 {@link #CASH_AMOUNT_REQUIRED} when both are unknown, 400 {@link #CASH_AMOUNT_INVALID} when
+     * {@code ≤ 0}) and {@code date} (else the invoice date, else the upload date), then delegates to
+     * the {@link ProcurementCashPaymentHandler} in this transaction and writes a
+     * {@code PAID_IN_CASH} audit row. A document that already has ledger links is refused with
+     * 409 {@link #PAYMENT_NOT_UNMATCHED}. Project-scope access applies; no stage gate (paying an
+     * invoice of a completed project is allowed).
+     *
+     * @param documentId    the document to mark paid
+     * @param cashAccountId the cash account, or {@code null} for the default cash account
+     * @param amount        the paid amount, or {@code null} to use the document total
+     * @param date          the payment date, or {@code null} for the invoice / upload date
+     * @return the refreshed document read model ({@code paymentStatus} recomputed)
+     */
+    @Transactional
+    public ProcurementDocumentServiceExtendedModel markPaidInCash(Long documentId, Long cashAccountId,
+                                                                  java.math.BigDecimal amount,
+                                                                  LocalDate date) {
+        assertProjectAccess(documentId);
+        ProcurementDocumentEntity document = documentDao.findById(documentId)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND_MESSAGE,
+                        documentId));
+        ProcurementDocumentServiceExtendedModel current = findReadModel(document);
+        if (current.getPaymentStatus() != DocumentPaymentStatus.UNMATCHED) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, PAYMENT_NOT_UNMATCHED, documentId);
+        }
+        java.math.BigDecimal resolvedAmount = amount != null ? amount : document.getDocumentTotal();
+        requirePositiveCashAmount(resolvedAmount);
+        LocalDate resolvedDate = date != null ? date
+                : document.getInvoiceDate() != null ? document.getInvoiceDate()
+                : document.getUploadedAt() != null ? document.getUploadedAt().toLocalDate()
+                : LocalDate.now();
+
+        cashPaymentHandler.payInCash(new ProcurementCashPayment(
+                documentId, cashAccountId, resolvedAmount, resolvedDate));
+        saveAudit(null, document, "PAID_IN_CASH");
+        return findReadModel(document);
+    }
+
+    /** 400 when the cash amount is missing (and no document total is known) / not positive. */
+    private static void requirePositiveCashAmount(java.math.BigDecimal amount) {
+        if (amount == null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, CASH_AMOUNT_REQUIRED);
+        }
+        if (amount.signum() <= 0) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, CASH_AMOUNT_INVALID);
+        }
+    }
+
+    /**
+     * FOR-07-04 (R28.1) — the payment part of an upload: the choice plus the {@code PAID_CASH}
+     * fields. A {@code null} {@code paymentChoice} means {@code NOT_LINKED}.
+     *
+     * @param paymentChoice the chosen option ({@code null} → {@code NOT_LINKED})
+     * @param cashAccountId the cash account for {@code PAID_CASH} ({@code null} → default account)
+     * @param cashAmount    the paid amount for {@code PAID_CASH} (required, {@code > 0})
+     * @param cashDate      the payment date for {@code PAID_CASH} ({@code null} → upload date)
+     */
+    public record UploadPaymentRequest(ProcurementPaymentChoice paymentChoice, Long cashAccountId,
+                                       java.math.BigDecimal cashAmount, LocalDate cashDate) {
+
+        /** The default: not linked yet. */
+        public static final UploadPaymentRequest NOT_LINKED =
+                new UploadPaymentRequest(ProcurementPaymentChoice.NOT_LINKED, null, null, null);
+
+        /** The choice with the {@code null → NOT_LINKED} default applied. */
+        public ProcurementPaymentChoice effectiveChoice() {
+            return paymentChoice == null ? ProcurementPaymentChoice.NOT_LINKED : paymentChoice;
+        }
+    }
+
+    /** The FOR-06-03 upload body (validation, storage, persist, audit, OCR enqueue). */
+    private ProcurementDocumentServiceExtendedModel uploadDocument(Long projectId, MultipartFile file) {
         assertProjectActive(projectId);
 
         // R2.4 — object store not configured: reject gracefully, storing nothing, creating no document.
@@ -568,10 +712,17 @@ public class ProcurementDocumentService
         document.setProcessedObjectKey(processedObjectKey);
         document.setSupplierName(result.supplierName());
         document.setDocumentTotal(result.documentTotal());
+        // FOR-07-04 R18.2 — the invoice fields used by bank matching (already validated by the parser).
+        document.setSupplierNip(result.supplierNip());
+        document.setInvoiceNumber(result.invoiceNumber());
+        document.setInvoiceDate(result.invoiceDate());
         document.setParsedAt(OffsetDateTime.now());
         document.setFailureReason(null);
         document.setStatus(ProcessingStatus.PARSED);
         persistLifecycle(document, "PROCESS");
+
+        // FOR-07-04 R28.2 — the reverse document matcher listens AFTER_COMMIT of this transaction.
+        eventPublisher.publishEvent(new ProcurementDocumentParsedEvent(document.getId()));
 
         // R8.1 — a re-process that produced a new processed rendition supersedes the old one.
         if (previousProcessedKey != null && !previousProcessedKey.equals(processedObjectKey)) {

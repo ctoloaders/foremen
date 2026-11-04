@@ -1,12 +1,15 @@
 package com.foremen.service.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import com.foremen.controller.model.ProcurementLineModel;
+import com.foremen.dao.model.DocumentPaymentStatus;
 import com.foremen.dao.model.ProcessingStatus;
+import com.foremen.service.procurement.ProcurementLedgerEntryDto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -70,4 +73,16 @@ public class ProcurementDocumentServiceExtendedModel {
 
     /** The ordered per-line extracted items with their proposed matches (read path, R5.8); empty until {@code PARSED}. */
     private List<ProcurementLineModel> lines = new ArrayList<>();
+
+    // --- FOR-07-04 (Requirements 18.3, 16.4, 28.4) — invoice fields + derived payment state ---
+    /** Supplier NIP from the parse (10 digits, valid checksum); nullable. */
+    private String supplierNip;
+    /** Invoice number from the parse (≤ 64 chars); nullable. */
+    private String invoiceNumber;
+    /** Invoice issue date from the parse; nullable. */
+    private LocalDate invoiceDate;
+    /** Derived from Σ PROCUREMENT link amounts vs {@code documentTotal} (never persisted). */
+    private DocumentPaymentStatus paymentStatus = DocumentPaymentStatus.UNMATCHED;
+    /** The ledger lines linked to this document, by booking date; empty when none. */
+    private List<ProcurementLedgerEntryDto> ledgerEntries = new ArrayList<>();
 }

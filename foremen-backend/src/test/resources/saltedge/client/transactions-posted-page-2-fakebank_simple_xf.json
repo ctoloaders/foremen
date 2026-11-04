@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "1190000000000000108",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-11-05",
+      "amount": -45.00,
+      "currency_code": "PLN",
+      "description": "Paliwo Orlen",
+      "category": "fuel",
+      "extra": { "payee": "PKN Orlen S.A.", "posting_date": "2026-11-05" },
+      "created_at": "2026-11-05T06:00:00Z",
+      "updated_at": "2026-11-05T06:00:00Z"
+    }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

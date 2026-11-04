@@ -46,4 +46,20 @@ public interface ProcurementDocumentDao extends AdminDao<ProcurementDocumentEnti
               AND d.updatedDate < :cutoff
             """)
     List<Long> findStaleProcessingIds(@Param("cutoff") LocalDateTime cutoff);
+
+    /**
+     * FOR-07-04 (Requirement 14.6, design "ProcurementCandidates") — documents whose invoice date is in
+     * {@code [fromDate, toDate]} or whose upload instant is in {@code [fromTs, toTs]}, by id. The payment
+     * status ({@code UNMATCHED} / {@code PARTIALLY_PAID}) is derived by the caller from the link sums.
+     */
+    @Query("""
+            SELECT d FROM ProcurementDocumentEntity d
+            WHERE (d.invoiceDate BETWEEN :fromDate AND :toDate)
+               OR (d.uploadedAt BETWEEN :fromTs AND :toTs)
+            ORDER BY d.id
+            """)
+    List<ProcurementDocumentEntity> findLedgerCandidates(@Param("fromDate") java.time.LocalDate fromDate,
+                                                         @Param("toDate") java.time.LocalDate toDate,
+                                                         @Param("fromTs") java.time.OffsetDateTime fromTs,
+                                                         @Param("toTs") java.time.OffsetDateTime toTs);
 }

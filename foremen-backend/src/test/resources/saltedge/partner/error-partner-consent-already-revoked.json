@@ -1,0 +1,7 @@
+{
+  "error": {
+    "class": "PartnerConsentAlreadyRevoked",
+    "message": "Partner consent is already revoked",
+    "request_id": "req-pcr-1"
+  }
+}

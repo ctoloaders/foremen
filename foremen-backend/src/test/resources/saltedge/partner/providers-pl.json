@@ -1,0 +1,21 @@
+{
+  "data": [
+    {
+      "id": "9999",
+      "code": "pkobp_business_oauth_client_pl",
+      "name": "PKO BP Business",
+      "mode": "oauth",
+      "status": "active",
+      "country_code": "PL",
+      "regulated": true,
+      "automatic_fetch": true,
+      "max_consent_days": 180,
+      "max_fetch_interval": 730,
+      "home_url": "https://www.pkobp.pl",
+      "logo_url": "https://example.invalid/logos/pkobp.svg",
+      "supported_account_types": ["business"],
+      "supported_fetch_scopes": ["accounts", "holder_info", "transactions"]
+    }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

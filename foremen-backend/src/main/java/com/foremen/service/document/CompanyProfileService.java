@@ -2,6 +2,7 @@ package com.foremen.service.document;
 
 import java.util.Iterator;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class CompanyProfileService {
     static final String PROFILE_INVALID_MESSAGE = "error.company.profile.invalid";
 
     private final CompanyProfileDao companyProfileDao;
+    private final ApplicationEventPublisher events;
 
     /**
      * Reads the single company profile, if one has been saved (R3.3). Returns an empty DTO (all
@@ -68,7 +70,10 @@ public class CompanyProfileService {
         profile.setRepresentativeName(in.representativeName());
         profile.setRepresentativeRole(in.representativeRole());
         profile.setEmail(in.email());
-        return toDto(companyProfileDao.save(profile));
+        CompanyProfileEntity saved = companyProfileDao.save(profile);
+        // FOR-07-04 (R3.10): bank account holder match is recomputed on a profile change.
+        events.publishEvent(new CompanyProfileUpdatedEvent(saved.getId()));
+        return toDto(saved);
     }
 
     // --- internals ---

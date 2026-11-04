@@ -1,0 +1,27 @@
+{
+  "data": [
+    {
+      "id": "444444444444444444",
+      "account_id": "333333333333333333",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-10-27",
+      "amount": -250.00,
+      "currency_code": "PLN",
+      "description": "Przelew: Hurtownia Budowlana",
+      "category": "building_materials",
+      "extra": {
+        "payee": "Hurtownia Budowlana Sp. z o.o.",
+        "payee_information": "PL27114020040000300201355387",
+        "posting_date": "2026-10-28"
+      },
+      "created_at": "2026-10-27T08:32:02Z",
+      "updated_at": "2026-10-28T08:32:02Z"
+    }
+  ],
+  "meta": {
+    "next_id": "444444444444444445",
+    "next_page": "/api/partners/v1/transactions?connection_id=111111111111111111&account_id=333333333333333333&from_id=444444444444444445"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "error": {
+    "class": "ConnectionNotFound",
+    "message": "Connection with id: '1170000000000000001' was not found.",
+    "request_id": "req-cnf-1"
+  }
+}

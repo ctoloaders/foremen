@@ -892,4 +892,26 @@
     <!-- FOR-05-02 bug-report Round 5 #3: plain metre unit "m" (MARK_RAN when present). Registered
          LAST, after 199. -->
     <include file="database_files/changesets/200-seed-measurement-unit-m.xml"/>
+    <!-- FOR-07-04: bank_connections (provider_mode, holder_names), bank_connection_secrets,
+         bank_accounts (BANK + CASH, default cash per currency, holder match) and
+         bank_balance_gaps. Idempotent (NOT tableExists + MARK_RAN). Registered LAST, after 200. -->
+    <include file="database_files/changesets/201-create-bank-connections-accounts.xml"/>
+    <!-- FOR-07-04: bank_sync_runs (one active run per connection), bank_sync_run_accounts and
+         bank_transactions (ledger lines: channel/origin, feed + system dedup keys). Idempotent.
+         Registered LAST, after 201. -->
+    <include file="database_files/changesets/202-create-bank-sync-runs-transactions.xml"/>
+    <!-- FOR-07-04: bank_transaction_links (per-kind target CHECK), bank_transaction_suggestions
+         and bank_counterparty_rules (UNIQUE counterparty_key). Idempotent. Registered LAST,
+         after 202. -->
+    <include file="database_files/changesets/203-create-bank-links-suggestions-rules.xml"/>
+    <!-- FOR-07-04: procurement_documents.supplier_nip / invoice_number / invoice_date (nullable)
+         + index on invoice_number. Idempotent (NOT columnExists + MARK_RAN). Registered LAST,
+         after 203. -->
+    <include file="database_files/changesets/204-procurement-documents-invoice-fields.xml"/>
+    <!-- FOR-07-04 (R21.1): ABAC resource BANK_CONNECTIONS + ADMIN/FINANCIER CRUD grants.
+         Idempotent (MARK_RAN + NOT EXISTS). Registered LAST, after 204. -->
+    <include file="database_files/changesets/205-seed-bank-connections-resource.xml"/>
+    <!-- FOR-07-04 (R21.2): ABAC resource BANK_LEDGER + ADMIN/FINANCIER/MANAGER CRUD grants.
+         Idempotent (MARK_RAN + NOT EXISTS). Registered LAST, after 205. -->
+    <include file="database_files/changesets/206-seed-bank-ledger-resource.xml"/>
 </databaseChangeLog>

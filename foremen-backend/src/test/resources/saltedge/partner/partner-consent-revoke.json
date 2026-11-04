@@ -1,0 +1,12 @@
+{
+  "data": {
+    "id": "666666666666666666",
+    "connection_id": "111111111111111111",
+    "customer_id": "222222222222222222",
+    "status": "revoked",
+    "revoked_by": "partner",
+    "revoked_at": "2026-11-10T09:00:00Z",
+    "created_at": "2026-10-29T05:32:02Z",
+    "updated_at": "2026-11-10T09:00:00Z"
+  }
+}

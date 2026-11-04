@@ -157,7 +157,8 @@ public class GoogleOcrService implements OcrService {
             }
 
             return new OcrResult(processedPages, parse.lines(), parse.supplierName(),
-                    parse.documentTotal());
+                    parse.documentTotal(), parse.supplierNip(), parse.invoiceNumber(),
+                    parse.invoiceDate());
         } catch (OcrFailedException | OcrUnavailableException e) {
             throw e;
         } catch (RuntimeException e) {

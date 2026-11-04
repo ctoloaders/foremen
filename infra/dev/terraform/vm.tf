@@ -77,6 +77,12 @@ resource "google_compute_instance" "vm" {
     secret-admin-password    = "foremen-dev-admin-password"
     secret-google-places-key = "foremen-dev-google-places-key"
     secret-ocr-gemini-key    = "foremen-dev-ocr-gemini-key"
+    # FOR-07-04 bank ledger (names only; secrets are created by hand in Secret Manager)
+    secret-bank-secrets-key    = "foremen-dev-bank-secrets-key"
+    secret-saltedge-app-id     = "foremen-dev-saltedge-app-id"
+    secret-saltedge-secret     = "foremen-dev-saltedge-secret"
+    secret-saltedge-lead-email = "foremen-dev-saltedge-lead-email"
+    secret-saltedge-mode       = "foremen-dev-saltedge-mode"
     # Startup script as a metadata entry (key "startup-script") — matches how the
     # VM was created, so Terraform doesn't try to null it out.
     startup-script = file("${path.module}/../vm-startup.sh")

@@ -1,0 +1,38 @@
+{
+  "_source": "https://docs.saltedge.com/v6/api_reference (pinned in FOR-07-04 task 5.5)",
+  "baseUrl": "https://www.saltedge.com/api/v6",
+  "routes": {
+    "customersList": { "method": "GET", "path": "/customers" },
+    "customerCreate": { "method": "POST", "path": "/customers", "body": ["data.identifier"], "errors": ["DuplicatedCustomer (409)"] },
+    "sessionCreate": {
+      "method": "POST", "path": "/connections/connect", "response": "data.connect_url",
+      "body": ["data.customer_id", "data.consent.scopes", "data.consent.from_date", "data.attempt.fetch_scopes",
+               "data.attempt.fetch_from_date", "data.attempt.return_to", "data.attempt.custom_fields",
+               "data.widget.skip_provider_selection", "data.provider.code", "data.provider.include_sandboxes",
+               "data.return_connection_id", "data.return_error_class", "data.automatic_refresh", "data.categorization"]
+    },
+    "sessionReconnect": {
+      "method": "POST", "path": "/connections/{connection_id}/reconnect", "response": "data.connect_url",
+      "body": ["data.consent", "data.attempt", "data.return_connection_id", "data.return_error_class", "data.automatic_refresh"]
+    },
+    "sessionRefresh": {
+      "method": "POST", "path": "/connections/{connection_id}/refresh", "response": "data.connect_url",
+      "body": ["data.attempt", "data.return_connection_id", "data.return_error_class", "data.automatic_refresh"]
+    },
+    "backgroundRefresh": { "method": "POST", "path": "/connections/{connection_id}/background_refresh", "response": "data (connection)" },
+    "connectionShow": { "method": "GET", "path": "/connections/{connection_id}", "notes": "holder_info and last_consent_id are connection attributes (no separate holder-info route in v6)" },
+    "consentShow": { "method": "GET", "path": "/consents/{consent_id}?connection_id={connection_id}" },
+    "consentsList": { "method": "GET", "path": "/consents?connection_id={connection_id}" },
+    "consentRevoke": { "method": "PUT", "path": "/consents/{consent_id}/revoke?connection_id={connection_id}" },
+    "connectionRemove": { "method": "DELETE", "path": "/connections/{connection_id}", "response": "data.removed" },
+    "accounts": { "method": "GET", "path": "/accounts?connection_id={connection_id}" },
+    "transactionsPosted": { "method": "GET", "path": "/transactions?connection_id={connection_id}&account_id={account_id}&from_id={from_id}" },
+    "transactionsPending": { "method": "GET", "path": "/transactions?connection_id={connection_id}&account_id={account_id}&pending=true" },
+    "providers": { "method": "GET", "path": "/providers?country_code={cc}&include_sandboxes={bool}&exclude_inactive=true&include_ais_fields=true" },
+    "providersSaltEdgeKeys": { "method": "GET", "path": "/providers?country_code={cc}&include_sandboxes={bool}&exclude_inactive=true&include_ais_fields=true&key_owner=saltedge" }
+  },
+  "scopes": {
+    "consent.scopes": ["accounts", "transactions", "holder_info"],
+    "attempt.fetch_scopes": ["accounts", "balance", "transactions", "holder_info"]
+  }
+}

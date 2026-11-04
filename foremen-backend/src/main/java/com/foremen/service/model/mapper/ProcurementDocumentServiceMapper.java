@@ -1,5 +1,6 @@
 package com.foremen.service.model.mapper;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.foremen.config.mapper.ForemenMapperConfig;
 import com.foremen.controller.model.ProcurementLineModel;
+import com.foremen.dao.model.DocumentPaymentStatus;
 import com.foremen.dao.model.MatchTier;
 import com.foremen.dao.model.ProcurementDocumentEntity;
 import com.foremen.dao.model.ProcurementLineEntity;
@@ -19,6 +21,9 @@ import com.foremen.dao.model.ProjectEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.model.ProcurementDocumentServiceExtendedModel;
 import com.foremen.service.model.ProcurementDocumentServiceModel;
+import com.foremen.service.bank.link.DocumentPaymentStatusDeriver;
+import com.foremen.service.procurement.ProcurementLedgerEntriesProvider;
+import com.foremen.service.procurement.ProcurementLedgerEntryDto;
 
 import jakarta.persistence.EntityManager;
 
@@ -52,6 +57,20 @@ public abstract class ProcurementDocumentServiceMapper
 
     @Autowired
     protected EntityManager entityManager;
+
+    /**
+     * FOR-07-04 (R16.4, R18.3) — the ledger-links seam. Optional: when no
+     * {@link ProcurementLedgerEntriesProvider} bean exists or the mapper is instantiated directly
+     * (unit tests), {@link ProcurementLedgerEntriesProvider#NONE} yields empty {@code ledgerEntries}
+     * and {@code UNMATCHED}.
+     */
+    private ProcurementLedgerEntriesProvider ledgerEntriesProvider = ProcurementLedgerEntriesProvider.NONE;
+
+    @Autowired(required = false)
+    public void setLedgerEntriesProvider(ProcurementLedgerEntriesProvider ledgerEntriesProvider) {
+        this.ledgerEntriesProvider = ledgerEntriesProvider == null
+                ? ProcurementLedgerEntriesProvider.NONE : ledgerEntriesProvider;
+    }
 
     protected ProjectEntity projectRef(Long id) {
         return id == null ? null : entityManager.getReference(ProjectEntity.class, id);
@@ -90,6 +109,9 @@ public abstract class ProcurementDocumentServiceMapper
     @Mapping(target = "sourceMimeType", ignore = true)
     @Mapping(target = "supplierName", ignore = true)
     @Mapping(target = "documentTotal", ignore = true)
+    @Mapping(target = "supplierNip", ignore = true)
+    @Mapping(target = "invoiceNumber", ignore = true)
+    @Mapping(target = "invoiceDate", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "uploadedAt", ignore = true)
     @Mapping(target = "parsedAt", ignore = true)
@@ -107,6 +129,9 @@ public abstract class ProcurementDocumentServiceMapper
     @Mapping(target = "sourceMimeType", ignore = true)
     @Mapping(target = "supplierName", ignore = true)
     @Mapping(target = "documentTotal", ignore = true)
+    @Mapping(target = "supplierNip", ignore = true)
+    @Mapping(target = "invoiceNumber", ignore = true)
+    @Mapping(target = "invoiceDate", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "uploadedAt", ignore = true)
     @Mapping(target = "parsedAt", ignore = true)
@@ -124,6 +149,8 @@ public abstract class ProcurementDocumentServiceMapper
     @Mapping(target = "rawImageUrl", ignore = true)
     @Mapping(target = "processedImageUrl", ignore = true)
     @Mapping(target = "lines", ignore = true)
+    @Mapping(target = "paymentStatus", ignore = true)
+    @Mapping(target = "ledgerEntries", ignore = true)
     public abstract ProcurementDocumentServiceModel toServiceModel(ProcurementDocumentEntity source);
 
     @Override
@@ -133,6 +160,8 @@ public abstract class ProcurementDocumentServiceMapper
     @Mapping(target = "rawImageUrl", ignore = true)
     @Mapping(target = "processedImageUrl", ignore = true)
     @Mapping(target = "lines", ignore = true)
+    @Mapping(target = "paymentStatus", ignore = true)
+    @Mapping(target = "ledgerEntries", ignore = true)
     public abstract ProcurementDocumentServiceExtendedModel toServiceExtendedModel(
             ProcurementDocumentEntity source);
 
@@ -146,6 +175,9 @@ public abstract class ProcurementDocumentServiceMapper
     protected void resolveReadModel(@MappingTarget ProcurementDocumentServiceModel target,
                                     ProcurementDocumentEntity source) {
         target.setLines(projectLines(source));
+        List<ProcurementLedgerEntryDto> entries = ledgerEntries(source.getId());
+        target.setLedgerEntries(entries);
+        target.setPaymentStatus(paymentStatus(source.getDocumentTotal(), entries));
     }
 
     /**
@@ -158,6 +190,36 @@ public abstract class ProcurementDocumentServiceMapper
             @MappingTarget ProcurementDocumentServiceExtendedModel target,
             ProcurementDocumentEntity source) {
         target.setLines(projectLines(source));
+        List<ProcurementLedgerEntryDto> entries = ledgerEntries(source.getId());
+        target.setLedgerEntries(entries);
+        target.setPaymentStatus(paymentStatus(source.getDocumentTotal(), entries));
+    }
+
+    /** FOR-07-04 (R16.4, R18.3) — the document's linked ledger lines via the seam; never {@code null}. */
+    protected List<ProcurementLedgerEntryDto> ledgerEntries(Long documentId) {
+        if (documentId == null) {
+            return new ArrayList<>();
+        }
+        List<ProcurementLedgerEntryDto> entries = ledgerEntriesProvider.forDocument(documentId);
+        return entries == null ? new ArrayList<>() : new ArrayList<>(entries);
+    }
+
+    /**
+     * FOR-07-04 (R16.4, R18.3, R28.4) — the derived {@code Document_Payment_Status} from the linked
+     * amounts vs the document total ({@link DocumentPaymentStatusDeriver}); non-positive / missing
+     * amounts are skipped defensively (the DB CHECK forbids them).
+     */
+    public static DocumentPaymentStatus paymentStatus(BigDecimal documentTotal,
+                                                      List<ProcurementLedgerEntryDto> entries) {
+        List<BigDecimal> amounts = new ArrayList<>();
+        if (entries != null) {
+            for (ProcurementLedgerEntryDto entry : entries) {
+                if (entry != null && entry.amount() != null && entry.amount().signum() > 0) {
+                    amounts.add(entry.amount());
+                }
+            }
+        }
+        return DocumentPaymentStatusDeriver.derive(documentTotal, amounts);
     }
 
     private static List<ProcurementLineModel> projectLines(ProcurementDocumentEntity source) {

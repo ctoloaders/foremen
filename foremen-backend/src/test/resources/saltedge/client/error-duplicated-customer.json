@@ -1,0 +1,7 @@
+{
+  "error": {
+    "class": "DuplicatedCustomer",
+    "message": "Customer with such identifier already exists",
+    "request_id": "req-dup-1"
+  }
+}

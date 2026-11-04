@@ -176,3 +176,74 @@ foremen:
     from: ${MAIL_FROM:${MAIL_USERNAME:}}
     reset-base-url: ${MAIL_RESET_BASE_URL:http://localhost:3000/auth/reset-password}
     invite-base-url: ${MAIL_INVITE_BASE_URL:http://localhost:3000/auth/set-password}
+  # FOR-07-04 bank ledger (R2.6, R4.3, R4.4, R8.1, R8.2, R15.1, R24.6). Nothing environment-specific
+  # is hard-coded: every secret / per-environment value comes from env with a safe empty/off default,
+  # so the application starts with no bank provider, no STUB, no AI and no secrets key configured.
+  # Public URL the bank provider redirects the user back to and posts callbacks to
+  # ({base}/bank/connections/return, {base}/api/bank-feed/saltedge/callbacks/{type}). Required per
+  # environment, NO default: blank => the Salt Edge connector is unavailable (R8.2).
+  public-base-url: ${FOREMEN_PUBLIC_BASE_URL:}
+  bank-feed:
+    sync:
+      # Scheduled fallback pull (Europe/Warsaw). "-" (Scheduled.CRON_DISABLED) turns it off. With no
+      # connector enabled there are no connections, so the tick is a no-op.
+      cron: ${FOREMEN_BANK_SYNC_CRON:0 30 6 * * *}
+      zone: ${FOREMEN_BANK_SYNC_ZONE:Europe/Warsaw}
+      # A RUNNING sync run older than this is marked FAILED by the next tick.
+      stale-after: ${FOREMEN_BANK_SYNC_STALE_AFTER:30m}
+      executor:
+        core: ${FOREMEN_BANK_SYNC_EXECUTOR_CORE:2}
+        max: ${FOREMEN_BANK_SYNC_EXECUTOR_MAX:4}
+        queue: ${FOREMEN_BANK_SYNC_EXECUTOR_QUEUE:50}
+    consent:
+      # CONSENT_EXPIRING starts this many days before the consent end.
+      warn-days: ${FOREMEN_BANK_CONSENT_WARN_DAYS:14}
+      # Daily consent sweep (same zone as sync); "-" disables.
+      sweep-cron: ${FOREMEN_BANK_CONSENT_SWEEP_CRON:0 0 7 * * *}
+      # PENDING_AUTH connections without accounts older than this are removed by the sweep.
+      pending-auth-max-age: ${FOREMEN_BANK_CONSENT_PENDING_AUTH_MAX_AGE:24h}
+    stub:
+      # Dev/test STUB connector (R4.4). Off by default; never enabled in production.
+      enabled: ${FOREMEN_BANK_STUB_ENABLED:false}
+      page-size: 100
+      consent-days: 90
+    saltedge:
+      # Salt Edge connector (R8.1). With enabled=false or incomplete keys it reports unavailable.
+      enabled: ${SALTEDGE_ENABLED:false}
+      mode: ${SALTEDGE_MODE:CLIENT}                         # PARTNER | CLIENT
+      base-url: ${SALTEDGE_BASE_URL:}                       # blank => the default for the mode
+      app-id: ${SALTEDGE_APP_ID:}
+      secret: ${SALTEDGE_SECRET:}
+      private-key-path: ${SALTEDGE_PRIVATE_KEY_PATH:}       # set => every request is signed
+      callback-public-key: ${SALTEDGE_CALLBACK_PUBLIC_KEY:} # blank => bundled classpath key
+      customer-identifier: ${SALTEDGE_CUSTOMER_IDENTIFIER:foremen-company}   # CLIENT identity
+      lead-email: ${SALTEDGE_LEAD_EMAIL:}                                    # PARTNER identity
+      fetch-days: ${SALTEDGE_FETCH_DAYS:89}
+      include-fake-providers: ${SALTEDGE_INCLUDE_FAKE:true}  # false => Live (HTTPS base URL required)
+      country-codes: ${SALTEDGE_COUNTRY_CODES:PL}
+      banks-cache-ttl: ${SALTEDGE_BANKS_CACHE_TTL:1h}
+      http-timeout: ${SALTEDGE_HTTP_TIMEOUT:60s}
+  bank-ledger:
+    match:
+      auto-threshold: 0.90
+      suggest-threshold: 0.50
+      margin: 0.20
+      max-suggestions: 3
+    holder:
+      # Account-holder vs company-name similarity at/above which an account is COMPANY.
+      name-similarity: 0.80
+    ai:
+      # AI classifier (R15.1). Off by default => DisabledBankTransactionClassifier.
+      enabled: ${BANK_AI_ENABLED:false}
+      model: ${BANK_AI_MODEL:gemini-3.8-flash}
+      # Vertex backend: project + location + ADC/credentials. Leave project blank and set api-key to
+      # use the Gemini Developer API instead.
+      project: ${BANK_AI_PROJECT:}
+      location: ${BANK_AI_LOCATION:europe-central2}
+      api-key: ${BANK_AI_API_KEY:}
+      credentials-location: ${BANK_AI_CREDENTIALS:}
+      max-per-run: ${BANK_AI_MAX_PER_RUN:200}
+  bank-secrets:
+    # AES-256-GCM key for per-connection bank credentials (R2.6): base64 of exactly 32 bytes,
+    # key-version 1. Blank => not configured (per-connection secrets unavailable); never in the DB.
+    key: ${FOREMEN_BANK_SECRETS_KEY:}

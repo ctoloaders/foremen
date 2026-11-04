@@ -1,0 +1,7 @@
+{
+  "data": [
+    { "customer_id": "1160000000000000000", "identifier": "someone-else", "blocked_at": null, "created_at": "2026-10-01T10:00:00Z", "updated_at": "2026-10-01T10:00:00Z" },
+    { "customer_id": "1160000000000000001", "identifier": "foremen-company", "blocked_at": null, "created_at": "2026-10-01T10:00:00Z", "updated_at": "2026-10-01T10:00:00Z" }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

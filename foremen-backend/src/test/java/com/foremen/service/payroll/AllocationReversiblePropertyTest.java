@@ -254,13 +254,14 @@ class AllocationReversiblePropertyTest {
                 return new com.foremen.service.payroll.dto.WorkerPayoutDto(p.getId(), WORKER_ID, null,
                         p.getPayoutDate(), p.getPeriodFrom(), p.getPeriodTo(), p.getAmount(),
                         p.getSuggestedAmount(), p.getAdvanceApplied(), p.getPaymentChannel(), p.getStatus(),
-                        p.isAdvance(), p.getPaidAt(), p.getNote());
+                        p.isAdvance(), p.getPaidAt(), p.getNote(), List.of());
             });
 
             EntityManager em = mock(EntityManager.class);
             service = new WorkerPayoutService(payoutDao, allocationDao, userDao, suggestionService,
                     new AllocationWriter(allocationDao, em), calculator, new AdvanceDeriver(),
-                    mock(WorkerPayoutServiceMapper.class), dtoMapper, mock(AuditLogDao.class), em);
+                    mock(WorkerPayoutServiceMapper.class), dtoMapper, mock(AuditLogDao.class), em,
+                    mock(org.springframework.context.ApplicationEventPublisher.class));
         }
 
         /** Applies the op; returns {@code true} when the service rejected it with a 409. */

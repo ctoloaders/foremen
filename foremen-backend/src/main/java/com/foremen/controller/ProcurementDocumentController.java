@@ -1,13 +1,18 @@
 package com.foremen.controller;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -22,7 +27,9 @@ import com.foremen.controller.model.ProcurementDocumentImagesResponse;
 import com.foremen.controller.model.ProcurementDocumentReprocessResponse;
 import com.foremen.controller.model.ProcurementDocumentStatusResponse;
 import com.foremen.controller.model.ProcurementDocumentUploadResponse;
+import com.foremen.controller.model.ProcurementPaidInCashRequest;
 import com.foremen.controller.model.mapper.ProcurementDocumentControllerMapper;
+import com.foremen.dao.model.ProcurementPaymentChoice;
 import com.foremen.service.ProcurementDocumentService;
 import com.foremen.service.model.ProcurementDocumentServiceExtendedModel;
 import com.foremen.service.model.ProcurementDocumentServiceModel;
@@ -64,6 +71,9 @@ import lombok.RequiredArgsConstructor;
  *   <li>{@code POST /{id}/reprocess} &rarr; {@code UPDATE} — re-run OCR + match on the already-stored
  *       raw bytes (R8); the document state is a mutation of an existing row, so it resolves to
  *       {@code PURCHASES}/{@code UPDATE}.</li>
+ *   <li>{@code POST /{id}/paid-in-cash} &rarr; {@code UPDATE} — FOR-07-04 "Mark paid in cash"
+ *       (R28.1, R28.4); the upload also accepts the optional {@code paymentChoice} +
+ *       {@code cashAccountId}/{@code cashAmount}/{@code cashDate} fields.</li>
  *   <li>{@code DELETE /{id}} &rarr; {@code DELETE} — delete the document (cascades to lines, cleans
  *       up object keys).</li>
  *   <li>{@code GET /{id}/images} &rarr; {@code READ} — resolve the raw + processed image URLs for
@@ -93,7 +103,11 @@ public class ProcurementDocumentController {
      * {@code PURCHASES}/{@code CREATE}.
      *
      * @param projectId the owning {@code ACTIVE} project
-     * @param file      the uploaded image or PDF
+     * @param file          the uploaded image or PDF
+     * @param paymentChoice FOR-07-04 payment choice; {@code null} → {@code NOT_LINKED}
+     * @param cashAccountId cash account for {@code PAID_CASH} ({@code null} → default cash account)
+     * @param cashAmount    paid amount for {@code PAID_CASH} (required, {@code > 0})
+     * @param cashDate      payment date for {@code PAID_CASH} (ISO; {@code null} → upload date)
      * @return the uploaded document projection (status {@code PROCESSING}/{@code PARSED}/
      *         {@code FAILED}/{@code UPLOADED} depending on the inline OCR outcome)
      */
@@ -101,9 +115,43 @@ public class ProcurementDocumentController {
     @RequiresPermission(resource = RESOURCE, operation = CREATE)
     public ResponseEntity<ProcurementDocumentUploadResponse> upload(
             @RequestParam("projectId") Long projectId,
-            @RequestPart("file") MultipartFile file) {
-        ProcurementDocumentServiceExtendedModel uploaded = service.upload(projectId, file);
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "paymentChoice", required = false) ProcurementPaymentChoice paymentChoice,
+            @RequestParam(value = "cashAccountId", required = false) Long cashAccountId,
+            @RequestParam(value = "cashAmount", required = false) BigDecimal cashAmount,
+            @RequestParam(value = "cashDate", required = false)
+                    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate cashDate) {
+        // FOR-07-04 (R28.1) — optional payment choice; absent ⇒ NOT_LINKED (backward compatible).
+        ProcurementDocumentServiceExtendedModel uploaded = service.upload(projectId, file,
+                new ProcurementDocumentService.UploadPaymentRequest(
+                        paymentChoice, cashAccountId, cashAmount, cashDate));
         return ResponseEntity.ok(controllerMapper.toUploadResponse(uploaded));
+    }
+
+    /**
+     * FOR-07-04 (Requirements 28.1, 28.4; design §Procurement upload outside the ledger) — "Mark paid
+     * in cash" on an {@code UNMATCHED} document. Every body field is optional: {@code cashAccountId}
+     * (default cash account), {@code amount} (document total; 400
+     * {@code error.procurement.cash.amountRequired} when both are unknown, 400
+     * {@code error.procurement.cash.amountInvalid} when {@code ≤ 0}), {@code date} (invoice date, else
+     * upload date). A document that already has ledger links → 409
+     * {@code error.procurement.payment.notUnmatched}. Marking a document paid mutates its payment
+     * state, so it resolves to {@code PURCHASES}/{@code UPDATE}.
+     *
+     * @param id      the document to mark paid in cash
+     * @param request the optional cash account / amount / date (a missing body means all defaults)
+     * @return the refreshed document detail projection ({@code paymentStatus} + {@code ledgerEntries})
+     */
+    @PostMapping("/{id}/paid-in-cash")
+    @RequiresPermission(resource = RESOURCE, operation = UPDATE)
+    public ResponseEntity<ProcurementDocumentDtoExtendedModel> paidInCash(
+            @PathVariable Long id,
+            @RequestBody(required = false) ProcurementPaidInCashRequest request) {
+        ProcurementPaidInCashRequest body = request == null
+                ? new ProcurementPaidInCashRequest(null, null, null) : request;
+        ProcurementDocumentServiceExtendedModel paid =
+                service.markPaidInCash(id, body.cashAccountId(), body.amount(), body.date());
+        return ResponseEntity.ok(controllerMapper.toExtendedDto(paid));
     }
 
     /**

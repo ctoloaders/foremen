@@ -51,4 +51,19 @@ public interface WorkerPayoutDao extends AdminDao<WorkerPayoutEntity, Long> {
             + "ORDER BY w.id, p.payoutDate, p.id")
     List<WorkerPayoutEntity> findByWorkersAndPayoutDateLte(@Param("workerIds") Collection<Long> workerIds,
                                                            @Param("to") LocalDate to);
+
+    /**
+     * FOR-07-04 (Requirement 14.5, design "PayoutCandidates") — payouts of a payment channel in the given
+     * statuses with {@code payoutDate} in {@code [from, to]}, worker fetch-joined, by id. Feeds the bank
+     * detection matcher ({@code BANK_TRANSFER}, {@code PLANNED} / {@code PAID}).
+     */
+    @Query("SELECT p FROM WorkerPayoutEntity p "
+            + "JOIN FETCH p.worker w "
+            + "WHERE p.paymentChannel = :channel AND p.status IN :statuses "
+            + "AND p.payoutDate BETWEEN :from AND :to "
+            + "ORDER BY p.id")
+    List<WorkerPayoutEntity> findLedgerCandidates(@Param("channel") com.foremen.dao.model.PaymentChannel channel,
+                                                  @Param("statuses") Collection<com.foremen.dao.model.PayoutStatus> statuses,
+                                                  @Param("from") LocalDate from,
+                                                  @Param("to") LocalDate to);
 }

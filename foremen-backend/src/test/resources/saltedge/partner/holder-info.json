@@ -1,0 +1,13 @@
+{
+  "data": {
+    "names": ["Foremen Sp. z o.o."],
+    "emails": ["finance@example.com"],
+    "phone_numbers": ["+48000000000"],
+    "addresses": [
+      { "city": "Warszawa", "state": null, "street": "ul. Prosta 1", "country_code": "PL", "post_code": "00-001" }
+    ],
+    "extra": {
+      "document_number": "5250000000"
+    }
+  }
+}

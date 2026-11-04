@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "444444444444444445",
+      "account_id": "333333333333333333",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-10-28",
+      "amount": 1200.00,
+      "currency_code": "PLN",
+      "description": "Przelew przychodzacy FM-7",
+      "category": "income",
+      "extra": { "payer": "ACME Budownictwo Sp. z o.o.", "posting_date": "2026-10-28" },
+      "created_at": "2026-10-28T08:32:02Z",
+      "updated_at": "2026-10-28T08:32:02Z"
+    }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

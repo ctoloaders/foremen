@@ -95,6 +95,14 @@ public class SecurityConfig {
                         // layer. Admitted here so an unauthenticated provider request reaches the
                         // controller rather than being rejected with 401 by the catch-all below.
                         .requestMatchers(HttpMethod.POST, "/api/payments/webhook/**").permitAll()
+                        // FOR-07-04 (10.1, 10.2, 21.5): the Salt Edge callbacks
+                        // POST /api/bank-feed/saltedge/callbacks/{success|fail|notify|destroy} are
+                        // unauthenticated provider callbacks. SaltEdgeCallbackController carries none of
+                        // the three permission annotations; authenticity is enforced solely by the
+                        // RSA-SHA256 Signature header verified against the Public_Base_URL-derived
+                        // callback URL (401 error.bank.callback.unverified otherwise). CSRF is disabled
+                        // globally below, so no extra exemption is needed.
+                        .requestMatchers(HttpMethod.POST, "/api/bank-feed/saltedge/callbacks/**").permitAll()
                         // FOR-04-13 (5.6): the standalone Google Places proxy AddressController is
                         // cross-cutting and intentionally NOT tied to the PROJECTS ABAC resource. It
                         // carries none of the three permission annotations (authenticated-any-user),

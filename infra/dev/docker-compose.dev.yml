@@ -124,6 +124,26 @@ services:
       REDIS_HOST: ${REDIS_HOST:-redis}
       REDIS_PORT: ${REDIS_PORT:-6379}
       FOREMEN_COLLAB_ENABLED: ${FOREMEN_COLLAB_ENABLED:-true}
+      # --- FOR-07-04 bank ledger ---------------------------------------------
+      # application-docker.yml turns the STUB connector ON by default (local
+      # stack), so the dev VM MUST pin it to false explicitly.
+      FOREMEN_BANK_STUB_ENABLED: ${FOREMEN_BANK_STUB_ENABLED:-false}
+      # Public URL the bank provider redirects to / posts callbacks to
+      # ({base}/api/bank-feed/saltedge/callbacks/{success,fail,notify,destroy}).
+      FOREMEN_PUBLIC_BASE_URL: ${FOREMEN_PUBLIC_BASE_URL:-https://dev.foremen.eu}
+      # base64 of 32 random bytes (AES-256-GCM). Secret Manager
+      # foremen-dev-bank-secrets-key -> .env via vm-startup.sh. Blank => per-connection
+      # bank secrets unavailable.
+      FOREMEN_BANK_SECRETS_KEY: ${FOREMEN_BANK_SECRETS_KEY:-}
+      # Salt Edge connector. Off unless vm-startup.sh finds app id + secret.
+      # SALTEDGE_MODE: CLIENT now, PARTNER once Salt Edge grants it.
+      SALTEDGE_ENABLED: ${SALTEDGE_ENABLED:-false}
+      SALTEDGE_MODE: ${SALTEDGE_MODE:-CLIENT}
+      SALTEDGE_APP_ID: ${SALTEDGE_APP_ID:-}
+      SALTEDGE_SECRET: ${SALTEDGE_SECRET:-}
+      SALTEDGE_LEAD_EMAIL: ${SALTEDGE_LEAD_EMAIL:-}
+      # Optional RSA request signing: path INSIDE the container (needs a volume mount).
+      SALTEDGE_PRIVATE_KEY_PATH: ${SALTEDGE_PRIVATE_KEY_PATH:-}
     depends_on:
       postgres:
         condition: service_healthy

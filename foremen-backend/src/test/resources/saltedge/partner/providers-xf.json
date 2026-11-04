@@ -1,0 +1,31 @@
+{
+  "data": [
+    {
+      "id": "2",
+      "code": "fakebank_simple_xf",
+      "country_code": "XF",
+      "name": "Fake Bank Simple",
+      "status": "active",
+      "mode": "web",
+      "regulated": false,
+      "automatic_fetch": true,
+      "max_consent_days": null,
+      "max_fetch_interval": 365,
+      "supported_account_types": ["personal"],
+      "supported_fetch_scopes": ["accounts", "holder_info", "transactions"]
+    },
+    {
+      "id": "3",
+      "code": "fake_oauth_client_xf",
+      "country_code": "XF",
+      "name": "Fake OAuth Bank with Client Keys",
+      "status": "active",
+      "mode": "oauth",
+      "regulated": true,
+      "automatic_fetch": true,
+      "supported_account_types": ["personal", "business"],
+      "supported_fetch_scopes": ["accounts", "transactions"]
+    }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,6 +20,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,6 +36,7 @@ import com.foremen.dao.model.PaymentScheduleEntity;
 import com.foremen.dao.model.PaymentTransactionEntity;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.payment.dto.BankTransferInput;
 import com.foremen.service.payment.dto.mapper.PaymentDtoMapper;
 import com.foremen.service.payment.provider.IncomingBankTxn;
 import com.foremen.service.payment.provider.OnlineWebhookEvent;
@@ -271,5 +275,82 @@ class PaymentTransactionServiceTest {
 
         verify(paymentTransactionDao, never()).save(any());
         verify(reconciliationService, never()).reconcile(any());
+    }
+
+    // --- FOR-07-04 ledger seam: recordBankTransfer (R16.6) ---
+
+    private static final String LEDGER_REF = "bank-txn:11:22";
+
+    private BankTransferInput ledgerInput(PaymentChannel channel) {
+        return new BankTransferInput(new BigDecimal("1234.5"), "PLN", LocalDate.of(2026, 3, 14),
+                LEDGER_REF, "Wpłata klienta", channel);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = PaymentChannel.class, names = {"BANK_TRANSFER", "MANUAL"})
+    @DisplayName("recordBankTransfer saves a CONFIRMED row with the line's channel/ref/bookingDate and reconciles it (R16.6)")
+    void recordBankTransferSavesConfirmedAndReconciles(PaymentChannel channel) {
+        when(paymentScheduleDao.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule()));
+        when(paymentTransactionDao.findByScheduleIdAndChannelAndExternalRef(SCHEDULE_ID, channel, LEDGER_REF))
+                .thenReturn(Optional.empty());
+        when(paymentTransactionDao.save(any(PaymentTransactionEntity.class))).thenAnswer(inv -> {
+            PaymentTransactionEntity e = inv.getArgument(0);
+            e.setId(900L);
+            return e;
+        });
+
+        Long id = service.recordBankTransfer(SCHEDULE_ID, ledgerInput(channel));
+
+        assertThat(id).isEqualTo(900L);
+        ArgumentCaptor<PaymentTransactionEntity> captor =
+                ArgumentCaptor.forClass(PaymentTransactionEntity.class);
+        verify(paymentTransactionDao).save(captor.capture());
+        PaymentTransactionEntity saved = captor.getValue();
+        assertThat(saved.getSchedule().getId()).isEqualTo(SCHEDULE_ID);
+        assertThat(saved.getChannel()).isEqualTo(channel);
+        assertThat(saved.getExternalRef()).isEqualTo(LEDGER_REF);
+        assertThat(saved.getStatus()).isEqualTo(TransactionStatus.CONFIRMED);
+        assertThat(saved.getAmountGross()).isEqualByComparingTo("1234.50");
+        assertThat(saved.getFeeGross()).isEqualByComparingTo("0");
+        assertThat(saved.getReceivedAt().toLocalDate()).isEqualTo(LocalDate.of(2026, 3, 14));
+        assertThat(saved.getNote()).isEqualTo("Wpłata klienta");
+        verify(reconciliationService).reconcile(saved);
+    }
+
+    @Test
+    @DisplayName("recordBankTransfer is idempotent by (schedule, channel, externalRef): no save, no reconcile, existing id (R16.6, R5.8)")
+    void recordBankTransferIdempotent() {
+        PaymentTransactionEntity existing = new PaymentTransactionEntity();
+        existing.setId(901L);
+        when(paymentScheduleDao.findById(SCHEDULE_ID)).thenReturn(Optional.of(schedule()));
+        when(paymentTransactionDao.findByScheduleIdAndChannelAndExternalRef(
+                SCHEDULE_ID, PaymentChannel.BANK_TRANSFER, LEDGER_REF))
+                .thenReturn(Optional.of(existing));
+
+        Long id = service.recordBankTransfer(SCHEDULE_ID, ledgerInput(PaymentChannel.BANK_TRANSFER));
+
+        assertThat(id).isEqualTo(901L);
+        verify(paymentTransactionDao, never()).save(any());
+        verify(reconciliationService, never()).reconcile(any());
+    }
+
+    @Test
+    @DisplayName("recordBankTransfer on a missing schedule is 404")
+    void recordBankTransferMissingSchedule() {
+        when(paymentScheduleDao.findById(anyLong())).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.recordBankTransfer(SCHEDULE_ID, ledgerInput(PaymentChannel.MANUAL)))
+                .isInstanceOf(ForemenApiException.class)
+                .extracting(e -> ((ForemenApiException) e).getStatus())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+        verify(reconciliationService, never()).reconcile(any());
+    }
+
+    @Test
+    @DisplayName("recordBankTransfer rejects the ONLINE channel")
+    void recordBankTransferRejectsOnlineChannel() {
+        assertThatThrownBy(() -> service.recordBankTransfer(SCHEDULE_ID, ledgerInput(PaymentChannel.ONLINE)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(paymentTransactionDao, never()).save(any());
     }
 }

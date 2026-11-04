@@ -1,0 +1,47 @@
+{
+  "_source": "https://docs.saltedge.com/partners/v1/ (pinned in FOR-07-04 task 5.5)",
+  "baseUrl": "https://www.saltedge.com/api/partners/v1",
+  "routes": {
+    "leadCreate": { "method": "POST", "path": "/leads", "body": ["data.email"], "response": "data.customer_id", "notes": "create-or-return" },
+    "leadRemove": { "method": "DELETE", "path": "/leads?customer_id={customer_id}", "notes": "not used: permanently de-associates the lead from the partner" },
+    "sessionCreate": {
+      "method": "POST", "path": "/lead_sessions/create", "response": "data.redirect_url",
+      "body": ["data.customer_id", "data.consent.scopes", "data.consent.from_date", "data.attempt.fetch_scopes",
+               "data.attempt.from_date", "data.attempt.return_to", "data.attempt.custom_fields", "data.provider_code",
+               "data.skip_provider_select", "data.daily_refresh", "data.include_fake_providers",
+               "data.return_connection_id", "data.return_error_class", "data.categorization"]
+    },
+    "sessionReconnect": {
+      "method": "POST", "path": "/lead_sessions/reconnect", "response": "data.redirect_url",
+      "body": ["data.customer_id", "data.connection_id", "data.consent", "data.attempt", "data.daily_refresh",
+               "data.include_fake_providers", "data.return_connection_id", "data.return_error_class", "data.categorization"]
+    },
+    "sessionRefresh": {
+      "method": "POST", "path": "/lead_sessions/refresh", "response": "data.redirect_url",
+      "body": ["data.customer_id", "data.connection_id", "data.attempt", "data.daily_refresh",
+               "data.return_connection_id", "data.return_error_class", "data.categorization"]
+    },
+    "connectionShow": { "method": "GET", "path": "/connections/{connection_id}" },
+    "consentShow": { "method": "GET", "path": "/consents/{consent_id}?connection_id={connection_id}" },
+    "consentsList": { "method": "GET", "path": "/consents?connection_id={connection_id}" },
+    "partnerConsentsList": { "method": "GET", "path": "/partner_consents?connection_id={connection_id}" },
+    "partnerConsentRevoke": {
+      "method": "PUT", "path": "/partner_consents/{partner_consent_id}/revoke?connection_id={connection_id}",
+      "errors": ["PartnerConsentAlreadyRevoked", "PartnerConsentNotFound"]
+    },
+    "holderInfo": { "method": "GET", "path": "/holder_info?connection_id={connection_id}" },
+    "accounts": { "method": "GET", "path": "/accounts?connection_id={connection_id}" },
+    "transactionsPosted": { "method": "GET", "path": "/transactions?connection_id={connection_id}&account_id={account_id}&from_id={from_id}" },
+    "transactionsPending": { "method": "GET", "path": "/transactions/pending?connection_id={connection_id}&account_id={account_id}" },
+    "providers": { "method": "GET", "path": "/providers?country_code={cc}&include_fake_providers={bool}" }
+  },
+  "scopes": {
+    "consent.scopes": ["account_details", "holder_information", "transactions_details"],
+    "attempt.fetch_scopes": ["accounts", "holder_info", "transactions"]
+  },
+  "notes": [
+    "Partners v1 has no connection delete route: disable revokes the active partner consent(s).",
+    "Partners v1 has no background refresh: the daily refresh is Salt Edge's daily_refresh.",
+    "Partners v1 providers listing has no key_owner / exclude_inactive filters; requiresOwnKeys is always false."
+  ]
+}

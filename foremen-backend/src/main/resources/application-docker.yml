@@ -22,3 +22,10 @@ foremen:
   bot:
     identity-secret: ${FOREMEN_BOT_IDENTITY_SECRET:}
     site-key: ${FOREMEN_BOT_SITE_KEY:}
+  # FOR-07-04 bank ledger, local Docker stack: STUB connector on, public base URL = the local frontend
+  # (STUB only; Salt Edge needs an HTTPS tunnel). The dev VM (also the `docker` profile) overrides both
+  # via env: FOREMEN_BANK_STUB_ENABLED=false, FOREMEN_PUBLIC_BASE_URL=https://dev.foremen.eu.
+  public-base-url: ${FOREMEN_PUBLIC_BASE_URL:http://localhost:3000}
+  bank-feed:
+    stub:
+      enabled: ${FOREMEN_BANK_STUB_ENABLED:true}

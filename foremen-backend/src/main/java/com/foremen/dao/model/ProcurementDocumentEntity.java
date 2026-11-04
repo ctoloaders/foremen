@@ -1,6 +1,7 @@
 package com.foremen.dao.model;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -70,6 +71,18 @@ public class ProcurementDocumentEntity extends BaseEntity {
     /** Document-level total from the parse; nullable, {@code >= 0}. */
     @Column(name = "document_total", precision = 19, scale = 2)
     private BigDecimal documentTotal;
+
+    /** FOR-07-04 (R18.1): supplier NIP (10 digits, normalized) from the parse or by hand; nullable. */
+    @Column(name = "supplier_nip", length = 10)
+    private String supplierNip;
+
+    /** FOR-07-04 (R18.1): invoice number as printed; nullable, indexed for reverse matching. */
+    @Column(name = "invoice_number", length = 64)
+    private String invoiceNumber;
+
+    /** FOR-07-04 (R18.1): invoice issue date; nullable. */
+    @Column(name = "invoice_date")
+    private LocalDate invoiceDate;
 
     /** The {@link ProcessingStatus} ({@code UPLOADED}/{@code PROCESSING}/{@code PARSED}/{@code FAILED}). */
     @Enumerated(EnumType.STRING)

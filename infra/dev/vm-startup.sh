@@ -49,6 +49,12 @@ SECRET_OCR_GEMINI_KEY="$(md secret-ocr-gemini-key || true)"
 SECRET_BOT_IDENTITY="$(md secret-bot-identity || true)"
 SECRET_BOT_SITE_KEY="$(md secret-bot-site-key || true)"
 SECRET_GOOGLE_OAUTH_CLIENT="$(md secret-google-oauth-client || true)"
+# FOR-07-04 bank ledger: NAMES of the Secret Manager secrets (values never here).
+SECRET_BANK_SECRETS_KEY="$(md secret-bank-secrets-key || true)"
+SECRET_SALTEDGE_APP_ID="$(md secret-saltedge-app-id || true)"
+SECRET_SALTEDGE_SECRET="$(md secret-saltedge-secret || true)"
+SECRET_SALTEDGE_LEAD_EMAIL="$(md secret-saltedge-lead-email || true)"
+SECRET_SALTEDGE_MODE="$(md secret-saltedge-mode || true)"
 
 # --- docker auth to Artifact Registry (via VM service account) ---
 gcloud auth configure-docker "${AR_HOST}" --quiet
@@ -97,6 +103,26 @@ FOREMEN_GOOGLE_CLIENT_ID=""
 if [ -n "${SECRET_GOOGLE_OAUTH_CLIENT}" ]; then
   FOREMEN_GOOGLE_CLIENT_ID="$(sm "${SECRET_GOOGLE_OAUTH_CLIENT}" || true)"
 fi
+# FOR-07-04 bank ledger. All optional: with nothing provisioned the backend runs with no
+# bank provider (SALTEDGE_ENABLED=false) and no STUB. Same direct-`versions access`
+# pattern as the bot secrets (the metadata-pointer non-empty check is the guard).
+# Salt Edge is turned on only when BOTH app id and secret resolve to non-empty values.
+FOREMEN_BANK_SECRETS_KEY=""
+SALTEDGE_ENABLED="false"
+SALTEDGE_MODE="CLIENT"
+SALTEDGE_APP_ID=""
+SALTEDGE_SECRET=""
+SALTEDGE_LEAD_EMAIL=""
+[ -n "${SECRET_BANK_SECRETS_KEY}" ] && FOREMEN_BANK_SECRETS_KEY="$(sm "${SECRET_BANK_SECRETS_KEY}" 2>/dev/null || true)"
+[ -n "${SECRET_SALTEDGE_APP_ID}" ] && SALTEDGE_APP_ID="$(sm "${SECRET_SALTEDGE_APP_ID}" 2>/dev/null || true)"
+[ -n "${SECRET_SALTEDGE_SECRET}" ] && SALTEDGE_SECRET="$(sm "${SECRET_SALTEDGE_SECRET}" 2>/dev/null || true)"
+[ -n "${SECRET_SALTEDGE_LEAD_EMAIL}" ] && SALTEDGE_LEAD_EMAIL="$(sm "${SECRET_SALTEDGE_LEAD_EMAIL}" 2>/dev/null || true)"
+if [ -n "${SECRET_SALTEDGE_MODE}" ]; then
+  _mode="$(sm "${SECRET_SALTEDGE_MODE}" 2>/dev/null || true)"
+  case "${_mode}" in CLIENT|PARTNER) SALTEDGE_MODE="${_mode}" ;; esac
+fi
+[ -n "${SALTEDGE_APP_ID}" ] && [ -n "${SALTEDGE_SECRET}" ] && SALTEDGE_ENABLED="true"
+
 # --- write .env for compose ---
 cat > "${APP_DIR}/.env" <<EOF
 POSTGRES_DB=${DB_NAME}
@@ -115,6 +141,12 @@ FOREMEN_OCR_LLM_MODEL=${FOREMEN_OCR_LLM_MODEL}
 FOREMEN_BOT_IDENTITY_SECRET=${FOREMEN_BOT_IDENTITY_SECRET}
 FOREMEN_BOT_SITE_KEY=${FOREMEN_BOT_SITE_KEY}
 FOREMEN_GOOGLE_CLIENT_ID=${FOREMEN_GOOGLE_CLIENT_ID}
+FOREMEN_BANK_SECRETS_KEY=${FOREMEN_BANK_SECRETS_KEY}
+SALTEDGE_ENABLED=${SALTEDGE_ENABLED}
+SALTEDGE_MODE=${SALTEDGE_MODE}
+SALTEDGE_APP_ID=${SALTEDGE_APP_ID}
+SALTEDGE_SECRET=${SALTEDGE_SECRET}
+SALTEDGE_LEAD_EMAIL=${SALTEDGE_LEAD_EMAIL}
 EOF
 chmod 600 "${APP_DIR}/.env"
 

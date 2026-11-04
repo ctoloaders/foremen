@@ -1,0 +1,62 @@
+{
+  "data": [
+    {
+      "id": "3001",
+      "code": "pko_bp_oauth_client_pl",
+      "country_code": "PL",
+      "bic_codes": ["BPKOPLPW"],
+      "group_code": "pko_bp",
+      "group_name": "PKO Bank Polski",
+      "name": "PKO Bank Polski",
+      "status": "active",
+      "mode": "oauth",
+      "regulated": true,
+      "logo_url": "https://d1uuj3mi6rzwpm.cloudfront.net/logos/providers/pl/pko_bp.svg",
+      "home_url": "https://www.pkobp.pl",
+      "login_url": "https://www.ipko.pl",
+      "timezone": "Europe/Warsaw",
+      "automatic_fetch": true,
+      "max_consent_days": 180,
+      "max_fetch_interval": 730,
+      "supported_account_types": ["personal", "business"],
+      "supported_fetch_scopes": ["accounts", "holder_info", "transactions"],
+      "supported_account_natures": ["account", "card"],
+      "created_at": "2019-09-01T09:00:00Z",
+      "updated_at": "2026-10-01T09:00:00Z"
+    },
+    {
+      "id": "3002",
+      "code": "erste_oauth_client_pl",
+      "country_code": "PL",
+      "name": "Erste Bank Polska",
+      "status": "active",
+      "mode": "oauth",
+      "regulated": true,
+      "logo_url": "https://d1uuj3mi6rzwpm.cloudfront.net/logos/providers/pl/erste.svg",
+      "home_url": "https://www.erstebank.pl",
+      "automatic_fetch": true,
+      "max_consent_days": "90",
+      "max_fetch_interval": null,
+      "supported_account_types": ["business"],
+      "supported_fetch_scopes": ["accounts", "transactions"]
+    },
+    {
+      "id": "3003",
+      "code": "mbank_pl",
+      "country_code": "PL",
+      "name": "mBank",
+      "status": "active",
+      "mode": "api",
+      "created_at": "2014-08-21T09:07:38Z"
+    },
+    {
+      "id": "3004",
+      "country_code": "PL",
+      "name": "Malformed: no code"
+    }
+  ],
+  "meta": {
+    "next_id": null,
+    "next_page": null
+  }
+}

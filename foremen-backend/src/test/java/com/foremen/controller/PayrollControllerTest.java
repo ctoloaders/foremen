@@ -37,6 +37,12 @@ import com.foremen.service.payroll.PayrollProfileService;
 import com.foremen.service.payroll.PayrollReadModelService;
 import com.foremen.service.payroll.dto.CompanyPayrollDto;
 import com.foremen.service.payroll.dto.PayrollProfileDto;
+import com.foremen.dao.model.PaymentChannel;
+import com.foremen.dao.model.PayoutStatus;
+import com.foremen.service.payroll.dto.PayoutLedgerEntryDto;
+import com.foremen.service.payroll.dto.PayrollMonthDto;
+import com.foremen.service.payroll.dto.WorkerPayoutDto;
+import com.foremen.service.payroll.dto.WorkerPayrollCardDto;
 
 /**
  * FOR-07-06 task 6.2 — {@link PayrollController}: ABAC mapping / startup completeness of every
@@ -130,6 +136,29 @@ class PayrollControllerTest {
                         .param("workerIds", "3").param("workerIds", "4"))
                 .andExpect(status().isOk());
         verify(readModelService, org.mockito.Mockito.times(2)).companyTable(from, to, List.of(3L, 4L));
+    }
+
+    // --- FOR-07-04 (R16.3) — payout ledgerEntries reach the card JSON -------------------------
+
+    @Test
+    @DisplayName("worker card JSON exposes ledgerEntries on each month payout (FOR-07-04 R16.3)")
+    void cardExposesPayoutLedgerEntries() throws Exception {
+        WorkerPayoutDto payout = new WorkerPayoutDto(31L, 5L, "Worker", null, null, null,
+                new BigDecimal("400.00"), new BigDecimal("400.00"), BigDecimal.ZERO,
+                PaymentChannel.CASH, PayoutStatus.PAID, false, null, null,
+                List.of(new PayoutLedgerEntryDto(901L, "CASH", null, "Cash PLN", new BigDecimal("400.00"))));
+        PayrollMonthDto month = new PayrollMonthDto(null, List.of(), List.of(), BigDecimal.ZERO,
+                List.of(payout), new BigDecimal("400.00"), BigDecimal.ZERO, BigDecimal.ZERO, List.of());
+        when(readModelService.workerCard(5L, LocalDate.of(2026, 7, 1), LocalDate.of(2026, 7, 31)))
+                .thenReturn(new WorkerPayrollCardDto(5L, "Worker", null, null, false, BigDecimal.ZERO,
+                        BigDecimal.ZERO, List.of(month)));
+
+        mockMvc.perform(get("/api/payroll/workers/5/card").param("from", "2026-07-01").param("to", "2026-07-31"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.months[0].payouts[0].id").value(31))
+                .andExpect(jsonPath("$.months[0].payouts[0].ledgerEntries[0].transactionId").value(901))
+                .andExpect(jsonPath("$.months[0].payouts[0].ledgerEntries[0].channel").value("CASH"))
+                .andExpect(jsonPath("$.months[0].payouts[0].ledgerEntries[0].accountName").value("Cash PLN"));
     }
 
     // --- Non-numeric bodies (R9.2, R8.3) -------------------------------------------------------

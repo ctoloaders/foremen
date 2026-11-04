@@ -1,6 +1,8 @@
 package com.foremen.service.ocr;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -8,6 +10,7 @@ import java.util.regex.Pattern;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.foremen.service.NipValidator;
 
 /**
  * FOR-06-03 (Requirements 3.0, 3.1, 3.2, design §5.2) — the pure, I/O-free helpers the
@@ -73,6 +76,9 @@ public final class OcrHelpers {
             in exactly this shape:
             {"supplierName": string|null,
              "documentTotal": number|null,
+             "supplierNip": string|null,
+             "invoiceNumber": string|null,
+             "invoiceDate": string|null,
              "lines": [
                {"rawName": string,
                 "quantity": number|null,
@@ -90,6 +96,10 @@ public final class OcrHelpers {
             - manufacturerHint is the printed brand/manufacturer verbatim, or null.
             - supplierName is the store/supplier name, documentTotal is the grand total; use null \
             when not present.
+            - supplierNip is the supplier's (seller's) Polish tax id NIP as printed (10 digits, \
+            separators allowed), never the buyer's NIP; use null when not printed.
+            - invoiceNumber is the invoice / receipt number verbatim (e.g. FV/123/2024), or null.
+            - invoiceDate is the issue date of the document in ISO format YYYY-MM-DD, or null.
             - Skip non-item rows (subtotals, taxes, payment lines, loyalty points).
             - If there are no purchased items, return "lines": [].
             """;
@@ -265,6 +275,9 @@ public final class OcrHelpers {
         JsonNode linesNode;
         String supplierName = null;
         BigDecimal documentTotal = null;
+        String supplierNip = null;
+        String invoiceNumber = null;
+        LocalDate invoiceDate = null;
         if (root.isArray()) {
             linesNode = root;
         } else if (root.isObject()) {
@@ -274,6 +287,10 @@ public final class OcrHelpers {
             }
             supplierName = readText(root.get("supplierName"));
             documentTotal = absDecimal(readDecimal(root.get("documentTotal")));
+            // FOR-07-04 R18.2 — tolerant capture of the invoice fields (never fails the parse).
+            supplierNip = readNip(root.get("supplierNip"));
+            invoiceNumber = readInvoiceNumber(root.get("invoiceNumber"));
+            invoiceDate = readIsoDate(root.get("invoiceDate"));
         } else {
             return null;
         }
@@ -295,7 +312,54 @@ public final class OcrHelpers {
                     absDecimal(readDecimal(lineNode.get("lineTotal"))),
                     readText(lineNode.get("manufacturerHint"))));
         }
-        return new OcrParse(List.copyOf(lines), supplierName, documentTotal);
+        return new OcrParse(List.copyOf(lines), supplierName, documentTotal,
+                supplierNip, invoiceNumber, invoiceDate);
+    }
+
+    /** FOR-07-04 R18.1 — the {@code procurement_documents.invoice_number} column width. */
+    public static final int INVOICE_NUMBER_MAX_LENGTH = 64;
+
+    /**
+     * FOR-07-04 R18.2 — the supplier NIP normalized to ten digits when its checksum is valid
+     * ({@link NipValidator}); an optional {@code PL} prefix and dots / spaces / hyphens are tolerated.
+     * Anything else (missing, wrong length, bad checksum) → {@code null}.
+     */
+    static String readNip(JsonNode node) {
+        String raw = readText(node);
+        if (raw == null) {
+            return null;
+        }
+        String candidate = raw.strip().replace(".", "");
+        if (candidate.regionMatches(true, 0, "PL", 0, 2)) {
+            candidate = candidate.substring(2);
+        }
+        return NipValidator.isValidNip(candidate) ? NipValidator.normalize(candidate) : null;
+    }
+
+    /** FOR-07-04 R18.2 — the stripped invoice number, {@code null} when blank or longer than 64 chars. */
+    static String readInvoiceNumber(JsonNode node) {
+        String raw = readText(node);
+        if (raw == null) {
+            return null;
+        }
+        String value = raw.strip();
+        return value.isEmpty() || value.length() > INVOICE_NUMBER_MAX_LENGTH ? null : value;
+    }
+
+    /** FOR-07-04 R18.2 — an ISO {@code YYYY-MM-DD} date (a trailing time part is ignored), else {@code null}. */
+    static LocalDate readIsoDate(JsonNode node) {
+        if (node == null || !node.isTextual()) {
+            return null;
+        }
+        String value = node.asText().strip();
+        if (value.length() > 10 && (value.charAt(10) == 'T' || value.charAt(10) == ' ')) {
+            value = value.substring(0, 10);
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     // --- Shared pure utilities -------------------------------------------------------------------
@@ -305,8 +369,11 @@ public final class OcrHelpers {
      * wrapped in markdown fences, or JSON surrounded by prose. Strips fences, then — if a direct
      * parse fails — extracts the substring from the first opening brace/bracket to its matching
      * closing one and parses that. Returns {@code null} when no JSON value can be read.
+     *
+     * <p>Public so other model-response parsers (e.g. the FOR-07-04 bank transaction classifier)
+     * reuse the same tolerant fence / brace approach.
      */
-    private static JsonNode extractJson(String text) {
+    public static JsonNode extractJson(String text) {
         if (text == null || text.isBlank()) {
             return null;
         }

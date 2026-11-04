@@ -3,6 +3,7 @@ package com.foremen.service.payroll.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 import com.foremen.dao.model.PaymentChannel;
 import com.foremen.dao.model.PayoutStatus;
@@ -33,6 +34,8 @@ import com.foremen.dao.model.PayoutStatus;
  * @param isAdvance        {@code true} when {@code periodTo} is after the creation date (R5.3)
  * @param paidAt          when it was marked paid; {@code null} while {@code PLANNED} (R7.1)
  * @param note            optional issuer note
+ * @param ledgerEntries   FOR-07-04 (R16.3): the ledger lines linked to this payout; empty, never
+ *                        {@code null}, while no line is linked (or the ledger is absent)
  */
 public record WorkerPayoutDto(
         Long id,
@@ -48,5 +51,11 @@ public record WorkerPayoutDto(
         PayoutStatus status,
         boolean isAdvance,
         OffsetDateTime paidAt,
-        String note) {
+        String note,
+        List<PayoutLedgerEntryDto> ledgerEntries) {
+
+    /** Normalizes a {@code null} {@link #ledgerEntries} to an empty list. */
+    public WorkerPayoutDto {
+        ledgerEntries = ledgerEntries == null ? List.of() : List.copyOf(ledgerEntries);
+    }
 }

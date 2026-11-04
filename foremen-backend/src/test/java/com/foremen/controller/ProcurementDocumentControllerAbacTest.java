@@ -1,20 +1,54 @@
 package com.foremen.controller;
 
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.web.servlet.MockMvc;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.foremen.config.security.PermissionInterceptor;
 import com.foremen.config.security.PermissionResolver;
 import com.foremen.config.security.PermissionResource;
+import com.foremen.controller.model.ProcurementPaidInCashRequest;
+import com.foremen.controller.model.mapper.ProcurementDocumentControllerMapperImpl;
+import com.foremen.dao.model.DocumentPaymentStatus;
+import com.foremen.dao.model.ProcurementPaymentChoice;
+import com.foremen.exception.ForemenApiException;
+import com.foremen.service.ProcurementDocumentService;
+import com.foremen.service.model.ProcurementDocumentServiceExtendedModel;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
+import com.foremen.service.procurement.ProcurementLedgerEntryDto;
 
 /**
  * ABAC + startup-annotation verification for {@link ProcurementDocumentController} (FOR-06-03 task
- * 6.1).
+ * 6.1), extended by FOR-07-04 task 7.6 (upload payment choice + {@code POST /{id}/paid-in-cash}).
  *
  * <p>Asserts, at the annotation/resolution level, the two guarantees the runtime ABAC stack and the
  * startup {@code PermissionAnnotationValidator} depend on (design §5.5, entity-creation-rules step
@@ -24,25 +58,18 @@ import com.foremen.config.security.PermissionResource;
  *       through the real {@link PermissionResolver#resolve(HandlerMethod)} (the exact code path the
  *       request-time {@code PermissionInterceptor} runs) to the pair the design mandates: upload →
  *       {@code PURCHASES}/{@code CREATE}, list / read-one / images → {@code PURCHASES}/{@code READ},
- *       re-process → {@code PURCHASES}/{@code UPDATE}, delete → {@code PURCHASES}/{@code DELETE}.</li>
- *   <li><b>Startup completeness (R7.3, {@code PermissionAnnotationValidator}).</b> Because the
- *       controller does not inherit any {@code @PermissionOperation} from {@code AdminController},
- *       every in-scope handler carries a method-level {@code @RequiresPermission}; each therefore
- *       classifies {@link PermissionResolver.Completeness#COMPLETE} via
- *       {@link PermissionResolver#classifyCompleteness(HandlerMethod)} — the exact per-handler check
- *       the {@code PermissionAnnotationValidator} {@code SmartInitializingSingleton} performs at
- *       startup. No handler is half-annotated ({@code RESOURCE_WITHOUT_OPERATION} /
- *       {@code OPERATION_WITHOUT_RESOURCE}) and none is UNGUARDED, so a loading application context
- *       would not fail on this controller.</li>
+ *       re-process / paid-in-cash → {@code PURCHASES}/{@code UPDATE}, delete →
+ *       {@code PURCHASES}/{@code DELETE}.</li>
+ *   <li><b>Startup completeness (R7.3, {@code PermissionAnnotationValidator}).</b> Every in-scope
+ *       handler classifies {@link PermissionResolver.Completeness#COMPLETE}.</li>
  * </ol>
  *
- * <p>This is a fast, context-free reflection test mirroring {@link EstimateMaterialsControllerAbacTest}
- * / {@link EstimateMatrixControllerAbacTest}: it builds a {@link HandlerMethod} directly from a bare
- * controller instance ({@code null} collaborators are never dereferenced — only annotations are
- * read) and exercises the real {@link PermissionResolver}, so it needs neither a Spring context nor
- * Testcontainers while asserting the identical logic the startup validator relies on.
+ * <p>FOR-07-04 additions: the real {@link PermissionInterceptor} (real resolver, stubbed evaluator)
+ * allows / denies {@code paid-in-cash} by the {@code PURCHASES}/{@code UPDATE} grant, and a standalone
+ * MockMvc (mocked service, real MapStruct mapper) proves the upload binds the optional payment fields
+ * and that {@code paymentStatus} / {@code ledgerEntries} reach the JSON.
  *
- * <p>Validates: Requirements 6.1, 7.3, 8.1
+ * <p>Validates: Requirements 6.1, 7.3, 8.1 (FOR-06-03); 18.3, 28.1, 28.4 (FOR-07-04)
  */
 @DisplayName("ProcurementDocumentController ABAC mapping + startup completeness")
 class ProcurementDocumentControllerAbacTest {
@@ -53,6 +80,10 @@ class ProcurementDocumentControllerAbacTest {
     private static final String UPDATE = "UPDATE";
     private static final String DELETE = "DELETE";
 
+    private static final Class<?>[] UPLOAD_PARAMS = {Long.class, MultipartFile.class,
+            ProcurementPaymentChoice.class, Long.class, BigDecimal.class, LocalDate.class};
+    private static final Class<?>[] PAID_IN_CASH_PARAMS = {Long.class, ProcurementPaidInCashRequest.class};
+
     private final PermissionResolver resolver = new PermissionResolver();
 
     /**
@@ -61,6 +92,11 @@ class ProcurementDocumentControllerAbacTest {
      */
     private final ProcurementDocumentController controller =
             new ProcurementDocumentController(null, null);
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     // --- class-level guarding: the PURCHASES resource (entity-creation-rules step 3) ---
 
@@ -82,7 +118,7 @@ class ProcurementDocumentControllerAbacTest {
     @Test
     @DisplayName("POST / (upload) → (PURCHASES, CREATE)")
     void uploadIsPurchasesCreate() {
-        assertResolvesTo(handlerFor("upload", Long.class, MultipartFile.class), PURCHASES, CREATE);
+        assertResolvesTo(handlerFor("upload", UPLOAD_PARAMS), PURCHASES, CREATE);
     }
 
     @Test
@@ -104,6 +140,12 @@ class ProcurementDocumentControllerAbacTest {
     }
 
     @Test
+    @DisplayName("POST /{id}/paid-in-cash → (PURCHASES, UPDATE)")
+    void paidInCashIsPurchasesUpdate() {
+        assertResolvesTo(handlerFor("paidInCash", PAID_IN_CASH_PARAMS), PURCHASES, UPDATE);
+    }
+
+    @Test
     @DisplayName("DELETE /{id} → (PURCHASES, DELETE)")
     void deleteIsPurchasesDelete() {
         assertResolvesTo(handlerFor("delete", Long.class), PURCHASES, DELETE);
@@ -120,15 +162,148 @@ class ProcurementDocumentControllerAbacTest {
     @Test
     @DisplayName("every handler classifies COMPLETE (no half-annotation, none UNGUARDED)")
     void everyHandlerComplete() {
-        assertComplete(handlerFor("upload", Long.class, MultipartFile.class));
+        assertComplete(handlerFor("upload", UPLOAD_PARAMS));
         assertComplete(handlerFor("list", Long.class, Pageable.class));
         assertComplete(handlerFor("findById", Long.class));
         assertComplete(handlerFor("reprocess", Long.class));
+        assertComplete(handlerFor("paidInCash", PAID_IN_CASH_PARAMS));
         assertComplete(handlerFor("delete", Long.class));
         assertComplete(handlerFor("images", Long.class));
     }
 
+    // --- FOR-07-04: paid-in-cash allowed / denied by the PURCHASES UPDATE grant (R28.4) ---
+
+    @Test
+    @DisplayName("paid-in-cash: a role with PURCHASES UPDATE is allowed through the interceptor")
+    void paidInCashAllowedWithPurchasesUpdate() {
+        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
+        when(evaluator.isAllowed("MANAGER", PURCHASES, UPDATE)).thenReturn(true);
+        authenticateAs("MANAGER");
+
+        boolean proceed = new PermissionInterceptor(evaluator, resolver).preHandle(
+                new MockHttpServletRequest(), new MockHttpServletResponse(),
+                handlerFor("paidInCash", PAID_IN_CASH_PARAMS));
+
+        assertThat(proceed).isTrue();
+        verify(evaluator).isAllowed("MANAGER", PURCHASES, UPDATE);
+    }
+
+    @Test
+    @DisplayName("paid-in-cash: a role without PURCHASES UPDATE is denied with 403 error.access.denied")
+    void paidInCashDeniedWithoutPurchasesUpdate() {
+        ForemenPermissionEvaluator evaluator = mock(ForemenPermissionEvaluator.class);
+        when(evaluator.isAllowed("WORKER", PURCHASES, UPDATE)).thenReturn(false);
+        authenticateAs("WORKER");
+        PermissionInterceptor interceptor = new PermissionInterceptor(evaluator, resolver);
+        HandlerMethod handler = handlerFor("paidInCash", PAID_IN_CASH_PARAMS);
+
+        assertThatThrownBy(() -> interceptor.preHandle(
+                new MockHttpServletRequest(), new MockHttpServletResponse(), handler))
+                .isInstanceOfSatisfying(ForemenApiException.class, ex -> {
+                    assertThat(ex.getStatus()).isEqualTo(HttpStatus.FORBIDDEN);
+                    assertThat(ex.getMessageCode()).isEqualTo("error.access.denied");
+                });
+        verify(evaluator).isAllowed("WORKER", PURCHASES, UPDATE);
+    }
+
+    // --- FOR-07-04: request binding + JSON shape (R18.3, R28.1, R28.4) ---
+
+    @Test
+    @DisplayName("upload binds paymentChoice + cash fields and echoes paymentStatus / ledgerEntries")
+    void uploadBindsPaymentChoice() throws Exception {
+        ProcurementDocumentService service = mock(ProcurementDocumentService.class);
+        when(service.upload(eq(7L), any(MultipartFile.class), any(ProcurementDocumentService.UploadPaymentRequest.class)))
+                .thenReturn(paidModel());
+        MockMvc mvc = mockMvc(service);
+
+        mvc.perform(multipart("/api/procurement-documents")
+                        .file(new MockMultipartFile("file", "r.jpg", "image/jpeg", new byte[] {1, 2}))
+                        .param("projectId", "7")
+                        .param("paymentChoice", "PAID_CASH")
+                        .param("cashAccountId", "3")
+                        .param("cashAmount", "123.45")
+                        .param("cashDate", "2026-07-15"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(11))
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"))
+                .andExpect(jsonPath("$.ledgerEntries[0].transactionId").value(501))
+                .andExpect(jsonPath("$.ledgerEntries[0].channel").value("CASH"));
+
+        verify(service).upload(eq(7L), any(MultipartFile.class), eq(new ProcurementDocumentService.UploadPaymentRequest(
+                ProcurementPaymentChoice.PAID_CASH, 3L, new BigDecimal("123.45"), LocalDate.of(2026, 7, 15))));
+    }
+
+    @Test
+    @DisplayName("upload without payment fields stays backward compatible (null choice ⇒ NOT_LINKED)")
+    void uploadWithoutPaymentFields() throws Exception {
+        ProcurementDocumentService service = mock(ProcurementDocumentService.class);
+        when(service.upload(eq(7L), any(MultipartFile.class), any(ProcurementDocumentService.UploadPaymentRequest.class)))
+                .thenReturn(paidModel());
+        MockMvc mvc = mockMvc(service);
+
+        mvc.perform(multipart("/api/procurement-documents")
+                        .file(new MockMultipartFile("file", "r.jpg", "image/jpeg", new byte[] {1}))
+                        .param("projectId", "7"))
+                .andExpect(status().isOk());
+
+        verify(service).upload(eq(7L), any(MultipartFile.class),
+                eq(new ProcurementDocumentService.UploadPaymentRequest(null, null, null, null)));
+        assertThat(new ProcurementDocumentService.UploadPaymentRequest(null, null, null, null).effectiveChoice())
+                .isEqualTo(ProcurementPaymentChoice.NOT_LINKED);
+    }
+
+    @Test
+    @DisplayName("POST /{id}/paid-in-cash passes the body to markPaidInCash and returns the detail DTO")
+    void paidInCashDelegates() throws Exception {
+        ProcurementDocumentService service = mock(ProcurementDocumentService.class);
+        when(service.markPaidInCash(11L, 3L, new BigDecimal("50.00"), LocalDate.of(2026, 7, 20)))
+                .thenReturn(paidModel());
+        MockMvc mvc = mockMvc(service);
+
+        mvc.perform(post("/api/procurement-documents/11/paid-in-cash")
+                        .contentType("application/json")
+                        .content("{\"cashAccountId\":3,\"amount\":50.00,\"date\":\"2026-07-20\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentStatus").value("PAID"))
+                .andExpect(jsonPath("$.ledgerEntries[0].transactionId").value(501));
+    }
+
+    @Test
+    @DisplayName("POST /{id}/paid-in-cash without a body uses all defaults (nulls)")
+    void paidInCashWithoutBody() throws Exception {
+        ProcurementDocumentService service = mock(ProcurementDocumentService.class);
+        when(service.markPaidInCash(eq(11L), isNull(), isNull(), isNull())).thenReturn(paidModel());
+        MockMvc mvc = mockMvc(service);
+
+        mvc.perform(post("/api/procurement-documents/11/paid-in-cash"))
+                .andExpect(status().isOk());
+
+        verify(service).markPaidInCash(11L, null, null, null);
+    }
+
     // --- helpers ---
+
+    private static MockMvc mockMvc(ProcurementDocumentService service) {
+        return MockMvcBuilders.standaloneSetup(
+                new ProcurementDocumentController(service, new ProcurementDocumentControllerMapperImpl()))
+                .build();
+    }
+
+    private static ProcurementDocumentServiceExtendedModel paidModel() {
+        ProcurementDocumentServiceExtendedModel model = new ProcurementDocumentServiceExtendedModel();
+        model.setId(11L);
+        model.setProjectId(7L);
+        model.setPaymentStatus(DocumentPaymentStatus.PAID);
+        model.setLedgerEntries(List.of(
+                new ProcurementLedgerEntryDto(501L, "CASH", null, "Cash PLN", new BigDecimal("123.45"))));
+        return model;
+    }
+
+    private static void authenticateAs(String roleCode) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        "42", "n/a", List.of(new SimpleGrantedAuthority("ROLE_" + roleCode))));
+    }
 
     private HandlerMethod handlerFor(String methodName, Class<?>... paramTypes) {
         try {

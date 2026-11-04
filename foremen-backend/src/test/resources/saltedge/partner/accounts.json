@@ -1,0 +1,20 @@
+{
+  "data": [
+    {
+      "id": "333333333333333333",
+      "connection_id": "111111111111111111",
+      "name": "Rachunek firmowy",
+      "nature": "account",
+      "balance": 12500.55,
+      "currency_code": "PLN",
+      "extra": {
+        "iban": "PL61109010140000071219812874",
+        "client_name": "Foremen Sp. z o.o.",
+        "available_amount": 12000.00
+      },
+      "created_at": "2026-10-29T05:32:01Z",
+      "updated_at": "2026-10-29T05:32:01Z"
+    }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

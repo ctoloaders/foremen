@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-04 (company money ledger: bank + cash) — sync runs and ledger lines.
+
+        Tables (design §Data model):
+          - bank_sync_runs         : one row per sync attempt of a connection (R5.2, R6.1). A
+                                     partial UNIQUE index on connection_id WHERE status IN
+                                     ('QUEUED','RUNNING') enforces one active run per connection.
+          - bank_sync_run_accounts : per-account counters of a run (R6.2).
+          - bank_transactions      : ledger lines, bank and cash (R6.1, R6.2, R13.1, R17.3, R18.1,
+                                     R27.1). channel (BANK | CASH) and origin (BANK_FEED | MANUAL |
+                                     SYSTEM) are tied by CHECK: BANK => BANK_FEED, CASH => MANUAL or
+                                     SYSTEM. external_id is required for BANK_FEED and unique per
+                                     account (partial UNIQUE). (system_source, system_source_id) is
+                                     partially UNIQUE so a payroll payout / procurement document
+                                     produces at most one SYSTEM cash line. amount <> 0, and
+                                     booking_date is NOT NULL when status = POSTED.
+
+        Audit columns follow BaseEntity (created_date, created_by, updated_date, updated_by).
+
+        Idempotent: each table is guarded by NOT tableExists + onFail="MARK_RAN". Registered LAST
+        in changelog.xml, after 201.
+    -->
+
+    <changeSet id="202-create-bank-sync-runs" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_sync_runs"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_sync_runs (
+                id                   BIGSERIAL PRIMARY KEY,
+                connection_id        BIGINT      NOT NULL
+                    REFERENCES bank_connections (id) ON DELETE CASCADE,
+                "trigger"            VARCHAR(16) NOT NULL,
+                status               VARCHAR(16) NOT NULL,
+                started_at           TIMESTAMP WITH TIME ZONE,
+                finished_at          TIMESTAMP WITH TIME ZONE,
+                stage                VARCHAR(64),
+                accounts_seen        INT         NOT NULL DEFAULT 0,
+                transactions_new     INT         NOT NULL DEFAULT 0,
+                transactions_updated INT         NOT NULL DEFAULT 0,
+                pending_replaced     INT         NOT NULL DEFAULT 0,
+                rows_skipped         INT         NOT NULL DEFAULT 0,
+                to_review            INT         NOT NULL DEFAULT 0,
+                error_class          VARCHAR(32),
+                error_code           VARCHAR(64),
+                error_message        TEXT,
+                requested_by         VARCHAR(255),
+                created_date         TIMESTAMP   NOT NULL DEFAULT NOW(),
+                created_by           VARCHAR(255),
+                updated_date         TIMESTAMP,
+                updated_by           VARCHAR(255),
+                CONSTRAINT ck_bank_sync_runs_trigger
+                    CHECK ("trigger" IN ('CALLBACK', 'SCHEDULE', 'MANUAL', 'CONNECT')),
+                CONSTRAINT ck_bank_sync_runs_status
+                    CHECK (status IN ('QUEUED', 'RUNNING', 'SUCCEEDED', 'PARTIAL', 'FAILED'))
+            );
+            CREATE INDEX ix_bank_sync_runs_connection_started
+                ON bank_sync_runs (connection_id, started_at DESC);
+            CREATE UNIQUE INDEX ux_bank_sync_runs_one_active
+                ON bank_sync_runs (connection_id)
+                WHERE status IN ('QUEUED', 'RUNNING');
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_sync_runs"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="202-create-bank-sync-run-accounts" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_sync_run_accounts"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_sync_run_accounts (
+                id                   BIGSERIAL PRIMARY KEY,
+                run_id               BIGINT NOT NULL
+                    REFERENCES bank_sync_runs (id) ON DELETE CASCADE,
+                account_id           BIGINT NOT NULL
+                    REFERENCES bank_accounts (id) ON DELETE CASCADE,
+                transactions_new     INT    NOT NULL DEFAULT 0,
+                transactions_updated INT    NOT NULL DEFAULT 0,
+                pending_replaced     INT    NOT NULL DEFAULT 0,
+                status               VARCHAR(16),
+                error_code           VARCHAR(64),
+                created_date         TIMESTAMP NOT NULL DEFAULT NOW(),
+                created_by           VARCHAR(255),
+                updated_date         TIMESTAMP,
+                updated_by           VARCHAR(255),
+                CONSTRAINT uq_bank_sync_run_accounts_run_account UNIQUE (run_id, account_id)
+            );
+            CREATE INDEX ix_bank_sync_run_accounts_account ON bank_sync_run_accounts (account_id);
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_sync_run_accounts"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="202-create-bank-transactions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_transactions"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_transactions (
+                id                BIGSERIAL PRIMARY KEY,
+                account_id        BIGINT        NOT NULL
+                    REFERENCES bank_accounts (id) ON DELETE CASCADE,
+                channel           VARCHAR(8)    NOT NULL,
+                origin            VARCHAR(10)   NOT NULL,
+                external_id       VARCHAR(64),
+                system_source     VARCHAR(32),
+                system_source_id  BIGINT,
+                status            VARCHAR(8)    NOT NULL,
+                amount            NUMERIC(19,2) NOT NULL,
+                currency          CHAR(3)       NOT NULL,
+                operation_date    DATE          NOT NULL,
+                booking_date      DATE,
+                title             TEXT,
+                counterparty_name VARCHAR(255),
+                counterparty_iban VARCHAR(34),
+                counterparty_key  VARCHAR(300),
+                provider_category VARCHAR(64),
+                counterparty_raw  JSONB,
+                provider_payload  JSONB,
+                link_status       VARCHAR(20)   NOT NULL DEFAULT 'UNLINKED',
+                ignored_reason    TEXT,
+                ignored_by        VARCHAR(255),
+                ignored_at        TIMESTAMP WITH TIME ZONE,
+                reviewed_at       TIMESTAMP WITH TIME ZONE,
+                reviewed_by       VARCHAR(255),
+                ai_classified_at  TIMESTAMP WITH TIME ZONE,
+                ingested_at       TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                last_seen_at      TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                first_sync_run_id BIGINT
+                    REFERENCES bank_sync_runs (id) ON DELETE SET NULL,
+                created_by_user   VARCHAR(255),
+                created_date      TIMESTAMP     NOT NULL DEFAULT NOW(),
+                created_by        VARCHAR(255),
+                updated_date      TIMESTAMP,
+                updated_by        VARCHAR(255),
+                CONSTRAINT ck_bank_transactions_channel CHECK (channel IN ('BANK', 'CASH')),
+                CONSTRAINT ck_bank_transactions_origin
+                    CHECK (origin IN ('BANK_FEED', 'MANUAL', 'SYSTEM')),
+                CONSTRAINT ck_bank_transactions_channel_origin CHECK (
+                    (channel = 'BANK' AND origin = 'BANK_FEED')
+                    OR (channel = 'CASH' AND origin IN ('MANUAL', 'SYSTEM'))
+                ),
+                CONSTRAINT ck_bank_transactions_feed_external
+                    CHECK (origin <> 'BANK_FEED' OR external_id IS NOT NULL),
+                CONSTRAINT ck_bank_transactions_system_source CHECK (
+                    system_source IS NULL OR system_source IN ('PAYROLL_PAYOUT', 'PROCUREMENT_CASH')
+                ),
+                CONSTRAINT ck_bank_transactions_system_refs CHECK (
+                    origin <> 'SYSTEM' OR (system_source IS NOT NULL AND system_source_id IS NOT NULL)
+                ),
+                CONSTRAINT ck_bank_transactions_status CHECK (status IN ('PENDING', 'POSTED')),
+                CONSTRAINT ck_bank_transactions_cash_posted
+                    CHECK (channel <> 'CASH' OR status = 'POSTED'),
+                CONSTRAINT ck_bank_transactions_amount_non_zero CHECK (amount <> 0),
+                CONSTRAINT ck_bank_transactions_posted_booking
+                    CHECK (status <> 'POSTED' OR booking_date IS NOT NULL),
+                CONSTRAINT ck_bank_transactions_link_status CHECK (link_status IN (
+                    'IGNORED', 'LINKED', 'AUTO_LINKED', 'PARTIALLY_LINKED', 'SUGGESTED', 'UNLINKED'
+                )),
+                CONSTRAINT ck_bank_transactions_ignored_reason
+                    CHECK ((link_status = 'IGNORED') = (ignored_reason IS NOT NULL))
+            );
+            CREATE UNIQUE INDEX ux_bank_transactions_account_external
+                ON bank_transactions (account_id, external_id)
+                WHERE external_id IS NOT NULL;
+            CREATE UNIQUE INDEX ux_bank_transactions_system_source
+                ON bank_transactions (system_source, system_source_id)
+                WHERE system_source IS NOT NULL;
+            CREATE INDEX ix_bank_transactions_booking_date
+                ON bank_transactions (booking_date DESC);
+            CREATE INDEX ix_bank_transactions_account_booking
+                ON bank_transactions (account_id, booking_date);
+            CREATE INDEX ix_bank_transactions_link_status ON bank_transactions (link_status);
+            CREATE INDEX ix_bank_transactions_channel ON bank_transactions (channel);
+            CREATE INDEX ix_bank_transactions_counterparty_key
+                ON bank_transactions (counterparty_key);
+            CREATE INDEX ix_bank_transactions_counterparty_iban
+                ON bank_transactions (counterparty_iban);
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_transactions"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

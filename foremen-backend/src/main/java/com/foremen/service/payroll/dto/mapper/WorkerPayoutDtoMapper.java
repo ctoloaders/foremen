@@ -4,10 +4,13 @@ import java.util.List;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.foremen.config.mapper.ForemenMapperConfig;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkerPayoutEntity;
+import com.foremen.service.payroll.PayoutLedgerEntriesProvider;
+import com.foremen.service.payroll.dto.PayoutLedgerEntryDto;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
 
 /**
@@ -30,12 +33,35 @@ import com.foremen.service.payroll.dto.WorkerPayoutDto;
 @Mapper(config = ForemenMapperConfig.class)
 public abstract class WorkerPayoutDtoMapper {
 
+    /**
+     * FOR-07-04 (R16.3) — the ledger-links seam. Optional: when no {@link PayoutLedgerEntriesProvider}
+     * bean exists (the bank ledger is absent) or the mapper is instantiated directly (unit tests),
+     * {@link PayoutLedgerEntriesProvider#NONE} yields an empty {@code ledgerEntries}.
+     */
+    private PayoutLedgerEntriesProvider ledgerEntriesProvider = PayoutLedgerEntriesProvider.NONE;
+
+    @Autowired(required = false)
+    public void setLedgerEntriesProvider(PayoutLedgerEntriesProvider ledgerEntriesProvider) {
+        this.ledgerEntriesProvider = ledgerEntriesProvider == null
+                ? PayoutLedgerEntriesProvider.NONE : ledgerEntriesProvider;
+    }
+
     @Mapping(target = "workerId", source = "worker.id")
     @Mapping(target = "workerName", expression = "java(workerName(entity.getWorker()))")
     @Mapping(target = "isAdvance", expression = "java(entity.isAdvance())")
+    @Mapping(target = "ledgerEntries", expression = "java(ledgerEntries(entity.getId()))")
     public abstract WorkerPayoutDto toDto(WorkerPayoutEntity entity);
 
     public abstract List<WorkerPayoutDto> toDtos(List<WorkerPayoutEntity> entities);
+
+    /** FOR-07-04 (R16.3) — the payout's linked ledger lines via the seam; never {@code null}. */
+    protected List<PayoutLedgerEntryDto> ledgerEntries(Long payoutId) {
+        if (payoutId == null) {
+            return List.of();
+        }
+        List<PayoutLedgerEntryDto> entries = ledgerEntriesProvider.forPayout(payoutId);
+        return entries == null ? List.of() : entries;
+    }
 
     /**
      * The worker's localized display name ({@code ru → pl → code} fallback). A worker is a

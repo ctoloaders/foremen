@@ -215,7 +215,8 @@ class WorkerPayoutLifecyclePropertyTest {
             service = new WorkerPayoutService(
                     workerPayoutDao, allocationDao, userDao, suggestionService,
                     new AllocationWriter(allocationDao, entityManager), new AdvanceCreditCalculator(),
-                    new AdvanceDeriver(), serviceMapper, dtoMapper, auditLogDao, entityManager);
+                    new AdvanceDeriver(), serviceMapper, dtoMapper, auditLogDao, entityManager,
+                    mock(org.springframework.context.ApplicationEventPublisher.class));
             lenient().when(allocationDao.findByPayoutId(anyLong())).thenReturn(List.of());
             lenient().when(workerPayoutDao.save(any(WorkerPayoutEntity.class)))
                     .thenAnswer(inv -> inv.getArgument(0));
@@ -224,7 +225,7 @@ class WorkerPayoutLifecyclePropertyTest {
             lenient().when(dtoMapper.toDto(any(WorkerPayoutEntity.class)))
                     .thenReturn(new WorkerPayoutDto(1L, WORKER_ID, "W", FROM, FROM, REGULAR_TO,
                             BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ZERO,
-                            PaymentChannel.CASH, PayoutStatus.PLANNED, false, null, null));
+                            PaymentChannel.CASH, PayoutStatus.PLANNED, false, null, null, List.of()));
             // FOR-07-06: the payee must be a WORKER user (replaces the project-membership check).
             UserEntity worker = referenceStub(UserEntity.class, WORKER_ID);
             RoleEntity role = new RoleEntity();

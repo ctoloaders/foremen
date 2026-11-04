@@ -1,0 +1,131 @@
+{
+  "data": [
+    {
+      "id": "1190000000000000101",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-11-02",
+      "amount": 4500.00,
+      "currency_code": "PLN",
+      "description": "Przelew przychodzacy FM-42",
+      "category": "income",
+      "extra": {
+        "payer": "ACME Budownictwo Sp. z o.o.",
+        "payer_information": "ACME Budownictwo, ul. Prosta 1, 00-001 Warszawa, rach. PL27 1140 2004 0000 3002 0135 5387",
+        "payee": "Foremen Sp. z o.o.",
+        "payee_information": "PL61109010140000071219812874",
+        "posting_date": "2026-11-03",
+        "information": "Zaliczka etap 1",
+        "account_balance_snapshot": 10250.55,
+        "categorization_confidence": null
+      },
+      "created_at": "2026-11-03T06:00:00Z",
+      "updated_at": "2026-11-03T06:00:00Z"
+    },
+    {
+      "id": "1190000000000000102",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-11-02",
+      "amount": -1500.00,
+      "currency_code": "PLN",
+      "description": "Wynagrodzenie 10/2026",
+      "category": "salary",
+      "extra": {
+        "payer": "Foremen Sp. z o.o.",
+        "payee": "Jan Kowalski",
+        "payee_information": "60 1020 1026 0000 0422 7020 1111"
+      },
+      "created_at": "2026-11-02T06:00:00Z",
+      "updated_at": "2026-11-02T06:00:00Z"
+    },
+    {
+      "id": "1190000000000000103",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-11-04",
+      "amount": -230.5,
+      "currency_code": "PLN",
+      "description": "Faktura FV/11/2026",
+      "category": "building_materials",
+      "extra": {
+        "payee": "PL71 1240 1037 0000 2222 3333 4444",
+        "payee_information": "Hurtownia Budowlana Kowal"
+      },
+      "created_at": "2026-11-04T06:00:00Z",
+      "updated_at": "2026-11-04T06:00:00Z"
+    },
+    {
+      "id": "1190000000000000104",
+      "account_id": "1180000000000000001",
+      "duplicated": true,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-11-04",
+      "amount": -230.5,
+      "currency_code": "PLN",
+      "description": "Faktura FV/11/2026",
+      "category": "building_materials",
+      "extra": {
+        "payee": "Hurtownia Budowlana Kowal"
+      },
+      "created_at": "2026-11-04T06:05:00Z",
+      "updated_at": "2026-11-04T06:05:00Z"
+    },
+    {
+      "id": "1190000000000000105",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "fee",
+      "status": "posted",
+      "made_on": "2026-11-05",
+      "amount": -9.99,
+      "currency_code": "PLN",
+      "description": "Oplata za prowadzenie rachunku",
+      "category": "bank_charges",
+      "created_at": "2026-11-05T06:00:00Z",
+      "updated_at": "2026-11-05T06:00:00Z"
+    },
+    {
+      "id": "1190000000000000106",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "made_on": "2026-11-05",
+      "amount": "not-a-number",
+      "currency_code": "PLN",
+      "description": "Malformed: bad amount",
+      "extra": {}
+    },
+    {
+      "id": "1190000000000000107",
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "mode": "normal",
+      "status": "posted",
+      "amount": 10.00,
+      "currency_code": "PLN",
+      "description": "Malformed: missing made_on"
+    },
+    {
+      "account_id": "1180000000000000001",
+      "duplicated": false,
+      "status": "posted",
+      "made_on": "2026-11-05",
+      "amount": 1.00,
+      "currency_code": "PLN",
+      "description": "Malformed: missing id"
+    }
+  ],
+  "meta": {
+    "next_id": "1190000000000000108",
+    "next_page": "/api/v6/transactions?connection_id=1170000000000000001&account_id=1180000000000000001&from_id=1190000000000000108"
+  }
+}

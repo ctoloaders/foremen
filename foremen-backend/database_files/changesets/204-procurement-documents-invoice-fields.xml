@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-04 (Requirements 18.1, 13.1): invoice identity on procurement documents, used by
+        reverse document matching (ledger line <-> invoice) and the ledger's document payment status.
+
+        Columns (all nullable, filled from the OCR parse or by hand):
+          - supplier_nip   : VARCHAR(10) — Polish tax id of the supplier (10 digits, normalized).
+          - invoice_number : VARCHAR(64) — invoice number as printed; indexed for matching.
+          - invoice_date   : DATE        — invoice issue date.
+
+        Document_Payment_Status is derived (no column) from the sum of link amounts vs
+        document_total.
+
+        Idempotent: each column is guarded by NOT columnExists + MARK_RAN, the index by NOT
+        indexExists. Registered LAST in changelog.xml, after 203.
+    -->
+
+    <changeSet id="204-procurement-documents-supplier-nip" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="procurement_documents" columnName="supplier_nip"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="procurement_documents">
+            <column name="supplier_nip" type="VARCHAR(10)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="204-procurement-documents-invoice-number" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="procurement_documents" columnName="invoice_number"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="procurement_documents">
+            <column name="invoice_number" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="204-procurement-documents-invoice-date" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="procurement_documents" columnName="invoice_date"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="procurement_documents">
+            <column name="invoice_date" type="DATE"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="204-procurement-documents-invoice-number-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="procurement_documents"
+                             indexName="ix_procurement_documents_invoice_number"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="procurement_documents"
+                     indexName="ix_procurement_documents_invoice_number">
+            <column name="invoice_number"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

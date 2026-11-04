@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-04 (company money ledger: bank + cash) — links, suggestions and learned counterparty
+        rules.
+
+        Tables (design §Data model):
+          - bank_transaction_links       : applied links ledger line -> target (R13.1, R13.3).
+                                           amount > 0, source RULE | AI | MANUAL, confidence 0..1.
+                                           A per-kind CHECK enforces the required target and keeps
+                                           foreign targets empty:
+                                             WORKER_PAYOUT  -> worker_payout_id required
+                                             PROCUREMENT    -> procurement_document_id (see below)
+                                             CLIENT_PAYMENT -> payment_schedule_id required
+                                             OTHER_EXPENSE  -> unplanned_category_id required
+                                             OTHER_INCOME / INTERNAL_TRANSFER -> no required target
+                                           procurement_document_id is ON DELETE SET NULL (design: the
+                                           link survives a deleted document and is flagged), so the
+                                           DB cannot require it for PROCUREMENT; the service enforces
+                                           it on create. Indexes on payout and document.
+          - bank_transaction_suggestions : detection suggestions, same target shape (no
+                                           payment_transaction_id) + rank / rationale / status (R13.7).
+                                           Targets are ON DELETE CASCADE (a suggestion for a vanished
+                                           target is meaningless), so the per-kind CHECK can require
+                                           every target including the document.
+          - bank_counterparty_rules      : learned / manual counterparty rules, UNIQUE
+                                           counterparty_key (R17.3).
+
+        Audit columns follow BaseEntity (created_date, created_by, updated_date, updated_by).
+
+        Idempotent: each table is guarded by NOT tableExists + onFail="MARK_RAN". Registered LAST
+        in changelog.xml, after 202.
+    -->
+
+    <changeSet id="203-create-bank-transaction-links" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_transaction_links"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_transaction_links (
+                id                      BIGSERIAL PRIMARY KEY,
+                transaction_id          BIGINT        NOT NULL
+                    REFERENCES bank_transactions (id) ON DELETE CASCADE,
+                kind                    VARCHAR(24)   NOT NULL,
+                amount                  NUMERIC(19,2) NOT NULL,
+                worker_payout_id        BIGINT
+                    REFERENCES worker_payouts (id) ON DELETE RESTRICT,
+                procurement_document_id BIGINT
+                    REFERENCES procurement_documents (id) ON DELETE SET NULL,
+                payment_schedule_id     BIGINT
+                    REFERENCES payment_schedules (id) ON DELETE RESTRICT,
+                payment_transaction_id  BIGINT
+                    REFERENCES payment_transactions (id) ON DELETE SET NULL,
+                project_id              BIGINT
+                    REFERENCES projects (id) ON DELETE SET NULL,
+                unplanned_category_id   BIGINT
+                    REFERENCES unplanned_expense_categories (id) ON DELETE RESTRICT,
+                counter_account_id      BIGINT
+                    REFERENCES bank_accounts (id) ON DELETE SET NULL,
+                source                  VARCHAR(8)    NOT NULL,
+                confidence              NUMERIC(4,3),
+                confirmed_at            TIMESTAMP WITH TIME ZONE,
+                confirmed_by            VARCHAR(255),
+                note                    TEXT,
+                created_date            TIMESTAMP     NOT NULL DEFAULT NOW(),
+                created_by              VARCHAR(255),
+                updated_date            TIMESTAMP,
+                updated_by              VARCHAR(255),
+                CONSTRAINT ck_bank_transaction_links_amount_positive CHECK (amount > 0),
+                CONSTRAINT ck_bank_transaction_links_kind CHECK (kind IN (
+                    'WORKER_PAYOUT', 'PROCUREMENT', 'CLIENT_PAYMENT',
+                    'OTHER_EXPENSE', 'OTHER_INCOME', 'INTERNAL_TRANSFER'
+                )),
+                CONSTRAINT ck_bank_transaction_links_source
+                    CHECK (source IN ('RULE', 'AI', 'MANUAL')),
+                CONSTRAINT ck_bank_transaction_links_confidence
+                    CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+                CONSTRAINT ck_bank_transaction_links_kind_target CHECK (
+                    (kind = 'WORKER_PAYOUT') = (worker_payout_id IS NOT NULL)
+                    AND (kind = 'PROCUREMENT' OR procurement_document_id IS NULL)
+                    AND (kind = 'CLIENT_PAYMENT') = (payment_schedule_id IS NOT NULL)
+                    AND (kind = 'CLIENT_PAYMENT' OR payment_transaction_id IS NULL)
+                    AND (kind = 'OTHER_EXPENSE') = (unplanned_category_id IS NOT NULL)
+                    AND (kind = 'INTERNAL_TRANSFER' OR counter_account_id IS NULL)
+                )
+            );
+            CREATE INDEX ix_bank_transaction_links_transaction
+                ON bank_transaction_links (transaction_id);
+            CREATE INDEX ix_bank_transaction_links_payout
+                ON bank_transaction_links (worker_payout_id);
+            CREATE INDEX ix_bank_transaction_links_document
+                ON bank_transaction_links (procurement_document_id);
+            CREATE INDEX ix_bank_transaction_links_schedule
+                ON bank_transaction_links (payment_schedule_id);
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_transaction_links"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="203-create-bank-transaction-suggestions" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_transaction_suggestions"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_transaction_suggestions (
+                id                      BIGSERIAL PRIMARY KEY,
+                transaction_id          BIGINT        NOT NULL
+                    REFERENCES bank_transactions (id) ON DELETE CASCADE,
+                kind                    VARCHAR(24)   NOT NULL,
+                amount                  NUMERIC(19,2) NOT NULL,
+                worker_payout_id        BIGINT
+                    REFERENCES worker_payouts (id) ON DELETE CASCADE,
+                procurement_document_id BIGINT
+                    REFERENCES procurement_documents (id) ON DELETE CASCADE,
+                payment_schedule_id     BIGINT
+                    REFERENCES payment_schedules (id) ON DELETE CASCADE,
+                project_id              BIGINT
+                    REFERENCES projects (id) ON DELETE CASCADE,
+                unplanned_category_id   BIGINT
+                    REFERENCES unplanned_expense_categories (id) ON DELETE CASCADE,
+                counter_account_id      BIGINT
+                    REFERENCES bank_accounts (id) ON DELETE CASCADE,
+                rank                    SMALLINT      NOT NULL DEFAULT 1,
+                rationale               VARCHAR(300),
+                status                  VARCHAR(16)   NOT NULL DEFAULT 'OPEN',
+                source                  VARCHAR(8)    NOT NULL,
+                confidence              NUMERIC(4,3),
+                note                    TEXT,
+                created_date            TIMESTAMP     NOT NULL DEFAULT NOW(),
+                created_by              VARCHAR(255),
+                updated_date            TIMESTAMP,
+                updated_by              VARCHAR(255),
+                CONSTRAINT ck_bank_transaction_suggestions_amount_positive CHECK (amount > 0),
+                CONSTRAINT ck_bank_transaction_suggestions_kind CHECK (kind IN (
+                    'WORKER_PAYOUT', 'PROCUREMENT', 'CLIENT_PAYMENT',
+                    'OTHER_EXPENSE', 'OTHER_INCOME', 'INTERNAL_TRANSFER'
+                )),
+                CONSTRAINT ck_bank_transaction_suggestions_source
+                    CHECK (source IN ('RULE', 'AI', 'MANUAL')),
+                CONSTRAINT ck_bank_transaction_suggestions_status
+                    CHECK (status IN ('OPEN', 'CONFIRMED', 'REJECTED', 'SUPERSEDED')),
+                CONSTRAINT ck_bank_transaction_suggestions_confidence
+                    CHECK (confidence IS NULL OR (confidence >= 0 AND confidence <= 1)),
+                CONSTRAINT ck_bank_transaction_suggestions_kind_target CHECK (
+                    (kind = 'WORKER_PAYOUT') = (worker_payout_id IS NOT NULL)
+                    AND (kind = 'PROCUREMENT') = (procurement_document_id IS NOT NULL)
+                    AND (kind = 'CLIENT_PAYMENT') = (payment_schedule_id IS NOT NULL)
+                    AND (kind = 'OTHER_EXPENSE') = (unplanned_category_id IS NOT NULL)
+                    AND (kind = 'INTERNAL_TRANSFER' OR counter_account_id IS NULL)
+                )
+            );
+            CREATE INDEX ix_bank_transaction_suggestions_transaction_status
+                ON bank_transaction_suggestions (transaction_id, status);
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_transaction_suggestions"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="203-create-bank-counterparty-rules" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_counterparty_rules"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_counterparty_rules (
+                id                    BIGSERIAL PRIMARY KEY,
+                counterparty_key      VARCHAR(300) NOT NULL,
+                display_name          VARCHAR(255),
+                target_kind           VARCHAR(24)  NOT NULL,
+                worker_id             BIGINT
+                    REFERENCES users (id) ON DELETE CASCADE,
+                supplier_name         VARCHAR(255),
+                supplier_nip          VARCHAR(10),
+                project_id            BIGINT
+                    REFERENCES projects (id) ON DELETE CASCADE,
+                payment_schedule_id   BIGINT
+                    REFERENCES payment_schedules (id) ON DELETE CASCADE,
+                unplanned_category_id BIGINT
+                    REFERENCES unplanned_expense_categories (id) ON DELETE CASCADE,
+                counter_account_id    BIGINT
+                    REFERENCES bank_accounts (id) ON DELETE CASCADE,
+                enabled               BOOLEAN      NOT NULL DEFAULT TRUE,
+                hits                  INT          NOT NULL DEFAULT 0,
+                last_used_at          TIMESTAMP WITH TIME ZONE,
+                origin                VARCHAR(8)   NOT NULL DEFAULT 'LEARNED',
+                created_date          TIMESTAMP    NOT NULL DEFAULT NOW(),
+                created_by            VARCHAR(255),
+                updated_date          TIMESTAMP,
+                updated_by            VARCHAR(255),
+                CONSTRAINT uq_bank_counterparty_rules_key UNIQUE (counterparty_key),
+                CONSTRAINT ck_bank_counterparty_rules_target_kind CHECK (target_kind IN (
+                    'WORKER_PAYOUT', 'PROCUREMENT', 'CLIENT_PAYMENT',
+                    'OTHER_EXPENSE', 'OTHER_INCOME', 'INTERNAL_TRANSFER'
+                )),
+                CONSTRAINT ck_bank_counterparty_rules_origin
+                    CHECK (origin IN ('LEARNED', 'MANUAL')),
+                CONSTRAINT ck_bank_counterparty_rules_hits CHECK (hits >= 0)
+            );
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_counterparty_rules"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

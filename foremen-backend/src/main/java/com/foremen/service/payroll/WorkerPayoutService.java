@@ -4,12 +4,14 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -21,6 +23,7 @@ import com.foremen.dao.AdminDao;
 import com.foremen.dao.UserDao;
 import com.foremen.dao.WorkerPayoutAllocationDao;
 import com.foremen.dao.WorkerPayoutDao;
+import com.foremen.dao.model.PaymentChannel;
 import com.foremen.dao.model.PayoutStatus;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoleEntity;
@@ -70,7 +73,9 @@ import jakarta.persistence.criteria.Predicate;
  *       {@link PayoutDistributor} and persists the allocations + {@code paid_amount +=} via
  *       {@link AllocationWriter} (R5.2–R5.5, R5.9); an advance uses the planned-basis suggestion,
  *       applies no credit, and allocates nothing (R5.6); audit;</li>
- *   <li>{@link #markPaid} — {@code PLANNED → PAID}, sets {@code paidAt} (R6.1);</li>
+ *   <li>{@link #markPaid} — {@code PLANNED → PAID}, sets {@code paidAt} (R6.1); FOR-07-04
+ *       {@link #markPaidFromLedger} does the same from a ledger link. Both publish
+ *       {@link WorkerPayoutPaidEvent} (a domain event for the cash ledger, not a notification);</li>
  *   <li>{@link #delete} — {@code PLANNED} only; an advance passes the worker-wide consumed-credit
  *       check (R6.3); a regular payout's allocations are released ({@code paid_amount -=}, R6.2);
  *       audit; hard delete (R6.4);</li>
@@ -95,6 +100,9 @@ public class WorkerPayoutService
     static final String STATUS_ILLEGAL_TRANSITION = "error.workerPayout.status.illegalTransition";
     static final String ADVANCE_ALREADY_APPLIED = "error.workerPayout.advance.alreadyApplied";
 
+    /** Payroll is single-currency; the currency carried by {@link WorkerPayoutPaidEvent} (FOR-07-04 R27.4). */
+    public static final String PAYOUT_CURRENCY = "PLN";
+
     private static final String WORKER_ROLE_CODE = "WORKER";
     private static final int SCALE = 2;
 
@@ -109,6 +117,7 @@ public class WorkerPayoutService
     private final WorkerPayoutDtoMapper dtoMapper;
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
+    private final ApplicationEventPublisher eventPublisher;
 
     public WorkerPayoutService(WorkerPayoutDao workerPayoutDao,
                                WorkerPayoutAllocationDao allocationDao,
@@ -120,7 +129,9 @@ public class WorkerPayoutService
                                WorkerPayoutServiceMapper serviceMapper,
                                WorkerPayoutDtoMapper dtoMapper,
                                AuditLogDao auditLogDao,
-                               EntityManager entityManager) {
+                               EntityManager entityManager,
+                               ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.workerPayoutDao = workerPayoutDao;
         this.allocationDao = allocationDao;
         this.userDao = userDao;
@@ -272,12 +283,51 @@ public class WorkerPayoutService
         if (payout.getStatus() != PayoutStatus.PLANNED) {
             throw new ForemenApiException(HttpStatus.CONFLICT, STATUS_ILLEGAL_TRANSITION);
         }
+        return transitionToPaid(payout, OffsetDateTime.now(), payout.getPaymentChannel(), false);
+    }
+
+    /**
+     * FOR-07-04 seam (R16.1, R16.2) — {@code PLANNED → PAID} driven by a confirmed ledger link: sets
+     * {@code paidAt} to the ledger line's booking date and {@code paymentChannel} to the line's channel
+     * ({@code BANK_TRANSFER} for a bank line, {@code CASH} for a cash line), then publishes
+     * {@link WorkerPayoutPaidEvent} with {@code fromLedger = true} so the cash hook creates no duplicate
+     * SYSTEM entry (R27.4). Same FOR-07-06 rules as {@link #markPaid}: unknown id → 404, non-PLANNED →
+     * {@link #STATUS_ILLEGAL_TRANSITION} / 409; a missing channel → {@link #CHANNEL_REQUIRED} / 422.
+     *
+     * @param id      the payout id
+     * @param paidAt  the ledger line's booking date (start of day, system zone); {@code null} → now
+     * @param channel the ledger line's channel mapped to the payout channel
+     * @return the paid payout
+     */
+    @Transactional
+    public WorkerPayoutDto markPaidFromLedger(Long id, LocalDate paidAt, PaymentChannel channel) {
+        WorkerPayoutEntity payout = findPayout(id);
+        if (payout.getStatus() != PayoutStatus.PLANNED) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, STATUS_ILLEGAL_TRANSITION);
+        }
+        if (channel == null) {
+            throw new ForemenApiException(HttpStatus.UNPROCESSABLE_ENTITY, CHANNEL_REQUIRED);
+        }
+        OffsetDateTime at = paidAt == null
+                ? OffsetDateTime.now()
+                : paidAt.atStartOfDay(ZoneId.systemDefault()).toOffsetDateTime();
+        return transitionToPaid(payout, at, channel, true);
+    }
+
+    /** The shared {@code PLANNED → PAID} write: entity update, audit, and the paid event (R27.4). */
+    private WorkerPayoutDto transitionToPaid(WorkerPayoutEntity payout, OffsetDateTime paidAt,
+                                             PaymentChannel channel, boolean fromLedger) {
         String before = serializeEntity(payout);
         payout.setStatus(PayoutStatus.PAID);
-        payout.setPaidAt(OffsetDateTime.now());
+        payout.setPaidAt(paidAt);
+        payout.setPaymentChannel(channel);
         WorkerPayoutEntity saved = workerPayoutDao.save(payout);
         entityManager.flush();
         saveAuditWithSnapshot(before, saved, "UPDATE");
+        eventPublisher.publishEvent(new WorkerPayoutPaidEvent(
+                saved.getId(), saved.getPaymentChannel(), saved.getPaidAt(), saved.getAmount(),
+                PAYOUT_CURRENCY, saved.getWorker() == null ? null : saved.getWorker().getName(),
+                saved.getNote(), fromLedger));
         return dtoMapper.toDto(saved);
     }
 

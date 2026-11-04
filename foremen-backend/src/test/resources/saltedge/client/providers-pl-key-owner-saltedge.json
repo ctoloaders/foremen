@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "id": "3002",
+      "code": "erste_oauth_client_pl",
+      "country_code": "PL",
+      "name": "Erste Bank Polska",
+      "status": "active",
+      "mode": "oauth",
+      "regulated": true
+    },
+    {
+      "id": "3003",
+      "code": "mbank_pl",
+      "country_code": "PL",
+      "name": "mBank",
+      "status": "active",
+      "mode": "api",
+      "regulated": false
+    }
+  ],
+  "meta": {
+    "next_id": null,
+    "next_page": null
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "data": {
+    "id": "1170000000000000001",
+    "customer_id": "1160000000000000001",
+    "provider_code": "fakebank_simple_xf",
+    "provider_name": "Fake Bank Simple",
+    "country_code": "XF",
+    "status": "active",
+    "categorization": "business",
+    "automatic_refresh": true,
+    "next_refresh_possible_at": "2026-11-05T07:30:00Z",
+    "last_consent_id": "1150000000000000001",
+    "holder_info": {
+      "names": ["Foremen Sp. z o.o.", "  ", "Foremen Sp. z o.o."],
+      "emails": ["finance@example.com"],
+      "phone_numbers": ["+48000000000"],
+      "addresses": [
+        { "city": "Warszawa", "state": null, "street": "ul. Prosta 1", "country_code": "PL", "post_code": "00-001" }
+      ],
+      "extra": {
+        "tax_id": "5250000000"
+      }
+    },
+    "created_at": "2026-11-01T10:00:00Z",
+    "updated_at": "2026-11-05T06:30:12Z"
+  }
+}

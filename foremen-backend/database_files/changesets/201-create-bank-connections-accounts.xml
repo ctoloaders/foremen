@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-04 (company money ledger: bank + cash) — connections, encrypted secrets, accounts
+        (BANK + CASH) and balance-continuity gaps.
+
+        Tables (design §Data model):
+          - bank_connections        : one row per bank connection (Salt Edge / Stub). provider_mode
+                                      records the Salt Edge mode the connection was created in
+                                      (PARTNER | CLIENT); holder_names keeps the connection-level
+                                      holder info (R1.1, R2.1, R3.7).
+          - bank_connection_secrets : AES-GCM-encrypted provider secrets, 1:1 with the connection,
+                                      ON DELETE CASCADE (R2.1).
+          - bank_accounts           : BANK accounts (connection_id + external_id NOT NULL) and CASH
+                                      registers (both NULL), opening_balance / default_for_cash /
+                                      archived for CASH, holder_match + manual override (R3.1, R3.7,
+                                      R3.8, R27.1, R27.2). Partial UNIQUE (currency) WHERE CASH AND
+                                      default_for_cash => one default cash register per currency.
+          - bank_balance_gaps       : detected balance-continuity gaps per account (R7.2).
+
+        Audit columns follow BaseEntity (created_date, created_by, updated_date, updated_by).
+
+        Idempotent: each table is guarded by NOT tableExists + onFail="MARK_RAN". Registered LAST
+        in changelog.xml, after 200.
+    -->
+
+    <changeSet id="201-create-bank-connections" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_connections"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_connections (
+                id                            BIGSERIAL PRIMARY KEY,
+                provider                      VARCHAR(32)  NOT NULL,
+                provider_mode                 VARCHAR(16),
+                provider_code                 VARCHAR(128),
+                bank_name                     VARCHAR(255),
+                bank_logo_url                 VARCHAR(512),
+                display_name                  VARCHAR(255),
+                external_customer_id          VARCHAR(64),
+                external_connection_id        VARCHAR(64),
+                external_consent_id           VARCHAR(64),
+                status                        VARCHAR(24)  NOT NULL,
+                consent_expires_at            TIMESTAMP WITH TIME ZONE,
+                consent_expiring_notified_for VARCHAR(64),
+                holder_names                  JSONB,
+                last_sync_at                  TIMESTAMP WITH TIME ZONE,
+                last_successful_sync_at       TIMESTAMP WITH TIME ZONE,
+                next_refresh_possible_at      TIMESTAMP WITH TIME ZONE,
+                last_error_code               VARCHAR(64),
+                last_error_message            TEXT,
+                last_sync_failed_notified_at  TIMESTAMP WITH TIME ZONE,
+                created_date                  TIMESTAMP    NOT NULL DEFAULT NOW(),
+                created_by                    VARCHAR(255),
+                updated_date                  TIMESTAMP,
+                updated_by                    VARCHAR(255),
+                CONSTRAINT ck_bank_connections_provider
+                    CHECK (provider IN ('SALT_EDGE', 'STUB')),
+                CONSTRAINT ck_bank_connections_provider_mode
+                    CHECK (provider_mode IS NULL OR provider_mode IN ('PARTNER', 'CLIENT')),
+                CONSTRAINT ck_bank_connections_status
+                    CHECK (status IN ('PENDING_AUTH', 'ACTIVE', 'CONSENT_EXPIRING',
+                                      'REAUTH_REQUIRED', 'ERROR', 'DISABLED'))
+            );
+            CREATE UNIQUE INDEX ux_bank_connections_provider_external
+                ON bank_connections (provider, external_connection_id)
+                WHERE external_connection_id IS NOT NULL;
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_connections"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="201-create-bank-connection-secrets" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_connection_secrets"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_connection_secrets (
+                connection_id BIGINT PRIMARY KEY
+                    REFERENCES bank_connections (id) ON DELETE CASCADE,
+                ciphertext    BYTEA    NOT NULL,
+                iv            BYTEA    NOT NULL,
+                key_version   SMALLINT NOT NULL,
+                updated_at    TIMESTAMP WITH TIME ZONE,
+                updated_by    VARCHAR(255),
+                CONSTRAINT ck_bank_connection_secrets_iv_len CHECK (octet_length(iv) = 12)
+            );
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_connection_secrets"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="201-create-bank-accounts" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_accounts"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_accounts (
+                id                     BIGSERIAL PRIMARY KEY,
+                type                   VARCHAR(8)    NOT NULL,
+                connection_id          BIGINT
+                    REFERENCES bank_connections (id) ON DELETE CASCADE,
+                external_id            VARCHAR(64),
+                name                   VARCHAR(255),
+                nature                 VARCHAR(64),
+                holder_name            VARCHAR(255),
+                iban                   VARCHAR(34),
+                account_number         VARCHAR(64),
+                currency               CHAR(3)       NOT NULL,
+                balance                NUMERIC(19,2),
+                available_balance      NUMERIC(19,2),
+                opening_balance        NUMERIC(19,2) NOT NULL DEFAULT 0,
+                default_for_cash       BOOLEAN       NOT NULL DEFAULT FALSE,
+                archived               BOOLEAN       NOT NULL DEFAULT FALSE,
+                balance_updated_at     TIMESTAMP WITH TIME ZONE,
+                included_in_ledger     BOOLEAN       NOT NULL DEFAULT TRUE,
+                closed_at_provider     BOOLEAN       NOT NULL DEFAULT FALSE,
+                has_balance_gap        BOOLEAN       NOT NULL DEFAULT FALSE,
+                holder_match           VARCHAR(10)   NOT NULL DEFAULT 'UNKNOWN',
+                holder_override_by     VARCHAR(255),
+                holder_override_at     TIMESTAMP WITH TIME ZONE,
+                holder_override_reason TEXT,
+                transactions_cursor    VARCHAR(64),
+                created_date           TIMESTAMP     NOT NULL DEFAULT NOW(),
+                created_by             VARCHAR(255),
+                updated_date           TIMESTAMP,
+                updated_by             VARCHAR(255),
+                CONSTRAINT ck_bank_accounts_type CHECK (type IN ('BANK', 'CASH')),
+                -- BANK is provider-backed (connection + external id), CASH has neither.
+                CONSTRAINT ck_bank_accounts_type_refs CHECK (
+                    (type = 'BANK' AND connection_id IS NOT NULL AND external_id IS NOT NULL)
+                    OR (type = 'CASH' AND connection_id IS NULL AND external_id IS NULL)
+                ),
+                CONSTRAINT ck_bank_accounts_cash_default
+                    CHECK (NOT default_for_cash OR type = 'CASH'),
+                CONSTRAINT ck_bank_accounts_cash_included
+                    CHECK (type <> 'CASH' OR included_in_ledger),
+                CONSTRAINT ck_bank_accounts_holder_match
+                    CHECK (holder_match IN ('MATCH', 'MISMATCH', 'UNKNOWN')),
+                CONSTRAINT uq_bank_accounts_connection_external
+                    UNIQUE (connection_id, external_id)
+            );
+            CREATE INDEX ix_bank_accounts_iban ON bank_accounts (iban);
+            CREATE UNIQUE INDEX ux_bank_accounts_default_cash_currency
+                ON bank_accounts (currency)
+                WHERE type = 'CASH' AND default_for_cash;
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_accounts"/>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="201-create-bank-balance-gaps" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_balance_gaps"/>
+            </not>
+        </preConditions>
+        <sql><![CDATA[
+            CREATE TABLE bank_balance_gaps (
+                id              BIGSERIAL PRIMARY KEY,
+                account_id      BIGINT NOT NULL
+                    REFERENCES bank_accounts (id) ON DELETE CASCADE,
+                period_from     TIMESTAMP WITH TIME ZONE,
+                period_to       TIMESTAMP WITH TIME ZONE,
+                expected        NUMERIC(19,2),
+                actual          NUMERIC(19,2),
+                difference      NUMERIC(19,2),
+                acknowledged_at TIMESTAMP WITH TIME ZONE,
+                acknowledged_by VARCHAR(255),
+                note            TEXT,
+                created_date    TIMESTAMP NOT NULL DEFAULT NOW(),
+                created_by      VARCHAR(255),
+                updated_date    TIMESTAMP,
+                updated_by      VARCHAR(255)
+            );
+            CREATE INDEX ix_bank_balance_gaps_account ON bank_balance_gaps (account_id);
+        ]]></sql>
+        <rollback>
+            <dropTable tableName="bank_balance_gaps"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

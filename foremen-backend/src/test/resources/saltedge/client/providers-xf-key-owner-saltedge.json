@@ -1,0 +1,14 @@
+{
+  "data": [
+    {
+      "id": "2",
+      "code": "fakebank_simple_xf",
+      "country_code": "XF",
+      "name": "Fake Bank Simple",
+      "status": "active",
+      "mode": "web",
+      "regulated": false
+    }
+  ],
+  "meta": { "next_id": null, "next_page": null }
+}

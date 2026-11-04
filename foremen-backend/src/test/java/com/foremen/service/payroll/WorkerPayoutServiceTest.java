@@ -27,6 +27,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
@@ -102,6 +103,8 @@ class WorkerPayoutServiceTest {
     private AuditLogDao auditLogDao;
     @Mock
     private EntityManager entityManager;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     private final List<WorkerPayoutAllocationEntity> savedAllocations = new ArrayList<>();
     private WorkerPayoutService service;
@@ -112,7 +115,7 @@ class WorkerPayoutServiceTest {
                 workerPayoutDao, allocationDao, userDao, suggestionService,
                 new AllocationWriter(allocationDao, entityManager),
                 new AdvanceCreditCalculator(), new AdvanceDeriver(),
-                serviceMapper, dtoMapper, auditLogDao, entityManager);
+                serviceMapper, dtoMapper, auditLogDao, entityManager, eventPublisher);
         lenient().when(workerPayoutDao.save(any(WorkerPayoutEntity.class))).thenAnswer(inv -> {
             WorkerPayoutEntity p = inv.getArgument(0);
             if (p.getId() == null) {
@@ -360,6 +363,69 @@ class WorkerPayoutServiceTest {
         }
 
         @Test
+        @DisplayName("FOR-07-04: mark-paid publishes WorkerPayoutPaidEvent with fromLedger=false (R27.4)")
+        void markPaidPublishesEvent() {
+            WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
+            p.getWorker().setName("Jan Kowalski");
+            p.setNote("May");
+
+            service.markPaid(p.getId());
+
+            WorkerPayoutPaidEvent event = capturedEvent();
+            assertThat(event.payoutId()).isEqualTo(p.getId());
+            assertThat(event.channel()).isEqualTo(PaymentChannel.CASH);
+            assertThat(event.paidAt()).isEqualTo(p.getPaidAt());
+            assertThat(event.amount()).isEqualByComparingTo("100");
+            assertThat(event.currency()).isEqualTo("PLN");
+            assertThat(event.workerName()).isEqualTo("Jan Kowalski");
+            assertThat(event.note()).isEqualTo("May");
+            assertThat(event.fromLedger()).isFalse();
+        }
+
+        @Test
+        @DisplayName("FOR-07-04: markPaidFromLedger sets paidAt + channel and publishes fromLedger=true (R16.1)")
+        void markPaidFromLedger() {
+            WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
+            p.setPaymentChannel(PaymentChannel.CASH);
+            LocalDate booking = LocalDate.of(2026, 5, 14);
+
+            service.markPaidFromLedger(p.getId(), booking, PaymentChannel.BANK_TRANSFER);
+
+            assertThat(p.getStatus()).isEqualTo(PayoutStatus.PAID);
+            assertThat(p.getPaymentChannel()).isEqualTo(PaymentChannel.BANK_TRANSFER);
+            assertThat(p.getPaidAt().toLocalDate()).isEqualTo(booking);
+            verify(auditLogDao).save(any());
+            WorkerPayoutPaidEvent event = capturedEvent();
+            assertThat(event.channel()).isEqualTo(PaymentChannel.BANK_TRANSFER);
+            assertThat(event.paidAt()).isEqualTo(p.getPaidAt());
+            assertThat(event.fromLedger()).isTrue();
+        }
+
+        @Test
+        @DisplayName("FOR-07-04: markPaidFromLedger keeps FOR-07-06 rules — PAID → 409, no channel → 422, no event")
+        void markPaidFromLedgerRejections() {
+            WorkerPayoutEntity paid = persisted(PayoutStatus.PAID, false);
+            assertApiError(() -> service.markPaidFromLedger(paid.getId(), LocalDate.now(), PaymentChannel.CASH),
+                    HttpStatus.CONFLICT, "error.workerPayout.status.illegalTransition");
+            WorkerPayoutEntity planned = persisted(PayoutStatus.PLANNED, false);
+            assertApiError(() -> service.markPaidFromLedger(planned.getId(), LocalDate.now(), null),
+                    HttpStatus.UNPROCESSABLE_ENTITY, "error.workerPayout.channel.required");
+            assertThat(planned.getStatus()).isEqualTo(PayoutStatus.PLANNED);
+            verify(eventPublisher, never()).publishEvent(any(Object.class));
+        }
+
+        @Test
+        @DisplayName("FOR-07-04: create and delete publish no paid event")
+        void createAndDeletePublishNothing() {
+            when(suggestionService.payableLines(WORKER_ID, TO)).thenReturn(List.of());
+            service.create(request(TO, bd("10"), null));
+            WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
+            when(allocationDao.findByPayoutId(p.getId())).thenReturn(List.of());
+            service.delete(p.getId());
+            verify(eventPublisher, never()).publishEvent(any(Object.class));
+        }
+
+        @Test
         @DisplayName("deleting a PLANNED regular payout releases its allocations: paid_amount −= a (R6.2, R6.4)")
         void deleteRegularReleasesAllocations() {
             WorkerPayoutEntity p = persisted(PayoutStatus.PLANNED, false);
@@ -471,11 +537,13 @@ class WorkerPayoutServiceTest {
         @DisplayName("the service is not project-scoped and has no notification seam (R14.2, R13)")
         void structure() {
             assertThat(ProjectScopedService.class.isAssignableFrom(WorkerPayoutService.class)).isFalse();
+            // FOR-07-04 R27.4 adds an ApplicationEventPublisher for the WorkerPayoutPaidEvent domain
+            // event (cash ledger hook); no notification service is wired (R13 still holds).
             boolean hasNotificationSeam = java.util.Arrays
                     .stream(WorkerPayoutService.class.getDeclaredConstructors())
                     .flatMap(c -> java.util.Arrays.stream(c.getParameterTypes()))
                     .map(Class::getName)
-                    .anyMatch(n -> n.contains("Notification") || n.contains("ApplicationEventPublisher"));
+                    .anyMatch(n -> n.contains("Notification"));
             assertThat(hasNotificationSeam).isFalse();
         }
     }
@@ -501,6 +569,13 @@ class WorkerPayoutServiceTest {
         ArgumentCaptor<WorkerPayoutEntity> captor = ArgumentCaptor.forClass(WorkerPayoutEntity.class);
         verify(workerPayoutDao).save(captor.capture());
         return captor.getValue();
+    }
+
+    private WorkerPayoutPaidEvent capturedEvent() {
+        ArgumentCaptor<Object> captor = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher).publishEvent(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(WorkerPayoutPaidEvent.class);
+        return (WorkerPayoutPaidEvent) captor.getValue();
     }
 
     private long idSeq = 1000L;
@@ -547,7 +622,7 @@ class WorkerPayoutServiceTest {
 
     private static WorkerPayoutDto sampleDto() {
         return new WorkerPayoutDto(1L, WORKER_ID, "Worker", LocalDate.now(), FROM, TO, bd("100"), bd("100"),
-                BigDecimal.ZERO, PaymentChannel.CASH, PayoutStatus.PLANNED, false, null, null);
+                BigDecimal.ZERO, PaymentChannel.CASH, PayoutStatus.PLANNED, false, null, null, List.of());
     }
 
     private static BigDecimal bd(String v) {
