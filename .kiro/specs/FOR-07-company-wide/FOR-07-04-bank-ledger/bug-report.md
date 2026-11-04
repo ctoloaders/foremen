@@ -4,7 +4,7 @@ Screen URL: https://dev.foremen.eu/bank/connections
 
 ## Round 1 (2026-11-04)
 
-- [ ] 1. The "Add bank" popup does not fit all the text (screenshot)
+- [x] 1. The "Add bank" popup does not fit all the text (screenshot)
   - Triage: observed: content of the Add bank dialog overflows / is clipped; expected: every label,
     bank name and capability chip is readable inside the dialog at desktop and mobile widths.
     Layer: frontend. Suspect: `foremen-frontend/src/features/bank/connections/BankPicker.tsx`
@@ -14,8 +14,10 @@ Screen URL: https://dev.foremen.eu/bank/connections
     Fix: `min-w-0` + 2-line clamp for the name, chips `flex-none` and wrapping under the name on
     narrow widths, dialog `sm:max-w-xl` with `max-h-[90vh] overflow-y-auto`.
   - _Requirements: 19.4, 23.1_
+  - Verified on dev 2026-11-04 (frontend 198cc29): Salt Edge, 70 banks; 1280px dialog 576px wide, 375px
+    full width, no element overflows, names + chips wrap, footer visible.
   - _Depends on: none_
-- [ ] 2. `POST /api/bank/connections` returns 409 "Provider connection limit reached"
+- [x] 2. `POST /api/bank/connections` returns 409 "Provider connection limit reached"
   - Triage: observed: `409 error.bank.provider.connectionLimit` (backend log 14:23:10,
     `code=error.bank.provider.connectionLimit, status=409`; the reported "429" is the same request,
     the body status is 409). Salt Edge refused the connect session with
@@ -31,12 +33,16 @@ Screen URL: https://dev.foremen.eu/bank/connections
     connections in Salt Edge or switch the account to Live"), shown inline in the dialog instead of
     a toast only.
   - _Requirements: 8.3, 12.1, 19.4_
+  - Verified on dev 2026-11-04: 9 fake connections deleted (`delete all`, status 0); "Add bank" →
+    Fake Bank Simple → redirected to saltedge.com/connect, connection 2 `PENDING_AUTH`, no
+    `connectionLimit` in the backend log.
   - _Depends on: none_
-- [ ] V1. Validate Round 1 in browser
+- [x] V1. Validate Round 1 in browser
   - Local stack (`docker compose up -d --build frontend backend`) for bug 1 (STUB provider, narrow
     and wide viewports, PL + RU); dev (https://dev.foremen.eu/bank/connections) for bug 2 after the
     Salt Edge slots are freed: "Add bank" → Salt Edge → `fakebank_simple_xf` → redirect to Salt Edge
     Connect without 409.
+  - Verified on dev (no local stack: the local liquibase hung on the Docker Desktop bind mount).
   - _Depends on: 1, 2_
 
 ## Parallel execution plan (waves) — Round 1
