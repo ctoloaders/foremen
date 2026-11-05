@@ -24,6 +24,7 @@ import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.ApplyAssignmentsRequest;
 import com.foremen.controller.model.ApplyPackageRequest;
 import com.foremen.controller.model.ApplyWorkRequest;
+import com.foremen.controller.model.LabourPriceAdjustmentRequest;
 import com.foremen.controller.model.RecomputeFinishingRequest;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.estimate.EstimateAssignmentService;
@@ -183,6 +184,27 @@ public class EstimateMatrixController {
                     EstimateChangedEvent.Trigger.ESTIMATE_SAVED));
         }
         return ResponseEntity.ok(matrix);
+    }
+
+    /**
+     * FOR-05-05 bug-report Round 8 (B) — the scoped LABOUR-price override write
+     * ({@code POST /project/{projectId}/labour-price-adjustment}, {@code ESTIMATE} UPDATE): applies a
+     * signed percentage to the EFFECTIVE labour price ({@code unit_price_override}) of every in-scope
+     * line (PROJECT / WORK_CATEGORY / WORK_ITEM), leaving the frozen original {@code unit_price}
+     * intact, and returns the refreshed matrix read model so the client can re-render (the labour
+     * cells + the divergence badge). DRAFT-gated + project-scoped in the service write path. It is a
+     * real server write (unlike the read-only calculate/preview endpoints), so it carries
+     * {@code ESTIMATE} UPDATE — reusing the existing resource, no new managed entity.
+     */
+    @PostMapping("/project/{projectId}/labour-price-adjustment")
+    @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = UPDATE_OPERATION)
+    public ResponseEntity<EstimateMatrixDto> adjustLabourPrice(
+            @PathVariable Long projectId, @Valid @RequestBody LabourPriceAdjustmentRequest request) {
+        estimateAssignmentService.applyLabourPriceAdjustment(
+                projectId, request.scope(), request.targetId(), request.pct());
+        // Always editable: a successful UPDATE write is only reachable for an ESTIMATE UPDATE caller
+        // on a DRAFT estimate (the service asserts DRAFT), mirroring the Save endpoint's contract.
+        return ResponseEntity.ok(estimateAssignmentService.getMatrix(projectId, true));
     }
 
     /**

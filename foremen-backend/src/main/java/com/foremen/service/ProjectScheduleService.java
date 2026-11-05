@@ -457,12 +457,15 @@ public class ProjectScheduleService
         List<ProjectMemberEntity> workerMembers = activeWorkerMembers(projectId);
         int crewSize = workerMembers.size();
         Map<Long, String> workerNameById = new LinkedHashMap<>();
+        // FOR-05-10b bug-report R1 — member id → stable user id, the per-worker color key.
+        Map<Long, Long> workerUserIdByMemberId = new LinkedHashMap<>();
         // FOR-05-10b (soft-match, this change) — the categories each ACTIVE worker member covers, so
         // the per-bar read model can flag a worker-vs-category MISMATCH (a bar whose assigned worker
         // does not perform the bar's work category). The match set is the member's Work_Categories.
         Map<Long, Set<Long>> coveredCategoriesByMemberForView = new HashMap<>();
         for (ProjectMemberEntity member : workerMembers) {
             workerNameById.put(member.getId(), memberDisplayName(member));
+            workerUserIdByMemberId.put(member.getId(), memberUserId(member));
             coveredCategoriesByMemberForView.put(member.getId(), memberCategoryIds(member));
         }
 
@@ -520,8 +523,11 @@ public class ProjectScheduleService
                     }
                     categoryMismatch = !memberCovered.contains(categoryId);
                 }
+                Long barUserId = memberId == null ? null
+                        : workerUserIdByMemberId.getOrDefault(memberId, memberUserId(bar.getProjectMember()));
                 barViews.add(new ScheduleBarView(
                         memberId,
+                        barUserId,
                         memberId == null ? null : workerNameById.get(memberId),
                         ScheduleCalculator.startDayFromHalfDays(startHalfDays),
                         ScheduleCalculator.durationDaysFromHalfDays(durationHalfDays),
@@ -546,7 +552,8 @@ public class ProjectScheduleService
         // 7 — the worker legend (one entry per ACTIVE WORKER member; color computed client-side).
         List<ScheduleWorkerView> workers = new ArrayList<>(workerMembers.size());
         for (ProjectMemberEntity member : workerMembers) {
-            workers.add(new ScheduleWorkerView(member.getId(), memberDisplayName(member), null));
+            workers.add(new ScheduleWorkerView(
+                    member.getId(), memberUserId(member), memberDisplayName(member), null));
         }
 
         // 8 — schedule-wide finish (half-day grid), finishDate, exceedsProjectEnd, and the currency.
@@ -601,6 +608,16 @@ public class ProjectScheduleService
     /** The display name of a member — its user's name, or {@code null} when the user is unresolved. */
     private static String memberDisplayName(ProjectMemberEntity member) {
         return member.getUser() == null ? null : member.getUser().getName();
+    }
+
+    /**
+     * The member's stable USER id — the per-worker color key (FOR-05-10b bug-report R1). Keying the
+     * Gantt color by the user id (not the project-membership id, which is reassigned when a worker is
+     * removed and re-added) keeps a worker's color stable across team/schedule re-creation.
+     * {@code null} when the user is unresolved.
+     */
+    private static Long memberUserId(ProjectMemberEntity member) {
+        return member == null || member.getUser() == null ? null : member.getUser().getId();
     }
 
     /** The non-null work-category ids of a member's Member_Work_Categories (R4.1 coverage input). */

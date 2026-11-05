@@ -22,6 +22,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
  *
  * @param projectMemberId the covering worker's project-member id; {@code null} for the virtual
  *                        {@code Uncovered_Category} bar (D-uncovered)
+ * @param userId          the covering worker's stable USER id — the color key (FOR-05-10b
+ *                        bug-report R1): keying the bar color by the user id (not the volatile
+ *                        project-membership id) keeps a worker's color stable across team/schedule
+ *                        re-creation. {@code null} for the virtual uncovered bar.
  * @param workerName      the covering worker's display name; {@code null} for the virtual bar
  * @param startDay        the bar start day as a 0.5-multiple ({@code startHalfDays / 2})
  * @param durationDays    the bar duration in days as a 0.5-multiple ({@code durationHalfDays / 2})
@@ -37,6 +41,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record ScheduleBarView(
         Long projectMemberId,
+        Long userId,
         String workerName,
         Double startDay,
         Double durationDays,

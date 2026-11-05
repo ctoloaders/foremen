@@ -314,6 +314,73 @@ public class EstimateAssignmentService
     }
 
     /**
+     * FOR-05-05 bug-report Round 8 (B) — applies a scoped signed-percentage adjustment to the
+     * EFFECTIVE labour price of the in-scope estimate lines: each in-scope line's
+     * {@code unitPriceOverride} is rewritten to {@code unitPrice × (1 + pct/100)} (the ORIGINAL ×
+     * factor), leaving the frozen {@code unitPrice} untouched. A negative {@code pct} is a discount,
+     * a positive one a surcharge, {@code 0} resets each override back to its original. This is a
+     * one-shot write per line (not a live multiplier), so each work item keeps its own concrete
+     * overridden value. <b>Labour only</b> — material lines are never touched.
+     *
+     * <p>DRAFT-gated + project-scoped: resolves the project's estimate through the write path (which
+     * asserts DRAFT) and never leaves the project boundary (a {@code WORK_ITEM}/{@code WORK_CATEGORY}
+     * target only ever matches this estimate's own lines). The persisted {@code valueNet} is NOT
+     * recomputed from the override — it intentionally stays derived from the ORIGINAL
+     * {@code unitPrice} (its javadoc contract), so the saved line value and the estimate totals are
+     * unchanged; the override drives only the displayed/offer <i>matrix</i> labour, which the
+     * assembler reads from {@code unitPriceOverride}. No recompute cascade is therefore needed.
+     *
+     * @param projectId the owning project's estimate to adjust
+     * @param scope     the adjustment scope (PROJECT / WORK_CATEGORY / WORK_ITEM)
+     * @param targetId  the scope target id (work-category id / work-item id; ignored for PROJECT)
+     * @param pct       the signed percentage adjustment applied to the original price
+     */
+    @Transactional
+    public void applyLabourPriceAdjustment(
+            Long projectId, LabourPriceAdjustmentScope scope, Long targetId, BigDecimal pct) {
+        if (scope == null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.validation");
+        }
+        if (pct == null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.validation");
+        }
+        if ((scope == LabourPriceAdjustmentScope.WORK_CATEGORY
+                || scope == LabourPriceAdjustmentScope.WORK_ITEM) && targetId == null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.validation");
+        }
+
+        EstimateEntity estimate = resolveDraftEstimate(projectId);
+
+        // factor = 1 + pct/100, computed once with enough scale, then applied to each original price.
+        BigDecimal factor = BigDecimal.ONE.add(pct.divide(BigDecimal.valueOf(100)));
+
+        for (EstimateLineEntity line : estimate.getLines()) {
+            if (!lineInScope(line, scope, targetId)) {
+                continue;
+            }
+            BigDecimal original = line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO;
+            // Keep the override at the unit_price column's scale (2) so it round-trips the NUMERIC(12,2)
+            // column without surprise truncation; HALF_UP matches the money-rounding used elsewhere.
+            BigDecimal override = original.multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);
+            line.setUnitPriceOverride(override);
+        }
+        entityManager.flush();
+    }
+
+    /** Whether an estimate line falls within the requested adjustment scope. */
+    private static boolean lineInScope(
+            EstimateLineEntity line, LabourPriceAdjustmentScope scope, Long targetId) {
+        return switch (scope) {
+            case PROJECT -> true;
+            case WORK_ITEM -> line.getWorkItem() != null
+                    && java.util.Objects.equals(line.getWorkItem().getId(), targetId);
+            case WORK_CATEGORY -> line.getWorkItem() != null
+                    && line.getWorkItem().getWorkCategory() != null
+                    && java.util.Objects.equals(line.getWorkItem().getWorkCategory().getId(), targetId);
+        };
+    }
+
+    /**
      * The single batched {@code Save} write path (design §B4, R15.2, R15.3, R15.7): persists the whole
      * staged set in one transaction and finishes by recomputing the estimate's totals.
      *
@@ -1356,6 +1423,8 @@ public class EstimateAssignmentService
         line.setUnitPrice(workPrice != null && workPrice.getNetPrice() != null
                 ? workPrice.getNetPrice()
                 : BigDecimal.ZERO);
+        // FOR-05-05 Round 8 (B): the effective override starts equal to the frozen original.
+        line.setUnitPriceOverride(line.getUnitPrice());
         line.setQuantity(BigDecimal.ZERO);
         line.setValueNet(BigDecimal.ZERO);
 

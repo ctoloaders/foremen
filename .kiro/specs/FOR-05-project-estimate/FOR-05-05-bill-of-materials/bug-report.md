@@ -468,3 +468,237 @@ so the existing `sticky top-0` header row and `sticky left-0` work column work. 
 Cosmetic leftover: with `border-collapse`, a few pixels of the scrolled rows show through above the
 pinned header (the collapsed borders don't stick). If it bothers you, switch the table to
 `border-separate border-spacing-0`.
+
+## Round 7 (2026-11-04)
+
+Screen URL: `http://localhost:3000/projects/{id}/estimate` (Works × Rooms matrix). Source: meeting
+notes (RU). Reported bug (one line): "в смете чтобы было в ячейке виден объём работы и цена … с
+возможностью сформировать цену работы, материала, работы с материалом (переключалка над таблицей —
+как показывать цены: Р, М, Р+М)". Clarified with the user: the toggle is the **"Итого работ
+(ед. изм.)" column header** itself — clicking it cycles the price mode; each matrix cell shows the
+work **volume** plus the **price for the selected mode**.
+
+Background (grounded in code): each `MatrixCell` (`features/estimate/components/MatrixCell.tsx`)
+currently renders only one combined money range (`cellCostRange`), no volume and no work/material
+split. `CellDto` (`features/estimate/types/index.ts`) already carries `volume`, `labour`, and
+per-material lines, and the pure cost model (`features/estimate/state/costModel.ts`) already has the
+building blocks — `cellCostRange` (combined = Р+М), a private `cellWorksRange` (labour = Р), and
+`cellBranchMaterialRange` (per-branch material). The "total works" column header
+(`estimate.matrix.totalVolumeColumn`, testid `estimate-total-volume-col`) lives in
+`WorksRoomsMatrix.tsx`; the per-row total/volume cell lives in `WorkTypeGroupSection.tsx`. This is a
+**frontend-only** change — no new backend fields are required (Р, М, Р+М are all derivable from
+`CellDto`).
+
+Scope note on material format: the user said material price needs "другой формат" later; at this
+stage М mode reuses the existing material money-range format (no new formatting introduced now).
+
+- [x] 1. Add a price-mode cycle on the "Итого работ (ед. изм.)" column header (Р → М → Р+М)
+  - Triage: observed — the total-works header is a static label; cells show one combined price.
+    Expected — clicking the header cycles a price mode held in UI state (default **Р+М**, matching
+    today's combined behaviour), with Р = работа (labour), М = материал (material), Р+М = both. The
+    chosen mode is **persisted in the browser session** (per the user's decision). The header shows
+    the active mode (e.g. a `Р / М / Р+М` affordance) and is keyboard-accessible (button,
+    `aria-label`). Layer: **frontend**.
+    - Hold the mode in a small store mirroring `estimatePositioningStore`, persisting to
+      `sessionStorage` (per project); thread the selected mode into `WorkTypeGroupSection` →
+      `MatrixCell`.
+    - New i18n keys (PL + RU) for the mode labels and the header aria/tooltip (e.g.
+      `estimate.priceMode.work` = `Р`/`R`-work label, `.material`, `.both`, `.cycleAria`,
+      `.hint`). No hard-coded UI text.
+  - _Requirements: 1.2, 7.2, 14.1_
+  - _Depends on: none_
+- [x] 2. Add `cellWorkRange` / `cellMaterialRange` helpers and render volume + mode price per cell
+  - Triage: observed — `MatrixCell` renders `volume`-less, combined-only price. Expected — each
+    assigned cell shows the work **volume** (with unit) plus the money for the active mode: Р =
+    labour (`cellWorkRange`), М = Σ material lines (`cellMaterialRange`, both branches), Р+М =
+    `cellCostRange` (unchanged). Pending/zero/placeholder cues preserved. Layer: **frontend**.
+    - Export `cellWorkRange` (expose the existing private `cellWorksRange` labour point) and add
+      `cellMaterialRange` (Σ `materialLineRange` over all of the cell's lines) to `costModel.ts`;
+      keep the module pure/total and update its property tests.
+    - In `MatrixCell`, pick the range by mode and render `volume` + formatted range; verify group /
+      header subtotals stay consistent (they already expose `works`/`construction`/`finishing`).
+  - _Requirements: 1.2, 4.1, 7.2_
+  - _Depends on: 1_
+- [x] V7. Validate Round 7 in browser
+  - Bring up the local stack, open the estimate matrix on a DRAFT project with assigned cells.
+    Confirm: (a) clicking the "Итого работ" header cycles Р → М → Р+М; (b) each cell shows the work
+    volume and the price for the active mode; (c) Р+М matches the previous combined value; (d)
+    subtotals/totals remain correct.
+  - _Requirements: 1.2, 4.1, 7.2, 14.1_
+  - _Depends on: 1, 2_
+
+## Parallel execution plan (waves) — Round 7
+
+- **Wave 1:** 1 — the header toggle + mode state + i18n (entry point the cell render depends on).
+- **Wave 2:** 2 — cost-model helpers + cell render (depends on the mode threaded from 1).
+- **Wave 3:** V7 — browser validation; depends on 1, 2.
+
+## Round 7 — validation results (2026-11-04)
+
+Stack: local Docker (`backend` :8080, `frontend` :3000, admin `cto+1@loaders.dev`). Screen:
+`http://localhost:3000/projects/2/estimate` (DRAFT project, 270 assigned cells).
+
+Decisions applied: default mode **Р+М (BOTH)**; the chosen mode is persisted in the **browser
+session** (`sessionStorage` key `foremen.estimatePriceMode.<projectId>`).
+
+- **#1 Header price-mode toggle — ✅ FIXED.** The "Итого работ (ед. изм.)" header is a button
+  showing the active mode as a badge; it defaults to **Р+М** and cycling it goes **Р+М → Р → М**.
+  Session persistence confirmed: set to М, reloaded the page, the toggle restored to М (badge `М`,
+  `sessionStorage` = `MATERIAL`).
+- **#2 Cell volume + mode price — ✅ FIXED.** Sample cell (work 1 × room 2, volume `27,00 м²`):
+  - Р+М: price `484,65`
+  - Р (work): price `268,65`
+  - М (material): price `216,00`
+  - `268,65 + 216,00 = 484,65` — the work/material split sums to the combined value, and each cell
+    shows the work volume (`27,00 м²`) above the mode's price. Р+М equals the prior combined value.
+  Unit tests: `costModel.property.test.ts` and the 35 `WorksRoomsMatrix.test.tsx` cases green.
+
+Result: 2 fixed / 0 failed. All Round 7 bugs closed.
+
+## Round 8 (2026-11-05)
+
+Screen URL: `http://localhost:3000/projects/{id}/estimate` (Works × Rooms matrix). Source: meeting
+notes. Two items agreed with the user: (A) a per-row Total-column money sum that follows the active
+price mode, and (B) a per-work-item price override expressed as a scoped percentage adjustment.
+
+Background (grounded in code):
+- The per-row "total works" column lives in `WorkTypeGroupSection.tsx` (the IIFE rendering
+  `estimate-work-total-volume-<id>`). It shows the row's total **volume** + unit and the per-unit
+  labour price, but no money SUM and it does not react to the price mode. The price mode
+  (`WORK`/`MATERIAL`/`BOTH`, Р/М/Р+М) is already threaded into this component and down to
+  `MatrixCell` (Round 7). The pure cost model (`state/costModel.ts`) has per-cell mode helpers
+  (`cellWorkRange`, `cellMaterialRange`, `cellCostRange`) and row aggregators (`totalVolumeOfRow`,
+  `packageMoneyOfRow`) but no price-mode-aware row money sum.
+- The project already stores its own frozen per-work-item price: `EstimateLineEntity.unitPrice`
+  (`estimate_lines.unit_price`) is seeded from the catalog `WorkPrice.netPrice` at line creation
+  (`EstimateLineService.copySingleWorkPrice`) and is the source of truth for the line value; the
+  matrix assembler reads it into `WorkRowDto.unitPrice` and `CellDto.labour = unitPrice × volume`.
+  There is NO percentage-override / base-vs-effective concept anywhere today (confirmed by grep).
+
+### A — Per-row Total column: show the row's P / M / P+M money sum (frontend only)
+
+- [x] 1. Add a price-mode-aware row money sum and render it in the Total column
+  - Triage: observed — the `estimate-work-total-volume-<id>` cell shows volume + unit price only;
+    no money total, ignores the price mode. Expected — the Total column also shows the row's SUM
+    money for the active mode: Р = Σ labour, М = Σ materials, Р+М = Σ combined, summed across the
+    row's assigned room cells (collapsing range, same rule as cells). Layer: **frontend**.
+    - Add `rowModeMoney(row: WorkRowDto, mode: PriceMode): MoneyRange` to `costModel.ts` (Σ over
+      assigned cells of `cellWorkRange`/`cellMaterialRange`/`cellCostRange` by mode); keep the module
+      pure/total and extend `costModel.property.test.ts` / `costModel.test.ts`.
+    - In `WorkTypeGroupSection.tsx` total-column IIFE, render the money (new testid
+      `estimate-work-total-money-<id>`) using `formatMoneyRange`, driven by the in-scope `priceMode`;
+      keep the volume + unit-price lines; update the cell `aria-label`.
+    - i18n: add a row-total-money label/aria key in `pl.json` + `ru.json` (mirror
+      `estimate.matrix.unitPrice` / `totalVolumeAria`). No backend change (data already in the DTO).
+  - _Requirements: 1.2, 2.2, 7.2, 14.1_
+  - _Depends on: none_
+
+### B — Scoped LABOUR-price override (keep original, add an overridden column)
+
+Semantics agreed with the user (corrected): the **original** labour price stays untouched — today's
+`EstimateLine.unitPrice` remains the frozen original and is NEVER rewritten. A **new column** holds
+the possibly-adjusted labour price (the effective/overridden value, default = the original). A
+%-adjust applied at a scope — PROJECT, WORK_CATEGORY, or WORK_ITEM — writes **each in-scope line's new
+column** (original × `(1 + pct/100)`), leaving the original column intact; it is a one-shot write per
+line (not a live multiplier), so each work item keeps its own concrete overridden value. The matrix
+labour (`CellDto.labour`) uses the **effective** (overridden) price. When a line's overridden price ≠
+its original, the UI renders a (discount|surcharge) badge with the delta %. **Labour only** —
+material prices are not affected by the override.
+
+- [x] 2. Persist an overridden labour-price column + a scoped percentage-adjust operation (backend)
+  - Triage: expected — every estimate line keeps its **original** `unitPrice` (unchanged) plus a new
+    `unitPriceOverride` column (default = `unitPrice`; seeded equal on line create and backfilled =
+    `unit_price` for existing rows). A new endpoint applies a signed percentage to all lines in a
+    scope (PROJECT = all lines of the estimate; WORK_CATEGORY = lines whose work's category matches;
+    WORK_ITEM = the single line), writing each in-scope line's `unitPriceOverride = unitPrice ×
+    (1 + pct/100)` and leaving `unitPrice` untouched. DRAFT-gated + project-scoped. Layer:
+    **backend**.
+    - DB: new changeset adds `estimate_lines.unit_price_override` (NUMERIC, nullable→backfilled =
+      `unit_price`; new lines seed it = `unitPrice` in `copySingleWorkPrice`). Take the next free
+      changeset number at implementation time and register it last in `changelog.xml`.
+    - Service + controller: a project-scoped `applyLabourPriceAdjustment(estimateId, scope, targetId,
+      pct)` that resolves the in-scope lines and sets each line's `unitPriceOverride` (never the
+      original). Guard: DRAFT project + `ESTIMATE` UPDATE (reuse the `ESTIMATE` resource with a
+      method-level `@RequiresPermission`; follow the entity-creation checklist only if a new managed
+      surface is introduced).
+    - Labour value: the estimate matrix labour must use the **override** — `labour = unitPriceOverride
+      × volume` in `EstimateMatrixAssembler.assembleCell` and the row effective price in the row
+      build. Decide/document whether `valueNet` (the persisted line value `unitPrice × quantity`) now
+      tracks the override; per the user this override drives the displayed/offer labour, so compute
+      the effective labour from the override while keeping the original `unitPrice` column as the
+      untouched source of truth. Confirm no unintended recompute cascade beyond the estimate/offer
+      labour read. **Materials are untouched.**
+  - _Requirements: 1.2 (and a new estimate-labour-price-override requirement in requirements.md)_
+  - _Depends on: none_
+- [x] 3. Surface original vs overridden labour price in the matrix DTO (backend)
+  - Triage: expected — `WorkRowDto` carries the **effective** labour unit price (the override) plus
+    the **original** `unitPrice` so the frontend can render the divergence badge without a second
+    call. Layer: **backend**.
+    - Extend `WorkRowDto` (backend record + frontend `types/index.ts`): keep `unitPrice` as the
+      effective/override labour unit price shown in the row, and add `baseUnitPrice` (the untouched
+      original). Populate both in `EstimateMatrixAssembler` from the line's `unit_price` (original)
+      and `unit_price_override` (effective), falling back to the catalog for unassigned works. No
+      change to material math.
+  - _Requirements: 1.2 (+ new estimate-labour-price-override requirement)_
+  - _Depends on: 2_
+- [x] 4. Labour-price override UI at three scopes + divergence badge (frontend)
+  - Triage: expected — the user can apply a %-adjust at project scope (matrix header /
+    `WorksRoomsMatrix.tsx`), group scope (group header in `WorkTypeGroupSection.tsx`, alongside the
+    existing group actions), and per-work-item (the row header). After apply, the row shows a
+    (discount|surcharge) badge with the delta % whenever the overridden price ≠ the original. Layer:
+    **frontend**.
+    - Add a small adjust control (signed % input + apply) at each scope wired to the new backend
+      endpoint; invalidate/refetch the matrix on success. Render the badge in the row total column
+      (reuses A's cell) when `unitPrice` (effective) ≠ `baseUnitPrice` (original).
+    - i18n: new keys for the adjust control (label, placeholder, apply, discount/surcharge badge) in
+      `pl.json` + `ru.json`.
+  - _Requirements: 1.2 (+ new estimate-labour-price-override requirement)_
+  - _Depends on: 3_
+- [ ] 5. Add the estimate-price requirement to requirements.md + author/refresh test-cases.md
+  - Add a requirement for the scoped per-work-item price override (base vs effective, scope
+    precedence/semantics, DRAFT gate) to `requirements.md`, and cover A + B in `test-cases.md`
+    (API tests for the adjust endpoint against the Dockerized app; browser-engine scenarios for the
+    matrix total money + the three-scope adjust + the badge) per the test-cases standard.
+  - _Requirements: all of Round 8_
+  - _Depends on: 1, 4_
+- [x] V8. Validate Round 8 in browser
+  - Rebuild the stack, open the estimate matrix on a DRAFT project. Confirm: (A) the Total column
+    shows the row money sum for Р / М / Р+М and it follows the header toggle; (B) applying a labour
+    %-adjust at project / category / work-item scope sets each in-scope line's OVERRIDE column
+    (leaving the original `unitPrice` intact), the row shows a (discount|surcharge) badge with the
+    delta, labour totals reflect the override, materials are unchanged, and subtotals update
+    consistently.
+  - _Requirements: all of Round 8_
+  - _Depends on: 1, 2, 3, 4_
+
+## Parallel execution plan (waves) — Round 8
+
+- **Wave 1 (parallel):** 1 (frontend Total-money, independent) and 2 (backend base-price + adjust
+  endpoint, independent) — different repos/files, no shared state.
+- **Wave 2:** 3 — matrix DTO base-price (depends on 2's column).
+- **Wave 3:** 4 — three-scope UI + badge (depends on 3's DTO field; also uses 1's total cell).
+- **Wave 4:** 5 — requirements + test-cases (depends on 1 and 4 being defined).
+- **Wave 5:** V8 — browser validation; depends on 1, 2, 3, 4.
+
+## Round 8 — validation results (2026-11-05)
+
+Stack: local Docker rebuilt (backend :8080, frontend :3000, admin `cto+1@loaders.dev`). DB migrated
+with the new `estimate_lines.unit_price_override` column (changeset 211). Screen:
+`http://localhost:3000/projects/2/estimate` (DRAFT, 76 work rows).
+
+- **A — per-row Total money by mode — ✅ FIXED.** The Total column now shows a row money sum
+  (testid `estimate-work-total-money-<id>`) on all 76 rows and it follows the header toggle: work 1
+  row total read **1 220,82** in Р+М and **736,30** in Р (WORK) after one toggle click.
+- **B — scoped labour-price override — ✅ FIXED.** Applied **+10%** at WORK_ITEM scope on work 1
+  (`estimate-labour-adjust-work-1`): the effective labour unit price went **9,95 → 10,95 / м²**
+  (override = original × 1.1), the WORK row total went **736,30 → 810,30**, and the row cell shows
+  the divergence badge **+10,05%** (surcharge vs the untouched original). The original `unit_price`
+  is preserved; materials are unchanged. Project and group scopes use the same endpoint/mechanism.
+  Backend: 29 affected tests green, `compileJava/compileTestJava` green. Frontend: 253 estimate
+  tests green; full `tsc -b` clean.
+
+Note: task 5 (add the estimate-labour-price-override requirement to `requirements.md` + author
+`test-cases.md`) remains open as documentation follow-up; the code (tasks 1–4) is complete and
+verified.
+
+Result: A + B fixed / 0 failed.

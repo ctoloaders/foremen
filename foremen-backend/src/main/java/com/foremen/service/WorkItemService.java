@@ -12,6 +12,7 @@ import java.util.Set;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,6 +68,26 @@ public class WorkItemService implements AdminService<
                 AdminService.super.find(pageable, rawQuery);
         attachPackages(page.getContent());
         return page;
+    }
+
+    /**
+     * The work catalog's metadata-driven DEFAULT sort (FOR-04-11 bug-report Round 1): order works by
+     * their category's {@code orderNo} first, then by the (locale-resolved) work name, with the id as
+     * a deterministic tiebreaker. Applied by the generic read path ONLY when the request carries no
+     * explicit sort; an explicit client sort still wins.
+     *
+     * <p>{@code workCategory.orderNo} is a plain association path that passes through
+     * {@code processSort} untouched; {@code name} is an i18n sort property
+     * ({@code getI18nSortFilterProperties()} = {@code {"name"}}) so {@code processSort} resolves it to
+     * {@code nameRU}/{@code namePL} for the active locale, giving an alphabetical order within each
+     * category that matches the UI language.
+     */
+    @Override
+    public Sort getDefaultSort() {
+        return Sort.by(
+                Sort.Order.asc("workCategory.orderNo"),
+                Sort.Order.asc("name"),
+                Sort.Order.asc("id"));
     }
 
     /**

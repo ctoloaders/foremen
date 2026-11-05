@@ -24,11 +24,13 @@ import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.advice.ForemenControllerAdvice;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.exception.dto.ErrorResponse;
+import com.foremen.service.payroll.PayoutLineHintService;
 import com.foremen.service.payroll.PayrollLineService;
 import com.foremen.service.payroll.PayrollProfileService;
 import com.foremen.service.payroll.PayrollReadModelService;
 import com.foremen.service.payroll.dto.CompanyPayrollDto;
 import com.foremen.service.payroll.dto.OpeningBalanceRequest;
+import com.foremen.service.payroll.dto.PayoutLineDto;
 import com.foremen.service.payroll.dto.PayrollLineDto;
 import com.foremen.service.payroll.dto.PayrollLineRequest;
 import com.foremen.service.payroll.dto.PayrollProfileDto;
@@ -50,6 +52,8 @@ import lombok.RequiredArgsConstructor;
  *       ({@code PAYROLL} READ, R11).</li>
  *   <li>{@code GET /api/payroll/workers/{workerId}/hints?month} &rarr; {@code List<PayrollLineDto>}
  *       ({@code PAYROLL} READ, R8.5).</li>
+ *   <li>{@code GET /api/payroll/workers/{workerId}/payout-hints?month} &rarr; {@code List<PayoutLineDto>}
+ *       ({@code PAYROLL} READ, bug H — previous-month payable lines for the create-payment dialog).</li>
  *   <li>{@code POST /api/payroll/lines} &rarr; {@link PayrollLineDto} ({@code PAYROLL} CREATE, R8.1).</li>
  *   <li>{@code PUT /api/payroll/lines/{id}} &rarr; {@link PayrollLineDto} ({@code PAYROLL} UPDATE).</li>
  *   <li>{@code DELETE /api/payroll/lines/{id}} &rarr; 204 ({@code PAYROLL} DELETE).</li>
@@ -89,6 +93,7 @@ public class PayrollController {
     private final PayrollReadModelService readModelService;
     private final PayrollLineService lineService;
     private final PayrollProfileService profileService;
+    private final PayoutLineHintService payoutLineHintService;
     private final ForemenControllerAdvice controllerAdvice;
 
     // --- Company table (R10) -------------------------------------------------------------------
@@ -138,6 +143,25 @@ public class PayrollController {
             @PathVariable Long workerId,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate month) {
         return ResponseEntity.ok(lineService.hints(workerId, month));
+    }
+
+    // --- Previous-month payout-line hints (bug H) ----------------------------------------------
+
+    /**
+     * The worker's <b>previous calendar month</b> payable work-report lines, so the create-payment
+     * dialog can surface last month's line items with quick-add (bug H). Relative to {@code month}
+     * (the current month when omitted); worker-wide, no project; visual helper only — nothing is
+     * created. {@code PAYROLL} READ.
+     *
+     * @param workerId the worker (must be a {@code WORKER})
+     * @param month    any day of the reference month (current month when omitted)
+     */
+    @GetMapping("/workers/{workerId}/payout-hints")
+    @RequiresPermission(resource = PAYROLL_RESOURCE, operation = READ_OPERATION)
+    public ResponseEntity<List<PayoutLineDto>> payoutHints(
+            @PathVariable Long workerId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate month) {
+        return ResponseEntity.ok(payoutLineHintService.previousMonthHints(workerId, month));
     }
 
     // --- Additional lines (R8) -----------------------------------------------------------------

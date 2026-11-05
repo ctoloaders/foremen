@@ -32,6 +32,7 @@ import com.foremen.config.i18n.MessageResolver;
 import com.foremen.config.security.PermissionResolver;
 import com.foremen.config.security.PermissionResource;
 import com.foremen.controller.advice.ForemenControllerAdvice;
+import com.foremen.service.payroll.PayoutLineHintService;
 import com.foremen.service.payroll.PayrollLineService;
 import com.foremen.service.payroll.PayrollProfileService;
 import com.foremen.service.payroll.PayrollReadModelService;
@@ -58,6 +59,7 @@ class PayrollControllerTest {
     private PayrollReadModelService readModelService;
     private PayrollLineService lineService;
     private PayrollProfileService profileService;
+    private PayoutLineHintService payoutLineHintService;
     private MockMvc mockMvc;
     private final PermissionResolver resolver = new PermissionResolver();
 
@@ -66,8 +68,10 @@ class PayrollControllerTest {
         readModelService = mock(PayrollReadModelService.class);
         lineService = mock(PayrollLineService.class);
         profileService = mock(PayrollProfileService.class);
+        payoutLineHintService = mock(PayoutLineHintService.class);
         ForemenControllerAdvice advice = new ForemenControllerAdvice(new MessageResolver(new StaticMessageSource()));
-        PayrollController controller = new PayrollController(readModelService, lineService, profileService, advice);
+        PayrollController controller = new PayrollController(readModelService, lineService, profileService,
+                payoutLineHintService, advice);
         mockMvc = MockMvcBuilders.standaloneSetup(controller).setControllerAdvice(advice).build();
     }
 
@@ -80,19 +84,20 @@ class PayrollControllerTest {
         assertPair("company", "READ");
         assertPair("card", "READ");
         assertPair("hints", "READ");
+        assertPair("payoutHints", "READ");
         assertPair("createLine", "CREATE");
         assertPair("updateLine", "UPDATE");
         assertPair("deleteLine", "DELETE");
         assertPair("setOpeningBalance", "UPDATE");
 
-        PayrollController bare = new PayrollController(null, null, null, null);
+        PayrollController bare = new PayrollController(null, null, null, null, null);
         List<Method> handlers = Arrays.stream(PayrollController.class.getDeclaredMethods())
                 .filter(m -> !m.isSynthetic() && java.lang.reflect.Modifier.isPublic(m.getModifiers()))
                 .filter(m -> !m.isAnnotationPresent(ExceptionHandler.class))
                 .filter(m -> org.springframework.core.annotation.AnnotatedElementUtils
                         .hasAnnotation(m, RequestMapping.class))
                 .toList();
-        assertThat(handlers).hasSize(7);
+        assertThat(handlers).hasSize(8);
         for (Method m : handlers) {
             assertThat(resolver.classifyCompleteness(new HandlerMethod(bare, m)))
                     .as("handler %s must be COMPLETE", m.getName())
@@ -103,7 +108,7 @@ class PayrollControllerTest {
     private void assertPair(String methodName, String operation) {
         Method method = Arrays.stream(PayrollController.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals(methodName)).findFirst().orElseThrow();
-        assertThat(resolver.resolve(new HandlerMethod(new PayrollController(null, null, null, null), method)))
+        assertThat(resolver.resolve(new HandlerMethod(new PayrollController(null, null, null, null, null), method)))
                 .as(methodName)
                 .isEqualTo(new PermissionResolver.ResolvedPair("PAYROLL", operation));
     }

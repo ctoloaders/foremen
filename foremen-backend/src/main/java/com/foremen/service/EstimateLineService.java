@@ -209,6 +209,10 @@ public class EstimateLineService
                     entity.setUnitPrice(workPrice.getNetPrice());
                     entity.setWorkPrice(workPrice);
                 });
+        // FOR-05-05 Round 8 (B): seed the effective override = the frozen original (no adjustment
+        // yet). Covers both the priced path (unitPrice just set above) and the unpriced path
+        // (unitPrice left as the caller supplied), so the override column is always populated.
+        entity.setUnitPriceOverride(entity.getUnitPrice());
     }
 
     /**

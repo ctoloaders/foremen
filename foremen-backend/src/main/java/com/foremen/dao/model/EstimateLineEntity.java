@@ -82,6 +82,22 @@ public class EstimateLineEntity extends BaseEntity {
     @Column(name = "unit_price", nullable = false)
     private BigDecimal unitPrice;
 
+    /**
+     * FOR-05-05 bug-report Round 8 (B): the EFFECTIVE (possibly-adjusted) labour unit price. It is
+     * seeded equal to {@link #unitPrice} on line create (and backfilled = {@code unit_price} for
+     * existing rows, changeset 211). A scoped percentage-adjust rewrites this column per in-scope
+     * line as {@code unitPrice × (1 + pct/100)}, leaving {@link #unitPrice} — the untouched ORIGINAL
+     * — intact. The matrix labour ({@code CellDto.labour}) is computed from this override; the
+     * persisted {@link #valueNet} stays derived from the ORIGINAL {@link #unitPrice} (its javadoc
+     * contract is unchanged). Materials are never affected by this override.
+     *
+     * <p>Nullable: a {@code null} override means "no adjustment" and the read path falls back to
+     * {@link #unitPrice}, so a line persisted without explicitly seeding the override is still
+     * well-formed (changeset 211 is a nullable column + backfill).
+     */
+    @Column(name = "unit_price_override")
+    private BigDecimal unitPriceOverride;
+
     /** DERIVED = sum of {@code EstimateLineRoomQty.quantity}; never hand-entered (R2.6). */
     @Column(name = "quantity", nullable = false)
     private BigDecimal quantity = BigDecimal.ZERO;

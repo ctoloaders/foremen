@@ -180,15 +180,23 @@ public class EstimateMatrixAssembler {
             headerPackageFold.merge(rowPackageFold);
             MeasurementUnitEntity unit = work.getUnit();
             EstimateLineEntity rowLine = lineByWork.get(work.getId());
-            BigDecimal unitPrice = rowLine != null && rowLine.getUnitPrice() != null
+            // FOR-05-05 Round 8 (B): the row's EFFECTIVE labour unit price is the line's
+            // unit_price_override when assigned (the possibly-adjusted labour price), else the
+            // catalog; the BASE is the untouched original unit_price when assigned, else the same
+            // catalog. An unassigned work has no override to diverge, so base == effective there.
+            BigDecimal catalogPrice = catalogPriceByWorkId.get(work.getId());
+            BigDecimal baseUnitPrice = rowLine != null && rowLine.getUnitPrice() != null
                     ? rowLine.getUnitPrice()
-                    : catalogPriceByWorkId.get(work.getId());
+                    : catalogPrice;
+            BigDecimal effectiveUnitPrice = rowLine != null && rowLine.getUnitPriceOverride() != null
+                    ? rowLine.getUnitPriceOverride()
+                    : baseUnitPrice;
             group.rows.add(new WorkRowDto(
                     work.getId(), workItemName(work, ru), roomTypeIds(work), cells,
                     rowPackageFold.volume(), rowPackageFold.toMoney(),
                     unit != null ? unit.getCode() : null,
                     unit != null ? localizedName(ru, unit.getNameRU(), unit.getNamePL()) : null,
-                    unitPrice));
+                    effectiveUnitPrice, baseUnitPrice));
         }
 
         List<WorkTypeGroupDto> groupDtos = new ArrayList<>(groups.size());
@@ -237,8 +245,12 @@ public class EstimateMatrixAssembler {
         String formulaKey = fallbackUsed ? "fallback"
                 : (defaultFormula != null ? defaultFormula.getSourceText() : null);
 
-        BigDecimal unitPrice = line != null && line.getUnitPrice() != null
-                ? line.getUnitPrice() : BigDecimal.ZERO;
+        // FOR-05-05 Round 8 (B): the matrix labour uses the EFFECTIVE (overridden) labour price —
+        // unit_price_override — falling back to the frozen original unit_price only when the override
+        // is somehow unset (defensive; createLine/copySingleWorkPrice always seed it = unitPrice).
+        BigDecimal unitPrice = line != null && line.getUnitPriceOverride() != null
+                ? line.getUnitPriceOverride()
+                : (line != null && line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO);
         BigDecimal labour = unitPrice.multiply(volume);
 
         List<MaterialLineDto> materialDtos = new ArrayList<>();

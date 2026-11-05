@@ -473,3 +473,94 @@ questions.
    and startup validation; and frontend tests for the page, filters + persistence + shift, the card,
    the dialog, the user-form field, work-reporting badges, tab removal, and locale parity.
 3. THE spec SHALL ship `test-cases.md` per `.kiro/steering/test-cases.md`.
+
+---
+
+## Round 1 amendments (bug-report E–H, 2026-11-05)
+
+These amend the requirements above from the Round 1 bug-report (items E, F, G, H). Where a clause
+revises an existing acceptance criterion, the original is amended in place by the paragraph below.
+
+### Requirement 10.2 (amended) — planning mode: list every worker by default
+
+**Replaces R10.2.** THE result SHALL contain **one row per WORKER user (planning mode, the
+default)**, including workers with **no** report line, payout, or additional line in the period —
+their period sums are 0, their project breakdown is empty, and their balance at `to` is the running
+balance from the opening balance. When `workerIds` is non-empty, exactly those WORKER users are
+listed (unchanged). Each row keeps the fields of the original R10.2 plus the status summary of
+R10.7.
+
+_Rationale:_ previously the default (unfiltered) branch dropped zero-activity workers
+(`if (!filtered && !activity) continue;`), so a worker with nothing planned/reported/paid was
+invisible. Planning requires seeing every worker, including idle ones.
+
+### Requirement 10.7 (new) — per-worker payment-status summary column
+
+1. EACH company-table row SHALL carry a derived **payment-status summary** classifying the worker
+   from the row's already-computed figures (Reported work, Planned work, Paid, balance at `to`) —
+   no extra query.
+2. THE status SHALL be one of `FULLY_PAID` | `HAS_DEBT` | `UNREPORTED_WORK` | `NO_ACTIVITY`, resolved
+   by this precedence (first match wins):
+   1. `NO_ACTIVITY` — no reported, planned or paid work in the period **and** a zero balance at `to`;
+   2. `HAS_DEBT` — balance at `to` is strictly positive (the company owes the worker); this wins over
+      the planning signal below, so an idle worker still carrying an opening-balance debt is
+      `HAS_DEBT`, not `NO_ACTIVITY`;
+   3. `UNREPORTED_WORK` — planned work exceeds reported work with no outstanding debt;
+   4. `FULLY_PAID` — otherwise (activity exists, balance settled, nothing left to report).
+3. THE status SHALL render as a localized badge column on the table; its labels and column header
+   SHALL be in both `pl.json` and `ru.json` (`companyPayroll.rowStatus.*`, `companyPayroll.column.status`).
+
+### Requirement 10.8 (new) — create payment from a company-table row
+
+1. FOR a caller holding `PAYROLL`/CREATE, each company-table row SHALL offer a **Create payment**
+   control that opens the existing create-payout dialog pre-selecting that row's worker.
+2. THE control SHALL be hidden for a caller without `PAYROLL`/CREATE, and activating it SHALL NOT
+   open the worker card (it is an independent row affordance).
+
+### Requirement 15.2 (extended) — month quick-select on the filter bar and the worker card
+
+**Extends R15.2 / R15.5.** IN ADDITION to the from/to inputs, presets and prev/next shift, both the
+company filter bar **and** the worker card's period bar SHALL offer a **month quick-select**
+(a `YYYY-MM` month input) that sets the window to a whole calendar month (first..last day) with the
+preset set to MONTH. On the filter bar it goes through the persisted-filters hook (so it persists);
+on the card it rewrites the `from`/`to` query params. An invalid month value SHALL be ignored.
+
+_Rationale (bug F):_ the worker card already groups earned/reported/planned work by month
+(`workerCard` builds one block per calendar month); the only gap was that the single-month default
+range made multi-month data unreachable. The month quick-select (plus prev/next) makes any month and
+multi-month window reachable, so no change to the month-grouping read model is required.
+
+### Requirement 8.8 (new) — previous-month payout-line hints in the create-payment dialog
+
+1. A new read endpoint SHALL return, for `(worker, reference month M)`, the worker's **previous
+   calendar month (M−1)** payable work-report lines — the unpaid `APPROVED` report lines whose
+   report ends on or before the end of M−1, in distribution order (oldest first), **available lines
+   only** (a line with an unresolvable cost has no amount to quick-add). Worker-wide (no project);
+   `PAYROLL`/READ; reference month defaults to the current month when omitted.
+2. This is distinct from the **additional-line** hints of R8.5 (which suggest free-text
+   `WorkerPayrollLine` rows): R8.8 suggests **payout/report lines**.
+3. THE create-payment dialog SHALL surface these hints with a **quick-add** that seeds the dialog's
+   period with the previous month so the live suggestion folds in exactly those lines; the issuer may
+   still adjust the resolved `[from, to]`. Hints SHALL be a visual helper only — nothing is created
+   until the payout is submitted. Hint labels and the quick-add action SHALL be in both `pl.json`
+   and `ru.json` (`companyPayroll.payoutHints.*`).
+
+### Requirement 13 (reaffirmed) — no new notifications for Round 1
+
+The Round 1 changes (planning-mode list, status column, create-from-list, month quick-select,
+previous-month payout-line hints) are **read-side UI** plus a reuse of the **existing** payout-create
+flow. Consistent with R13, they emit **no** notifications: there is no new cross-role handoff, and
+foremen continue to read paid status on demand. This decision is explicit — the i18n/notification
+workspace hooks are satisfied by surfacing changes in the read-side UI only.
+
+### Requirement 16 (reaffirmed) — Round 1 i18n scope
+
+1. THE Round 1 backend adds **no** `nameRU`/`namePL` entity columns. The only new entity-ish field is
+   the company-row **status enum** (`CompanyPaymentStatus`), which is a derived, non-persisted
+   classification surfaced as **localized frontend badges** — not a stored, human-named entity field;
+   it therefore needs no backend i18n columns (R16.1 unchanged).
+2. EVERY new user-facing string of Round 1 SHALL be added to both `pl.json` and `ru.json`:
+   `companyPayroll.column.status`, `companyPayroll.column.actions`, `companyPayroll.rowStatus.*`
+   (noActivity / hasDebt / unreportedWork / fullyPaid), `companyPayroll.filter.month`,
+   `companyPayroll.payout.createShort`, and `companyPayroll.payoutHints.*` (title / addAll /
+   addAllHint). The locale-parity tests SHALL pass.

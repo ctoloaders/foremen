@@ -928,5 +928,6 @@
     <!-- FOR-07-03 (R10.2): ABAC resource EXPENSE_UPLOAD + READ/CREATE grants for ADMIN, FINANCIER,
          MANAGER, FOREMAN, WORKER. Registered LAST, after 209. -->
     <include file="database_files/changesets/210-seed-expense-upload-resource.xml"/>
+    <include file="database_files/changesets/211-estimate-line-unit-price-override.xml"/>
 
 </databaseChangeLog>

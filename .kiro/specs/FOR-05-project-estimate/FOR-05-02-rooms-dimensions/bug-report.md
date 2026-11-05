@@ -508,3 +508,59 @@ does not persist on UPDATE, for every dimension, not just `narrowPlace`. `Foreme
 `NullValuePropertyMappingStrategy.IGNORE`, so a `null` in the update payload keeps the stored value.
 Fixing it needs care, because partial payloads (the full editor doesn't send door/window fields)
 would then wipe data. Candidate for a follow-up round.
+
+## Round 6 (2026-11-04)
+
+Screen URL: `http://localhost:3000/projects/{id}/rooms` (room dimensions matrix). Source: meeting
+notes (RU). Reported bug (one line): "периметр помещений, поменять мб на м, единица измерения" — the
+rooms' perimeter dimension is labelled/united as running-metre `мб` / `mb` but should be plain
+metre `м` / `m`.
+
+Background (grounded in code): perimeter is a plain length (room wall obwód) stored as a raw number
+on `rooms` (no unit in the backend `RoomEntity`), so this is a **frontend-only** presentation fix.
+The `мб`/`mb` appears in two places: (a) the i18n label strings `rooms.form.perimeter` in both
+locales (`"Периметр (мб)"` / `"Obwód (mb)"`), each present **twice** (`ru.json`/`pl.json` lines
+~1889 and ~1920); and (b) the dimension registry row `unit: 'mb'` in
+`features/rooms/dimensions.ts` (the `perimeter` row), which drives the summary matrix unit column
+and Σ-totals. The codebase already distinguishes `mb` from `m` (heights/widths were set to `'m'` in
+Round 5 #3), so flipping perimeter to `m` is consistent.
+
+- [x] 1. Perimeter unit `мб`/`mb` → `м`/`m`
+  - Triage: observed — perimeter shows unit `мб` (RU) / `mb` (PL). Expected — perimeter shows unit
+    `м` (RU) / `m` (PL). Layer: **frontend** only (perimeter is a unitless number in the backend).
+    - **i18n:** change `rooms.form.perimeter` in `foremen-frontend/src/locales/ru.json` from
+      `"Периметр (мб)"` → `"Периметр (м)"` (both occurrences, ~line 1889 and ~1920), and in
+      `pl.json` from `"Obwód (mb)"` → `"Obwód (m)"` (both occurrences).
+    - **Metadata:** change the `perimeter` row in `foremen-frontend/src/features/rooms/dimensions.ts`
+      from `unit: 'mb'` → `unit: 'm'` so the summary matrix unit column / exports show `m`.
+    - **Tests:** update any test that hardcodes the old label/unit — e.g.
+      `features/work-catalog/__tests__/FormulaInput.test.tsx` (mock `'rooms.form.perimeter'`),
+      `features/rooms/__tests__/dimensions.property.test.ts`, and
+      `src/__tests__/for-04-bugs.preservation.test.tsx` if they assert the `mb` perimeter unit.
+  - _Requirements: 2.2, 2.3_
+  - _Depends on: none_
+- [x] V6. Validate Round 6 in browser
+  - Bring up the local stack, open the rooms dimensions matrix, confirm the perimeter row's unit
+    reads `м` (RU) / `m` (PL) in the label and the summary unit column, and that Σ-totals are
+    unaffected.
+  - _Requirements: 2.2, 2.3_
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 6
+
+- **Wave 1:** 1 — single frontend change (locale strings + one registry row + test fixtures).
+- **Wave 2:** V6 — browser validation; depends on 1.
+
+## Round 6 — validation results (2026-11-04)
+
+Stack: local Docker (`postgres`/`redis`/`liquibase` up, `backend` :8080, `frontend` :3000, admin
+`cto+1@loaders.dev`). Screen: `http://localhost:3000/projects/2/rooms`.
+
+- **#1 Perimeter unit `мб` → `м` — ✅ FIXED.** The rooms matrix renders the perimeter dimension as
+  **`Периметр (м)`**; `Периметр (мб)` is gone. Heights/widths still read `(м)` (unchanged); the
+  genuine running-metre metrics (`Отсутствующая стена/отделка` = wallGap/finishGap) correctly still
+  read `(мб)`, confirming the change was scoped to perimeter only. Σ-totals unaffected.
+  Unit tests: `dimensions.property.test.ts`, `roomsSummary.i18n.test.ts`, `FormulaInput.test.tsx`
+  all green.
+
+Result: 1 fixed / 0 failed. All Round 6 bugs closed.

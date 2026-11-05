@@ -70,7 +70,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         Pageable processedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                processSort(pageable.getSort())
+                resolveSort(pageable.getSort())
         );
 
         Specification<DaoModel> spec = buildFinalSpecification(rawQuery);
@@ -98,7 +98,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         Pageable processedPageable = PageRequest.of(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
-                processSort(pageable.getSort())
+                resolveSort(pageable.getSort())
         );
 
         Specification<DaoModel> spec = buildFinalSpecification(rawQuery);
@@ -164,6 +164,35 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
 
     default Set<String> getAdminOnlyFields() {
         return Set.of();
+    }
+
+    // --- Default Sort ---
+
+    /**
+     * The per-entity DEFAULT sort, applied by {@link #find} / {@link #findExtended} ONLY when the
+     * request carries no explicit sort (an unsorted {@link Pageable}). The default is
+     * {@link Sort#unsorted()} — i.e. no default, preserving the prior "DB order when nothing is sent"
+     * behaviour for every entity that does not override this.
+     *
+     * <p>Concrete services override this to declare a metadata-driven initial ordering (e.g. the work
+     * catalog orders by its category's {@code orderNo} then by name). The returned sort is still run
+     * through {@link #processSort(Sort)}, so i18n sort properties (e.g. {@code name} →
+     * {@code nameRU}/{@code namePL}) are resolved for the active locale exactly as an explicit sort is.
+     * An explicit client sort always wins over this default.
+     */
+    default Sort getDefaultSort() {
+        return Sort.unsorted();
+    }
+
+    /**
+     * Resolves the effective sort for a request: the client's explicit sort when one is supplied
+     * (i18n-processed), otherwise the per-entity {@link #getDefaultSort()} (also i18n-processed).
+     * Both paths go through {@link #processSort(Sort)}, so {@code getDefaultSort()} may reference
+     * i18n properties by their unsuffixed names.
+     */
+    default Sort resolveSort(Sort incoming) {
+        Sort effective = (incoming == null || incoming.isUnsorted()) ? getDefaultSort() : incoming;
+        return processSort(effective);
     }
 
     // --- I18n Sort Processing ---

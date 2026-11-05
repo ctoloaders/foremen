@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-05 bug-report Round 8 (B — scoped LABOUR-price override): keep the frozen ORIGINAL
+        labour price (estimate_lines.unit_price) untouched and add a sibling column holding the
+        possibly-adjusted (effective/overridden) labour price.
+
+          unit_price_override NUMERIC(12,2) — the effective per-unit labour price. Matches the
+              unit_price precision/scale (changeset 077). Default = the original: new lines seed it
+              equal to unit_price in code (EstimateLineService.copySingleWorkPrice /
+              EstimateAssignmentService.createLine), and every EXISTING row is backfilled =
+              unit_price so the override is a faithful "no adjustment yet" copy. NOT NULL after the
+              backfill.
+
+        A scoped percentage-adjust (POST .../labour-price-adjustment) later rewrites this column per
+        in-scope line as unit_price * (1 + pct/100), leaving unit_price intact. The matrix labour
+        reads this override; the persisted line value_net stays on the ORIGINAL unit_price.
+
+        The column is NULLABLE (not NOT NULL): a null override means "no adjustment — use the
+        original", so both the matrix assembler and the adjust service treat a null override as the
+        frozen unit_price. New lines seed it = unitPrice in code; existing rows are backfilled =
+        unit_price here. Keeping it nullable also means an EstimateLine persisted directly (e.g. by a
+        test fixture or a legacy path) without explicitly setting the override is still valid.
+
+        Idempotent: the column is added only while absent (NOT columnExists) and the add changeSet is
+        MARK_RAN, so a re-run against an already-migrated database makes no schema change. The
+        backfill runs unconditionally but is a no-op second time (every row already non-null).
+        Registered LAST in changelog.xml, after 210.
+    -->
+
+    <changeSet id="211-add-estimate-line-unit-price-override" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="estimate_lines" columnName="unit_price_override"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="estimate_lines">
+            <column name="unit_price_override" type="NUMERIC(12,2)"/>
+        </addColumn>
+        <!-- Backfill the effective price = the frozen original for every existing line. -->
+        <sql>
+            UPDATE estimate_lines SET unit_price_override = unit_price WHERE unit_price_override IS NULL;
+        </sql>
+        <rollback>
+            <dropColumn tableName="estimate_lines" columnName="unit_price_override"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

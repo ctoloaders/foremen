@@ -24,9 +24,15 @@ import java.util.List;
  * @param unitCode      the work's unit-of-measurement code (e.g. {@code M2}); {@code null} when unknown
  *                      (FOR-05-05 bug-report Round 5 #11 — the "total works" column)
  * @param unitName      the work's unit-of-measurement name, localized (RU/PL) at the read layer
- * @param unitPrice     the work's labour price per unit: the frozen {@code EstimateLine.unitPrice} when
- *                      the work is assigned in the estimate, otherwise the catalog
- *                      {@code WorkPrice.netPrice}; {@code null} when the work is unpriced
+ * @param unitPrice     the work's EFFECTIVE labour price per unit (FOR-05-05 Round 8 B): the frozen
+ *                      {@code EstimateLine.unitPriceOverride} (the possibly-adjusted labour price)
+ *                      when the work is assigned, otherwise the catalog {@code WorkPrice.netPrice};
+ *                      {@code null} when the work is unpriced
+ * @param baseUnitPrice the work's ORIGINAL (untouched) labour price per unit (FOR-05-05 Round 8 B):
+ *                      the frozen {@code EstimateLine.unitPrice} when assigned, otherwise the catalog
+ *                      {@code WorkPrice.netPrice}; {@code null} when unpriced. Equals {@link #unitPrice}
+ *                      until a scoped percentage-adjust overrides the effective price — the frontend
+ *                      renders a discount/surcharge badge whenever {@code unitPrice != baseUnitPrice}
  */
 public record WorkRowDto(
         Long workItemId,
@@ -37,11 +43,20 @@ public record WorkRowDto(
         MoneyRange packageMoney,
         String unitCode,
         String unitName,
-        java.math.BigDecimal unitPrice) {
+        java.math.BigDecimal unitPrice,
+        java.math.BigDecimal baseUnitPrice) {
 
     /** A row without unit / unit-price information (the pre-Round-5 shape, used by tests). */
     public WorkRowDto(Long workItemId, String workItemName, List<Long> roomTypeIds, List<CellDto> cells,
                       java.math.BigDecimal packageVolume, MoneyRange packageMoney) {
-        this(workItemId, workItemName, roomTypeIds, cells, packageVolume, packageMoney, null, null, null);
+        this(workItemId, workItemName, roomTypeIds, cells, packageVolume, packageMoney, null, null, null, null);
+    }
+
+    /** The pre-Round-8 shape (effective price only, no separate base), used by older tests. */
+    public WorkRowDto(Long workItemId, String workItemName, List<Long> roomTypeIds, List<CellDto> cells,
+                      java.math.BigDecimal packageVolume, MoneyRange packageMoney,
+                      String unitCode, String unitName, java.math.BigDecimal unitPrice) {
+        this(workItemId, workItemName, roomTypeIds, cells, packageVolume, packageMoney,
+                unitCode, unitName, unitPrice, unitPrice);
     }
 }

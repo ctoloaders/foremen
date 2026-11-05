@@ -182,13 +182,15 @@ class PayrollReadModelServiceTest {
     // =============================================================================================
 
     @Test
-    @DisplayName("table row: period sums, project sub-rows, balance at to; inactive worker omitted (R10.2–10.4)")
+    @DisplayName("table row: period sums, project sub-rows, balance, status; all workers listed (R10.2–10.4, bug E)")
     void tableRowSumsSubRowsAndBalance() {
         CompanyPayrollDto dto = service.companyTable(FROM, TO, List.of());
 
         assertThat(dto.from()).isEqualTo(FROM);
         assertThat(dto.to()).isEqualTo(TO);
-        assertThat(dto.rows()).extracting(CompanyPayrollRowDto::workerId).containsExactly(ANNA);
+        // Bug E (planning mode, default): every WORKER is listed, including zero-activity Bob,
+        // ordered by name (Anna, then Bob).
+        assertThat(dto.rows()).extracting(CompanyPayrollRowDto::workerId).containsExactly(ANNA, BOB);
         CompanyPayrollRowDto row = dto.rows().get(0);
         assertThat(row.workerName()).isEqualTo("Anna");
         assertThat(row.workerTypeName()).isEqualTo("BASE");
@@ -201,6 +203,17 @@ class PayrollReadModelServiceTest {
         assertThat(row.sums().earned()).isEqualByComparingTo("118.00");
         assertThat(row.sums().paid()).isEqualByComparingTo("50.00");
         assertThat(row.balanceAtTo()).isEqualByComparingTo("188.00");
+        // planned (160) > reported (120) but the balance is positive → HAS_DEBT wins (bug E precedence).
+        assertThat(row.status()).isEqualTo(CompanyPaymentStatus.HAS_DEBT);
+
+        // The zero-activity filler row (bug E): zeroed sums, empty projects, NO_ACTIVITY status.
+        CompanyPayrollRowDto bobRow = dto.rows().get(1);
+        assertThat(bobRow.workerName()).isEqualTo("Bob");
+        assertThat(bobRow.sums().earned()).isEqualByComparingTo("0");
+        assertThat(bobRow.sums().paid()).isEqualByComparingTo("0");
+        assertThat(bobRow.balanceAtTo()).isEqualByComparingTo("0");
+        assertThat(bobRow.projects()).isEmpty();
+        assertThat(bobRow.status()).isEqualTo(CompanyPaymentStatus.NO_ACTIVITY);
 
         assertThat(row.projects()).extracting(CompanyPayrollProjectRowDto::projectName)
                 .containsExactly("Alpha", "Beta");
@@ -240,14 +253,23 @@ class PayrollReadModelServiceTest {
     }
 
     @Test
-    @DisplayName("no period payouts ⇒ the allocation query is skipped; zero-activity period ⇒ no rows")
-    void emptyPeriodHasNoRows() {
+    @DisplayName("no period payouts ⇒ allocation query skipped; zero-activity period still lists all workers (bug E)")
+    void emptyPeriodStillListsAllWorkers() {
         LocalDate from = LocalDate.of(2025, 6, 1);
         LocalDate to = LocalDate.of(2025, 6, 30);
 
         CompanyPayrollDto dto = service.companyTable(from, to, null);
 
-        assertThat(dto.rows()).isEmpty();
+        // Bug E: every WORKER is listed even in a period with no data. Anna still carries her
+        // opening balance of 100 (owed) ⇒ HAS_DEBT; Bob has no opening balance ⇒ NO_ACTIVITY.
+        assertThat(dto.rows()).extracting(CompanyPayrollRowDto::workerName).containsExactly("Anna", "Bob");
+        CompanyPayrollRowDto annaRow = dto.rows().get(0);
+        assertThat(annaRow.sums().earned()).isEqualByComparingTo("0");
+        assertThat(annaRow.balanceAtTo()).isEqualByComparingTo("100.00");
+        assertThat(annaRow.status()).isEqualTo(CompanyPaymentStatus.HAS_DEBT);
+        CompanyPayrollRowDto bobRow = dto.rows().get(1);
+        assertThat(bobRow.balanceAtTo()).isEqualByComparingTo("0");
+        assertThat(bobRow.status()).isEqualTo(CompanyPaymentStatus.NO_ACTIVITY);
         assertThat(dto.totals().earned()).isEqualByComparingTo("0");
         verify(allocationDao, never()).findByPayoutIds(anyCollection());
     }

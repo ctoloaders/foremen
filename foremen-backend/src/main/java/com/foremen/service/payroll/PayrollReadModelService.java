@@ -152,8 +152,10 @@ public class PayrollReadModelService {
      *
      * @param from      period start, required
      * @param to        period end, required, {@code >= from} (else 422 {@code error.payroll.period.invalid})
-     * @param workerIds optional worker filter; when non-empty exactly these WORKER users are listed
-     *                  (even without activity); when empty every WORKER with activity in the period
+     * @param workerIds optional worker filter; when non-empty exactly these WORKER users are listed;
+     *                  when empty every WORKER is listed (planning mode, default — bug E), including
+     *                  those with no activity in the period (zeroed sums, empty projects, balance
+     *                  from the opening balance)
      * @return the table with rows ordered by worker name, then id, and the totals row
      */
     public CompanyPayrollDto companyTable(LocalDate from, LocalDate to, Collection<Long> workerIds) {
@@ -206,14 +208,12 @@ public class PayrollReadModelService {
             BigDecimal planned = ZERO;
             BigDecimal other = ZERO;
             BigDecimal paid = ZERO;
-            boolean activity = false;
             Map<Long, ProjectAcc> projects = new LinkedHashMap<>();
 
             for (CostedLine cl : lines) {
                 if (!inPeriod(cl.performedTo(), from, to)) {
                     continue;
                 }
-                activity = true;
                 ProjectAcc acc = projects.computeIfAbsent(projectId(cl.project()), k -> new ProjectAcc(cl.project()));
                 if (cl.cost() != null) {
                     reported = reported.add(cl.cost());
@@ -227,13 +227,11 @@ public class PayrollReadModelService {
             for (WorkerPayrollLineEntity l : additional) {
                 YearMonth m = MonthAttribution.ofAdditionalLine(l.getMonth());
                 if (!m.isBefore(fromMonth) && !m.isAfter(toMonth)) {
-                    activity = true;
                     other = other.add(scaled(l.getAmount()));
                 }
             }
             for (WorkerPayoutEntity p : payouts) {
                 if (inPeriod(p.getPayoutDate(), from, to)) {
-                    activity = true;
                     paid = paid.add(scaled(p.getAmount()));
                 }
             }
@@ -247,9 +245,12 @@ public class PayrollReadModelService {
                 acc.paid = acc.paid.add(scaled(a.getAmount()));
             }
 
-            if (!filtered && !activity) {
-                continue; // R10.2 — no activity in the period and not explicitly listed
-            }
+            // Bug E (planning mode, default): every WORKER is listed, including those with no
+            // planned / reported / paid work in the period — their sums are zero, their project
+            // breakdown empty, and the balance at {@code to} comes from the opening balance. Both
+            // branches (explicit {@code workerIds} and the default all-workers list) now keep the
+            // worker unconditionally; the previous zero-activity drop
+            // ({@code if (!filtered && !activity) continue;}) is gone.
 
             WorkerInfo info = workerInfo(wid, batch, ru);
             BigDecimal balanceAtTo = BalanceCalculator.balanceAt(batch.opening(wid),
@@ -260,8 +261,10 @@ public class PayrollReadModelService {
                 projectRows.add(new CompanyPayrollProjectRowDto(projectId(acc.project),
                         acc.project == null ? null : acc.project.getName(), acc.reported, acc.planned, acc.paid));
             }
+            PayrollSumsDto rowSums = sums(reported, planned, other, paid);
+            CompanyPaymentStatus status = CompanyPaymentStatus.of(reported, planned, paid, balanceAtTo);
             rows.add(new CompanyPayrollRowDto(wid, worker.getName(), info.typeName(), info.seniorityPct(),
-                    info.missing(), sums(reported, planned, other, paid), balanceAtTo, projectRows));
+                    info.missing(), rowSums, balanceAtTo, status, projectRows));
         }
 
         rows.sort(Comparator.comparing(CompanyPayrollRowDto::workerName,

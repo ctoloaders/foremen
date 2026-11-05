@@ -483,3 +483,117 @@ Frontend (`npx vitest --run <file>`):
   tests.
 
 E2E-style scenarios are in `test-cases.md` (API + browser).
+
+---
+
+## Round 1 design (bug-report E–H, 2026-11-05)
+
+Implements the Round 1 amendments to requirements (R10.2 amended; R10.7, R10.8, R8.8 new; R15.2
+extended). No migration, no new entity, no new persisted field — all four items are a read-side /
+derived change plus a reuse of the existing payout-create flow. No new notifications (R13).
+
+### Backend
+
+**`PayrollReadModelService.companyTable` — all workers (R10.2 amended).** The default (unfiltered)
+branch already loaded every WORKER (`userDao.findByRoleCode("WORKER")`); the only change is to
+**drop the zero-activity filter** `if (!filtered && !activity) continue;`. Both branches now keep
+every worker unconditionally; a no-activity worker emits a zeroed `PayrollSumsDto`, an empty
+`projects` list, and a `balanceAtTo` carried from the opening balance via the existing
+`BalanceCalculator.balanceAt`. The now-unused `activity` local is removed.
+
+**`CompanyPaymentStatus` (R10.7).** A new pure enum
+`com.foremen.service.payroll.CompanyPaymentStatus` with
+`of(reported, planned, paid, balanceAtTo)` and the precedence of R10.7.2 (NO_ACTIVITY → HAS_DEBT →
+UNREPORTED_WORK → FULLY_PAID). It is deterministic, Spring-free, and mirrors the `LinePaymentStatus`
+style. `CompanyPayrollRowDto` gains a `CompanyPaymentStatus status` field (after `balanceAtTo`);
+`companyTable` computes it per row from the figures it already has (`CompanyPaymentStatus.of(reported,
+planned, paid, balanceAtTo)`).
+
+**Previous-month payout-line hints (R8.8).** A new service
+`com.foremen.service.payroll.PayoutLineHintService.previousMonthHints(workerId, month)`:
+asserts the worker (R8.7, via `PayrollWriteSupport.assertWorker`), resolves M−1 from the reference
+month (today when null) as `[firstDay(M-1), lastDay(M-1)]`, then **reuses** the existing
+`PayoutSuggestionService.suggest(workerId, from, to, /*advance=*/false)` and returns
+`suggestion.breakdown()` filtered to `PayoutLineDto::available`. It adds no new cost arithmetic or
+DAO query — it folds the same candidate selection the create dialog previews. A `Clock` test seam
+supports deterministic "previous month".
+
+**Endpoint (R8.8 / R14).** `PayrollController` gains a dependency on `PayoutLineHintService` and a
+handler:
+
+```
+GET /api/payroll/workers/{workerId}/payout-hints?month   -> List<PayoutLineDto>   (PAYROLL READ)
+```
+
+annotated `@RequiresPermission(resource = "PAYROLL", operation = "READ")`, so the class stays COMPLETE
+for `PermissionAnnotationValidator`. It is distinct from the existing `…/hints` (additional-line
+hints, R8.5). The controller now exposes 8 request-mapped handlers.
+
+### Frontend
+
+**Types / enum labels.** `types/company-payroll.ts` adds `CompanyPaymentStatus`
+(`'NO_ACTIVITY' | 'HAS_DEBT' | 'UNREPORTED_WORK' | 'FULLY_PAID'`) + `COMPANY_PAYMENT_STATUSES`, and a
+`status` field on `CompanyPayrollRowDto`. `lib/enum-labels.ts` adds
+`companyPaymentStatusLabelKey` (→ `companyPayroll.rowStatus.*`) and `companyPaymentStatusVariant`
+(HAS_DEBT = destructive, UNREPORTED_WORK = secondary, FULLY_PAID = default, NO_ACTIVITY = outline).
+
+**`CompanyPayrollTable.tsx` (R10.7, R10.8).** Adds a **Status** column rendering the localized badge
+per worker, and — gated on a new `canCreatePayout` prop — an **actions** column rendering
+`CreatePayoutDialog` per row (pre-selecting the row's worker). The dialog trigger is customized via
+new optional `CreatePayoutDialog` props (`triggerVariant`, `triggerSize`, `triggerLabel`,
+`triggerTestId`) so the row shows a compact `outline`/`sm` "Wypłać" button; its cell stops click
+propagation so creating a payout never opens the card. Sub-rows and the totals row get the extra
+cells. `CompanyPayrollPage.tsx` passes `canCreatePayout = usePermission().hasPermission('PAYROLL',
+'CREATE')`.
+
+**Month quick-select (R15.2 extended).** `lib/dateRange.ts` adds `isIsoMonth`, `monthRangeOf(YYYY-MM)`
+(whole-month `DateRange` or null) and `monthValueOf(range)` (the `YYYY-MM` of `from`).
+`usePersistedPayrollFilters` adds `setMonth(yearMonth)` → sets the whole-month range with preset
+MONTH (persisted). `PayrollFilterBar.tsx` and `WorkerPayrollCard.tsx` each render a
+`<input type="month">` wired to `setMonth` / `monthRangeOf` (the card rewrites the from/to query
+params).
+
+**Previous-month payout-line hints + quick-add (R8.8).** `company-payroll-api.ts` adds
+`fetchPayoutLineHints(workerId, month)` → `GET …/payout-hints`; `useCompanyPayroll.ts` adds
+`usePayoutLineHints` (`['companyPayroll','payoutHints',workerId,month]`, enabled while the dialog is
+open and a worker is chosen). A new presentational `PayoutLineHints.tsx` renders the previous-month
+payable lines as chips with an **Add previous month** quick-add. `CreatePayoutDialog.tsx` fetches the
+hints for the selected worker and renders the section; the quick-add calls the existing
+`applyQuickSelect('PREVIOUS_MONTH')` so the live suggestion covers exactly those lines. The chips hide
+once the period already is the previous month (they would be redundant).
+
+### i18n keys (PL / RU) added in Round 1
+
+`companyPayroll.column.status`, `companyPayroll.column.actions`, `companyPayroll.rowStatus.noActivity`
+/ `.hasDebt` / `.unreportedWork` / `.fullyPaid`, `companyPayroll.filter.month`,
+`companyPayroll.payout.createShort`, `companyPayroll.payoutHints.title` / `.addAll` / `.addAllHint`.
+
+### Correctness notes
+
+- **Status precedence** is total and deterministic: every `(reported, planned, paid, balanceAtTo)`
+  maps to exactly one status; HAS_DEBT (positive balance) is checked before the planning signal so an
+  idle-but-owed worker is never `NO_ACTIVITY`/`FULLY_PAID`.
+- **Hints = suggestion over M−1:** because `previousMonthHints` delegates to the same
+  `PayoutSuggestionService.suggest(..., false)` the dialog uses, the hint set equals what the dialog
+  shows once its period is the previous month (the quick-add's target) — the chips and the breakdown
+  never disagree.
+- **No month-grouping change (bug F):** `workerCard` already builds one block per calendar month; the
+  fix is purely the reachability of multi-month windows via the month quick-select (R15.2 extended).
+
+### Round 1 testing
+
+Backend (run only affected classes, log to `/tmp/for-07-06-test.log`, read JUnit XML):
+- `CompanyPaymentStatusTest` (precedence, null-as-zero, scale-irrelevance);
+- `PayoutLineHintServiceTest` (previous-month window from clock / explicit month, available-only
+  filter, non-WORKER 422 before any suggestion);
+- updated `PayrollReadModelServiceTest` (all-workers default incl. zero-activity filler row + status;
+  empty period still lists workers) and `PayrollControllerTest` (new `payoutHints` READ handler,
+  8 handlers, 5-arg constructor).
+
+Frontend (`npx vitest --run src/features/company-payroll`):
+- `CompanyPayrollTable.test.tsx` (status badge column; per-row create control gated on
+  `canCreatePayout`; create click does not open the card);
+- `PayrollFilterBar.test.tsx` (month input value + `setMonth`);
+- `usePersistedPayrollFilters.test.ts` (`setMonth` whole-month + persist; invalid month ignored);
+- `CreatePayoutDialog.test.tsx` (previous-month hints shown; quick-add sets previous month + hides
+  chips; empty hints → no block).

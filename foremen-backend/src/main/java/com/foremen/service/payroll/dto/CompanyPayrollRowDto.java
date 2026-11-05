@@ -3,6 +3,8 @@ package com.foremen.service.payroll.dto;
 import java.math.BigDecimal;
 import java.util.List;
 
+import com.foremen.service.payroll.CompanyPaymentStatus;
+
 /**
  * FOR-07-06 (Requirement 10.2; design §DTO sketches) — one worker row of the company payroll table.
  *
@@ -13,9 +15,10 @@ import java.util.List;
  * @param workerTypeMissing {@code true} when the base-tier fallback applied (R2.2 warning)
  * @param sums              the period sums
  * @param balanceAtTo       the balance at the end of the month of {@code to} (data up to {@code to})
+ * @param status            the per-worker payment-status summary (bug E; derived from the figures)
  * @param projects          the per-project sub-rows
  */
 public record CompanyPayrollRowDto(Long workerId, String workerName, String workerTypeName, BigDecimal seniorityPct,
                                    boolean workerTypeMissing, PayrollSumsDto sums, BigDecimal balanceAtTo,
-                                   List<CompanyPayrollProjectRowDto> projects) {
+                                   CompanyPaymentStatus status, List<CompanyPayrollProjectRowDto> projects) {
 }
