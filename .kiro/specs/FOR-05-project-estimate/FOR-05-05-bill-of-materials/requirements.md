@@ -448,12 +448,90 @@ and RU.
    migration, and spec changes SHALL be committed from the root repository (two commits when a change
    spans both).
 
+### Requirement 20: Price-display mode and per-row total money (bug-report Rounds 7 and 8-A)
+
+**User Story:** As an estimator, I want to switch how prices are shown (labour, materials, or both)
+and see each row's total money, so I can read the estimate from either side without recalculating.
+
+#### Acceptance Criteria
+
+1. THE Estimate_Tab SHALL provide a price-display mode with three values: **Р** (labour only),
+   **М** (materials only) and **Р+М** (labour plus materials). THE default SHALL be **Р+М**.
+2. THE mode SHALL be changed by activating the "total works" column header, cycling Р+М → Р → М, and
+   SHALL be persisted per project in the browser session (`sessionStorage`).
+3. EACH assigned matrix cell SHALL show its work volume with the work's unit and the price for the
+   active mode; Р+М SHALL equal Р plus М.
+4. EACH work row's "total works" cell SHALL show the row's total volume and the row's total money for
+   the active mode, summed over the row's assigned cells and following the same collapse rule as the
+   cells (a point when every contributing material line is concrete, otherwise a range).
+
+### Requirement 21: Scoped labour-price override (bug-report Round 8-B)
+
+**User Story:** As an estimator, I want to discount or surcharge the labour price for a whole
+project, a work category or a single work, so I can adjust the price without losing the original.
+
+#### Acceptance Criteria
+
+1. EACH estimate line SHALL keep its ORIGINAL labour unit price (`unit_price`) unchanged and SHALL
+   hold a separate EFFECTIVE labour unit price (`unit_price_override`). WHEN a line is created, the
+   effective price SHALL equal the original; existing lines SHALL be backfilled equal to the original.
+2. THE system SHALL offer a signed percentage adjustment at three scopes: PROJECT (all lines of the
+   estimate), WORK_CATEGORY (lines whose work belongs to the category) and WORK_ITEM (one line). A
+   negative value is a discount and a positive value is a surcharge.
+3. APPLYING an adjustment SHALL set each in-scope line's effective price to
+   `original x (1 + pct / 100)`, rounded to two decimals, and SHALL NOT modify the original price. IT
+   SHALL be a one-shot write per line, not a live multiplier; each line keeps its own value. Applying
+   `0` SHALL restore the effective price to the original.
+4. THE adjustment SHALL apply to LABOUR ONLY. Material prices, material quantities and package
+   selections SHALL NOT change.
+5. THE adjustment SHALL be allowed only while the project is in DRAFT and only for a caller holding
+   `ESTIMATE` UPDATE; otherwise the request SHALL be rejected.
+6. THE matrix labour (`labour`, group subtotals and header totals) SHALL be computed from the
+   effective price. THE persisted line value (`value_net`) SHALL remain derived from the original
+   price; consumers that need the client-facing labour (the offer, see FOR-05-07 Requirement 22)
+   SHALL read the effective price.
+7. WHERE a work row's effective price differs from its original, THE row SHALL show a discount or
+   surcharge badge with the signed percentage relative to the original.
+8. THE original labour price SHALL be exposed only through the `ESTIMATE`-READ gated matrix; it SHALL
+   NOT be exposed to a CLIENT (see FOR-05-07 Requirements 22 and 23).
+
+### Requirement 22: Total labour comparison (bug-report Round 9)
+
+**User Story:** As an estimator, I want the labour totals to show how far the override moved them
+from the original, so I see the effect of a discount or surcharge at a glance.
+
+#### Acceptance Criteria
+
+1. EACH assigned matrix cell SHALL carry the original labour (`baseLabour = original unit price x
+   volume`) in addition to the effective `labour`. WHERE no override exists the two SHALL be equal.
+2. THE header "works" total SHALL, WHERE the effective labour total differs from the original labour
+   total, also show the original total and a discount or surcharge badge with the signed percentage
+   `(effective - original) / original`, using the same rule and look as the per-row badge.
+3. EACH work-type group's works subtotal SHALL show the same comparison for that group.
+4. WHERE the two totals are equal (no override, or an override that nets to zero) THE comparison
+   SHALL NOT be rendered, so an estimate without overrides looks unchanged.
+5. THE comparison SHALL recompute live with the matrix and SHALL treat a cell without `baseLabour`
+   (older payloads, staged placeholders) as having no override.
+
+#### Notifications and i18n (Rounds 7 to 9)
+
+- **Notifications:** none. These are read-side display changes and one DRAFT-gated write that emits no
+  domain event.
+- **Backend i18n entity fields:** none.
+- **Frontend text (PL and RU):** price-mode labels and header hint, labour-adjust control texts,
+  discount and surcharge badge and their accessible labels, and the "original" label of the totals
+  comparison (`estimate.totals.worksOriginal`, `worksDiscountAria`, `worksSurchargeAria`).
+
 ## Subsequently Affected / Out of Scope
 
 - **Margins / package VALUE comparison (FOR-05-06)** — this spec computes and displays cost ranges and
   supports comparing package pricing via Recompute_Finishing_Prices, but the margin model
   (`EstimateLineMargin`) and offer VALUE remain FOR-05-06.
-- **Offer / approval (FOR-05-07)** and client rendering (FOR-09) are out of scope.
+- **Offer / approval (FOR-05-07)** and client rendering (FOR-09) are out of scope, with one
+  dependency: the offer reads the EFFECTIVE labour price of Requirement 21 (FOR-05-07 Requirement 22).
+- **Other `value_net` readers.** The margin matrix plan revenue (FOR-06-06) and the schedule category
+  value (FOR-05-10) still read the original `value_net`; aligning them with the override is an open
+  decision and is not changed by Requirements 21 and 22.
 - FOR-05-05 does NOT redefine the material catalogs, the formula engine, or the assortment model; it
   consumes them. The only new material logic is the finishing type[/package] price-range resolver and
   the estimate's copied-price material collection.

@@ -731,3 +731,110 @@ SALESMAN, кроме действующего пользователя, ссыл
 | 4 | TC-OR-UI-03 | 1 | колокольчик клиента | текст + ссылка | | |
 
 Итог: X пройдено / Y провалено / Z пропущено. Run-id: `<timestamp>`. Стратегия: `генератор + teardown`.
+
+---
+
+# Bug-report Round 4 (2026-11): оферта по эффективной (override) цене работ
+
+Покрывает Round 4 задачи 1–3 (требования 22, 23). Тип: **API (Docker) + UI (браузерный движок)**.
+`unit_price` — исходная цена работ, `unit_price_override` — эффективная. Оферта считается по
+`round2(coalesce(override, unit_price) × quantity)`; `valueNet` сметы остаётся по исходной цене.
+
+## Стратегия повторяемости
+
+**Генератор `run-id` + teardown.** Проект `OfferLabour {run-id}`, клиент `client+{run-id}@example.com`,
+одно помещение с одной назначенной работой (известные цена P и объём Q). Пользователи ADMIN / MANAGER /
+ESTIMATOR / FINANCIER / FOREMAN — отдельные, с суффиксом `{run-id}`. В конце: проект → `CANCELLED`,
+тестовые пользователи деактивируются. Все кейсы читают оферту «вживую» (без снапшота), поэтому порядок
+не важен.
+
+## Фича L1. Итоги оферты (API)
+
+### TC-LAB-01 — Итог без override равен исходному
+- Предусловия: смета с одной работой P=100, Q=2 (net=200), override не применялся.
+- Шаги:
+  1. `POST /api/offers/project/{id}/prepare` (MANAGER) → 200.
+  2. `GET /api/offers/{offerId}` → `offer.totalNet = 200.00`.
+  3. `labourComparison.originalLabourNet = effectiveLabourNet = 200.00`.
+
+### TC-LAB-02 — Итог с override
+- Шаги:
+  1. `POST /api/estimates/matrix/project/{id}/labour-price-adjustment` `{"scope":"PROJECT","pct":-10}`
+     → 200.
+  2. `GET /api/offers/{offerId}` → `offer.totalNet = 180.00` (а не 200.00); `totalGross` пересчитан с НДС.
+  3. `GET` матрицы сметы: `valueNet`/итог сметы по исходной цене не изменились (расхождение
+     сметы и оферты — намеренное).
+  4. `pct = 0` → итог оферты снова 200.00.
+
+### TC-LAB-03 — База скидки считается по эффективной цене
+- Шаги (после TC-LAB-02, net строки = 180):
+  1. `POST /api/offers/{offerId}/discounts` `{"scope":"GLOBAL","kind":"ABSOLUTE","value":190}` → 400
+     `error.offer.discount.absolute.over.base` (190 > 180, но ≤ 200).
+  2. Скидка `value=30` → 200; `totalNet = 150.00`.
+  3. Скидка `PERCENT 10` на `LINE` → применяется к 180.00 (эффективная сумма скидки 18.00).
+
+### TC-LAB-04 — Потолки переговоров по эффективной базе
+- Шаги: клиент создаёт `DISCOUNT_REQUEST`, менеджер предлагает абсолютную скидку выше эффективной базы
+  (но ниже исходной) → отклоняется валидацией базы; в пределах эффективной базы — принимается.
+
+## Фича L2. Матрица ролей для `labourComparison` (API)
+
+Для каждой роли: `GET /api/offers/project/{id}` (оферта в `SENT`, override −10%).
+
+### TC-LAB-05 — Роли без блока
+- Шаги:
+  1. CLIENT → 200, плоская `ClientOfferReadModel`; в теле НЕТ `labourComparison`, `originalLabourNet`,
+     `unitPrice`, `valueNet`.
+  2. FOREMAN (если имеет право `OFFERS` READ) → 200 или 403; при 200 блок `labourComparison` отсутствует
+     в JSON (FOREMAN не входит в список разрешённых).
+
+### TC-LAB-06 — Роли с блоком
+- Шаги: MANAGER, ESTIMATOR, FINANCIER, ADMIN → 200, в `labourComparison`: `originalLabourNet = 200.00`,
+  `effectiveLabourNet = 180.00`.
+- FINANCIER получает 200 (грант `OFFERS` READ, changeset 212), а не 403; `POST /api/offers/.../send`
+  от FINANCIER → 403 (CREATE/UPDATE не выданы).
+
+### TC-LAB-07 — Блок не зависит от мутирующих ответов
+- Шаги: `POST /prepare` и `POST /send` от MANAGER возвращают `labourComparison`; от ESTIMATOR — тоже.
+
+## Фича L3. Исполнительский экран (UI)
+
+### TC-LAB-UI-01 — Бейдж скидки у менеджера
+- Предусловия: override −10%, оферта `DRAFT`.
+- Шаги:
+  1. Войти MANAGER → `/projects/{id}/offer`.
+  2. Блок `offer-labour-comparison` виден; `offer-labour-effective` = 180,00; `offer-labour-original` =
+     200,00.
+  3. `offer-labour-divergence` имеет `data-divergence="discount"`, зелёный (emerald), текст «−10%».
+
+### TC-LAB-UI-02 — Наценка
+- Шаги: override +10% → `data-divergence="surcharge"`, янтарный (amber), «+10%».
+
+### TC-LAB-UI-03 — Нет расхождения / нет блока
+- Шаги: override = 0 → виден только `offer-labour-effective`, нет `offer-labour-original` и
+  `offer-labour-divergence`. Войти FOREMAN/CLIENT → блока `offer-labour-comparison` нет вовсе, сетевой
+  ответ не содержит исходных цен.
+
+### TC-LAB-UI-04 — Локализация
+- Шаги: переключить PL/RU → подписи «Robocizna wg ceny efektywnej / pierwotnej» и «Работы по эффективной
+  / исходной цене» без сырых ключей `offer.labourComparison.*`.
+
+## Регрессия (Round 4)
+
+- **TC-LAB-REG-01** — оферта без override полностью совпадает со старым поведением (TC-07-01..05 из Части C
+  проходят без изменений).
+- **TC-LAB-REG-02** — клиентская модель (`toClientReadModel`) не изменилась: структура JSON идентична
+  прежней (TC-REG-02 «Конфиденциальность»).
+- **TC-LAB-REG-03** — материалы (construction/finishing) и их итоги не меняются после применения override.
+
+## Шаблон MD-репорта (Round 4)
+
+| # | Тест-кейс | Шаг | Запрос/Действие | Ожидание | Факт | Статус |
+|---|-----------|-----|-----------------|----------|------|--------|
+| 1 | TC-LAB-02 | 2 | GET /api/offers/{id} | totalNet = 180.00 | | |
+| 2 | TC-LAB-03 | 1 | предложение ABSOLUTE 190 | 400 absolute.over.base | | |
+| 3 | TC-LAB-05 | 1 | GET offer как CLIENT | нет labourComparison | | |
+| 4 | TC-LAB-06 | 1 | GET offer как FINANCIER | 200 + блок 200.00/180.00 | | |
+| 5 | TC-LAB-UI-01 | 3 | бейдж у MANAGER | discount, emerald, −10% | | |
+
+Итог: X пройдено / Y провалено / Z пропущено. Run-id: `<timestamp>`. Стратегия: `генератор + teardown`.

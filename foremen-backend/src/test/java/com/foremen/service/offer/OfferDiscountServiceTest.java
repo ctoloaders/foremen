@@ -192,6 +192,25 @@ class OfferDiscountServiceTest {
         verify(offerService, times(1)).recomputeTotals(offer);
     }
 
+    @Test
+    @DisplayName("add: discount base uses the EFFECTIVE (override) net, not the original valueNet (Round 4)")
+    void discountBaseUsesEffectiveNet() {
+        authenticateManager();
+        OfferEntity offer = draftOffer();
+        // Line 501: original 100 (valueNet stays 100), override 50 => effective base 50.
+        EstimateLineEntity l501 = offer.getEstimate().getLines().get(0);
+        l501.setUnitPriceOverride(new BigDecimal("50"));
+        when(offerDao.findById(OFFER_ID)).thenReturn(Optional.of(offer));
+
+        // 60 is within the ORIGINAL base (100) but over the EFFECTIVE base (50) => rejected.
+        DiscountWrite request = new DiscountWrite(DiscountScope.LINE, LINE_501_ID, DiscountKind.ABSOLUTE,
+                new BigDecimal("60"));
+
+        assertApiError(() -> service.add(OFFER_ID, request), HttpStatus.BAD_REQUEST,
+                "error.offer.discount.absolute.over.base");
+        verify(offerDiscountDao, never()).save(any(OfferDiscountEntity.class));
+    }
+
     // ------------------------------------------------------------------------------------------
     // R2.8 / R5.3 — non-executor writer rejected server-side with 403 error.offer.discount.forbidden
     // ------------------------------------------------------------------------------------------
@@ -330,6 +349,9 @@ class OfferDiscountServiceTest {
         line.setId(id);
         line.setWorkItem(workItem);
         line.setValueNet(net);
+        // Round 4: the discount base reads the EFFECTIVE net = unitPrice(/override) x quantity.
+        line.setUnitPrice(net);
+        line.setQuantity(BigDecimal.ONE);
         return line;
     }
 

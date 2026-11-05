@@ -33,6 +33,10 @@ import java.util.List;
  * @param materials   the cell's copied material lines
  * @param costRange   the cell cost band {@code labour + Σ material ranges}; collapses when concrete
  * @param fillState   the cell's fill state (R8.1)
+ * @param baseLabour  FOR-05-05 Round 9: the ORIGINAL labour {@code unit_price × Volume} (a point), i.e.
+ *                    the labour BEFORE any labour-price override. {@code labour} is the effective
+ *                    (override) value; the two are equal when no override exists. Lets the frontend
+ *                    total the original labour to show the override's discount/surcharge.
  */
 public record CellDto(
         Long workItemId,
@@ -46,7 +50,30 @@ public record CellDto(
         BigDecimal labour,
         List<MaterialLineDto> materials,
         MoneyRange costRange,
-        FillState fillState) {
+        FillState fillState,
+        BigDecimal baseLabour) {
+
+    /**
+     * Back-compat constructor: no override information supplied, so the original labour equals the
+     * effectiv  {@code labour}.
+     */
+    public CellDto(
+            Long workItemId,
+            Long roomId,
+            boolean assigned,
+            BigDecimal volume,
+            String formulaUsed,
+            String formulaKey,
+            boolean fallbackUsed,
+            boolean volumeOverridden,
+            BigDecimal labour,
+            List<MaterialLineDto> materials,
+            MoneyRange costRange,
+            FillState fillState) {
+        this(workItemId, roomId, assigned, volume, formulaUsed, formulaKey, fallbackUsed,
+                volumeOverridden, labour, materials, costRange, fillState, labour);
+    }
+
 
     /** An unassigned cell for {@code (workItemId, roomId)} — empty/assignable neutral defaults (R1.3). */
     public static CellDto unassigned(Long workItemId, Long roomId) {
@@ -62,6 +89,7 @@ public record CellDto(
                 BigDecimal.ZERO,
                 List.of(),
                 MoneyRange.ZERO,
-                FillState.placeholder);
+                FillState.placeholder,
+                BigDecimal.ZERO);
     }
 }

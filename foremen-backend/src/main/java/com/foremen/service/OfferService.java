@@ -828,7 +828,7 @@ public class OfferService
             if (line == null || line.getId() == null) {
                 continue;
             }
-            inputs.add(new EstimateLineInput(line.getId(), categoryIdOf(line), line.getValueNet()));
+            inputs.add(new EstimateLineInput(line.getId(), categoryIdOf(line), line.effectiveValueNet()));
         }
         return inputs;
     }
@@ -851,7 +851,9 @@ public class OfferService
         if (estimate.getLines() != null) {
             for (EstimateLineEntity line : estimate.getLines()) {
                 if (line != null && line.getId() != null) {
-                    prices.put(line.getId(), line.getValueNet());
+                    // FOR-05-07 Round 4: the offer prices labour on the EFFECTIVE (override) net, which
+                    // intentionally differs from the estimate's ORIGINAL-derived valueNet.
+                    prices.put(line.getId(), line.effectiveValueNet());
                 }
             }
         }

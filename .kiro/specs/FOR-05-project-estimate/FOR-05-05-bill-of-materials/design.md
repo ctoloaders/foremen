@@ -950,3 +950,48 @@ for the same package.
 Apply-cheapest, per-line quantity override (#1), the `PER_ROOM` basis (#4), and
 undo/redo/discard reconciliation all operate on the resulting lines **unchanged**. Construction
 materials are **not** affected by the package merge (finishing only).
+
+
+## Addendum: labour-price override and price-mode display (bug-report Rounds 7 to 9)
+
+### Data model
+
+- `estimate_lines.unit_price` stays the frozen ORIGINAL labour price. Changeset 211 adds
+  `estimate_lines.unit_price_override NUMERIC(12,2)`, nullable, backfilled equal to `unit_price`; new
+  lines seed it equal to `unit_price` (`EstimateLineService.copySingleWorkPrice`,
+  `EstimateAssignmentService.createLine`). A null override is read as "no adjustment".
+- `value_net` remains `round2(unit_price x quantity)` and is not recomputed by the adjustment. The
+  matrix and the offer therefore read labour from the override, while `value_net` keeps the original;
+  the two intentionally differ once an override exists.
+
+### Write path
+
+`POST /api/estimates/project/{projectId}/labour-price-adjustment` with `{ scope, targetId, pct }`,
+scope one of `PROJECT`, `WORK_CATEGORY`, `WORK_ITEM`. Guarded by `@RequiresPermission(ESTIMATE, UPDATE)`
+and the DRAFT gate shared with the other estimate writes (`resolveDraftEstimate`). For each in-scope
+line it sets `unit_price_override = round2(unit_price x (1 + pct / 100))` and returns the refreshed
+matrix. No new managed entity, so the entity-creation checklist does not apply.
+
+### Read model
+
+- `CellDto.labour` = `coalesce(override, unit_price) x volume` (effective). `CellDto.baseLabour` =
+  `unit_price x volume` (original). The 12-argument `CellDto` constructor remains and defaults
+  `baseLabour` to `labour`.
+- `WorkRowDto.unitPrice` is the effective unit price and `WorkRowDto.baseUnitPrice` the original.
+- The matrix endpoint is `ESTIMATE`-READ gated, so a CLIENT never receives either original field.
+
+### Frontend
+
+- `state/priceDivergence.ts` is the single rule (epsilon, signed delta, discount or surcharge), used by
+  the row badge in `WorkTypeGroupSection` and by `LabourDivergenceNote`.
+- `state/costModel.ts`: `rowModeMoney(row, mode)` for the per-row total, and `baseLabourTotal` /
+  `groupBaseLabour` for the original-labour folds. A cell without `baseLabour` falls back to its
+  `labour`, so staged placeholders and old payloads never show a false divergence.
+- `components/LabourDivergenceNote` renders the original amount plus the badge under the header works
+  total (`estimate-total-works-*`) and in the group header (`estimate-group-works-<id>-*`); it renders
+  nothing when the totals agree.
+- `state/estimatePriceModeStore.ts` persists the price mode per project in `sessionStorage`.
+
+### Out of scope
+
+Margin matrix plan revenue and the schedule category value still read the original `value_net`.

@@ -127,6 +127,50 @@ public class ClientOfferReadModelAssembler {
     }
 
     /**
+     * Round 4: executor read model with the staff-only {@link ExecutorOfferReadModel.LabourPriceComparison}
+     * when {@code includeLabourComparison} is true (the caller passes
+     * {@link #canSeeLabourComparison(String)} of the resolved role); otherwise identical to
+     * {@link #toExecutorReadModel(OfferEntity, boolean)}.
+     */
+    public ExecutorOfferReadModel toExecutorReadModel(
+            OfferEntity offer, boolean editable, boolean includeLabourComparison) {
+        ExecutorOfferReadModel base = toExecutorReadModel(offer, editable);
+        if (!includeLabourComparison) {
+            return base;
+        }
+        return new ExecutorOfferReadModel(base.offer(), base.control(), labourComparison(offer));
+    }
+
+    /**
+     * Explicit allow-list of roles that may see the ORIGINAL labour price in the executor offer view.
+     * FOREMAN (an admin-staff role elsewhere) and CLIENT are deliberately excluded.
+     */
+    public static final java.util.Set<String> LABOUR_COMPARISON_ROLES =
+            java.util.Set.of("ADMIN", "MANAGER", "ESTIMATOR", "FINANCIER");
+
+    /** Whether {@code roleCode} is in {@link #LABOUR_COMPARISON_ROLES} (null-safe). */
+    public static boolean canSeeLabourComparison(String roleCode) {
+        return roleCode != null && LABOUR_COMPARISON_ROLES.contains(roleCode);
+    }
+
+    /** Labour-only totals (before offer discounts) from the offer's live estimate lines. */
+    private static ExecutorOfferReadModel.LabourPriceComparison labourComparison(OfferEntity offer) {
+        BigDecimal original = BigDecimal.ZERO.setScale(2);
+        BigDecimal effective = BigDecimal.ZERO.setScale(2);
+        EstimateEntity estimate = offer.getEstimate();
+        if (estimate != null && estimate.getLines() != null) {
+            for (com.foremen.dao.model.EstimateLineEntity line : estimate.getLines()) {
+                if (line == null) {
+                    continue;
+                }
+                original = original.add(line.originalValueNet());
+                effective = effective.add(line.effectiveValueNet());
+            }
+        }
+        return new ExecutorOfferReadModel.LabourPriceComparison(original, effective);
+    }
+
+    /**
      * Builds the downstream {@link AgreedOfferView} of an approved offer (R7.4). Captures the agreed
      * revision's totals, selected package, and applied discounts.
      *

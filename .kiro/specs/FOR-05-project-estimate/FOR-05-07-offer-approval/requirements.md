@@ -1073,3 +1073,65 @@ first navigating to the Offer tab and regardless of whether the estimate is pric
   **ADMIN/MANAGER-only** and NEVER reach a `CLIENT`, and the ESTIMATE (kosztorys) stays
   **MANAGER/ADMIN-only** (Requirement 15, Requirement 16). This spec does NOT build any client-facing
   cost, margin, or estimate view — the client sees only the offer-level Client_Offer_Read_Model.
+
+---
+
+## Bug-report Round 4 (2026-11-05): offer labour on the effective (override) price
+
+Follow-up to the FOR-05-05 Round 8 labour-price override. `estimate_lines.unit_price` is the frozen
+ORIGINAL labour price; `estimate_lines.unit_price_override` (changeset 211) is the EFFECTIVE one.
+
+### Requirement 22: The offer prices labour on the effective (override) net
+
+**User Story:** As a manager, I want the offer to be priced on the adjusted (override) labour price, so
+that the offer total, the discount base and the negotiation caps match what the client is actually
+charged.
+
+#### Acceptance Criteria
+
+1. THE Offer SHALL read the per-line labour net as `round2(coalesce(unit_price_override, unit_price) ×
+   quantity)` (HALF_UP, scale 2, null-safe) — exposed as a single shared helper
+   `EstimateLineEntity#effectiveValueNet()` — at ALL four offer sites: `OfferService.estimateClientPrices`
+   (offer totals), `OfferService.toLineInputs` (discount-resolver base), `OfferDiscountService`
+   (discount scope base / ABSOLUTE-over-base validation) and `NegotiationService` (negotiation caps).
+2. WHEN no override is set (null) THE effective net SHALL equal the net derived from the original
+   `unit_price`, so offers on un-adjusted estimates are unchanged.
+3. THE persisted `EstimateLineEntity.valueNet` and `EstimateRecomputeService` SHALL remain derived from
+   the ORIGINAL `unit_price`. Therefore the estimate `valueNet` and the offer net INTENTIONALLY DIFFER
+   when an override exists. Materials are untouched (the override is labour-only).
+4. THE Offer remains a live reference (Requirement 19): no migration or stored-total backfill is needed;
+   stored `total_net/vat/gross` are refreshed on the next write path and live-recomputed on every read.
+
+### Requirement 23: Staff-only original-vs-effective labour comparison
+
+**User Story:** As ADMIN / MANAGER / ESTIMATOR / FINANCIER, I want to see in the executor offer view the
+labour total on the effective price next to the original total and the resulting discount/surcharge, so
+that the effect of the override is visible.
+
+#### Acceptance Criteria
+
+1. THE `ExecutorOfferReadModel` SHALL carry an optional `labourComparison { originalLabourNet,
+   effectiveLabourNet }` block: labour only, before offer discounts, computed from the offer's live
+   estimate lines (`Σ round2(unit_price × qty)` vs `Σ effectiveValueNet()`).
+2. THE block SHALL be populated ONLY when the caller role is in the explicit allow-list
+   `{ADMIN, MANAGER, ESTIMATOR, FINANCIER}`; for every other executor-side role (notably FOREMAN, which is
+   in `ADMIN_STAFF_ROLE_CODES` but is NOT allowed here) it SHALL be `null` and omitted from the JSON
+   (`@JsonInclude(NON_NULL)`).
+3. THE FINANCIER role SHALL hold `OFFERS` READ (changeset 212) so it is served the executor read model
+   (CREATE/UPDATE/DELETE/APPROVE are NOT granted). The client branch of the controllers is unchanged.
+4. THE frontend SHALL render, in the EXECUTOR offer view only, the effective labour total and — when the
+   block is present and the totals differ — the original total plus a discount (emerald, negative) /
+   surcharge (amber, positive) badge with `delta% = (effective − original) / original`. WHEN the block is
+   absent nothing is rendered.
+5. A CLIENT SHALL NEVER receive the original labour price: `ClientOfferReadModel` and
+   `ClientOfferReadModelAssembler.toClientReadModel` are unchanged and carry no original-labour field
+   (Requirements 15, 16, Property 21).
+
+### Round 4 cross-cutting notes
+
+- **Notifications: none.** This is a read-side change on the existing recompute paths; no new
+  Notification_Type, event or emitter is introduced.
+- **Backend i18n entity fields: none.** No new localized entity columns.
+- **Frontend labels only (PL + RU):** `offer.labourComparison.*` (`title`, `effective`, `original`,
+  `discountBadge`, `surchargeBadge`, `discountBadgeAria`, `surchargeBadgeAria`) in both `pl.json` and
+  `ru.json`.

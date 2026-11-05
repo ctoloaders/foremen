@@ -929,5 +929,7 @@
          MANAGER, FOREMAN, WORKER. Registered LAST, after 209. -->
     <include file="database_files/changesets/210-seed-expense-upload-resource.xml"/>
     <include file="database_files/changesets/211-estimate-line-unit-price-override.xml"/>
+    <!-- FOR-05-07 Round 4 (task 2): FINANCIER OFFERS READ (executor offer read model). Registered LAST, after 211. -->
+    <include file="database_files/changesets/212-seed-financier-offers-read.xml"/>
 
 </databaseChangeLog>

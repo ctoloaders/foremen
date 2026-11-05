@@ -252,6 +252,12 @@ public class EstimateMatrixAssembler {
                 ? line.getUnitPriceOverride()
                 : (line != null && line.getUnitPrice() != null ? line.getUnitPrice() : BigDecimal.ZERO);
         BigDecimal labour = unitPrice.multiply(volume);
+        // FOR-05-05 Round 9: the ORIGINAL labour (frozen unit_price x Volume), before any override, so
+        // the frontend can total it and show the override's discount/surcharge. Equals `labour` when
+        // there is no override.
+        BigDecimal baseUnitPrice = line != null && line.getUnitPrice() != null
+                ? line.getUnitPrice() : BigDecimal.ZERO;
+        BigDecimal baseLabour = baseUnitPrice.multiply(volume);
 
         List<MaterialLineDto> materialDtos = new ArrayList<>();
         MoneyRange materialsRange = MoneyRange.ZERO;
@@ -283,7 +289,8 @@ public class EstimateMatrixAssembler {
                 labour,
                 materialDtos,
                 costRange,
-                fillState);
+                fillState,
+                baseLabour);
     }
 
     /**

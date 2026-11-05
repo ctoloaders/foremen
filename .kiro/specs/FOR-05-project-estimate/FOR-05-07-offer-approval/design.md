@@ -697,3 +697,37 @@ a `discard` restores the last committed selection; nothing is persisted until an
 which maps exactly to the Requirement 11 write path.
 
 **Validates: Requirements 18.1, 18.2, 18.3, 18.4**
+
+---
+
+## Bug-report Round 4: effective (override) labour in the offer
+
+**Effective-net helper.** `EstimateLineEntity#effectiveValueNet()` = `round2(coalesce(unitPriceOverride,
+unitPrice) × quantity)` (HALF_UP, scale 2, null-safe); `originalValueNet()` = `round2(unitPrice × quantity)`.
+All four offer sites use `effectiveValueNet()`: `OfferService.estimateClientPrices` (feeds
+`OfferTotalsCalculator`), `OfferService.toLineInputs` (feeds `DiscountResolver`), `OfferDiscountService`
+and `NegotiationService` (scope base). `EstimateLineEntity.valueNet` and `EstimateRecomputeService` are
+NOT changed: the estimate `valueNet` (original) and the offer net (effective) intentionally differ under
+an override. `MarginMatrixService`, `MarginMatrixAssembler` and `ScheduleRowDerivation` are out of scope.
+The offer still holds no price snapshot (Requirement 19), so there is no migration.
+
+**Staff-only comparison.** `ExecutorOfferReadModel` gains `labourComparison`
+(`LabourPriceComparison(originalLabourNet, effectiveLabourNet)`, `@JsonInclude(NON_NULL)`).
+`ClientOfferReadModelAssembler.toExecutorReadModel(offer, editable, includeLabourComparison)` computes it
+from the live estimate lines (labour only, before offer discounts). The controllers
+(`OfferController`, `OfferNegotiationController`) pass
+`ClientOfferReadModelAssembler.canSeeLabourComparison(currentRoleCode())`, where the role is resolved from
+the `ROLE_<code>` authority exactly as for `isClient()`. The allow-list is the explicit constant
+`{ADMIN, MANAGER, ESTIMATOR, FINANCIER}`; FOREMAN/SALESMAN/others get `null`. Any role with `OFFERS` READ
+other than CLIENT is served the executor model; FINANCIER was missing that grant and receives READ only
+via changeset `212-seed-financier-offers-read`. `toClientReadModel` / `ClientOfferReadModel` are unchanged
+(Property 21).
+
+**Frontend.** `LabourPriceComparison` type and optional `labourComparison` on the executor wire/read
+model (`normalizeOffer` copies it when present). `OfferSummaryHeader` renders a `LabourComparisonStrip`
+(testids `offer-labour-comparison`, `offer-labour-effective`, `offer-labour-original`,
+`offer-labour-divergence`) only when `OfferTab` passes it (non-client and block present); the badge mirrors
+the estimate per-row badge in `WorkTypeGroupSection`.
+
+**Notifications:** none. **Backend i18n entity fields:** none. **Frontend labels:** PL + RU
+(`offer.labourComparison.*`).

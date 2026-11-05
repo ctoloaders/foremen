@@ -90,7 +90,7 @@ public class OfferController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = CREATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> prepare(@PathVariable Long projectId) {
         OfferEntity offer = offerService.prepareOffer(projectId);
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
 
     /**
@@ -103,7 +103,7 @@ public class OfferController {
     public ResponseEntity<ExecutorOfferReadModel> selectPackage(
             @PathVariable Long offerId, @RequestBody SelectPackageRequest request) {
         OfferEntity offer = offerService.selectPackage(offerId, request != null ? request.packageCode() : null);
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
 
     /**
@@ -114,7 +114,7 @@ public class OfferController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> send(@PathVariable Long offerId) {
         OfferEntity offer = offerService.send(offerId);
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false, canSeeLabourComparison()));
     }
 
     /**
@@ -125,7 +125,7 @@ public class OfferController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> withdraw(@PathVariable Long offerId) {
         OfferEntity offer = offerService.withdraw(offerId);
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false, canSeeLabourComparison()));
     }
 
     /**
@@ -167,7 +167,7 @@ public class OfferController {
             offerVisibilityResolver.assertClientVisible(offer.getStatus(), offerId);
             return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
         }
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
 
     /**
@@ -208,7 +208,15 @@ public class OfferController {
             offerVisibilityResolver.assertClientVisible(offer.getStatus(), offer.getId());
             return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
         }
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
+    }
+
+    /**
+     * Round 4: whether the caller's role may see the original-vs-effective labour comparison
+     * (explicit allow-list ADMIN/MANAGER/ESTIMATOR/FINANCIER; FOREMAN and CLIENT excluded).
+     */
+    private boolean canSeeLabourComparison() {
+        return ClientOfferReadModelAssembler.canSeeLabourComparison(currentRoleCode());
     }
 
     /** Whether the authenticated caller's role is CLIENT (selects the confidential read model). */

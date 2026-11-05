@@ -283,3 +283,126 @@ Screen URL: http://localhost:3000/projects/1/pricing
 
 - **Wave 1:** 5 (Round 3) — single frontend effect in `ClientMaterialSelection`.
 - **Wave 2:** V3 — browser validation; depends on 5.
+
+## Round 4 (2026-11-05)
+
+Screen URL: `http://localhost:3000/projects/{id}/offer` (offer tab; executor view and client view).
+Source: follow-up to the FOR-05-05 Round 8 labour-price override. Three agreed points:
+(1) the offer must use the **override** (effective labour price) as the source of truth;
+(2) a CLIENT must never see the original labour price;
+(3) in the **executor offer view** the original labour price / total is shown ONLY to
+ADMIN, MANAGER, ESTIMATOR and FINANCIER (FOREMAN and CLIENT do not get it).
+
+Background (grounded in code):
+- `estimate_lines.unit_price` is the frozen ORIGINAL labour price; `unit_price_override`
+  (changeset 211) is the effective one. `EstimateLineEntity.valueNet` is DERIVED from the ORIGINAL
+  (`round2(unitPrice x quantity)`); `applyLabourPriceAdjustment` deliberately does not recompute it.
+- The offer holds no price snapshot; it reads the estimate LIVE (Live_Referenced_Pricing, R19).
+  Every offer path reads the per-line net from `EstimateLineEntity.getValueNet()`, i.e. the original:
+  `OfferService.estimateClientPrices` (~L854, feeds `OfferTotalsCalculator`),
+  `OfferService.toLineInputs` (~L831, discount-resolver base), `OfferDiscountService` (~L254) and
+  `NegotiationService` (~L564). Changing only one would leave discounts/negotiation computed on the
+  original base.
+- The CLIENT is served only `ClientOfferReadModel` (no unit price, no `valueNet`, Property 21); the
+  estimate matrix (where `baseUnitPrice` lives) is `ESTIMATE`-READ gated and excludes CLIENT. So there
+  is NO leak today; the requirement is to keep it that way.
+- Executors are served `ExecutorOfferReadModel(offer, control)` from `OfferController` (branch on
+  `isClient()`). It is the correct home for a staff-only extra block.
+
+- [x] 1. Offer uses the override (effective) labour net as the source of truth
+  - Triage: observed - offer totals, discount base and negotiation caps are computed from
+    `line.getValueNet()` (ORIGINAL labour). Expected - they use the effective labour net
+    `round2(coalesce(unitPriceOverride, unitPrice) x quantity)`. Layer: **backend**.
+    - Add one shared helper (e.g. `EstimateLineEntity#effectiveValueNet()` or a small
+      `EffectiveLineNet` util) returning `round2(coalesce(unit_price_override, unit_price) x quantity)`,
+      and use it in ALL four offer sites: `OfferService.estimateClientPrices`, `OfferService.toLineInputs`,
+      `OfferDiscountService` (~L254) and `NegotiationService` (~L564). Do NOT change the persisted
+      `valueNet` column or the estimate recompute (it stays the original). Materials are untouched
+      (labour-only override).
+    - Because the offer reads live, no migration and no stored-total backfill is needed; stored
+      `total_net/vat/gross` are refreshed on the next write path and live-recomputed on every read.
+    - Document in code/design that estimate `valueNet` (original) and offer net (effective) now
+      intentionally differ when an override exists.
+  - _Requirements: 1.3, 19 (Live_Referenced_Pricing), discount/negotiation requirements_
+  - _Depends on: none_
+- [x] 2. Staff-only original-vs-effective labour comparison in the executor offer read model
+  - Triage: expected - ADMIN, MANAGER, ESTIMATOR and FINANCIER can see, in the executor offer view,
+    the offer labour total on the effective price AND the original labour total with the delta (so the
+    discount/surcharge introduced by the override is visible). FOREMAN and CLIENT never receive it.
+    Layer: **backend**.
+    - Add an optional block (e.g. `LabourPriceComparison { originalLabourNet, effectiveLabourNet }`)
+      to `ExecutorOfferReadModel` (or `ManagerControlState`), computed from the estimate lines
+      (`unit_price x quantity` vs `coalesce(unit_price_override, unit_price) x quantity`, labour only,
+      before offer discounts). Populate it only when the caller role is in
+      {ADMIN, MANAGER, ESTIMATOR, FINANCIER}; otherwise `null` (omitted by `NON_NULL`). Reuse the
+      existing role resolution used by `OfferController` / `ADMIN_STAFF_ROLE_CODES` pattern, but with
+      this explicit four-role allow-list (FOREMAN is in `ADMIN_STAFF_ROLE_CODES` but NOT in this list).
+    - Verify which roles actually reach the executor model today (`toExecutorReadModel`): the
+      controller javadoc names MANAGER/ADMIN/ESTIMATOR; confirm FINANCIER has `OFFERS` READ and is
+      served the executor model, otherwise add it to the executor branch (not to the client branch).
+    - `ClientOfferReadModel` and `ClientOfferReadModelAssembler.toClientReadModel` stay UNCHANGED.
+      Add a serialization test asserting the CLIENT payload contains no original-labour field and the
+      FOREMAN executor payload has the block absent.
+  - _Requirements: 15.1, 16 (confidentiality boundary), Property 21_
+  - _Depends on: 1_
+- [x] 3. Render the comparison in the executor offer view (frontend)
+  - Triage: expected - the executor offer view shows the offer labour total (effective) and, when the
+    block is present and the two totals differ, the original total plus a discount/surcharge badge
+    styled like the estimate per-row badge. Absent block => nothing rendered. Layer: **frontend**.
+    - Extend the offer types with the optional `labourComparison`; render it in the executor offer
+      view only; reuse the badge look and the existing `estimate.matrix.discountBadge` /
+      `surchargeBadge` keys or add `offer.labourComparison.*` keys.
+    - i18n: any new label (original total, effective total, delta) in BOTH `pl.json` and `ru.json`.
+  - _Requirements: 15.1, 16_
+  - _Depends on: 2_
+- [x] 4. Update requirements.md / design.md and test-cases.md
+  - Add requirements: offer labour = effective override net (all four sites); staff-only comparison
+    for the four roles; CLIENT never receives the original. Notifications: none (read-side change,
+    existing recompute paths). i18n: no new backend i18n entity fields; only the frontend labels above
+    (PL + RU). `test-cases.md` (Russian, per the standard): API tests on the Dockerized app for the
+    offer total with/without override, the discount base, and the role matrix (CLIENT/FOREMAN no
+    block, MANAGER/ESTIMATOR/FINANCIER/ADMIN block present); browser scenarios for the executor view.
+  - _Requirements: all of Round 4_
+  - _Depends on: 1, 2, 3_
+- [x] V4. Validate Round 4 in browser
+  - Rebuild the stack. On a DRAFT project with an override applied, prepare an offer. As MANAGER (and
+    ADMIN): offer total reflects the override, comparison block shows original vs effective with the
+    badge. As FOREMAN: no comparison. As CLIENT: only the effective total, and the raw offer API
+    response contains no original-labour data.
+  - _Requirements: all of Round 4_
+  - _Depends on: 1, 2, 3_
+
+## Parallel execution plan (waves) - Round 4
+
+- **Wave 1:** 1 - effective-net helper + the four offer call sites (foundation).
+- **Wave 2:** 2 - executor read-model block + role gate (depends on 1's helper).
+- **Wave 3:** 3 - frontend rendering (depends on 2's contract).
+- **Wave 4:** 4 - docs (depends on 1-3).
+- **Wave 5:** V4 - browser validation; depends on 1, 2, 3.
+
+## Round 4 - validation results (2026-11-05)
+
+Stack: local Docker rebuilt (backend :8080, frontend :3000). Changeset 212 (FINANCIER `OFFERS` READ)
+applied directly to Postgres plus its `databasechangelog` row, because the local liquibase container
+is wedged at the Docker daemon level (same as changeset 211). Project 2 (DRAFT), labour override
++10% at PROJECT scope; temporary role users created for the role matrix and removed afterwards.
+
+| # | Check | Evidence | Result |
+|---|-------|----------|--------|
+| 1 | Offer total uses the override | Matrix original labour 182 104,61, effective 200 316,10 (+10.00%); prepared offer `totalNet` = **200 316,10** | PASS |
+| 2 | ADMIN / MANAGER / ESTIMATOR / FINANCIER get the comparison | `GET /api/offers/project/2`: each returns `labourComparison {originalLabourNet: 182104.61, effectiveLabourNet: 200316.1}` | PASS |
+| 3 | FOREMAN does not get it | FOREMAN has no `OFFERS` READ: `403`, key absent | PASS |
+| 4 | CLIENT sees only the effective total | Sent offer, CLIENT read `200`: keys have no `labourComparison`, `baseUnitPrice`, `baseLabour`, `unitPrice`, `valueNet`; `totalNet` 200 316,10; CLIENT `GET .../estimates/project/2/matrix` = `403` | PASS |
+| 5 | Executor offer view (browser, ADMIN) | `/projects/2/pricing`: `offer-labour-effective` 200 316,10, `offer-labour-original` 182 104,61, badge `+10,00%` `data-divergence="surcharge"`, aria "Наценка на работы 10,00% относительно исходной суммы 182 104,61" | PASS |
+| 6 | Client offer view (browser, CLIENT) | Same tab as the QA client: Нетто 200 316,10; no `offer-labour-*` nodes; the original amount is not on the page | PASS |
+
+Notes:
+- FOREMAN is outside the allow-list by design. It also has no `OFFERS` READ, so it never reaches the
+  executor model (the assembler gate is defense in depth). SALESMAN reaches the executor model but is
+  not in the allow-list, so it gets no block.
+- Margin matrix plan revenue and schedule category value still read the original `value_net` (out of
+  scope, open decision).
+- Cleanup: offer 175 withdrawn, project override reset to 0%, temporary memberships removed, the four
+  temporary users deactivated (audit rows reference them), and the E2E client password hash restored.
+
+Result: 6 of 6 checks passed. Round 4 closed.

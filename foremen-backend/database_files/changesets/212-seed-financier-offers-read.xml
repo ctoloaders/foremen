@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-05-07 bug-report Round 4 (task 2): FINANCIER must be served the executor offer read model
+        (staff-only original-vs-effective labour comparison). The OFFERS resource was never granted to
+        FINANCIER (133 seeded ADMIN/MANAGER/CLIENT only; 135 stripped any FINANCIER grant), so
+        FINANCIER got 403 on GET /api/offers/**. This grants FINANCIER OFFERS READ ONLY (no CREATE,
+        UPDATE, DELETE, APPROVE). Idempotent: guarded by NOT EXISTS on each insert.
+    -->
+    <changeSet id="212-seed-financier-offers-read" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM roles WHERE code = 'FINANCIER'</sqlCheck>
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM resources WHERE code = 'OFFERS'</sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FINANCIER' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FINANCIER' AND res2.code = 'OFFERS'
+              );
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'FINANCIER' AND res.code = 'OFFERS'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

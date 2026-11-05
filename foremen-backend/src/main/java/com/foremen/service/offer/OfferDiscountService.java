@@ -251,7 +251,7 @@ public class OfferDiscountService {
             if (line == null) {
                 continue;
             }
-            BigDecimal net = normalizeNet(line.getValueNet());
+            BigDecimal net = normalizeNet(line.effectiveValueNet());
             switch (scope) {
                 case GLOBAL -> base = base.add(net);
                 case CATEGORY -> {

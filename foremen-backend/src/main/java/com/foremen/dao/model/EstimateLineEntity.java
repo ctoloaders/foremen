@@ -115,4 +115,31 @@ public class EstimateLineEntity extends BaseEntity {
      */
     @OneToMany(mappedBy = "line", fetch = FetchType.LAZY)
     private List<EstimateLineRoomQtyEntity> roomQtys = new ArrayList<>();
+
+    /**
+     * FOR-05-07 Round 4: the EFFECTIVE labour net of this line =
+     * {@code round2(coalesce(unitPriceOverride, unitPrice) × quantity)} (HALF_UP, scale 2), null-safe
+     * (null price or quantity counts as zero). This is the single source the OFFER reads (totals,
+     * discount base, negotiation caps). It intentionally DIFFERS from {@link #valueNet}, which stays
+     * derived from the ORIGINAL {@link #unitPrice} when an override exists. Materials are not involved.
+     */
+    public BigDecimal effectiveValueNet() {
+        BigDecimal price = unitPriceOverride != null ? unitPriceOverride : unitPrice;
+        return lineNet(price, quantity);
+    }
+
+    /**
+     * FOR-05-07 Round 4: the ORIGINAL labour net = {@code round2(unitPrice × quantity)} (HALF_UP,
+     * scale 2), null-safe. Staff-only comparison input; never exposed to a CLIENT.
+     */
+    public BigDecimal originalValueNet() {
+        return lineNet(unitPrice, quantity);
+    }
+
+    private static BigDecimal lineNet(BigDecimal price, BigDecimal qty) {
+        if (price == null || qty == null) {
+            return BigDecimal.ZERO.setScale(2);
+        }
+        return price.multiply(qty).setScale(2, java.math.RoundingMode.HALF_UP);
+    }
 }

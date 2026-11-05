@@ -169,7 +169,8 @@ public class OfferNegotiationController {
             offerVisibilityResolver.assertClientVisible(offer.getStatus(), offer.getId());
             return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
         }
-        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true));
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true,
+                ClientOfferReadModelAssembler.canSeeLabourComparison(currentRoleCode())));
     }
 
     /** Whether the authenticated caller's role is CLIENT (selects the confidential read model). */

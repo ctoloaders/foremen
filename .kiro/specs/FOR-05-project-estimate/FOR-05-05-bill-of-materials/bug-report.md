@@ -654,7 +654,7 @@ material prices are not affected by the override.
       `pl.json` + `ru.json`.
   - _Requirements: 1.2 (+ new estimate-labour-price-override requirement)_
   - _Depends on: 3_
-- [ ] 5. Add the estimate-price requirement to requirements.md + author/refresh test-cases.md
+- [x] 5. Add the estimate-price requirement to requirements.md + author/refresh test-cases.md
   - Add a requirement for the scoped per-work-item price override (base vs effective, scope
     precedence/semantics, DRAFT gate) to `requirements.md`, and cover A + B in `test-cases.md`
     (API tests for the adjust endpoint against the Dockerized app; browser-engine scenarios for the
@@ -702,3 +702,85 @@ Note: task 5 (add the estimate-labour-price-override requirement to `requirement
 verified.
 
 Result: A + B fixed / 0 failed.
+
+## Round 9 (2026-11-05)
+
+Screen URL: `http://localhost:3000/projects/{id}/estimate`. Source: follow-up to Round 8-B (labour
+price override). Reported: the TOTAL labour cost must compare the original sum with the override sum
+and render the divergence the same way the per-row badge does. Visible to internal roles as today
+(the estimate matrix is `ESTIMATE`-READ gated, so CLIENT never receives it).
+
+Background (grounded in code): `CellDto` carries only the effective `labour`
+(`EstimateMatrixAssembler.assembleCell`, = `unit_price_override x volume`), so the frontend cannot
+total the original. `costModel.headerTotals` folds `works` from `cell.labour`;
+`EstimateHeader.HeaderTotals` renders it as a `TotalCard`. The per-row badge lives in
+`WorkTypeGroupSection.tsx` (delta% vs `baseUnitPrice`, `data-divergence` discount/surcharge).
+
+- [x] 1. Expose the original labour per cell in the matrix DTO (backend)
+  - Triage: expected - each assigned cell also carries `baseLabour = unit_price x volume` (the
+    untouched original), alongside the existing effective `labour`. Layer: **backend**.
+    - Add `baseLabour` to the backend `CellDto` (and its constructors/fixtures) and compute it in
+      `EstimateMatrixAssembler.assembleCell` from `line.getUnitPrice()` (falling back as the row's base
+      price does). Unassigned cells: zero. Mirror in the frontend `CellDto` type
+      (`features/estimate/types/index.ts`, optional for older fixtures). No change to material math or
+      to `labour`/`costRange`.
+  - _Requirements: 1.2, 14.1 (+ the Round 8 labour-override requirement)_
+  - _Depends on: none_
+- [x] 2. Original-labour fold + header total comparison with divergence badge (frontend)
+  - Triage: expected - the header "works" total card shows the effective labour sum, and when the
+    original labour sum differs it also shows the original sum and a discount/surcharge badge
+    (delta% = (effective - original) / original), styled like the per-row badge. Same for group
+    subtotals if the group header shows the works subtotal. Layer: **frontend**.
+    - `costModel.ts`: add a pure `baseLabourTotal(matrix)` (and group variant) summing
+      `cell.baseLabour` over assigned cells; extract the delta/badge computation shared with
+      `WorkTypeGroupSection` into a small pure helper so row and total use one rule; extend
+      `costModel.property.test.ts` (no override => original == effective; scaling property).
+    - `EstimateHeader.tsx` `HeaderTotals`/`TotalCard`: render the comparison (testids e.g.
+      `estimate-total-works-original`, `estimate-total-works-divergence`).
+    - i18n: reuse `estimate.matrix.discountBadge`/`surchargeBadge` or add `estimate.totals.*` keys in
+      BOTH `pl.json` and `ru.json`.
+  - _Requirements: 14.1, 14.2 (+ the Round 8 labour-override requirement)_
+  - _Depends on: 1_
+- [x] 3. Tests + docs
+  - Backend: extend the matrix assembler test with an override scenario asserting `baseLabour` vs
+    `labour`. Add the comparison to `requirements.md`/`test-cases.md` together with the still-open
+    Round 8 task 5. Notifications: none. New i18n: frontend labels only (PL + RU).
+  - _Requirements: all of Round 9_
+  - _Depends on: 1, 2_
+- [x] V9. Validate Round 9 in browser
+  - Apply a labour %-adjust at project scope; the header works total shows effective and original sums
+    and the badge with the correct delta; clearing the adjustment (0%) hides the badge. No override =>
+    no comparison rendered.
+  - _Requirements: all of Round 9_
+  - _Depends on: 1, 2_
+
+## Parallel execution plan (waves) - Round 9
+
+- **Wave 1:** 1 - backend `baseLabour` (FE depends on the new field).
+- **Wave 2:** 2 - frontend fold + header badge.
+- **Wave 3:** 3 - tests/docs (depends on 1, 2).
+- **Wave 4:** V9 - browser validation; depends on 1, 2.
+
+## Round 9 - validation results (2026-11-05)
+
+Stack: local Docker rebuilt. Screen `http://localhost:3000/projects/2/estimate` as ADMIN.
+
+| # | Check | Evidence | Result |
+|---|-------|----------|--------|
+| 1 | `baseLabour` on the cell (API) | With +10% on the project: Σ`labour` 200 316,10, Σ`baseLabour` 182 104,61. After reset to 0%: both 182 104,61 and no row with `unitPrice != baseUnitPrice` | PASS |
+| 2 | Header comparison, surcharge | `estimate-total-works` 200 316,10, `-original` "Исходно: 182 104,61", `-divergence` `+10,00%` surcharge | PASS |
+| 3 | Group subtotals | +10% on the project: all 12 groups show `+10,00%` surcharge | PASS |
+| 4 | Category-scoped discount | −10% on category 1 only: only `estimate-group-works-1` shows `−10,00%` (discount); header shows 179 347,38, original 182 104,61, `−1,51%` discount | PASS |
+| 5 | No override, no comparison | After reset to 0%: header 182 104,61, zero `*-original` and `*-divergence` nodes | PASS |
+
+Tests: backend `EstimateMatrixAssemblerLabourOverrideTest` 5/5 (new), plus `...PackageDivergenceTest`
+7/7, `MaterialsListAssemblerPropertyTest` 6/6, `MarginsListAssemblerPropertyTest` 3/3. Frontend:
+estimate suite 268 tests (including new `priceDivergence`, `costModel.baseLabour` property tests and
+`LabourDivergenceNote`), project-offer suite 42 tests, `tsc -b` clean.
+
+Observation: after a change made directly through the API (outside the UI), the first page load still
+showed the earlier matrix from cache; the next load was correct. Changes made in the UI refetch the
+matrix, so users are not affected.
+
+Round 8 task 5 (requirements and test-cases for the override) is now covered by requirements 20-22
+and the Rounds 7-9 test-case section. Result: 5 of 5 checks passed. Round 9 closed.
