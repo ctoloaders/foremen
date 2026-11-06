@@ -32,10 +32,21 @@ public record RoomsImportProperties(
         Limits limits,
         Ttl ttl,
         int maxConcurrency,
-        Validation validation) {
+        Validation validation,
+        Plausibility plausibility) {
+
+    /** Convenience constructor without the plausibility block (defaults apply). */
+    public RoomsImportProperties(boolean enabled, Llm llm, Limits limits, Ttl ttl, int maxConcurrency,
+                                 Validation validation) {
+        this(enabled, llm, limits, ttl, maxConcurrency, validation, null);
+    }
 
     @ConstructorBinding
     public RoomsImportProperties {
+        if (plausibility == null) {
+            plausibility = new Plausibility(null, null, null, null, null, null, null, null, null, null,
+                    null, null);
+        }
         if (llm == null) {
             llm = new Llm(null, null, null, null, new Credentials(null, null));
         }
@@ -113,6 +124,56 @@ public record RoomsImportProperties(
             if (stuckTimeout == null || stuckTimeout.isZero() || stuckTimeout.isNegative()) {
                 stuckTimeout = Duration.ofMinutes(15);
             }
+        }
+    }
+
+    /**
+     * Inclusive real-world range of one value, in target units (metres / square metres / pieces).
+     */
+    public record Range(double min, double max) {
+        /** {@code true} when {@code v} is finite and {@code min <= v <= max}. */
+        public boolean contains(double v) {
+            return Double.isFinite(v) && v >= min && v <= max;
+        }
+
+        boolean isValid() {
+            return Double.isFinite(min) && Double.isFinite(max) && min >= 0 && max > 0 && min <= max;
+        }
+    }
+
+    /**
+     * Requirement 25 / design B5a: ranges for the deterministic plausibility pass. A missing or
+     * invalid range (max not positive, min &gt; max) falls back to its default, so no component is
+     * ever {@code null}. Defaults: ceiling 1.8–6.0, door height 1.8–3.0, door width 0.6–2.0,
+     * window height 0.3–3.0, window width 0.3–6.0, wall length 0.3–50, perimeter 2–200,
+     * floor area 1–500, wall area 2–2000, narrow place 0–200, gap 0–0.5, count 0–50.
+     */
+    public record Plausibility(Range ceilingHeight, Range doorHeight, Range doorWidth, Range windowHeight,
+                               Range windowWidth, Range wallLength, Range perimeter, Range floorArea,
+                               Range wallArea, Range narrowPlace, Range gap, Range count) {
+        @ConstructorBinding
+        public Plausibility {
+            ceilingHeight = orDefault(ceilingHeight, 1.8, 6.0);
+            doorHeight = orDefault(doorHeight, 1.8, 3.0);
+            doorWidth = orDefault(doorWidth, 0.6, 2.0);
+            windowHeight = orDefault(windowHeight, 0.3, 3.0);
+            windowWidth = orDefault(windowWidth, 0.3, 6.0);
+            wallLength = orDefault(wallLength, 0.3, 50);
+            perimeter = orDefault(perimeter, 2, 200);
+            floorArea = orDefault(floorArea, 1, 500);
+            wallArea = orDefault(wallArea, 2, 2000);
+            narrowPlace = orDefault(narrowPlace, 0, 200);
+            gap = orDefault(gap, 0, 0.5);
+            count = orDefault(count, 0, 50);
+        }
+
+        /** All-default plausibility ranges. */
+        public static Plausibility defaults() {
+            return new Plausibility(null, null, null, null, null, null, null, null, null, null, null, null);
+        }
+
+        private static Range orDefault(Range r, double min, double max) {
+            return r != null && r.isValid() ? r : new Range(min, max);
         }
     }
 

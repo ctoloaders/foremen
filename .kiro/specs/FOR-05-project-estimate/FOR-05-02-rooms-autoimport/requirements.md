@@ -107,7 +107,7 @@ Scope decisions:
 1. FOR each draft room, THE measuring step SHALL ask Gemini (structured JSON) for: polygon `vertices` in metres (when the shape can be read), per-wall `openings` (type, count, height, width, optional `offset`), per-wall `wallGap`/`finishGap` when stated, `ceilingHeight`, `internalCorners`, `narrowPlace`, and any **stated** values (areas, perimeter, door/window sizes).
 2. WHEN geometry is obtained, THE draft `room` SHALL contain `geometry` (vertices + walls + openings) and the backend SHALL compute the geometry-derived metrics with `RoomCalculationService` so the draft's `calculated` block and the saved room agree exactly with the standard save behaviour (geometry present ⇒ the five metrics are `CALCULATED`).
 3. WHEN only scalar values can be extracted (a text such as "łazienka 4,2 m², sufit 2,6"), THE draft `room` SHALL carry those values without geometry; on save they become `MANUAL` per the existing contract.
-4. THE geometry SHALL be normalised before being returned: vertices ordered, consecutive duplicates removed, units converted to metres (cm/mm/ft hints from the source are applied), walls list length = vertices length, openings with non-positive size dropped with a `OPENING_DROPPED` warning.
+4. THE geometry SHALL be normalised before being returned: vertices ordered, consecutive duplicates removed, units converted per field as defined in Requirement 25 (every value carries its own source unit), walls list length = vertices length, openings with non-positive size dropped with a `OPENING_DROPPED` warning.
 5. FOR any of the 15 dimensions that could be neither read nor derived, THE draft SHALL carry `DIMENSION_MISSING` with `field` set, and the value SHALL be left `null` (never invented).
 6. THE scale of an image SHALL be derived from written dimensions on the plan; IF no scale can be established, THEN the geometry SHALL be omitted and the warning `SCALE_UNKNOWN` added.
 
@@ -139,7 +139,7 @@ Scope decisions:
    - `INTERNAL_CORNERS_MISMATCH` — the stated `internalCorners` differs from the count of reflex vertices of the polygon;
    - `DIMENSION_OUT_OF_RANGE` — a value outside the range the existing manual-path range check would accept.
 2. WHEN a deterministic fix exists, THE warning SHALL include `suggestedFix` (for example the calculated area to replace a stated one, or the reflex-vertex count for `internalCorners`).
-3. EVERY validation outcome SHALL be a warning; validation SHALL NOT remove a room, change a value, or fail the job.
+3. EVERY validation outcome SHALL be a warning; validation SHALL NOT remove a room, change a value, or fail the job. The only exception is the unit plausibility correction of Requirement 25, which runs before these rules and may rescale or clear a value, always with a warning that keeps the original.
 4. THE `calculated` block of each draft room SHALL be the unmodified output of `RoomCalculationService` (so the caller can display the numbers that will be persisted).
 5. THE rules SHALL be implemented as pure functions with unit and property-based tests (determinism; an exact polygon with its own stated area never produces `AREA_MISMATCH`).
 
@@ -341,6 +341,23 @@ Scope decisions:
 5. THE Rooms tab SHALL show a **Cancel import** button in the in-table progress indicator (Requirement 20.3) and in the open dialog; clicking it SHALL ask for confirmation (localized: "Cancel the running AI import? Progress will be lost."), call the cancel endpoint, then immediately refresh the current-job query so the spinner disappears and **Generate rooms** becomes enabled; a localized "Import cancelled" toast SHALL be shown.
 6. IF the job finishes between the click and the request (`409`), THE UI SHALL show the finished state (completed result or failed banner) instead of an error.
 7. A cancelled job SHALL emit no notification (Requirement 17.6) and leave no row in `rooms_import_jobs`; stored objects of the cancelled job SHALL be removed after commit and any late-written objects by the sweep (design B2a).
+
+### Requirement 25: Unit-aware extraction and plausibility correction
+
+**User Story:** As a foreman, I want every imported dimension to land in the unit its field uses, so that `4200` on a plan dimensioned in millimetres becomes 4.2 m and never 4200 m.
+
+#### Acceptance Criteria
+
+1. THE measure response SHALL return every numeric value as `{ value, unit, unitSource }`, with length units `m|cm|mm|ft`, area units `m2|cm2|mm2`, and `unitSource` equal to `EXPLICIT` (the unit is written next to the number) or `INFERRED`; counts (`doorCount`, `windowCount`, `internalCorners`, opening count) SHALL carry no unit; polygon vertices SHALL share one length unit for the outline (`geometryUnit` plus `geometryUnitSource`); each opening SHALL carry its own length unit.
+2. THE measure prompt SHALL instruct the model to copy numbers exactly as written, never convert them, and report the unit per value; it SHALL state the drafting convention that plain numbers on PL/RU architectural plans are usually millimetres (sometimes centimetres) and areas are in m²; it SHALL list the target unit of each field for context only.
+3. THE backend SHALL convert each value to the unit of its target `RoomDto` field: `floorArea`, `wallArea`, `doorArea`, `windowArea` in m²; `perimeter`, `ceilingHeight`, door and window height and width, wall length and opening offset in m; `narrowPlace`, `wallGap`, `finishGap` in mb (metres); counts in szt. THE model SHALL NOT decide the target unit.
+4. AFTER conversion and BEFORE the Requirement 7 rules, THE backend SHALL run a deterministic plausibility pass that checks every value against configurable real-world ranges (`foremen.rooms-import.plausibility.*`) with defaults: `ceilingHeight` 1.8–6.0 m; `doorHeight` 1.8–3.0 m; `doorWidth` 0.6–2.0 m; `windowHeight` 0.3–3.0 m; `windowWidth` 0.3–6.0 m; wall length 0.3–50 m; opening offset 0 to the wall length; `perimeter` 2–200 m; `floorArea` 1–500 m²; `wallArea` 2–2000 m²; `doorArea` and `windowArea` 0 to `wallArea`; `narrowPlace` 0–200 mb; `wallGap` and `finishGap` 0–0.5 m; counts 0–50.
+5. WHEN a value is out of range, THE plausibility pass SHALL try rescale candidates (lengths ÷10, ÷100, ÷1000, and ×10, ×100 for values read as metres that are too small, e.g. `0.0026`; areas ÷100, ÷10⁴, ÷10⁶) and keep only candidates that land in range AND pass the cross-checks within the same room: door and window height below `ceilingHeight`; opening width not above its wall length; stated `floorArea` within tolerance of the calculated area when geometry exists; door and window area not above `wallArea`. WHEN the outline's bounding box or area is implausible, THE pass SHALL rescale the whole outline with one factor for all vertices.
+   - IF exactly one candidate fits, THEN THE pass SHALL replace the value and add an INFO warning `UNIT_CORRECTED` with `params { field, original, originalUnit, corrected, factor }` and `suggestedFix` equal to the original value, so that "Apply suggestion" restores it as an undoable edit.
+   - IF no candidate or several candidates fit, THEN THE pass SHALL set the value to `null` (an implausible value is never saved) and add a WARNING `DIMENSION_OUT_OF_RANGE` with `params { field, original, originalUnit, min, max }`; `DIMENSION_MISSING` SHALL NOT additionally be emitted for that field.
+6. THE correction SHALL be per field and deterministic, SHALL NOT call the LLM, SHALL NOT fail the job, and SHALL run on both geometry rooms and scalar-only rooms; geometry-derived metrics SHALL be recomputed from the corrected geometry.
+7. THE code `UNIT_CORRECTED` SHALL be added to the shared warning-code list (backend `WarningCodes.ALL` and frontend `WARNING_CODES`) with PL/RU texts that show the original and the corrected values with their units.
+8. THE unit conversion and the plausibility correction SHALL be pure functions with unit and property-based tests: correcting an already-corrected room changes nothing (idempotence); in-range values are never changed; for any in-range value `v` and factor `f` in `{10, 100, 1000}`, reading `v·f` in metres is corrected back to `v` when the other values of the room are consistent.
 
 ### Requirement 23: Test-cases artifact
 

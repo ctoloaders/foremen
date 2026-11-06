@@ -130,6 +130,32 @@ Test execution rule (workspace standard): run only the affected test classes wit
   - _Requirements: all_
   - _Depends on: 7_
 
+- [x] 9. Unit-aware extraction and plausibility correction
+  - [x] 9.1 Schema, prompt and response records
+    - Per-value `{ value, unit, unitSource }` (and `geometryUnit`/`geometryUnitSource`, per-opening length unit) in `RoomsVisionSchemas`, `MeasureResponse` and `RoomsVisionResponseValidator`; `RoomsImportPrompts.MEASURE_SYSTEM` gets the unit rules (copy exactly, never convert, report unit per value) and the mm drafting convention; update `StubRoomsVisionClient` canned data to the new shape and add `STUB:MM_UNITS` and `STUB:AMBIGUOUS_UNIT`; unit tests for schema, validator and stub.
+    - _Requirements: 25.1, 25.2_
+    - _Depends on: none_
+  - [x] 9.2 `UnitConverter` and `PlausibilityCorrector`
+    - Pure classes in `com.foremen.service.roomsimport.units`, `RoomsImportProperties.Plausibility` and the `foremen.rooms-import.plausibility.*` block in `application.yml` (this task is the only one editing `application.yml`); unit tests plus property tests (idempotence, in-range untouched, rescale round-trip, ambiguous ⇒ null).
+    - _Requirements: 25.3, 25.4, 25.5, 25.6, 25.8_
+    - _Depends on: none_
+  - [x] 9.3 Pipeline integration
+    - In `RoomsImportPipeline`: convert and plausibility-correct before validation (order per design B5a), `toDraftRoom` uses converted values; add `UNIT_CORRECTED` to `WarningCodes.ALL`; `DimensionMissingRule` skips fields flagged `DIMENSION_OUT_OF_RANGE`; pipeline unit tests (mm plan ⇒ metres; ambiguous ⇒ null + warning; scalar-only room); integration test with `STUB:MM_UNITS`.
+    - _Requirements: 25.3, 25.4, 25.5, 25.6, 25.7, 5.4, 7.3_
+    - _Depends on: 9.1, 9.2_
+  - [x] 9.4 Frontend warning texts and restore
+    - `UNIT_CORRECTED` in `WARNING_CODES`; PL/RU texts (original → corrected with units) and `DIMENSION_OUT_OF_RANGE` text showing the original value (this task is the only one editing the locale files); "Apply suggestion" restores the original as an undoable edit; i18n parity tests and a popover/apply-suggestion test.
+    - _Requirements: 25.5, 25.7_
+    - _Depends on: 9.3_
+  - [x] 9.5 Update test-cases.md
+    - In Russian, following the steering standard: API cases for `STUB:MM_UNITS` and `STUB:AMBIGUOUS_UNIT`, a non-blocking live-Gemini smoke case with an mm plan, a UI case for the `UNIT_CORRECTED` popover and restoring the original value; keep run-id/teardown and the MD report template.
+    - _Requirements: 25.1–25.8_
+    - _Depends on: 9.3, 9.4_
+  - [x] 9.6 Checkpoint
+    - Ensure the affected backend test classes and frontend test files pass; verify `git status` in BOTH repos (root and `foremen-frontend/`).
+    - _Requirements: 25.1–25.8_
+    - _Depends on: 9.5_
+
 ## Parallel execution plan (waves)
 
 - **Wave 1 (parallel):** 1.1, 1.3, 1.4, 1.5, 2.0, 2.3, 2.4, 5.1 — independent roots (changelog; gradle/yml; OCR refactor; geometry model; result records; resolver; cropper; frontend i18n). No shared files.
@@ -141,11 +167,16 @@ Test execution rule (workspace standard): run only the affected test classes wit
 - **Wave 7:** 5.6 — frontend flow tests.
 - **Wave 8:** 7 — test-cases.md (needs implemented and tested behaviour).
 - **Wave 9:** 8 — final checkpoint.
+- **Wave 10 (parallel):** 9.1, 9.2 — disjoint files (`ai/*` and stub vs `units/*` + config and `application.yml`).
+- **Wave 11:** 9.3 — pipeline integration (needs the new schema and the units classes).
+- **Wave 12:** 9.4 — frontend texts and restore (needs the backend warning contract).
+- **Wave 13:** 9.5 — test-cases.md update.
+- **Wave 14:** 9.6 — checkpoint.
 
 ## Dependency checklist
 
 - [x] Every leaf task has `_Depends on:_` (`none` for roots).
 - [x] The dependency graph is acyclic.
 - [x] A "Parallel execution plan (waves)" section groups every leaf task exactly once.
-- [x] Tasks sharing a wave touch disjoint files (`changelog.xml` is edited by 1.1 then 1.2 in separate waves; `application.yml` only by 1.3 in Wave 1; locale files only by 5.1).
+- [x] Tasks sharing a wave touch disjoint files (`changelog.xml` is edited by 1.1 then 1.2 in separate waves; `application.yml` only by 1.3 in Wave 1; locale files only by 5.1; in the unit group `application.yml` is edited only by 9.2 and locale files only by 9.4).
 - [x] Regression/`Author test-cases.md`/checkpoint tasks sit in the final, dependency-heavy waves.

@@ -11,6 +11,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -30,6 +31,7 @@ import com.foremen.service.roomsimport.RoomsImportContextLoader.JobContext;
 import com.foremen.service.roomsimport.ai.DetectRequest;
 import com.foremen.service.roomsimport.ai.DetectResponse;
 import com.foremen.service.roomsimport.ai.DetectResponse.DetectedRoom;
+import com.foremen.service.roomsimport.ai.Measured;
 import com.foremen.service.roomsimport.ai.MeasureRequest;
 import com.foremen.service.roomsimport.ai.MeasureResponse;
 import com.foremen.service.roomsimport.ai.RoomsVisionClient;
@@ -52,6 +54,11 @@ import com.foremen.service.roomsimport.model.Severity;
 import com.foremen.service.roomsimport.model.SourceRef;
 import com.foremen.service.roomsimport.model.Warning;
 import com.foremen.service.roomsimport.model.WarningCodes;
+import com.foremen.service.roomsimport.units.PlausibilityCorrector;
+import com.foremen.service.roomsimport.units.PlausibilityInput;
+import com.foremen.service.roomsimport.units.PlausibilityInput.Quantity;
+import com.foremen.service.roomsimport.units.PlausibilityResult;
+import com.foremen.service.roomsimport.units.UnitConverter;
 import com.foremen.service.roomsimport.validate.CountRule;
 import com.foremen.service.roomsimport.validate.DimensionMissingRule;
 import com.foremen.service.roomsimport.validate.DraftValidator;
@@ -93,12 +100,24 @@ public class RoomsImportPipeline {
     private final DraftValidator validator;
     private final RoomCropper cropper;
     private final RoomsImportProperties properties;
+    private final PlausibilityCorrector corrector;
+    private final UnitConverter converter = new UnitConverter();
+
+    /** Stated / scalar fields that are areas (m²); the other known scalar fields are lengths (m) or counts. */
+    private static final Set<String> AREA_FIELDS = Set.of(PlausibilityInput.FLOOR_AREA, PlausibilityInput.WALL_AREA,
+            PlausibilityInput.DOOR_AREA, PlausibilityInput.WINDOW_AREA);
+    private static final Set<String> LENGTH_FIELDS = Set.of(PlausibilityInput.CEILING_HEIGHT,
+            PlausibilityInput.NARROW_PLACE, PlausibilityInput.PERIMETER, PlausibilityInput.DOOR_HEIGHT,
+            PlausibilityInput.DOOR_WIDTH, PlausibilityInput.WINDOW_HEIGHT, PlausibilityInput.WINDOW_WIDTH);
+    private static final Set<String> COUNT_FIELDS = Set.of(PlausibilityInput.DOOR_COUNT,
+            PlausibilityInput.WINDOW_COUNT);
 
     public RoomsImportPipeline(RoomsImportContextLoader loader, RoomsImportStageMarker stages,
                                RoomsImportCancellation cancellation, RoomsImportStorage storage,
                                RoomsInputExtractors extractors, RoomsVisionClient vision,
                                GeometryNormalizer normalizer, DraftValidator validator, RoomCropper cropper,
-                               RoomsImportProperties properties) {
+                               RoomsImportProperties properties, PlausibilityCorrector corrector) {
+        this.corrector = corrector;
         this.loader = loader;
         this.stages = stages;
         this.cancellation = cancellation;
@@ -160,7 +179,7 @@ public class RoomsImportPipeline {
         for (DraftRoom d : drafts) {
             DraftRoom v = validator.validated(d, existing);
             List<Warning> all = new ArrayList<>(v.warnings());
-            all.addAll(DimensionMissingRule.evaluate(v.tempId(), v.room(), v.calculated()));
+            all.addAll(DimensionMissingRule.evaluate(v.tempId(), v.room(), v.calculated(), v.warnings()));
             validated.add(new DraftRoom(v.tempId(), v.confidence(), v.source(), v.room(), v.calculated(),
                     v.stated(), v.media(), List.copyOf(all)));
         }
@@ -457,7 +476,40 @@ public class RoomsImportPipeline {
                                  List<Warning> warnings) {
         String tempId = detected.tempId();
         RoomGeometry geometry = null;
-        Map<String, Object> stated = m == null ? Map.of() : m.stated();
+        String geometryUnit = m == null ? null : m.geometryUnit();
+
+        // Stage A (design B5a): UnitConverter — every value to its field's target unit.
+        Map<String, Quantity> quantities = new LinkedHashMap<>();
+        Map<String, Double> statedConverted = new LinkedHashMap<>();
+        if (m != null) {
+            m.stated().forEach((k, v) -> {
+                Double c = convertScalar(v, dimensionOf(k, v), k, tempId, warnings);
+                statedConverted.put(k, c);
+                if (PlausibilityInput.CEILING_HEIGHT.equals(k) || PlausibilityInput.NARROW_PLACE.equals(k)) {
+                    return; // taken from the dedicated top-level values below
+                }
+                if (AREA_FIELDS.contains(k) || LENGTH_FIELDS.contains(k) || COUNT_FIELDS.contains(k)) {
+                    quantities.put(k, new Quantity(c, v == null ? null : v.unit()));
+                }
+            });
+            Measured ceilingM = m.ceilingHeight();
+            Measured statedCeiling = m.stated().get(PlausibilityInput.CEILING_HEIGHT);
+            Measured ceilingSource = Measured.valueOf(ceilingM) != null ? ceilingM : statedCeiling;
+            if (ceilingSource != null) {
+                quantities.put(PlausibilityInput.CEILING_HEIGHT, new Quantity(
+                        statedConverted.containsKey(PlausibilityInput.CEILING_HEIGHT) && ceilingSource == statedCeiling
+                                ? statedConverted.get(PlausibilityInput.CEILING_HEIGHT)
+                                : convertScalar(ceilingSource, UnitConverter.Dimension.LENGTH,
+                                        PlausibilityInput.CEILING_HEIGHT, tempId, warnings),
+                        ceilingSource.unit()));
+            }
+            if (Measured.valueOf(m.narrowPlace()) != null) {
+                quantities.put(PlausibilityInput.NARROW_PLACE, new Quantity(
+                        convertScalar(m.narrowPlace(), UnitConverter.Dimension.LENGTH,
+                                PlausibilityInput.NARROW_PLACE, tempId, warnings), m.narrowPlace().unit()));
+            }
+        }
+        Map<String, Quantity> beforeCorrection = new LinkedHashMap<>(quantities);
 
         if (m != null) {
             boolean scaleKnown = !Boolean.FALSE.equals(m.scaleEstablished());
@@ -466,12 +518,16 @@ public class RoomsImportPipeline {
                     warnings.add(new Warning(WarningCodes.SCALE_UNKNOWN, Severity.WARNING, tempId, "geometry",
                             Map.of(), null));
                 } else {
-                    GeometryNormalizer.Result n = normalizer.normalize(toGeometry(m), m.unit(), tempId);
-                    warnings.addAll(n.warnings());
-                    geometry = n.geometry();
-                    if (geometry == null) {
-                        warnings.add(new Warning(WarningCodes.GEOMETRY_INVALID, Severity.WARNING, tempId, "geometry",
-                                Map.of("reason", "UNUSABLE_POLYGON"), null));
+                    RoomGeometry metric = toMetricGeometry(m, tempId, warnings);
+                    if (metric != null) {
+                        // GeometryNormalizer on already-metric data (unit "m")
+                        GeometryNormalizer.Result n = normalizer.normalize(metric, "m", tempId);
+                        warnings.addAll(n.warnings());
+                        geometry = n.geometry();
+                        if (geometry == null) {
+                            warnings.add(new Warning(WarningCodes.GEOMETRY_INVALID, Severity.WARNING, tempId,
+                                    "geometry", Map.of("reason", "UNUSABLE_POLYGON"), null));
+                        }
                     }
                 }
             } else if (!scaleKnown && hadImage) {
@@ -490,24 +546,46 @@ public class RoomsImportPipeline {
             }
         }
 
-        BigDecimal ceiling = m == null ? null : (m.ceilingHeight() != null ? m.ceilingHeight()
-                : decimal(stated.get("ceilingHeight")));
+        // Stage B: PlausibilityCorrector on the converted values and the metric geometry.
+        PlausibilityResult pr = corrector.correct(new PlausibilityInput(tempId, quantities, geometry, geometryUnit));
+        warnings.addAll(pr.warnings());
+        PlausibilityInput fixed = pr.corrected();
+        geometry = fixed.geometry();
+        if (geometry != null) {
+            // The corrector clears an implausible opening size to 0.0: let the normalizer drop it
+            // (OPENING_DROPPED) now that all sizes are final. Idempotent for untouched geometry.
+            GeometryNormalizer.Result n = normalizer.normalize(geometry, "m", tempId);
+            if (n.geometry() != null) {
+                geometry = n.geometry();
+                warnings.addAll(n.warnings());
+            }
+        }
+
+        // The draft's `stated` holds converted (target-unit) numbers, with corrections applied where the
+        // corrected field is the very value that was stated.
+        Map<String, Object> stated = new LinkedHashMap<>();
+        statedConverted.forEach((k, v) -> {
+            Quantity before = beforeCorrection.get(k);
+            stated.put(k, before != null && Objects.equals(before.value(), v) ? fixed.value(k) : v);
+        });
+
         boolean scalar = geometry == null;
         RoomCreateRequest room = new RoomCreateRequest(
-                ctx.projectId(), resolution.roomTypeId(), detected.label(), ceiling,
+                ctx.projectId(), resolution.roomTypeId(), detected.label(),
+                decimal(fixed.value(PlausibilityInput.CEILING_HEIGHT)),
                 m == null ? null : m.internalCorners(), geometry,
-                scalar ? decimal(stated.get("floorArea")) : null,
-                scalar ? decimal(stated.get("wallArea")) : null,
-                scalar ? decimal(stated.get("perimeter")) : null,
-                scalar ? decimal(stated.get("doorArea")) : null,
-                scalar ? decimal(stated.get("windowArea")) : null,
-                scalar ? integer(stated.get("doorCount")) : null,
-                scalar ? integer(stated.get("windowCount")) : null,
-                scalar ? decimal(stated.get("doorHeight")) : null,
-                scalar ? decimal(stated.get("doorWidth")) : null,
-                scalar ? decimal(stated.get("windowHeight")) : null,
-                scalar ? decimal(stated.get("windowWidth")) : null,
-                m == null ? null : m.narrowPlace(), null, null, null);
+                scalar ? decimal(fixed.value(PlausibilityInput.FLOOR_AREA)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.WALL_AREA)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.PERIMETER)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.DOOR_AREA)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.WINDOW_AREA)) : null,
+                scalar ? integer(fixed.value(PlausibilityInput.DOOR_COUNT)) : null,
+                scalar ? integer(fixed.value(PlausibilityInput.WINDOW_COUNT)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.DOOR_HEIGHT)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.DOOR_WIDTH)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.WINDOW_HEIGHT)) : null,
+                scalar ? decimal(fixed.value(PlausibilityInput.WINDOW_WIDTH)) : null,
+                decimal(fixed.value(PlausibilityInput.NARROW_PLACE)), null, null, null);
         CalculatedMetrics calculated = validator.calculate(room);
 
         Double dc = detected.confidence();
@@ -517,30 +595,56 @@ public class RoomsImportPipeline {
                 List.copyOf(warnings));
     }
 
-    private static RoomGeometry toGeometry(MeasureResponse m) {
+    /**
+     * Builds the geometry in metres: vertices by {@code geometryUnit} (null ⇒ metres), every wall gap and
+     * opening size/offset by its own unit. A unit that fails conversion makes the value unreadable (see
+     * {@link #conversionFailed}); an unreadable geometry unit yields {@code null} (no outline).
+     */
+    private RoomGeometry toMetricGeometry(MeasureResponse m, String tempId, List<Warning> warnings) {
+        double factor = 1.0;
+        if (m.geometryUnit() != null) {
+            Optional<Double> f = converter.lengthFactor(m.geometryUnit());
+            if (f.isEmpty()) {
+                warnings.add(conversionFailed(tempId, "geometry", null, m.geometryUnit(),
+                        UnitConverter.UNKNOWN_UNIT));
+                return null;
+            }
+            factor = f.get();
+        }
         RoomGeometry g = new RoomGeometry();
         List<RoomGeometry.Vertex> vertices = new ArrayList<>();
         for (MeasureResponse.Vertex v : m.vertices()) {
             RoomGeometry.Vertex out = new RoomGeometry.Vertex();
-            out.setX(v == null || v.x() == null ? Double.NaN : v.x());
-            out.setY(v == null || v.y() == null ? Double.NaN : v.y());
+            out.setX(v == null || v.x() == null ? Double.NaN : round(v.x() * factor));
+            out.setY(v == null || v.y() == null ? Double.NaN : round(v.y() * factor));
             vertices.add(out);
         }
         g.setVertices(vertices);
         List<RoomGeometry.Wall> walls = new ArrayList<>();
-        for (MeasureResponse.Wall w : m.walls()) {
+        for (int i = 0; i < m.walls().size(); i++) {
+            MeasureResponse.Wall w = m.walls().get(i);
+            String base = "geometry.walls[" + i + "]";
             RoomGeometry.Wall out = new RoomGeometry.Wall();
-            out.setWallGap(w == null ? null : w.wallGap());
-            out.setFinishGap(w == null ? null : w.finishGap());
+            out.setWallGap(w == null ? null : convertScalar(w.wallGap(), UnitConverter.Dimension.LENGTH,
+                    base + ".wallGap", tempId, warnings));
+            out.setFinishGap(w == null ? null : convertScalar(w.finishGap(), UnitConverter.Dimension.LENGTH,
+                    base + ".finishGap", tempId, warnings));
             List<RoomGeometry.Opening> openings = new ArrayList<>();
             if (w != null && w.openings() != null) {
+                int j = 0;
                 for (MeasureResponse.Opening o : w.openings()) {
+                    String ob = base + ".openings[" + j++ + "]";
                     RoomGeometry.Opening oo = new RoomGeometry.Opening();
                     oo.setType(openingType(o == null ? null : o.type()));
                     oo.setCount(o == null || o.count() == null ? 1 : o.count());
-                    oo.setHeight(o == null || o.height() == null ? 0 : o.height());
-                    oo.setWidth(o == null || o.width() == null ? 0 : o.width());
-                    oo.setOffset(o == null ? null : o.offset());
+                    Double height = o == null ? null : convertScalar(o.height(), UnitConverter.Dimension.LENGTH,
+                            ob + ".height", tempId, warnings);
+                    Double width = o == null ? null : convertScalar(o.width(), UnitConverter.Dimension.LENGTH,
+                            ob + ".width", tempId, warnings);
+                    oo.setHeight(height == null ? 0 : height);
+                    oo.setWidth(width == null ? 0 : width);
+                    oo.setOffset(o == null ? null : convertScalar(o.offset(), UnitConverter.Dimension.LENGTH,
+                            ob + ".offset", tempId, warnings));
                     openings.add(oo);
                 }
             }
@@ -549,6 +653,60 @@ public class RoomsImportPipeline {
         }
         g.setWalls(walls);
         return g;
+    }
+
+    /** Target dimension of a stated field; {@code null} ⇒ plain number (counts, unknown keys without a unit). */
+    private UnitConverter.Dimension dimensionOf(String key, Measured v) {
+        if (AREA_FIELDS.contains(key)) {
+            return UnitConverter.Dimension.AREA;
+        }
+        if (LENGTH_FIELDS.contains(key)) {
+            return UnitConverter.Dimension.LENGTH;
+        }
+        if (COUNT_FIELDS.contains(key) || v == null || v.unit() == null) {
+            return null;
+        }
+        if (converter.lengthFactor(v.unit()).isPresent()) {
+            return UnitConverter.Dimension.LENGTH;
+        }
+        return converter.areaFactor(v.unit()).isPresent() ? UnitConverter.Dimension.AREA : null;
+    }
+
+    /**
+     * Converts a measured number to its field's target unit (rounded to 9 decimals to drop float noise).
+     * {@code null}/absent ⇒ {@code null}. A conversion failure (unknown unit, length unit on an area field
+     * or the reverse, non-finite value) makes the value unreadable: {@code null} plus a
+     * {@code DIMENSION_OUT_OF_RANGE} warning carrying the original value/unit and a {@code reason}; the raw
+     * number is never used.
+     */
+    private Double convertScalar(Measured v, UnitConverter.Dimension target, String field, String tempId,
+                                 List<Warning> warnings) {
+        if (v == null || v.value() == null) {
+            return null;
+        }
+        if (target == null) {
+            return Double.isFinite(v.value()) ? v.value() : null;
+        }
+        UnitConverter.Result r = converter.convert(v.value(), v.unit(), target);
+        if (r.ok()) {
+            return round(r.value());
+        }
+        warnings.add(conversionFailed(tempId, field, v.value(), v.unit(), r.error()));
+        return null;
+    }
+
+    private static Warning conversionFailed(String tempId, String field, Double original, String unit,
+                                            String reason) {
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("field", field);
+        params.put("original", original);
+        params.put("originalUnit", unit);
+        params.put("reason", reason);
+        return new Warning(WarningCodes.DIMENSION_OUT_OF_RANGE, Severity.WARNING, tempId, field, params, null);
+    }
+
+    private static double round(double v) {
+        return Double.isFinite(v) ? Math.round(v * 1e9) / 1e9 : v;
     }
 
     private static OpeningType openingType(String s) {

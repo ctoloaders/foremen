@@ -19,9 +19,19 @@ public final class RoomsImportPrompts {
 
     public static final String MEASURE_SYSTEM = """
             You extract the dimensions of ONE room from the given image and/or text.
-            Return the floor outline as polygon vertices in the stated unit (m, cm or mm), walls aligned with
-            the vertices (wall i runs from vertex i to vertex i+1) with their doors and windows, the ceiling height,
-            and the values written in the source in "stated" (floorArea, perimeter, ...).
+            Return the floor outline as polygon vertices in ONE length unit (geometryUnit: m, cm, mm or ft),
+            walls aligned with the vertices (wall i runs from vertex i to vertex i+1) with their doors and windows,
+            the ceiling height, and the values written in the source in "stated" (floorArea, perimeter, ...).
+            UNITS: copy every number exactly as written in the source and NEVER convert it. Report the unit of
+            EVERY value next to it as { value, unit, unitSource }. Length units: m, cm, mm, ft. Area units:
+            m2, cm2, mm2. unitSource is EXPLICIT when the unit is written next to the number or in the
+            drawing legend, otherwise INFERRED. Do the same for geometryUnit / geometryUnitSource.
+            Plain numbers on Polish and Russian architectural plans are usually millimetres (sometimes
+            centimetres); areas are usually m2. Counts (internalCorners, opening count, doorCount, windowCount)
+            are plain integers without a unit.
+            For context only (the backend converts, you must not): the target unit of floorArea, wallArea,
+            doorArea and windowArea is m2; of perimeter, ceilingHeight, door/window height and width, wall length
+            and opening offset is m; of narrowPlace, wallGap and finishGap is metres.
             Use null for anything that is not present. Never guess or invent numbers; if the scale cannot be
             established set scaleEstablished=false. Respond with JSON only.""";
 

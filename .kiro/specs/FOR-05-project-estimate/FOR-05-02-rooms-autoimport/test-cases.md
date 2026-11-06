@@ -17,6 +17,9 @@ AI-автоимпорт комнат (текст / изображения / PDF 
   - `STUB:IMAGE_CROPS` — «Pokój A» (3×4, bbox `[100,100,500,450]`) и «Pokój B» (3×3.5, bbox `[100,500,500,900]`); кропы формируются реально из загруженной картинки;
   - `STUB:ROOM_COUNT_MISMATCH` — те же 3 комнаты, что в `THREE_ROOMS`, но «заявлено» 4 → `ROOM_COUNT_MISMATCH` (`stated=4`, `detected=3`);
   - `STUB:LLM_DOWN` — ошибка шага детекции (LLM недоступен);
+  - `STUB:MM_UNITS` — «Pokój MM» (спальня), план в **миллиметрах** с явными единицами (`unitSource=EXPLICIT`): контур 3200×4100 мм, потолок 2600 мм, дверь 900×2050 мм (стена 0, offset 500), окно 1200×1500 мм (стена 1, offset 900), заявленная площадь 13.12 м², заявленный периметр 14600 мм → в черновике метры (3.2×4.1, 2.6, 0.9×2.05, 1.2×1.5, 13.12 м², 14.6 м), без `AREA_MISMATCH` и без `UNIT_CORRECTED` (TC-API-37);
+  - `STUB:AMBIGUOUS_UNIT` — «Pokój niejednoznaczny» 3×4 м, потолок 2.6, ширина двери «30 м» (`unitSource=INFERRED`; высота 2.05 м) — ни ÷10 (3.0), ни ÷100 (0.3) не попадают в диапазон 0.6–2.0 м → значение не угадывается: `DIMENSION_OUT_OF_RANGE` + `OPENING_DROPPED` (TC-API-38);
+  - **`UNIT_CORRECTED` ни одним stub-сценарием не достижим** (все заготовки задают единицы явно либо дают неисправимое значение) — он проверяется только live-кейсами TC-API-91 / TC-UI-24 и unit-тестами;
   - `STUB:SLOW=<сек>` — искусственная задержка **каждого** вызова измерения комнаты (стадия MEASURING; по умолчанию 20 с, если число не указано); комбинируется со сценарным маркером, например `STUB:THREE_ROOMS STUB:SLOW=30`. Для 3 комнат общая задержка ≈ 3×N с — учитывать в таймаутах поллинга.
   - Маркер ищется в порядке: prompt → имена файлов → извлечённый текст; берётся первый сценарный маркер.
   - **Не достижимы через stub** (заготовок нет): потолок вне диапазона, `INTERNAL_CORNERS_MISMATCH`, `LOW_CONFIDENCE`, `GEOMETRY_INVALID`. Кейсы TC-API-32 (часть про диапазон), 33, 35, 36 в API-прогоне помечаются «пропущено (покрыто юнит/property-тестами правил `DraftValidator`)». `DIMENSION_MISSING` и `POSSIBLE_DUPLICATE_OF_EXISTING` достижимы.
@@ -188,6 +191,39 @@ AI-автоимпорт комнат (текст / изображения / PDF 
 ### TC-API-36. Невалидная геометрия
 **Статус в API-прогоне: пропущено (нет stub-заготовки; покрыто юнит/property-тестами `GeometryValidityRule`).** Unit-ожидание: самопересекающийся полигон / <3 вершин / нулевая площадь → `GEOMETRY_INVALID`; задача `COMPLETED`, комната возвращена.
 
+### TC-API-37. Единицы в миллиметрах конвертируются в метры (`STUB:MM_UNITS`, Requirement 25)
+**Повторяемость:** генератор (проект `AI-Import-{run-id}`) + teardown `DELETE /api/rooms/autoimport/{jobId}`.
+
+| Шаг | Действие | Ожидание |
+|---|---|---|
+| 1 | Старт `prompt="STUB:MM_UNITS"`, без файлов | `202` |
+| 2 | Поллинг до `COMPLETED` | `result.rooms.length=1`, комната «Pokój MM» |
+| 3 | `rooms[0].room.ceilingHeight` | `2.6` (в заготовке 2600 мм, единицы явные) |
+| 4 | `rooms[0].room.geometry.vertices[2]` | `x=3.2`, `y=4.1` (заготовка 3200×4100 мм) |
+| 5 | Проём двери `geometry.walls[0].openings[0]` | `width=0.9`, `height=2.05` (заготовка 900×2050 мм) |
+| 6 | Проём окна `geometry.walls[1].openings[0]` | `width=1.2`, `height=1.5` (заготовка 1200×1500 мм) |
+| 7 | `rooms[0].calculated.floorArea` | `13.12` (3.2×4.1) |
+| 8 | `rooms[0].stated` | `floorArea=13.12`, `perimeter=14.6` (заявленные 14600 мм → м) |
+| 9 | `rooms[0].warnings[*].code` | **нет** `AREA_MISMATCH` (заявлено = рассчитано), **нет** `UNIT_CORRECTED` (единицы заданы явно и просто конвертированы, а не «исправлены»), **нет** `DIMENSION_OUT_OF_RANGE` |
+| 10 | Teardown | `DELETE …/{jobId}` → `204` |
+
+### TC-API-38. Неоднозначная единица: значение отбрасывается, а не угадывается (`STUB:AMBIGUOUS_UNIT`, Requirement 25)
+**Повторяемость:** генератор + teardown `DELETE` job.
+
+| Шаг | Действие | Ожидание |
+|---|---|---|
+| 1 | Старт `prompt="STUB:AMBIGUOUS_UNIT"` | `202` |
+| 2 | Поллинг до `COMPLETED` | `result.rooms.length=1`, комната «Pokój niejednoznaczny» (3×4 м), задача не `FAILED` |
+| 3 | `rooms[0].warnings` с `code="DIMENSION_OUT_OF_RANGE"` | ровно одно, уровень `WARNING`, `field="geometry.walls[0].openings[0].width"`; `params`: `original=30`, `originalUnit="m"`, `min` и `max` (допустимый диапазон ширины двери, по заготовке ≈ 0.6…2.0 м) присутствуют; `suggestedFix` отсутствует |
+| 4 | `rooms[0].warnings` с `code="OPENING_DROPPED"` | есть, уровень `WARNING`, `field="geometry.walls[0].openings[0]"`, `params.wall=0` |
+| 5 | `rooms[0].room.geometry.walls[0].openings` | пустой массив (дверь отброшена, значение 30 м в черновик **не попало**) |
+| 6 | `rooms[0].warnings[*].code` | **нет** `UNIT_CORRECTED` (ни ÷10, ни ÷100 не дают значения в диапазоне) |
+| 7 | `DIMENSION_MISSING` по полю ширины двери | **нет** (значение прочитано, но неправдоподобно — дубль «отсутствует» не выдаётся) |
+| 8 | Остальная комната | геометрия 3×4 сохранена, `ceilingHeight=2.6`, `calculated.floorArea=12`, нет неправдоподобных значений (ничего вне диапазона) |
+| 9 | Teardown | `DELETE …/{jobId}` → `204` |
+
+Покрытие автотестами: `RoomsImportPipelineTest#ambiguousOpeningWidth_isDroppedWithOutOfRangeWarning`, `RoomsAutoimportFlowIT#ambiguousUnitIsFlaggedNotGuessed` (`mmPlanIsConvertedToMetres` — для TC-API-37).
+
 ---
 
 ## Группа E. Кропы и массовое создание (API)
@@ -279,6 +315,21 @@ AI-автоимпорт комнат (текст / изображения / PDF 
 
 ### TC-API-90. Smoke с реальным планом
 **Предусловия:** стек с реальными ключами. Старт: `plan-3-rooms.png` + prompt «3 pokoje, wysokość 2,6 m». Ожидание: `COMPLETED`, ≥ 1 комната, типы разрешены, `calculated` совпадает с расчётом движка; результат кладётся в репорт для ручной оценки качества. Расхождения с эталоном **не** считаются падением теста.
+
+### TC-API-91. Smoke: план в миллиметрах (Requirement 25, **не блокирующий**)
+**Предусловия:** стек с реальными ключами, `FOREMEN_ROOMS_IMPORT_LLM_STUB=false`. Фикстура `fixtures/rooms-import/plan-mm.png` (или PDF): прямоугольная комната, размеры подписаны в мм — «4200» и «3600», высота потолка «2600». **Повторяемость:** генератор (`run-id` в имени проекта) + teardown `DELETE` job.
+
+| Шаг | Действие | Ожидание |
+|---|---|---|
+| 1 | Старт: `plan-mm.png` + prompt «plan w milimetrach, wysokość 2600» | `202` |
+| 2 | Поллинг до терминального статуса (до 120 с) | `COMPLETED` |
+| 3 | Размеры комнаты в `result.rooms[*].room` | длины в **метрах**: стороны ≈ 4.2 и 3.6, `ceilingHeight` ≈ 2.6 (а не 2600 / 4200) |
+| 4 | `calculated.floorArea` | ≈ 15.12 м² (4.2×3.6), согласовано с геометрией |
+| 5 | `warnings` с кодом `UNIT_CORRECTED` (если модель ошиблась с единицей) | `params.original`, `params.originalUnit`, `params.corrected`, `params.factor`; `suggestedFix` содержит исходное значение |
+| 6 | Отсутствие молчаливых «сырых» значений | ни одно поле не содержит значения вне допустимого диапазона (потолок > 4 м, стена > 30 м); неисправимое значение — `null` + `DIMENSION_OUT_OF_RANGE` |
+| 7 | Teardown | `DELETE /api/rooms/autoimport/{jobId}` → `204` |
+
+Результат кладётся в репорт для ручной оценки; отклонения от эталона качества модели **не** считаются падением (**не блокирующий**).
 
 ---
 
@@ -438,6 +489,21 @@ AI-автоимпорт комнат (текст / изображения / PDF 
 ### TC-UI-23. Локализация PL/RU
 Переключить язык на PL и RU и пройти TC-UI-01, 04, 20, 22 → все тексты переведены, ключей вида `rooms.autoimport.*` на экране нет.
 
+### TC-UI-24. `UNIT_CORRECTED`: сообщение и восстановление исходного значения (Requirement 25.5)
+**Достижимость:** ни один stub-сценарий **не** порождает `UNIT_CORRECTED`: `STUB:MM_UNITS` задаёт единицы явно (`unitSource=EXPLICIT`) и конвертируется без коррекции, `STUB:AMBIGUOUS_UNIT` даёт `DIMENSION_OUT_OF_RANGE`. Поэтому кейс **не блокирующий** и выполняется на **live Gemini** (стек как в TC-API-91, `FOREMEN_ROOMS_IMPORT_LLM_STUB=false`), когда модель действительно ошиблась с единицей (например, потолок «2600» прочитан как метры). Детерминированное покрытие — unit-тесты: `foremen-frontend/src/features/rooms/components/autoimport/__tests__/autoimportUi.test.tsx` («renders UNIT_CORRECTED and applies the original value; geometry restores offer no button»), `foremen-frontend/src/features/rooms/lib/__tests__/importUi.test.ts` (восстановление поля как cell-action; для геометрии действия нет), `rooms.i18n.test.ts` (тексты PL/RU), backend `RoomsImportPipelineTest#ceilingReadInMetresButReallyMm_isCorrectedWithUnitCorrected`. Если live-прогон не дал `UNIT_CORRECTED` — статус «пропущено (покрыто unit-тестами)».
+**Повторяемость:** свежий проект `AI-Import-{run-id}-ui`, по завершении «Discard all»; localStorage очищается.
+
+| Шаг | Действие | Ожидание |
+|---|---|---|
+| 1 | Live-импорт плана в мм (см. TC-API-91), дождаться колонки с бейджем предупреждений | колонка добавлена |
+| 2 | Открыть поповер предупреждений колонки, у которой есть `UNIT_CORRECTED` по `ceilingHeight` | пункт уровня «Информация» с текстом «Исправлена единица измерения: {исходное} {ед.} → {исправленное} (поле ceilingHeight)» (RU) / «Poprawiono jednostkę: … → … (pole ceilingHeight)» (PL); рядом кнопка «Применить предложение» |
+| 3 | Нажать «Применить предложение» | значение `ceilingHeight` в ячейке = исходное (до коррекции), ячейка помечена ручной правкой, кнопка становится неактивной («предложение применено») |
+| 4 | Undo | в ячейке снова исправленное значение (в метрах) |
+| 5 | Redo / повторное применение | снова исходное значение |
+| 6 | `UNIT_CORRECTED` по `geometry` (если пришёл) | текст сообщения показан, кнопки «Применить предложение» **нет** |
+| 7 | Колонка в режиме только чтения (`canEdit=false`, нет прав на правку) | кнопок применения нет |
+| 8 | Проверить PL и RU | текст сообщения переведён, ключей `rooms.autoimport.warning.*` на экране нет |
+
 ---
 
 ## Группа K. Один job на проект, текущий job, отмена (API)
@@ -592,6 +658,9 @@ AI-автоимпорт комнат (текст / изображения / PDF 
 ### TC-REG-06. Матрица прав
 `GET /api/rooms` и существующие CRUD остаются доступны ролям как прежде; новые эндпоинты не открывают доступ роли без ROOMS.
 
+### TC-REG-07. Единицы измерения: метры не искажаются (Requirement 25)
+Повторить TC-API-10 (`STUB:THREE_ROOMS`, все значения явно в метрах) и TC-API-30 (`STUB:AREA_MISMATCH`) → значения комнат прежние (3.2×4.1, потолок 2.6 и т.д.), в `warnings` **нет** `UNIT_CORRECTED` и `DIMENSION_OUT_OF_RANGE`; затем TC-API-37 (`STUB:MM_UNITS`) → те же метры, что у комнаты в метрах. Проверяет, что конвертация и коррекция правдоподобия не затрагивают корректные данные в метрах. Повторяемость: генератор + teardown (`DELETE` job).
+
 ---
 
 ## Шаблон MD-репорта прогона
@@ -603,15 +672,19 @@ AI-автоимпорт комнат (текст / изображения / PDF 
 | # | Тест-кейс | Шаг | Запрос/Действие | Ожидание | Факт | Статус |
 |---|-----------|-----|-----------------|----------|------|--------|
 | 1 | TC-API-01 | 1 | POST /api/rooms/project/{id}/autoimport | 202 + jobId | | |
+| 2 | TC-API-37 | 3 | POST …/autoimport, prompt `STUB:MM_UNITS`; GET результат | потолок 2.6, геометрия 3.2×4.1, дверь 0.9×2.05, окно 1.2×1.5, `calculated.floorArea=13.12`, нет `AREA_MISMATCH`/`UNIT_CORRECTED`/`DIMENSION_OUT_OF_RANGE` | | |
+| 3 | TC-API-38 | 3 | POST …/autoimport, prompt `STUB:AMBIGUOUS_UNIT`; GET результат | `DIMENSION_OUT_OF_RANGE` (`original=30`, `originalUnit=m`, `min`, `max`) + `OPENING_DROPPED`, проём удалён, нет `UNIT_CORRECTED`/`DIMENSION_MISSING` по полю | | |
+| 4 | TC-API-91 | 3 | Live: план в мм (`4200`, `3600`, потолок `2600`), `LLM_STUB=false` | длины в метрах (4.2 / 3.6 / 2.6), `UNIT_CORRECTED` (если есть) содержит исходное (не блокирует) | | |
 
 ### UI
 
 | # | Тест-кейс | Шаг | Действие в браузере | Ожидание | Факт | Статус |
 |---|-----------|-----|---------------------|----------|------|--------|
 | 1 | TC-UI-03 | 2 | Дождаться завершения генерации | 3 новые колонки | | |
+| 2 | TC-UI-24 | 3 | Нажать «Применить предложение» у `UNIT_CORRECTED` по `ceilingHeight` (live-стек) | ячейка = исходное значение, ручная правка; Undo возвращает исправленное | | |
 
 ### Итог
 
-Пройдено: X · Провалено: Y · Пропущено: Z. Блокирующие провалы: `<список>`. Live-smoke (TC-API-90): `<результат, заметки о качестве>`.
+Пройдено: X · Провалено: Y · Пропущено: Z. Блокирующие провалы: `<список>`. Live-smoke (TC-API-90, TC-API-91, TC-UI-24): `<результат, заметки о качестве>`.
 
 Teardown выполнен: `<да/нет>`; остаточные сущности: `<список>`.

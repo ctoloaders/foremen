@@ -37,6 +37,9 @@ public final class WarningCodes {
     public static final String INTERNAL_CORNERS_MISMATCH = "INTERNAL_CORNERS_MISMATCH";
     public static final String DIMENSION_OUT_OF_RANGE = "DIMENSION_OUT_OF_RANGE";
 
+    // Unit plausibility (Requirement 25)
+    public static final String UNIT_CORRECTED = "UNIT_CORRECTED";
+
     // Media (Requirement 9)
     public static final String CROP_UNAVAILABLE = "CROP_UNAVAILABLE";
 
@@ -47,5 +50,5 @@ public final class WarningCodes {
             OPENING_DROPPED, GEOMETRY_SYNTHESIZED, DIMENSION_MISSING, FILE_UNREADABLE,
             GEOMETRY_INVALID, AREA_MISMATCH, PERIMETER_MISMATCH, OPENINGS_EXCEED_WALL,
             OPENING_TOO_WIDE, CEILING_HEIGHT_OUT_OF_RANGE, INTERNAL_CORNERS_MISMATCH,
-            DIMENSION_OUT_OF_RANGE, CROP_UNAVAILABLE);
+            DIMENSION_OUT_OF_RANGE, UNIT_CORRECTED, CROP_UNAVAILABLE);
 }

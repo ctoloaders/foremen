@@ -135,6 +135,20 @@ foremen:
       ceiling-min: 1.8
       ceiling-max: 6.0
       low-confidence: 0.6
+    # Requirement 25 / design B5a: real-world ranges (target units) for the plausibility pass.
+    plausibility:
+      ceiling-height: { min: 1.8, max: 6.0 }
+      door-height: { min: 1.8, max: 3.0 }
+      door-width: { min: 0.6, max: 2.0 }
+      window-height: { min: 0.3, max: 3.0 }
+      window-width: { min: 0.3, max: 6.0 }
+      wall-length: { min: 0.3, max: 50 }
+      perimeter: { min: 2, max: 200 }
+      floor-area: { min: 1, max: 500 }
+      wall-area: { min: 2, max: 2000 }
+      narrow-place: { min: 0, max: 200 }
+      gap: { min: 0, max: 0.5 }
+      count: { min: 0, max: 50 }
   translation:
     # Backend client<->staff message translation service (FOR-06-12). All values from environment;
     # no secrets committed. When enabled is false (or absent), the DisabledMessageTranslationService

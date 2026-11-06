@@ -127,6 +127,50 @@ class RoomsAutoimportFlowIT extends RoomsAutoimportItBase {
         assertThat(roomDao.findByProjectId(projectId)).hasSize(3);
     }
 
+    // ------------------------------------------------------------------ units (Requirement 25)
+
+    @Test
+    @DisplayName("STUB:MM_UNITS -> result rooms are in metres, floor area 13.12, no unit warnings")
+    void mmPlanIsConvertedToMetres() throws Exception {
+        long projectId = createProject("mm");
+
+        long jobId = startOk(projectId, prompt("STUB:MM_UNITS"));
+        String done = awaitStatus(jobId, "COMPLETED");
+
+        assertThat(JsonPath.<Integer>read(done, "$.result.rooms.length()")).isEqualTo(1);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].room.ceilingHeight").doubleValue()).isEqualTo(2.6);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].room.geometry.vertices[2].x").doubleValue())
+                .isEqualTo(3.2);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].room.geometry.vertices[2].y").doubleValue())
+                .isEqualTo(4.1);
+        assertThat(JsonPath.<Number>read(done,
+                "$.result.rooms[0].room.geometry.walls[0].openings[0].width").doubleValue()).isEqualTo(0.9);
+        assertThat(JsonPath.<Number>read(done,
+                "$.result.rooms[0].room.geometry.walls[0].openings[0].height").doubleValue()).isEqualTo(2.05);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].calculated.floorArea").doubleValue())
+                .isEqualTo(13.12);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].stated.perimeter").doubleValue()).isEqualTo(14.6);
+        List<String> codes = JsonPath.read(done, "$.result.rooms[0].warnings[*].code");
+        assertThat(codes).doesNotContain("AREA_MISMATCH", "UNIT_CORRECTED", "DIMENSION_OUT_OF_RANGE");
+    }
+
+    @Test
+    @DisplayName("STUB:AMBIGUOUS_UNIT -> the unfixable door width is dropped with DIMENSION_OUT_OF_RANGE")
+    void ambiguousUnitIsFlaggedNotGuessed() throws Exception {
+        long projectId = createProject("ambiguous");
+
+        long jobId = startOk(projectId, prompt("STUB:AMBIGUOUS_UNIT"));
+        String done = awaitStatus(jobId, "COMPLETED");
+
+        List<String> codes = JsonPath.read(done, "$.result.rooms[0].warnings[*].code");
+        assertThat(codes).contains("DIMENSION_OUT_OF_RANGE", "OPENING_DROPPED").doesNotContain("UNIT_CORRECTED");
+        List<String> fields = JsonPath.read(done,
+                "$.result.rooms[0].warnings[?(@.code=='DIMENSION_OUT_OF_RANGE')].field");
+        assertThat(fields).containsExactly("geometry.walls[0].openings[0].width");
+        assertThat(JsonPath.<Integer>read(done,
+                "$.result.rooms[0].room.geometry.walls[0].openings.length()")).isZero();
+    }
+
     private record RoomsAppendOnlySnapshot(String label, java.math.BigDecimal floorArea, boolean aiImported) {
     }
 

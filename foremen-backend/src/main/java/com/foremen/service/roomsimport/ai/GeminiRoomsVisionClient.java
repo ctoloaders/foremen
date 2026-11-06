@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 
@@ -37,6 +38,7 @@ public class GeminiRoomsVisionClient implements RoomsVisionClient {
     private final ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+    @Autowired
     public GeminiRoomsVisionClient(RoomsImportProperties properties) {
         this(new GenAiJsonTransport(properties), DEFAULT_CALL_TIMEOUT);
     }

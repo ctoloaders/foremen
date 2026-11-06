@@ -32,6 +32,7 @@ import com.foremen.service.RoomCalculationService;
 import com.foremen.service.roomsimport.RoomsImportContextLoader.JobContext;
 import com.foremen.service.roomsimport.ai.DetectRequest;
 import com.foremen.service.roomsimport.ai.DetectResponse;
+import com.foremen.service.roomsimport.ai.Measured;
 import com.foremen.service.roomsimport.ai.MeasureRequest;
 import com.foremen.service.roomsimport.ai.MeasureResponse;
 import com.foremen.service.roomsimport.ai.RoomsVisionClient;
@@ -45,6 +46,7 @@ import com.foremen.service.roomsimport.model.DraftRoom;
 import com.foremen.service.roomsimport.model.ImportResult;
 import com.foremen.service.roomsimport.model.Warning;
 import com.foremen.service.roomsimport.model.WarningCodes;
+import com.foremen.service.roomsimport.units.PlausibilityCorrector;
 import com.foremen.service.roomsimport.validate.DraftValidator;
 import com.foremen.service.roomsimport.validate.ExistingRoomRef;
 
@@ -84,7 +86,22 @@ class RoomsImportPipelineTest {
         RoomsImportProperties props = new RoomsImportProperties(true, null, null, null, maxConcurrency, null);
         return new RoomsImportPipeline(loader, stages, cancellation, storage, new RoomsInputExtractors(props),
                 vision, new GeometryNormalizer(),
-                new DraftValidator(new RoomCalculationService(), props.validation()), new RoomCropper(), props);
+                new DraftValidator(new RoomCalculationService(), props.validation()), new RoomCropper(), props,
+                new PlausibilityCorrector(props));
+    }
+
+    /** Client whose measuring answer is replaced by {@code answer}; detection stays the stub's. */
+    private RoomsVisionClient measuring(java.util.function.UnaryOperator<MeasureResponse> answer) {
+        return new DelegatingClient(client) {
+            @Override
+            public MeasureResponse measureRoom(MeasureRequest request) {
+                return answer.apply(super.measureRoom(request));
+            }
+        };
+    }
+
+    private static MeasureResponse scalarOnly(Measured ceiling, java.util.Map<String, Measured> stated) {
+        return new MeasureResponse(null, null, List.of(), List.of(), ceiling, null, null, stated, true, 0.8);
     }
 
     private void job(String prompt, StoredInput... inputs) {
@@ -127,6 +144,125 @@ class RoomsImportPipelineTest {
         order.verify(stages).markStage(JOB, RoomsImportStatus.MEASURING);
         order.verify(stages).markStage(JOB, RoomsImportStatus.VALIDATING);
         assertThat(client.measureCalls.get()).isEqualTo(3);
+    }
+
+    // --- Units and plausibility (Requirement 25) --------------------------------------------
+
+    @Test
+    void mmPlan_isConvertedToMetres_withoutAreaMismatch() {
+        job("STUB:MM_UNITS");
+
+        DraftRoom d = pipeline(client, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().ceilingHeight().doubleValue()).isEqualTo(2.6);
+        var vs = d.room().geometry().getVertices();
+        assertThat(vs.get(2).getX()).isEqualTo(3.2);
+        assertThat(vs.get(2).getY()).isEqualTo(4.1);
+        var door = d.room().geometry().getWalls().get(0).getOpenings().get(0);
+        assertThat(door.getWidth()).isEqualTo(0.9);
+        assertThat(door.getHeight()).isEqualTo(2.05);
+        assertThat(door.getOffset()).isEqualTo(0.5);
+        assertThat(d.calculated().floorArea().doubleValue()).isEqualTo(13.12);
+        // stated holds target-unit numbers: m² and metres
+        assertThat(d.stated()).containsEntry("floorArea", 13.12).containsEntry("perimeter", 14.6);
+        assertThat(has(d.warnings(), WarningCodes.AREA_MISMATCH)).isFalse();
+        assertThat(has(d.warnings(), WarningCodes.UNIT_CORRECTED)).isFalse();
+        assertThat(has(d.warnings(), WarningCodes.DIMENSION_OUT_OF_RANGE)).isFalse();
+    }
+
+    @Test
+    void ceilingReadInMetresButReallyMm_isCorrectedWithUnitCorrected() {
+        job("STUB:THREE_ROOMS");
+        RoomsVisionClient c = measuring(r -> new MeasureResponse(r.geometryUnit(), r.geometryUnitSource(),
+                r.vertices(), r.walls(), Measured.explicit(2600, "m"), r.internalCorners(), r.narrowPlace(),
+                r.stated(), r.scaleEstablished(), r.confidence()));
+
+        DraftRoom d = room(pipeline(c, 1).run(JOB), "Sypialnia");
+
+        assertThat(d.room().ceilingHeight().doubleValue()).isEqualTo(2.6);
+        Warning w = d.warnings().stream().filter(x -> x.code().equals(WarningCodes.UNIT_CORRECTED))
+                .findFirst().orElseThrow();
+        assertThat(w.field()).isEqualTo("ceilingHeight");
+        assertThat(w.params()).containsEntry("original", 2600.0).containsEntry("originalUnit", "m");
+        assertThat(w.suggestedFix()).containsEntry("ceilingHeight", 2600.0);
+        assertThat(d.warnings()).filteredOn(x -> x.code().equals(WarningCodes.DIMENSION_MISSING))
+                .extracting(Warning::field).doesNotContain("ceilingHeight");
+    }
+
+    @Test
+    void ambiguousOpeningWidth_isDroppedWithOutOfRangeWarning() {
+        job("STUB:AMBIGUOUS_UNIT");
+
+        DraftRoom d = pipeline(client, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.warnings()).anySatisfy(w -> {
+            assertThat(w.code()).isEqualTo(WarningCodes.DIMENSION_OUT_OF_RANGE);
+            assertThat(w.field()).isEqualTo("geometry.walls[0].openings[0].width");
+            assertThat(w.params()).containsEntry("original", 30.0);
+        });
+        assertThat(has(d.warnings(), WarningCodes.OPENING_DROPPED)).isTrue();
+        assertThat(d.room().geometry().getWalls().get(0).getOpenings()).isEmpty();
+        assertThat(has(d.warnings(), WarningCodes.UNIT_CORRECTED)).isFalse();
+    }
+
+    @Test
+    void scalarOnlyRoom_isConverted() {
+        job("STUB:TEXT_ONLY_SCALARS");
+        java.util.Map<String, Measured> stated = new java.util.LinkedHashMap<>();
+        stated.put("floorArea", Measured.explicit(12_000_000, "mm2"));
+        stated.put("perimeter", Measured.explicit(14000, "mm"));
+        stated.put("doorHeight", Measured.explicit(205, "cm"));
+        stated.put("doorCount", Measured.of(2, null, Measured.EXPLICIT));
+        RoomsVisionClient c = measuring(r -> scalarOnly(Measured.explicit(2600, "mm"), stated));
+
+        DraftRoom d = pipeline(c, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().geometry()).isNull();
+        assertThat(d.room().ceilingHeight().doubleValue()).isEqualTo(2.6);
+        assertThat(d.room().floorArea().doubleValue()).isEqualTo(12.0);
+        assertThat(d.room().perimeter().doubleValue()).isEqualTo(14.0);
+        assertThat(d.room().doorHeight().doubleValue()).isEqualTo(2.05);
+        assertThat(d.room().doorCount()).isEqualTo(2);
+        assertThat(d.stated()).containsEntry("floorArea", 12.0).containsEntry("perimeter", 14.0);
+        assertThat(has(d.warnings(), WarningCodes.UNIT_CORRECTED)).isFalse();
+    }
+
+    @Test
+    void scalarAmbiguous_isNullWithOutOfRange_andNotReportedMissing() {
+        job("STUB:TEXT_ONLY_SCALARS");
+        java.util.Map<String, Measured> stated = new java.util.LinkedHashMap<>();
+        stated.put("doorWidth", Measured.inferred(30, "m"));
+        RoomsVisionClient c = measuring(r -> scalarOnly(Measured.explicit(2.6, "m"), stated));
+
+        DraftRoom d = pipeline(c, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().doorWidth()).isNull();
+        assertThat(d.stated()).containsEntry("doorWidth", null);
+        assertThat(d.warnings()).anySatisfy(w -> {
+            assertThat(w.code()).isEqualTo(WarningCodes.DIMENSION_OUT_OF_RANGE);
+            assertThat(w.field()).isEqualTo("doorWidth");
+        });
+        assertThat(d.warnings()).filteredOn(w -> w.code().equals(WarningCodes.DIMENSION_MISSING))
+                .extracting(Warning::field).doesNotContain("doorWidth").contains("doorHeight");
+    }
+
+    @Test
+    void unconvertibleUnit_isUnreadable_neverRaw() {
+        job("STUB:TEXT_ONLY_SCALARS");
+        java.util.Map<String, Measured> stated = new java.util.LinkedHashMap<>();
+        stated.put("floorArea", Measured.explicit(12, "m")); // a length unit on an area field
+        RoomsVisionClient c = measuring(r -> scalarOnly(Measured.explicit(2.6, "m"), stated));
+
+        DraftRoom d = pipeline(c, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().floorArea()).isNull();
+        assertThat(d.warnings()).anySatisfy(w -> {
+            assertThat(w.code()).isEqualTo(WarningCodes.DIMENSION_OUT_OF_RANGE);
+            assertThat(w.field()).isEqualTo("floorArea");
+            assertThat(w.params()).containsEntry("reason", "DIMENSION_MISMATCH").containsEntry("original", 12.0);
+        });
+        assertThat(d.warnings()).filteredOn(w -> w.code().equals(WarningCodes.DIMENSION_MISSING))
+                .extracting(Warning::field).doesNotContain("floorArea");
     }
 
     @Test

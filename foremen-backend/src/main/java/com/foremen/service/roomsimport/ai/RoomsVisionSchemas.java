@@ -1,8 +1,10 @@
 package com.foremen.service.roomsimport.ai;
 
+import com.foremen.service.roomsimport.ai.MeasureUnits.Kind;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * JSON schemas (JSON-Schema subset accepted by Gemini structured output) for the detect and
@@ -37,22 +39,44 @@ public final class RoomsVisionSchemas {
         Map<String, Object> vertex = obj(props("x", num(), "y", num()), List.of("x", "y"));
         Map<String, Object> opening = obj(
                 props("type", Map.of("type", "string", "enum", List.of("DOOR", "WINDOW")),
-                        "count", integer(), "height", num(), "width", num(), "offset", nullable(num())),
+                        "count", integer(), "height", measured(Kind.LENGTH), "width", measured(Kind.LENGTH),
+                        "offset", nullable(measured(Kind.LENGTH))),
                 List.of("type", "count", "height", "width"));
         Map<String, Object> wall = obj(
-                props("wallGap", nullable(num()), "finishGap", nullable(num()),
+                props("wallGap", nullable(measured(Kind.LENGTH)), "finishGap", nullable(measured(Kind.LENGTH)),
                         "openings", array(opening)),
                 List.of());
-        Map<String, Object> stated = Map.of("type", "object", "nullable", true,
-                "description", "Values written in the source keyed by field name; null when absent");
+        Map<String, Object> statedProps = new LinkedHashMap<>();
+        new TreeMap<>(MeasureUnits.STATED_FIELDS)
+                .forEach((name, kind) -> statedProps.put(name, nullable(measured(kind))));
+        Map<String, Object> stated = nullable(obj(statedProps, List.of()));
+        stated.put("description", "Values written in the source keyed by field name, each with its own unit; "
+                + "null when absent");
         return obj(
-                props("unit", Map.of("type", "string", "enum", List.of("m", "cm", "mm")),
+                props("geometryUnit", Map.of("type", "string", "enum", MeasureUnits.LENGTH_UNITS),
+                        "geometryUnitSource", Map.of("type", "string", "enum", MeasureUnits.UNIT_SOURCES),
                         "vertices", array(vertex),
                         "walls", array(wall),
-                        "ceilingHeight", nullable(num()), "internalCorners", nullable(integer()),
-                        "narrowPlace", nullable(num()), "stated", stated,
+                        "ceilingHeight", nullable(measured(Kind.LENGTH)), "internalCorners", nullable(integer()),
+                        "narrowPlace", nullable(measured(Kind.LENGTH)), "stated", stated,
                         "scaleEstablished", Map.of("type", "boolean"), "confidence", num()),
-                List.of("unit", "vertices", "walls", "confidence"));
+                List.of("geometryUnit", "geometryUnitSource", "vertices", "walls", "confidence"));
+    }
+
+    /**
+     * Schema of a {@link Measured}: {@code { value, unit, unitSource }} with the unit enum matching the
+     * kind of the field (counts carry no unit).
+     */
+    private static Map<String, Object> measured(Kind kind) {
+        if (kind == Kind.COUNT) {
+            return obj(props("value", num()), List.of("value"));
+        }
+        List<String> units = kind == Kind.AREA ? MeasureUnits.AREA_UNITS : MeasureUnits.LENGTH_UNITS;
+        return obj(
+                props("value", num(),
+                        "unit", Map.of("type", "string", "enum", units),
+                        "unitSource", Map.of("type", "string", "enum", MeasureUnits.UNIT_SOURCES)),
+                List.of("value", "unit", "unitSource"));
     }
 
     private static Map<String, Object> obj(Map<String, Object> properties, List<String> required) {

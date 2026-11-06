@@ -56,7 +56,7 @@ class StubRoomsVisionClientTest {
         var room = stub.detectRooms(detect("STUB:AREA_MISMATCH")).rooms().get(0);
         MeasureResponse m = stub.measureRoom(measure("STUB:AREA_MISMATCH", room));
         // 4 x 5 polygon = 20 m2; stated 22.
-        assertThat(((Number) m.stated().get("floorArea")).doubleValue()).isEqualTo(22.0);
+        assertThat(m.stated().get("floorArea")).isEqualTo(new Measured(22.0, "m2", "EXPLICIT"));
         assertThat(m.vertices().get(2).x() * m.vertices().get(2).y()).isEqualTo(20.0);
     }
 
@@ -65,8 +65,52 @@ class StubRoomsVisionClientTest {
         var room = stub.detectRooms(detect("STUB:OPENINGS_TOO_BIG")).rooms().get(0);
         MeasureResponse m = stub.measureRoom(measure("STUB:OPENINGS_TOO_BIG", room));
         var opening = m.walls().get(0).openings().get(0);
-        assertThat(opening.width()).isGreaterThan(3.0);
-        assertThat(opening.width() * opening.height() * opening.count()).isGreaterThan(12.0 * 2.5);
+        assertThat(opening.width().value()).isGreaterThan(3.0);
+        assertThat(opening.width().value() * opening.height().value() * opening.count())
+                .isGreaterThan(12.0 * 2.5);
+    }
+
+    @Test
+    void defaultAnswersUseExplicitMetreUnitsPerValue() {
+        for (var room : stub.detectRooms(detect("STUB:THREE_ROOMS")).rooms()) {
+            MeasureResponse m = stub.measureRoom(measure("STUB:THREE_ROOMS", room));
+            assertThat(m.geometryUnit()).isEqualTo("m");
+            assertThat(m.geometryUnitSource()).isEqualTo("EXPLICIT");
+            assertThat(m.ceilingHeight()).isEqualTo(new Measured(2.6, "m", "EXPLICIT"));
+            assertThat(m.stated().get("floorArea").unit()).isEqualTo("m2");
+            assertThat(m.stated().get("perimeter").unit()).isEqualTo("m");
+        }
+    }
+
+    @Test
+    void mmUnitsIsAPlanDimensionedInMillimetres() {
+        DetectResponse d = stub.detectRooms(detect("STUB:MM_UNITS"));
+        assertThat(d.rooms()).hasSize(1);
+        MeasureResponse m = stub.measureRoom(measure("STUB:MM_UNITS", d.rooms().get(0)));
+        assertThat(RoomsVisionResponseValidator.validate(m)).isNull();
+        assertThat(m.geometryUnit()).isEqualTo("mm");
+        assertThat(m.vertices().get(2)).isEqualTo(new MeasureResponse.Vertex(3200.0, 4100.0));
+        assertThat(m.ceilingHeight()).isEqualTo(new Measured(2600.0, "mm", "EXPLICIT"));
+        var door = m.walls().get(0).openings().get(0);
+        assertThat(door.width().value()).isEqualTo(900.0);
+        assertThat(door.height().value()).isEqualTo(2050.0);
+        assertThat(door.width().unit()).isEqualTo("mm");
+        var window = m.walls().get(1).openings().get(0);
+        assertThat(window.width().value()).isEqualTo(1200.0);
+        assertThat(window.height().value()).isEqualTo(1500.0);
+        assertThat(m.stated().get("floorArea")).isEqualTo(new Measured(13.12, "m2", "EXPLICIT"));
+    }
+
+    @Test
+    void ambiguousUnitHasADoorWidthNoSingleRescaleFixes() {
+        DetectResponse d = stub.detectRooms(detect("STUB:AMBIGUOUS_UNIT"));
+        MeasureResponse m = stub.measureRoom(measure("STUB:AMBIGUOUS_UNIT", d.rooms().get(0)));
+        assertThat(RoomsVisionResponseValidator.validate(m)).isNull();
+        Measured width = m.walls().get(0).openings().get(0).width();
+        assertThat(width).isEqualTo(new Measured(30.0, "m", "INFERRED"));
+        // /10 = 3.0 and /100 = 0.3 are both outside the plausible 0.6-2.0 m door width.
+        assertThat(width.value() / 10).isGreaterThan(2.0);
+        assertThat(width.value() / 100).isLessThan(0.6);
     }
 
     @Test

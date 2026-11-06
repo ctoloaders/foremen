@@ -16,9 +16,14 @@ class GeminiRoomsVisionClientTest {
             "{\"rooms\":[{\"tempId\":\"r1\",\"label\":\"Kuchnia\",\"typeHint\":\"kitchen\","
                     + "\"bbox\":[10,10,500,500],\"confidence\":0.8}],\"statedRoomCount\":1}";
     private static final String VALID_MEASURE =
-            "{\"unit\":\"cm\",\"vertices\":[{\"x\":0,\"y\":0},{\"x\":300,\"y\":0},{\"x\":300,\"y\":400}],"
-                    + "\"walls\":[{\"openings\":[{\"type\":\"DOOR\",\"count\":1,\"height\":200,\"width\":90}]},{},{}],"
-                    + "\"ceilingHeight\":2.6,\"stated\":{\"floorArea\":null,\"perimeter\":12.0},"
+            "{\"geometryUnit\":\"cm\",\"geometryUnitSource\":\"INFERRED\","
+                    + "\"vertices\":[{\"x\":0,\"y\":0},{\"x\":300,\"y\":0},{\"x\":300,\"y\":400}],"
+                    + "\"walls\":[{\"openings\":[{\"type\":\"DOOR\",\"count\":1,"
+                    + "\"height\":{\"value\":200,\"unit\":\"cm\",\"unitSource\":\"INFERRED\"},"
+                    + "\"width\":{\"value\":90,\"unit\":\"cm\",\"unitSource\":\"INFERRED\"}}]},{},{}],"
+                    + "\"ceilingHeight\":{\"value\":2.6,\"unit\":\"m\",\"unitSource\":\"EXPLICIT\"},"
+                    + "\"stated\":{\"floorArea\":null,"
+                    + "\"perimeter\":{\"value\":12.0,\"unit\":\"m\",\"unitSource\":\"EXPLICIT\"}},"
                     + "\"scaleEstablished\":true,\"confidence\":0.7}";
 
     /** Fake transport that replays scripted answers and records the calls. */
@@ -72,10 +77,34 @@ class GeminiRoomsVisionClientTest {
     void validMeasureAnswerKeepsNullStatedValues() {
         Fake fake = new Fake("```json\n" + VALID_MEASURE + "\n```");
         MeasureResponse m = new GeminiRoomsVisionClient(fake, TIMEOUT).measureRoom(measureReq());
-        assertThat(m.unit()).isEqualTo("cm");
+        assertThat(m.geometryUnit()).isEqualTo("cm");
+        assertThat(m.geometryUnitSource()).isEqualTo("INFERRED");
         assertThat(m.vertices()).hasSize(3);
-        assertThat(m.stated()).containsKey("floorArea").containsEntry("perimeter", 12.0);
-        assertThat(m.walls().get(0).openings().get(0).type()).isEqualTo("DOOR");
+        assertThat(m.stated()).containsKey("floorArea")
+                .containsEntry("perimeter", new Measured(12.0, "m", "EXPLICIT"));
+        assertThat(m.stated().get("floorArea")).isNull();
+        assertThat(m.ceilingHeight()).isEqualTo(new Measured(2.6, "m", "EXPLICIT"));
+        var door = m.walls().get(0).openings().get(0);
+        assertThat(door.type()).isEqualTo("DOOR");
+        assertThat(door.width()).isEqualTo(new Measured(90.0, "cm", "INFERRED"));
+    }
+
+    @Test
+    void measureAnswerWithMissingUnitSourceIsRetried() {
+        String bad = VALID_MEASURE.replace(",\"unitSource\":\"EXPLICIT\"}},", "}},");
+        Fake fake = new Fake(bad, VALID_MEASURE);
+        MeasureResponse m = new GeminiRoomsVisionClient(fake, TIMEOUT).measureRoom(measureReq());
+        assertThat(m.stated().get("perimeter").unitSource()).isEqualTo("EXPLICIT");
+        assertThat(fake.userTexts).hasSize(2);
+    }
+
+    @Test
+    void measureAnswerWithAreaUnitOnLengthFieldIsRetried() {
+        String bad = VALID_MEASURE.replace("\"unit\":\"m\",\"unitSource\":\"EXPLICIT\"},\"stated\"",
+                "\"unit\":\"m2\",\"unitSource\":\"EXPLICIT\"},\"stated\"");
+        Fake fake = new Fake(bad, VALID_MEASURE);
+        new GeminiRoomsVisionClient(fake, TIMEOUT).measureRoom(measureReq());
+        assertThat(fake.userTexts).hasSize(2);
     }
 
     @Test
@@ -131,7 +160,49 @@ class GeminiRoomsVisionClientTest {
     void schemasDescribeTheResponses() {
         assertThat(RoomsVisionSchemas.detect()).containsEntry("type", "object");
         assertThat(RoomsVisionSchemas.measure().get("required")).isEqualTo(
-                List.of("unit", "vertices", "walls", "confidence"));
+                List.of("geometryUnit", "geometryUnitSource", "vertices", "walls", "confidence"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void measureSchemaUsesPerValueMeasuredObjects() {
+        Map<String, Object> props = (Map<String, Object>) RoomsVisionSchemas.measure().get("properties");
+        assertThat(props).containsKeys("geometryUnit", "geometryUnitSource", "ceilingHeight", "narrowPlace",
+                "stated", "internalCorners");
+        assertThat(props).doesNotContainKey("unit");
+        assertThat(props.get("internalCorners")).isEqualTo(Map.of("type", "integer", "nullable", true));
+
+        Map<String, Object> ceiling = (Map<String, Object>) props.get("ceilingHeight");
+        Map<String, Object> cProps = (Map<String, Object>) ceiling.get("properties");
+        assertThat(cProps).containsKeys("value", "unit", "unitSource");
+        assertThat(((Map<String, Object>) cProps.get("unit")).get("enum"))
+                .isEqualTo(List.of("m", "cm", "mm", "ft"));
+        assertThat(((Map<String, Object>) cProps.get("unitSource")).get("enum"))
+                .isEqualTo(List.of("EXPLICIT", "INFERRED"));
+
+        Map<String, Object> stated = (Map<String, Object>) props.get("stated");
+        Map<String, Object> sProps = (Map<String, Object>) stated.get("properties");
+        Map<String, Object> floorArea = (Map<String, Object>) sProps.get("floorArea");
+        assertThat(((Map<String, Object>) ((Map<String, Object>) floorArea.get("properties")).get("unit"))
+                .get("enum")).isEqualTo(List.of("m2", "cm2", "mm2"));
+        Map<String, Object> doorCount = (Map<String, Object>) sProps.get("doorCount");
+        assertThat((Map<String, Object>) doorCount.get("properties")).containsOnlyKeys("value");
+
+        Map<String, Object> walls = (Map<String, Object>) props.get("walls");
+        Map<String, Object> wall = (Map<String, Object>) walls.get("items");
+        Map<String, Object> opening = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) wall.get("properties")).get("openings")).get("items");
+        Map<String, Object> oProps = (Map<String, Object>) opening.get("properties");
+        assertThat(((Map<String, Object>) oProps.get("width")).get("properties"))
+                .isEqualTo(cProps);
+        assertThat(oProps.get("count")).isEqualTo(Map.of("type", "integer"));
+    }
+
+    @Test
+    void measurePromptStatesTheUnitRules() {
+        String p = RoomsImportPrompts.MEASURE_SYSTEM;
+        assertThat(p).contains("exactly as written").contains("NEVER convert").contains("unitSource")
+                .contains("millimetres").contains("m2");
     }
 
     @Test

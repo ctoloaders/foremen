@@ -247,6 +247,39 @@ All rules are `Function<ValidationContext, List<Warning>>`; thresholds come from
 
 **Stage 6 — COMPLETED.** `result` is serialized into the jsonb column; stage log and counters stored; `expires_at = now + result-ttl`.
 
+### B5a. Units and plausibility correction
+
+Covers Requirement 25. Plans are often dimensioned in mm, so the model must report each number with its own source unit and the backend, not the model, converts and sanity-checks.
+
+**Measure schema (`RoomsVisionSchemas`, `MeasureResponse`).** Every numeric value becomes a `Measured` object; counts stay plain integers.
+
+```java
+record Measured(Double value, String unit, String unitSource) {} // unit: m|cm|mm|ft | m2|cm2|mm2; unitSource: EXPLICIT|INFERRED
+// per room: geometryUnit + geometryUnitSource (one length unit for all vertices),
+// scalars as Measured (ceilingHeight, narrowPlace, stated.floorArea, stated.wallArea, stated.perimeter, ...),
+// openings: { type, width: Measured, height: Measured, offset: Measured } (own length unit each)
+```
+
+`RoomsVisionResponseValidator` rejects an unknown unit, a length unit on an area field (and vice versa) and a missing `unitSource` as an invalid response (the existing retry path applies). `RoomsImportPrompts.MEASURE_SYSTEM` tells the model to copy numbers exactly as written, never convert, report the unit per value, that plain numbers on PL/RU plans are usually mm (sometimes cm) and areas m², and lists the target unit of each field for context only.
+
+**Target units (decided by the backend).**
+
+| Field | Target unit |
+|---|---|
+| `floorArea`, `wallArea`, `doorArea`, `windowArea` | m² |
+| `perimeter`, `ceilingHeight`, door/window height and width, wall length, opening offset | m |
+| `narrowPlace`, `wallGap`, `finishGap` | mb (metres) |
+| `doorCount`, `windowCount`, `internalCorners` | szt (no unit) |
+
+**New pure classes in `com.foremen.service.roomsimport.units`** (no Spring state, no I/O):
+
+- `UnitConverter` — `double toTarget(Measured m, TargetUnit target)`; factors m=1, cm=0.01, mm=0.001, ft=0.3048; m2=1, cm2=1e-4, mm2=1e-6. A length unit given for an area target (or vice versa) is a type error handled by the validator, never guessed.
+- `PlausibilityCorrector` — takes the converted room (scalars, geometry, openings, stated values) and `RoomsImportProperties.Plausibility`, returns the corrected room plus warnings. Steps per value: (1) range check; (2) if out of range, generate candidates (lengths ÷10, ÷100, ÷1000 and ×10, ×100 for too-small metre readings; areas ÷100, ÷10⁴, ÷10⁶); (3) keep candidates that are in range AND pass the cross-checks (door/window height < `ceilingHeight`; opening width ≤ wall length; stated `floorArea` within `area-tolerance` of the calculated area when geometry exists; door/window area ≤ `wallArea`); (4) outcome: exactly one fits ⇒ replace and emit INFO `UNIT_CORRECTED { field, original, originalUnit, corrected, factor }` with `suggestedFix` = original; none or several ⇒ `null` and WARNING `DIMENSION_OUT_OF_RANGE { field, original, originalUnit, min, max }`. The polygon is treated as one unit: if the bounding box or area is implausible, a single factor is applied to all vertices, wall lengths and opening offsets. Geometry-derived metrics are recomputed afterwards by `RoomCalculationService`. The class never calls the LLM and never throws.
+
+**Pipeline order in `RoomsImportPipeline`.** measure → `UnitConverter` (each value to its field unit) → `GeometryNormalizer` (vertices/openings/gaps, now fed already-metric data) → `PlausibilityCorrector` → `RoomCalculationService` → Requirement 7 validators → `DimensionMissingRule`. `toDraftRoom` no longer copies raw scalars; it takes the converted and corrected values. `DimensionMissingRule` skips fields already flagged `DIMENSION_OUT_OF_RANGE`. The existing `CeilingHeightRule` and `DimensionRangeRule` stay as a final guard behind the corrector (Requirement 7.3 still forbids validators from changing values; only the plausibility pass of Requirement 25 may change them).
+
+**Frontend.** `UNIT_CORRECTED` is added to the shared `WARNING_CODES`; the `rooms.autoimport.warning.UNIT_CORRECTED` (original → corrected with units) and `DIMENSION_OUT_OF_RANGE` (shows the original value) texts exist in PL/RU. "Apply suggestion" for `UNIT_CORRECTED` writes `suggestedFix` (the original) through the standard edit action, so undo/redo works.
+
 ### B6. Result and warning model
 
 ```java
@@ -303,6 +336,21 @@ foremen:
     ttl: { result: 72h, stuck-timeout: 15m }
     max-concurrency: 4
     validation: { area-tolerance: 0.02, ceiling-min: 1.8, ceiling-max: 6.0, low-confidence: 0.6 }
+    # Requirement 25 / B5a: real-world ranges for the deterministic plausibility pass (min/max in target units)
+    plausibility:
+      ceiling-height: { min: 1.8, max: 6.0 }
+      door-height: { min: 1.8, max: 3.0 }
+      door-width: { min: 0.6, max: 2.0 }
+      window-height: { min: 0.3, max: 3.0 }
+      window-width: { min: 0.3, max: 6.0 }
+      wall-length: { min: 0.3, max: 50 }
+      perimeter: { min: 2, max: 200 }
+      floor-area: { min: 1, max: 500 }
+      wall-area: { min: 2, max: 2000 }
+      narrow-place: { min: 0, max: 200 }
+      gap: { min: 0, max: 0.5 }          # wallGap, finishGap
+      count: { min: 0, max: 50 }
+      # opening offset: 0..wall length; doorArea/windowArea: 0..wallArea (relative, not configurable)
 spring:
   servlet:
     multipart: { max-file-size: 20MB, max-request-size: 220MB }
@@ -315,6 +363,8 @@ The multipart limits are global in Spring; existing endpoints that enforce their
 ### B9. Test seam
 
 `RoomsVisionClient` is an interface; a `StubRoomsVisionClient` (profile `stub-llm`, test sources) returns canned JSON keyed by a marker in the prompt/file name. The Docker stack for API test-cases uses env `FOREMEN_ROOMS_IMPORT_LLM_STUB=true` to wire the stub, so end-to-end scenarios are deterministic; a separate live-Gemini smoke scenario is non-blocking.
+
+Requirement 25 update: all stub canned answers use the new per-value shape (`{ value, unit, unitSource }`, `geometryUnit`). Two new markers: `STUB:MM_UNITS` returns a plan in mm with mm scalars (e.g. ceiling `2600`, door `900×2050`, stated area `13120000` mm² or `13.12` m2), which must end up as 2.6 m, 0.9×2.05 m and 13.12 m² with `UNIT_CORRECTED` only where a rescale was needed; `STUB:AMBIGUOUS_UNIT` returns a value that no single rescale fixes, which must end up `null` with `DIMENSION_OUT_OF_RANGE`.
 
 ## Frontend architecture (`foremen-frontend`, separate git repo)
 
@@ -393,6 +443,9 @@ All strings under `rooms.autoimport.*`, `rooms.media.*`, `rooms.plan.*` in `pl.j
 10. **Single job per project:** under N concurrent starts for one project exactly one returns `202` and the rest `429`; the table never holds two rows for a project (integration test with a thread barrier).
 11. **Append-only:** after any import-originated save, every room that existed before still exists with identical field values (property over random existing sets).
 12. **Marker integrity:** `aiImported` becomes `true` only through a valid same-project `importJobId`; update requests never change it.
+13. **Correction idempotence (Requirement 25.8):** for any room, `correct(correct(r)) == correct(r)` and the second pass emits no `UNIT_CORRECTED` (property test over generated rooms and factors). Note: Property 2 applies to the Requirement 7 validators; only the plausibility pass may change values.
+14. **In-range untouched (Requirement 25.4, 25.8):** for any value inside its configured range, `PlausibilityCorrector` returns it unchanged and emits no warning for it.
+15. **Rescale round-trip (Requirement 25.5, 25.8):** for any in-range value `v` and `f ∈ {10, 100, 1000}`, reading `v·f` in metres in an otherwise consistent room is corrected back to `v` with `UNIT_CORRECTED { factor: f }`; the case where several candidates fit yields `null` plus `DIMENSION_OUT_OF_RANGE`.
 
 ## Error handling
 

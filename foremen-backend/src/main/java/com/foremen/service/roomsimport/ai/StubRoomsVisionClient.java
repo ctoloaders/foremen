@@ -7,7 +7,6 @@ import com.foremen.service.roomsimport.ai.MeasureResponse.Opening;
 import com.foremen.service.roomsimport.ai.MeasureResponse.Vertex;
 import com.foremen.service.roomsimport.ai.MeasureResponse.Wall;
 import com.foremen.service.roomsimport.ai.RoomsVisionException.Reason;
-import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -28,7 +27,9 @@ import org.springframework.stereotype.Component;
  * text (searched in that order): {@code STUB:THREE_ROOMS} (also the default when no marker is
  * present), {@code STUB:AREA_MISMATCH}, {@code STUB:OPENINGS_TOO_BIG}, {@code STUB:UNKNOWN_TYPE},
  * {@code STUB:TEXT_ONLY_SCALARS}, {@code STUB:IMAGE_CROPS}, {@code STUB:ROOM_COUNT_MISMATCH},
- * {@code STUB:LLM_DOWN}. The modifier {@code STUB:SLOW=<seconds>} (default 20) delays every measuring
+ * {@code STUB:LLM_DOWN}, {@code STUB:MM_UNITS} (plan dimensioned in mm, Requirement 25) and
+ * {@code STUB:AMBIGUOUS_UNIT} (a value no single rescale fixes). All answers use the per-value
+ * {@code { value, unit, unitSource }} shape. The modifier {@code STUB:SLOW=<seconds>} (default 20) delays every measuring
  * call so an active job can be observed.
  */
 @Component
@@ -38,7 +39,7 @@ public class StubRoomsVisionClient implements RoomsVisionClient {
     /** Canned scenarios selectable by marker. */
     public enum Scenario {
         THREE_ROOMS, AREA_MISMATCH, OPENINGS_TOO_BIG, UNKNOWN_TYPE, TEXT_ONLY_SCALARS, IMAGE_CROPS,
-        ROOM_COUNT_MISMATCH, LLM_DOWN
+        ROOM_COUNT_MISMATCH, LLM_DOWN, MM_UNITS, AMBIGUOUS_UNIT
     }
 
     /** Sleeps for the SLOW modifier; replaceable in tests. */
@@ -212,7 +213,7 @@ public class StubRoomsVisionClient implements RoomsVisionClient {
                     rect(4, 5, 2.7, List.of(), List.of(), 22.0, 18.0)));
             case OPENINGS_TOO_BIG -> List.of(new Canned("r1", "Pokój z oknami", "bedroom", null,
                     // 3 x 3 room, ceiling 2.5: wall area 30 m2, one 3.5 m wide window x4 = 33.6 m2.
-                    rect(3, 3, 2.5, List.of(new Opening("WINDOW", 4, 2.4, 3.5, null)), List.of(), 9.0, 12.0)));
+                    rect(3, 3, 2.5, List.of(op("WINDOW", 4, 2.4, 3.5, null)), List.of(), 9.0, 12.0)));
             case UNKNOWN_TYPE -> List.of(new Canned("r1", "Pomieszczenie X", "zzz-unknown", null,
                     rect(3, 3, 2.6, List.of(), List.of(), 9.0, 12.0)));
             case TEXT_ONLY_SCALARS -> List.of(new Canned("r1", "Pokój tekstowy", "bedroom", null, textOnly()));
@@ -221,24 +222,65 @@ public class StubRoomsVisionClient implements RoomsVisionClient {
                             rect(3, 4, 2.6, List.of(), List.of(), 12.0, 14.0)),
                     new Canned("r2", "Pokój B", "kitchen", List.of(100.0, 500.0, 500.0, 900.0),
                             rect(3, 3.5, 2.6, List.of(), List.of(), 10.5, 13.0)));
+            case MM_UNITS -> List.of(new Canned("r1", "Pokój MM", "bedroom", null, mmPlan()));
+            case AMBIGUOUS_UNIT -> List.of(new Canned("r1", "Pokój niejednoznaczny", "bedroom", null,
+                    ambiguousUnit()));
             case LLM_DOWN -> List.of();
         };
+    }
+
+    /** Opening with all three sizes explicitly in metres. */
+    private static Opening op(String type, int count, double height, double width, Double offset) {
+        return new Opening(type, count, Measured.explicit(height, "m"), Measured.explicit(width, "m"),
+                offset == null ? null : Measured.explicit(offset, "m"));
+    }
+
+    private static Wall wall(List<Opening> openings) {
+        return new Wall(null, null, openings);
     }
 
     private static MeasureResponse rect(double w, double h, double ceiling, List<Opening> wall0,
                                         List<Opening> wall1, double statedArea, double statedPerimeter) {
         List<Vertex> v = List.of(new Vertex(0.0, 0.0), new Vertex(w, 0.0), new Vertex(w, h), new Vertex(0.0, h));
-        List<Wall> walls = List.of(new Wall(null, null, wall0), new Wall(null, null, wall1),
-                new Wall(null, null, List.of()), new Wall(null, null, List.of()));
-        return new MeasureResponse("m", v, walls, BigDecimal.valueOf(ceiling), 0, null,
+        List<Wall> walls = List.of(wall(wall0), wall(wall1), wall(List.of()), wall(List.of()));
+        return new MeasureResponse("m", Measured.EXPLICIT, v, walls, Measured.explicit(ceiling, "m"), 0, null,
                 stated(statedArea, statedPerimeter), true, 0.9);
+    }
+
+    /**
+     * STUB:MM_UNITS — a plan dimensioned in millimetres: 3200 x 4100 rectangle, ceiling 2600, door
+     * 900 x 2050 (wall 0), window 1200 x 1500 (wall 1), stated floorArea 13.12 m2 and perimeter 14600 mm.
+     */
+    private static MeasureResponse mmPlan() {
+        List<Vertex> v = List.of(new Vertex(0.0, 0.0), new Vertex(3200.0, 0.0), new Vertex(3200.0, 4100.0),
+                new Vertex(0.0, 4100.0));
+        Opening door = new Opening("DOOR", 1, Measured.explicit(2050, "mm"), Measured.explicit(900, "mm"),
+                Measured.explicit(500, "mm"));
+        Opening window = new Opening("WINDOW", 1, Measured.explicit(1500, "mm"), Measured.explicit(1200, "mm"),
+                Measured.explicit(900, "mm"));
+        List<Wall> walls = List.of(wall(List.of(door)), wall(List.of(window)), wall(List.of()), wall(List.of()));
+        Map<String, Measured> stated = new LinkedHashMap<>();
+        stated.put("floorArea", Measured.explicit(13.12, "m2"));
+        stated.put("perimeter", Measured.explicit(14600, "mm"));
+        return new MeasureResponse("mm", Measured.EXPLICIT, v, walls, Measured.explicit(2600, "mm"), 0, null,
+                stated, true, 0.9);
+    }
+
+    /**
+     * STUB:AMBIGUOUS_UNIT — a 3 x 4 m room whose door width is "30 m" (INFERRED): neither /10 (3.0) nor
+     * /100 (0.3) lands in the plausible 0.6-2.0 m range, so no single rescale fixes it.
+     */
+    private static MeasureResponse ambiguousUnit() {
+        Opening door = new Opening("DOOR", 1, Measured.explicit(2.05, "m"), Measured.inferred(30, "m"),
+                Measured.explicit(0.5, "m"));
+        return rect(3, 4, 2.6, List.of(door), List.of(), 12.0, 14.0);
     }
 
     private static MeasureResponse bathroom() {
         // 1.8 x 2.4: door 0.9 x 2.0 on wall 0 (1.8 m), window 0.6 x 1.0 on wall 1 (2.4 m).
         return rect(1.8, 2.4, 2.6,
-                List.of(new Opening("DOOR", 1, 2.0, 0.9, 0.4)),
-                List.of(new Opening("WINDOW", 1, 1.0, 0.6, 0.9)), 4.32, 8.4);
+                List.of(op("DOOR", 1, 2.0, 0.9, 0.4)),
+                List.of(op("WINDOW", 1, 1.0, 0.6, 0.9)), 4.32, 8.4);
     }
 
     private static MeasureResponse lShapedKitchen() {
@@ -246,26 +288,25 @@ public class StubRoomsVisionClient implements RoomsVisionClient {
                 new Vertex(2.0, 2.0), new Vertex(2.0, 3.5), new Vertex(0.0, 3.5));
         List<Wall> walls = new ArrayList<>();
         for (int i = 0; i < v.size(); i++) {
-            walls.add(new Wall(null, null, i == 0
-                    ? List.of(new Opening("DOOR", 1, 2.0, 0.9, 0.5)) : List.of()));
+            walls.add(wall(i == 0 ? List.of(op("DOOR", 1, 2.0, 0.9, 0.5)) : List.of()));
         }
         // Area 4*2 + 2*1.5 = 11, perimeter 4+2+2+1.5+2+3.5 = 15, one reflex corner at (2, 2).
-        return new MeasureResponse("m", v, walls, BigDecimal.valueOf(2.6), 1, null,
+        return new MeasureResponse("m", Measured.EXPLICIT, v, walls, Measured.explicit(2.6, "m"), 1, null,
                 stated(11.0, 15.0), true, 0.9);
     }
 
     private static MeasureResponse textOnly() {
-        Map<String, Object> stated = new LinkedHashMap<>();
-        stated.put("floorArea", 12.0);
-        stated.put("ceilingHeight", 2.6);
-        return new MeasureResponse("m", List.of(), List.of(), BigDecimal.valueOf(2.6), null, null,
+        Map<String, Measured> stated = new LinkedHashMap<>();
+        stated.put("floorArea", Measured.explicit(12.0, "m2"));
+        stated.put("ceilingHeight", Measured.explicit(2.6, "m"));
+        return new MeasureResponse(null, null, List.of(), List.of(), Measured.explicit(2.6, "m"), null, null,
                 stated, false, 0.7);
     }
 
-    private static Map<String, Object> stated(double area, double perimeter) {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("floorArea", area);
-        m.put("perimeter", perimeter);
+    private static Map<String, Measured> stated(double area, double perimeter) {
+        Map<String, Measured> m = new LinkedHashMap<>();
+        m.put("floorArea", Measured.explicit(area, "m2"));
+        m.put("perimeter", Measured.explicit(perimeter, "m"));
         return m;
     }
 }
