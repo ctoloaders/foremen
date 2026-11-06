@@ -97,21 +97,24 @@ export async function handlePhoto(ctx: Context) {
 
   state.photoFileIds.push(largestPhoto.file_id);
   state.step = ConversationStep.AWAIT_MORE_PAGES;
-  await setState(state);
-
-  if (state.sessionId) {
-    await sessionLog.updateSession(state.sessionId, {
-      step: ConversationStep.AWAIT_MORE_PAGES,
-      photoFileIds: state.photoFileIds,
-    });
-  }
 
   const pageNum = state.photoFileIds.length;
   const keyboard = new InlineKeyboard()
     .text("📄 Ещё 1 страница", "ocr:more_pages")
     .text("✅ Готово", "ocr:done");
 
-  await ctx.reply(`📸 Страница ${pageNum} получена.`, { reply_markup: keyboard });
+  // Confirm receipt to the user while the state / session-log writes run concurrently, instead
+  // of making them wait for two sequential Sheets round trips first.
+  await Promise.all([
+    ctx.reply(`📸 Страница ${pageNum} получена.`, { reply_markup: keyboard }),
+    setState(state),
+    state.sessionId
+      ? sessionLog.updateSession(state.sessionId, {
+          step: ConversationStep.AWAIT_MORE_PAGES,
+          photoFileIds: state.photoFileIds,
+        })
+      : Promise.resolve(),
+  ]);
   logger.info("Photo received (OCR flow)", {
     telegramId,
     project: state.projectName,

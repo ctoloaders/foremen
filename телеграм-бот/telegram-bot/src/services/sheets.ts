@@ -1,6 +1,7 @@
-import { google } from "googleapis";
 import { config } from "../config.js";
 import { extractSpreadsheetId } from "../utils/validators.js";
+import { getSheetsClient } from "./google-clients.js";
+import { cached, invalidateCache } from "../utils/ttl-cache.js";
 
 export interface Worker {
   bitrixUserId: string;
@@ -35,32 +36,52 @@ export interface ExpenseCategory {
   extraPrompt?: string;
 }
 
-function getAuth() {
-  const opts: any = {
-    credentials: config.google.serviceAccountKey as any,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  };
-  if (config.google.impersonateEmail) {
-    opts.clientOptions = { subject: config.google.impersonateEmail };
-  }
-  return new google.auth.GoogleAuth(opts);
-}
-
 function getSheets() {
-  return google.sheets({ version: "v4", auth: getAuth() });
+  return getSheetsClient();
 }
 
-export async function getWorker(telegramId: number): Promise<Worker | null> {
-  const sheets = getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.google.workersSpreadsheetId,
-    range: `${config.google.workersSheetName}!A2:D`,
+// --- Cached registry reads ---------------------------------------------------------------
+// Workers, projects, project access and expense categories change rarely but were re-read from
+// Google Sheets on every button press. They are now served from a short in-memory TTL cache
+// (see utils/ttl-cache.ts; REGISTRY_CACHE_TTL_MS, default 60 s). The bot never writes these
+// sheets itself (the Bitrix sync does), so TTL expiry is the only invalidation needed.
+
+const CACHE_WORKERS = "registry:workers";
+const CACHE_PROJECTS = "registry:projects";
+const CACHE_ACCESS = "registry:access";
+const CACHE_CATEGORIES = "registry:categories";
+
+async function loadWorkerRows(): Promise<string[][]> {
+  return cached(CACHE_WORKERS, async () => {
+    const res = await getSheets().spreadsheets.values.get({
+      spreadsheetId: config.google.workersSpreadsheetId,
+      range: `${config.google.workersSheetName}!A2:D`,
+    });
+    return (res.data.values || []) as string[][];
   });
+}
 
-  const rows = res.data.values || [];
-  const row = rows.find(r => String(r[1]) === String(telegramId));
-  if (!row) return null;
+async function loadProjectRows(): Promise<string[][]> {
+  return cached(CACHE_PROJECTS, async () => {
+    const res = await getSheets().spreadsheets.values.get({
+      spreadsheetId: config.google.projectsSpreadsheetId,
+      range: `${config.google.projectsSheetName}!A2:F`,
+    });
+    return (res.data.values || []) as string[][];
+  });
+}
 
+async function loadAccessRows(): Promise<string[][]> {
+  return cached(CACHE_ACCESS, async () => {
+    const res = await getSheets().spreadsheets.values.get({
+      spreadsheetId: config.google.workersSpreadsheetId,
+      range: `${config.google.accessSheetName}!A2:E`,
+    });
+    return (res.data.values || []) as string[][];
+  });
+}
+
+function toWorker(row: string[]): Worker {
   return {
     bitrixUserId: row[0] || "",
     telegramId: Number(row[1]),
@@ -69,31 +90,27 @@ export async function getWorker(telegramId: number): Promise<Worker | null> {
   };
 }
 
-export async function getAllWorkers(): Promise<Worker[]> {
-  const sheets = getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.google.workersSpreadsheetId,
-    range: `${config.google.workersSheetName}!A2:D`,
-  });
+export async function getWorker(telegramId: number): Promise<Worker | null> {
+  const match = (rows: string[][]) => rows.find(r => String(r[1]) === String(telegramId));
 
-  return (res.data.values || [])
+  let row = match(await loadWorkerRows());
+  if (!row) {
+    // Not in the (possibly stale) cache: re-read once so a worker who was JUST added gets access
+    // immediately instead of waiting for the TTL to expire.
+    invalidateCache(CACHE_WORKERS);
+    row = match(await loadWorkerRows());
+  }
+  return row ? toWorker(row) : null;
+}
+
+export async function getAllWorkers(): Promise<Worker[]> {
+  return (await loadWorkerRows())
     .filter(r => r[1]) // must have telegram_id
-    .map(r => ({
-      bitrixUserId: r[0] || "",
-      telegramId: Number(r[1]),
-      name: r[2] || "",
-      role: r[3] || "other",
-    }));
+    .map(toWorker);
 }
 
 export async function getAllActiveProjects(): Promise<Project[]> {
-  const sheets = getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.google.projectsSpreadsheetId,
-    range: `${config.google.projectsSheetName}!A2:F`,
-  });
-
-  return (res.data.values || [])
+  return (await loadProjectRows())
     .filter(r => r[3] === "active")
     .map(r => ({
       name: r[0] || "",
@@ -105,13 +122,7 @@ export async function getAllActiveProjects(): Promise<Project[]> {
 }
 
 export async function getProjectAccessForWorker(bitrixUserId: string): Promise<ProjectAccess[]> {
-  const sheets = getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.google.workersSpreadsheetId,
-    range: `${config.google.accessSheetName}!A2:E`,
-  });
-
-  return (res.data.values || [])
+  return (await loadAccessRows())
     .filter(r => r[3] === bitrixUserId)
     .map(r => ({
       projectName: r[0] || "",
@@ -123,13 +134,15 @@ export async function getProjectAccessForWorker(bitrixUserId: string): Promise<P
 }
 
 export async function getProjectsForWorker(worker: Worker): Promise<Project[]> {
-  const allActive = await getAllActiveProjects();
-
   if (worker.role === "admin") {
-    return allActive;
+    return getAllActiveProjects();
   }
 
-  const access = await getProjectAccessForWorker(worker.bitrixUserId);
+  // The two reads are independent — run them concurrently instead of one after the other.
+  const [allActive, access] = await Promise.all([
+    getAllActiveProjects(),
+    getProjectAccessForWorker(worker.bitrixUserId),
+  ]);
 
   // Membership match prefers deal_id (robust to project renames). For legacy rows that have no
   // deal_id yet (pre-backfill), fall back to matching by project name for backward compatibility.
@@ -164,13 +177,13 @@ export function parseExpenseCategoryRows(rows: unknown[][]): ExpenseCategory[] {
  * empty category are skipped. Data starts at row 2 (row 1 is a header).
  */
 export async function getExpenseCategories(): Promise<ExpenseCategory[]> {
-  const sheets = getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: config.google.workersSpreadsheetId,
-    range: `${config.google.expenseCategoriesSheetName}!A2:B`,
+  return cached(CACHE_CATEGORIES, async () => {
+    const res = await getSheets().spreadsheets.values.get({
+      spreadsheetId: config.google.workersSpreadsheetId,
+      range: `${config.google.expenseCategoriesSheetName}!A2:B`,
+    });
+    return parseExpenseCategoryRows(res.data.values || []);
   });
-
-  return parseExpenseCategoryRows(res.data.values || []);
 }
 
 /**

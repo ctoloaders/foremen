@@ -1,8 +1,7 @@
-import { google } from "googleapis";
 import { Readable } from "stream";
-import { config } from "../config.js";
 import { extractFolderId } from "../utils/validators.js";
 import { transliterate } from "../utils/transliterate.js";
+import { getDriveClient } from "./google-clients.js";
 
 /**
  * Formats an array of photo links for insertion into a spreadsheet cell.
@@ -13,19 +12,8 @@ export function formatPhotoLinks(links: string[]): string {
   return links.join("\n");
 }
 
-function getAuth() {
-  const opts: any = {
-    credentials: config.google.serviceAccountKey as any,
-    scopes: ["https://www.googleapis.com/auth/drive"],
-  };
-  if (config.google.impersonateEmail) {
-    opts.clientOptions = { subject: config.google.impersonateEmail };
-  }
-  return new google.auth.GoogleAuth(opts);
-}
-
 function getDrive() {
-  return google.drive({ version: "v3", auth: getAuth() });
+  return getDriveClient();
 }
 
 /**

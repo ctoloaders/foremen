@@ -99,9 +99,9 @@ export function createOcrCallbackHandler(bot: Bot) {
     const telegramId = ctx.from?.id;
     if (!data || !telegramId) return;
 
-    await ctx.answerCallbackQuery();
-
-    const state = await getState(telegramId);
+    // Acknowledge the tap (stops the button spinner) and load the state concurrently — they are
+    // independent, and previously the state read only started after the acknowledgement finished.
+    const [, state] = await Promise.all([ctx.answerCallbackQuery(), getState(telegramId)]);
     if (!state) return;
 
     // Expense category selection (cat:N)

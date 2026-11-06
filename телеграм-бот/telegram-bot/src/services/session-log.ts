@@ -1,8 +1,8 @@
-import { google } from "googleapis";
 import { config } from "../config.js";
 import { serializePhotoIds } from "../state/store.js";
 import { sanitizeErrorTrace } from "../utils/sanitize.js";
 import { logger } from "../utils/logger.js";
+import { getSheetsClient } from "./google-clients.js";
 
 export type SessionStatus = "in_progress" | "success" | "failed" | "cancelled";
 
@@ -26,130 +26,111 @@ export interface SessionLogRecord {
   errorTrace?: string;
 }
 
-function getAuth() {
-  const opts: any = {
-    credentials: config.google.serviceAccountKey as any,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  };
-  if (config.google.impersonateEmail) {
-    opts.clientOptions = { subject: config.google.impersonateEmail };
-  }
-  return new google.auth.GoogleAuth(opts);
-}
-
-function getSheets() {
-  return google.sheets({ version: "v4", auth: getAuth() });
-}
-
 const spreadsheetId = config.google.workersSpreadsheetId;
 const sheetName = config.google.sessionLogSheetName;
 
-/** Serializes a record into the A–Q row layout of the session_log sheet. */
-function toRow(r: SessionLogRecord): (string | number)[] {
-  return [
-    r.sessionId,                                             // A
-    r.telegramId,                                            // B
-    r.workerName || "",                                      // C
-    r.role || "",                                            // D
-    r.startedAt,                                             // E
-    r.lastActivityAt,                                        // F
-    r.step,                                                  // G
-    r.projectName || "",                                     // H
-    r.projectDriveUrl || "",                                 // I
-    r.projectSheetsUrl || "",                                // J
-    serializePhotoIds(r.photoFileIds),                       // K
-    serializePhotoIds(r.photoLinks),                         // L
-    r.sum !== undefined ? String(r.sum) : "",                // M
-    r.description || "",                                     // N
-    r.storeName || "",                                       // O
-    r.status,                                                // P
-    r.errorTrace || "",                                      // Q
-  ];
-}
+type CellValue = string | number;
 
-/** Reads the full record for a sessionId, or null if the row is absent. */
-async function readRecord(sessionId: string): Promise<{ record: SessionLogRecord; rowNum: number } | null> {
-  const sheets = getSheets();
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: `${sheetName}!A2:Q`,
-  });
-  const rows = res.data.values || [];
-  const idx = rows.findIndex((row) => String(row[0]) === String(sessionId));
-  if (idx < 0) return null;
+/** Sheet column letter + cell serializer for every field of the A–Q session_log layout. */
+const COLUMNS: { [K in keyof SessionLogRecord]-?: { col: string; ser: (v: SessionLogRecord[K]) => CellValue } } = {
+  sessionId:        { col: "A", ser: (v) => v ?? "" },
+  telegramId:       { col: "B", ser: (v) => v ?? "" },
+  workerName:       { col: "C", ser: (v) => v || "" },
+  role:             { col: "D", ser: (v) => v || "" },
+  startedAt:        { col: "E", ser: (v) => v ?? "" },
+  lastActivityAt:   { col: "F", ser: (v) => v ?? "" },
+  step:             { col: "G", ser: (v) => v ?? "" },
+  projectName:      { col: "H", ser: (v) => v || "" },
+  projectDriveUrl:  { col: "I", ser: (v) => v || "" },
+  projectSheetsUrl: { col: "J", ser: (v) => v || "" },
+  photoFileIds:     { col: "K", ser: (v) => serializePhotoIds(v) },
+  photoLinks:       { col: "L", ser: (v) => serializePhotoIds(v) },
+  sum:              { col: "M", ser: (v) => (v !== undefined ? String(v) : "") },
+  description:      { col: "N", ser: (v) => v || "" },
+  storeName:        { col: "O", ser: (v) => v || "" },
+  status:           { col: "P", ser: (v) => v ?? "" },
+  errorTrace:       { col: "Q", ser: (v) => v || "" },
+};
 
-  const row = rows[idx];
-  const parseArr = (raw: string): string[] | undefined => {
-    if (!raw) return undefined;
-    try {
-      const p = JSON.parse(raw);
-      if (Array.isArray(p)) return p;
-    } catch {
-      /* fall through */
-    }
-    return [raw];
-  };
+/** Field order matching the sheet's A–Q columns. */
+const FIELD_ORDER: (keyof SessionLogRecord)[] = [
+  "sessionId", "telegramId", "workerName", "role", "startedAt", "lastActivityAt", "step",
+  "projectName", "projectDriveUrl", "projectSheetsUrl", "photoFileIds", "photoLinks",
+  "sum", "description", "storeName", "status", "errorTrace",
+];
 
-  const record: SessionLogRecord = {
-    sessionId: String(row[0]),
-    telegramId: Number(row[1]),
-    workerName: row[2] || undefined,
-    role: row[3] || undefined,
-    startedAt: row[4] || new Date().toISOString(),
-    lastActivityAt: row[5] || new Date().toISOString(),
-    step: row[6] || "",
-    projectName: row[7] || undefined,
-    projectDriveUrl: row[8] || undefined,
-    projectSheetsUrl: row[9] || undefined,
-    photoFileIds: parseArr(row[10] || ""),
-    photoLinks: parseArr(row[11] || ""),
-    sum: row[12] ? parseFloat(String(row[12])) || undefined : undefined,
-    description: row[13] || undefined,
-    storeName: row[14] || undefined,
-    status: (row[15] as SessionStatus) || "in_progress",
-    errorTrace: row[16] || undefined,
-  };
-  return { record, rowNum: idx + 2 };
-}
-
-async function writeRow(rowNum: number | null, record: SessionLogRecord): Promise<void> {
-  const sheets = getSheets();
-  const values = [toRow(record)];
-  if (rowNum) {
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `${sheetName}!A${rowNum}:Q${rowNum}`,
-      valueInputOption: "RAW",
-      requestBody: { values },
-    });
-  } else {
-    await sheets.spreadsheets.values.append({
-      spreadsheetId,
-      range: `${sheetName}!A:Q`,
-      valueInputOption: "RAW",
-      requestBody: { values },
-    });
-  }
+/** Serializes a full record into the A–Q row layout of the session_log sheet. */
+function toRow(r: SessionLogRecord): CellValue[] {
+  return FIELD_ORDER.map((k) => (COLUMNS[k].ser as (v: unknown) => CellValue)(r[k]));
 }
 
 /**
- * Applies a patch to an existing session row (looked up by sessionId),
- * refreshing last_activity_at. If the row is missing it is (re)created.
- * All failures are swallowed and logged — session logging is best-effort
- * and MUST NOT break the user-facing flow (Requirement 11.12).
+ * Builds the minimal set of single-cell writes for a patch: one entry per patched field plus
+ * last_activity_at. Fields explicitly present with `undefined` are written as an empty cell
+ * (same as the previous merge-and-rewrite behaviour). Pure function — unit tested.
+ */
+export function buildCellUpdates(
+  sheet: string,
+  rowNum: number,
+  patch: Partial<SessionLogRecord>,
+  nowIso: string,
+): { range: string; values: CellValue[][] }[] {
+  const values = new Map<keyof SessionLogRecord, CellValue>();
+  for (const key of Object.keys(patch) as (keyof SessionLogRecord)[]) {
+    if (!(key in COLUMNS)) continue;
+    values.set(key, (COLUMNS[key].ser as (v: unknown) => CellValue)(patch[key]));
+  }
+  values.set("lastActivityAt", nowIso); // always refreshed
+
+  return [...values.entries()].map(([key, v]) => ({
+    range: `${sheet}!${COLUMNS[key].col}${rowNum}`,
+    values: [[v]],
+  }));
+}
+
+/**
+ * Finds the sheet row of a session by reading ONLY column A (session ids). The previous
+ * implementation read the whole A–Q range (hundreds of KB, growing with every session) on every
+ * update. Not cached across calls on purpose: a human re-sorting the log sheet must never make
+ * us write to the wrong row.
+ */
+async function findSessionRow(sessionId: string): Promise<number | null> {
+  const res = await getSheetsClient().spreadsheets.values.get({
+    spreadsheetId,
+    range: `${sheetName}!A2:A`,
+  });
+  const rows = res.data.values || [];
+  const idx = rows.findIndex((row) => String(row[0]) === String(sessionId));
+  return idx < 0 ? null : idx + 2;
+}
+
+async function appendRow(record: SessionLogRecord): Promise<void> {
+  await getSheetsClient().spreadsheets.values.append({
+    spreadsheetId,
+    range: `${sheetName}!A:Q`,
+    valueInputOption: "RAW",
+    requestBody: { values: [toRow(record)] },
+  });
+}
+
+/**
+ * Applies a patch to an existing session row (looked up by sessionId), refreshing
+ * last_activity_at, by writing only the touched cells in a single request. If the row is
+ * missing it is (re)created. All failures are swallowed and logged — session logging is
+ * best-effort and MUST NOT break the user-facing flow (Requirement 11.12).
  */
 async function patchSession(sessionId: string, patch: Partial<SessionLogRecord>): Promise<void> {
   try {
-    const existing = await readRecord(sessionId);
+    const rowNum = await findSessionRow(sessionId);
     const now = new Date().toISOString();
-    if (existing) {
-      const merged: SessionLogRecord = {
-        ...existing.record,
-        ...patch,
-        sessionId,
-        lastActivityAt: now,
-      };
-      await writeRow(existing.rowNum, merged);
+    if (rowNum) {
+      await getSheetsClient().spreadsheets.values.batchUpdate({
+        spreadsheetId,
+        requestBody: {
+          valueInputOption: "RAW",
+          data: buildCellUpdates(sheetName, rowNum, patch, now),
+        },
+      });
     } else {
       // Row vanished (e.g. sheet reset) — recreate a best-effort record.
       const recreated: SessionLogRecord = {
@@ -161,7 +142,7 @@ async function patchSession(sessionId: string, patch: Partial<SessionLogRecord>)
         status: patch.status ?? "in_progress",
         ...patch,
       };
-      await writeRow(null, recreated);
+      await appendRow(recreated);
     }
   } catch (err: any) {
     logger.error("session-log write failed", { sessionId, error: err?.message });
@@ -176,6 +157,9 @@ export const sessionLog = {
     workerName?: string;
     role?: string;
     step: string;
+    projectName?: string;
+    projectDriveUrl?: string;
+    projectSheetsUrl?: string;
   }): Promise<void> {
     try {
       const now = new Date().toISOString();
@@ -184,12 +168,15 @@ export const sessionLog = {
         telegramId: input.telegramId,
         workerName: input.workerName,
         role: input.role,
+        projectName: input.projectName,
+        projectDriveUrl: input.projectDriveUrl,
+        projectSheetsUrl: input.projectSheetsUrl,
         startedAt: now,
         lastActivityAt: now,
         step: input.step,
         status: "in_progress",
       };
-      await writeRow(null, record);
+      await appendRow(record);
     } catch (err: any) {
       logger.error("session-log startSession failed", { sessionId: input.sessionId, error: err?.message });
     }

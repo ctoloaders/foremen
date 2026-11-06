@@ -1,23 +1,21 @@
-import { google } from "googleapis";
 import { config } from "../config.js";
 import { ConversationState, ConversationStep, emptyState } from "./machine.js";
+import { getSheetsClient } from "../services/google-clients.js";
 
 const STALE_HOURS = 24;
 
-function getAuth() {
-  const opts: any = {
-    credentials: config.google.serviceAccountKey as any,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  };
-  if (config.google.impersonateEmail) {
-    opts.clientOptions = { subject: config.google.impersonateEmail };
-  }
-  return new google.auth.GoogleAuth(opts);
+function getSheets() {
+  return getSheetsClient();
 }
 
-function getSheets() {
-  return google.sheets({ version: "v4", auth: getAuth() });
-}
+/**
+ * Remembers which bot_state sheet row a given state object was loaded from / last written to.
+ * `getState` records it, so the `setState` that follows in the same request can update that row
+ * directly instead of first re-reading column A just to find it (saves one Sheets round trip
+ * per save). The mapping is per state OBJECT and per request, so it can't go stale across
+ * requests; if absent, `setState` falls back to the lookup.
+ */
+const rowOfState = new WeakMap<object, number>();
 
 const spreadsheetId = config.google.workersSpreadsheetId;
 const sheetName = config.google.botStateSheetName;
@@ -60,8 +58,9 @@ export async function getState(telegramId: number): Promise<ConversationState | 
   });
 
   const rows = res.data.values || [];
-  const row = rows.find(r => String(r[0]) === String(telegramId));
-  if (!row) return null;
+  const rowIndex = rows.findIndex(r => String(r[0]) === String(telegramId));
+  if (rowIndex < 0) return null;
+  const row = rows[rowIndex];
 
   const photoFileIds = deserializePhotoIds(row[5] || "");
 
@@ -99,6 +98,7 @@ export async function getState(telegramId: number): Promise<ConversationState | 
     return null;
   }
 
+  rowOfState.set(state, rowIndex + 2); // data starts at sheet row 2
   return state;
 }
 
@@ -127,7 +127,20 @@ export async function setState(state: ConversationState): Promise<void> {
     state.categoryDetail || "",                             // R
   ];
 
-  // Find existing row by telegram_id in column A.
+  // Fast path: this state object was loaded by getState (or already written) in this request,
+  // so we know its row and can update it directly — no lookup read needed.
+  const knownRow = rowOfState.get(state);
+  if (knownRow !== undefined) {
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: `${sheetName}!A${knownRow}:R${knownRow}`,
+      valueInputOption: "RAW",
+      requestBody: { values: [row] },
+    });
+    return;
+  }
+
+  // Slow path (brand-new state): find existing row by telegram_id in column A.
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range: `${sheetName}!A2:A`,
@@ -145,6 +158,7 @@ export async function setState(state: ConversationState): Promise<void> {
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
+    rowOfState.set(state, rowNum);
   } else {
     // Insert into the first empty row. We compute the target row explicitly and UPDATE an
     // exact A{n}:R{n} range instead of using values.append — append aligns to the detected
@@ -162,6 +176,7 @@ export async function setState(state: ConversationState): Promise<void> {
       valueInputOption: "RAW",
       requestBody: { values: [row] },
     });
+    rowOfState.set(state, insertRow);
   }
 }
 

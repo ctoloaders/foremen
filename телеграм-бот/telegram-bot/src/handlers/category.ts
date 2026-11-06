@@ -12,11 +12,14 @@ import {
   type ExpenseCategory,
   type Project,
 } from "../services/sheets.js";
-import { sessionLog } from "../services/session-log.js";
+import { sessionLog, type SessionLogRecord } from "../services/session-log.js";
 import { withRetry } from "../utils/retry.js";
 import { logger } from "../utils/logger.js";
 
 const cancelKeyboard = new InlineKeyboard().text("❌ Отмена", "cancel");
+
+const PHOTO_PROMPT =
+  "Пришлите фото чека/фактуры 📸\n💡 Для лучшего качества отправьте как файл (без сжатия).";
 
 /** Built-in first category: leads to project selection instead of an expense category. */
 export const MATERIAL_LABEL = "Материал";
@@ -95,11 +98,13 @@ export async function handleCategorySelection(
   if (chosen.extraPrompt) {
     // Ask the follow-up question; the answer becomes the description (Opis).
     state.step = ConversationStep.AWAIT_CATEGORY_DETAIL;
-    await setState(state);
-    if (state.sessionId) {
-      await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_CATEGORY_DETAIL });
-    }
-    await ctx.reply(chosen.extraPrompt, { reply_markup: cancelKeyboard });
+    await replyAndPersist(
+      ctx,
+      state,
+      chosen.extraPrompt,
+      { reply_markup: cancelKeyboard },
+      { step: ConversationStep.AWAIT_CATEGORY_DETAIL },
+    );
     return;
   }
 
@@ -153,12 +158,13 @@ async function showProjects(ctx: Context, state: ConversationState): Promise<voi
   }
 
   state.step = ConversationStep.SELECT_PROJECT;
-  await setState(state);
-  if (state.sessionId) {
-    await sessionLog.updateSession(state.sessionId, { step: ConversationStep.SELECT_PROJECT });
-  }
-
-  await ctx.reply("Выберите объект (проект):", { reply_markup: keyboard });
+  await replyAndPersist(
+    ctx,
+    state,
+    "Выберите объект (проект):",
+    { reply_markup: keyboard },
+    { step: ConversationStep.SELECT_PROJECT },
+  );
 }
 
 /**
@@ -188,9 +194,9 @@ export async function handleProjectSelection(ctx: Context): Promise<void> {
   }
   userProjectsCache.delete(telegramId);
 
-  const state = await getState(telegramId);
+  // Acknowledge the tap (stops the button spinner) while loading the conversation state.
+  const [state] = await Promise.all([getState(telegramId), ctx.answerCallbackQuery()]);
   if (!state) {
-    await ctx.answerCallbackQuery();
     await ctx.reply("Сессия истекла. Начните заново (/start).");
     return;
   }
@@ -198,30 +204,49 @@ export async function handleProjectSelection(ctx: Context): Promise<void> {
   state.projectName = project.name;
   state.projectDriveUrl = project.googleDriveUrl;
   state.projectSheetsUrl = project.googleSheetsUrl;
-
-  await ctx.answerCallbackQuery();
-  if (state.sessionId) {
-    await sessionLog.updateSession(state.sessionId, {
-      projectName: project.name,
-      projectDriveUrl: project.googleDriveUrl,
-      projectSheetsUrl: project.googleSheetsUrl,
-    });
-  }
   logger.info("Project selected", { telegramId, project: project.name });
 
-  await goToPhoto(ctx, state);
+  await goToPhoto(ctx, state, {
+    projectName: project.name,
+    projectDriveUrl: project.googleDriveUrl,
+    projectSheetsUrl: project.googleSheetsUrl,
+  });
+}
+
+/**
+ * Sends `text` while persisting the conversation state and the session-log patch concurrently.
+ * Previously these ran strictly one after another BEFORE the reply, so the user waited for the
+ * sum of all bookkeeping writes (each a Google Sheets round trip). The session log is
+ * best-effort and never throws; a state-write failure still rejects and is logged by the global
+ * error handler.
+ */
+async function replyAndPersist(
+  ctx: Context,
+  state: ConversationState,
+  text: string,
+  extra: Parameters<Context["reply"]>[1],
+  logPatch: Partial<SessionLogRecord>,
+): Promise<void> {
+  await Promise.all([
+    ctx.reply(text, extra),
+    setState(state),
+    state.sessionId ? sessionLog.updateSession(state.sessionId, logPatch) : Promise.resolve(),
+  ]);
 }
 
 /** Transitions to AWAIT_PHOTO and prompts for the receipt/invoice image. */
-async function goToPhoto(ctx: Context, state: ConversationState): Promise<void> {
+async function goToPhoto(
+  ctx: Context,
+  state: ConversationState,
+  extraLogPatch: Partial<SessionLogRecord> = {},
+): Promise<void> {
   state.step = ConversationStep.AWAIT_PHOTO;
-  await setState(state);
-  if (state.sessionId) {
-    await sessionLog.updateSession(state.sessionId, { step: ConversationStep.AWAIT_PHOTO });
-  }
-  await ctx.reply(
-    "Пришлите фото чека/фактуры 📸\n💡 Для лучшего качества отправьте как файл (без сжатия).",
+  await replyAndPersist(
+    ctx,
+    state,
+    PHOTO_PROMPT,
     { reply_markup: cancelKeyboard },
+    { step: ConversationStep.AWAIT_PHOTO, ...extraLogPatch },
   );
 }
 
@@ -262,28 +287,31 @@ export async function handleMoreCallback(
   if (data === "more:add") {
     // New invoice for the SAME object: fresh session id, cleared receipt fields, same project.
     resetForNextReceipt(state);
-    const worker = await getWorker(state.telegramId);
-    state.sessionId = randomUUID();
-    await sessionLog.startSession({
-      sessionId: state.sessionId,
-      telegramId: state.telegramId,
-      workerName: worker?.name,
-      role: worker?.role,
-      step: ConversationStep.AWAIT_PHOTO,
-    });
-    // Carry the project/category context into the new session's log row.
-    await sessionLog.updateSession(state.sessionId, {
-      projectName: state.projectName,
-      projectDriveUrl: state.projectDriveUrl,
-      projectSheetsUrl: state.projectSheetsUrl,
-    });
-    // Remove the inline buttons from the previous message to avoid double taps.
-    try {
-      await ctx.editMessageReplyMarkup({ reply_markup: undefined });
-    } catch {
-      // ignore if the message can't be edited
-    }
-    await goToPhoto(ctx, state);
+    const worker = await getWorker(state.telegramId); // served from the registry cache
+    const sessionId = randomUUID();
+    state.sessionId = sessionId;
+    state.step = ConversationStep.AWAIT_PHOTO;
+
+    // Everything below is independent, so run it concurrently instead of one write after another:
+    // new session-log row (already carrying the project context), conversation state, the photo
+    // prompt, and removal of the inline buttons from the previous message (double-tap guard).
+    await Promise.all([
+      sessionLog.startSession({
+        sessionId,
+        telegramId: state.telegramId,
+        workerName: worker?.name,
+        role: worker?.role,
+        step: ConversationStep.AWAIT_PHOTO,
+        projectName: state.projectName,
+        projectDriveUrl: state.projectDriveUrl,
+        projectSheetsUrl: state.projectSheetsUrl,
+      }),
+      setState(state),
+      ctx.reply(PHOTO_PROMPT, { reply_markup: cancelKeyboard }),
+      ctx.editMessageReplyMarkup({ reply_markup: undefined }).catch(() => {
+        // ignore if the message can't be edited
+      }),
+    ]);
   }
 }
 
