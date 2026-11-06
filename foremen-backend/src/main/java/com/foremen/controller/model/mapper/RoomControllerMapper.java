@@ -50,10 +50,14 @@ public interface RoomControllerMapper extends ControllerToServiceMapper<
 
     @Override
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "aiImported", ignore = true)
     RoomServiceExtendedModel toServiceExtendedModel(RoomCreateRequest source);
 
     @Override
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "aiImported", ignore = true)
+    @Mapping(target = "importMedia", ignore = true)
+    @Mapping(target = "importJobId", ignore = true)
     RoomServiceExtendedModel toUpdateServiceExtendedModel(RoomUpdateRequest source);
 
     @Override

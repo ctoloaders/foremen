@@ -69,5 +69,12 @@ public class RoomGeometry {
 
         /** Per-unit width (mb); must be positive. */
         private double width;
+
+        /**
+         * Optional distance (mb) from the wall's start vertex to the opening's near edge
+         * (FOR-05-02, Req 12.8). Presentation-only: not read by the room calculation.
+         * Must be {@code >= 0} when present.
+         */
+        private Double offset;
     }
 }

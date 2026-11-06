@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 (Requirements 2.1, 2.3, 2.4, 16.1, 19.1; design B3): rooms_import_jobs — the
+        asynchronous AI rooms-import job. At most ONE job row per project (UNIQUE index on
+        project_id, design B2a); a terminal row is replaced by the next start.
+          - inputs      : JSONB manifest [{fileName, contentType, sizeBytes, objectKey, kind}].
+          - result      : JSONB ImportResult (draft rooms + warnings), set on completion.
+          - stage_log   : JSONB [{stage, at}].
+          - applied_at  : set when a room is created with this job's id.
+        Plus the four BaseEntity audit columns.
+        Idempotent: guarded by NOT tableExists + onFail="MARK_RAN".
+        Registered LAST in changelog.xml, after 212.
+    -->
+    <changeSet id="213-create-rooms-import-jobs" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="rooms_import_jobs"/>
+            </not>
+        </preConditions>
+        <createTable tableName="rooms_import_jobs">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <!-- RoomsImportStatus persisted as its name. -->
+            <column name="status" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="prompt_text" type="TEXT"/>
+            <column name="inputs" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="result" type="JSONB"/>
+            <!-- Stable failure code. -->
+            <column name="failure_reason" type="VARCHAR(64)"/>
+            <column name="stage_log" type="JSONB"/>
+            <column name="rooms_detected" type="INT"/>
+            <column name="warnings_count" type="INT"/>
+            <column name="model_id" type="VARCHAR(64)"/>
+            <column name="started_at" type="TIMESTAMP"/>
+            <column name="completed_at" type="TIMESTAMP"/>
+            <column name="expires_at" type="TIMESTAMP"/>
+            <column name="applied_at" type="TIMESTAMP"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+            constraintName="fk_rooms_import_jobs_project"
+            baseTableName="rooms_import_jobs"
+            baseColumnNames="project_id"
+            referencedTableName="projects"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            constraintName="fk_rooms_import_jobs_created_by"
+            baseTableName="rooms_import_jobs"
+            baseColumnNames="created_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"/>
+        <!-- One job per project (design B2a). -->
+        <createIndex tableName="rooms_import_jobs" indexName="uq_rooms_import_jobs_project" unique="true">
+            <column name="project_id"/>
+        </createIndex>
+        <!-- Sweep: stuck-job timeout and TTL cleanup. -->
+        <createIndex tableName="rooms_import_jobs" indexName="ix_rooms_import_jobs_status_expires">
+            <column name="status"/>
+            <column name="expires_at"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

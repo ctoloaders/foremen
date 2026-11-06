@@ -108,6 +108,14 @@ public class RoomService
     private final RoomTypeDao roomTypeDao;
     private final RoomCalculationService roomCalculationService;
 
+    /** FOR-05-02 (R10.4, R10.5): media count / cleanup collaborator; optional so unit tests may omit it. */
+    private com.foremen.service.room.media.RoomMediaSupport roomMediaSupport;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setRoomMediaSupport(com.foremen.service.room.media.RoomMediaSupport roomMediaSupport) {
+        this.roomMediaSupport = roomMediaSupport;
+    }
+
     public RoomService(RoomDao roomDao,
                        RoomServiceMapper roomServiceMapper,
                        ProjectAccessCache projectAccessCache,
@@ -169,6 +177,45 @@ public class RoomService
     @Override
     public Set<Long> allowedProjectIds(Long userId) {
         return projectAccessCache.get(userId);
+    }
+
+    // --- Media (FOR-05-02 R10.4, R10.5) ---
+
+    /** Adds {@code mediaCount} to every room of the page with ONE grouped count query (no N+1). */
+    @Override
+    public org.springframework.data.domain.Page<RoomServiceModel> find(
+            org.springframework.data.domain.Pageable pageable, String rawQuery) {
+        org.springframework.data.domain.Page<RoomServiceModel> page =
+                ProjectScopedService.super.find(pageable, rawQuery);
+        if (roomMediaSupport != null) {
+            List<RoomServiceModel> models = page.getContent().stream()
+                    .filter(java.util.Objects::nonNull).toList();
+            java.util.Map<Long, Integer> counts = roomMediaSupport.countByRoomIds(
+                    models.stream().map(RoomServiceModel::getId).toList());
+            models.forEach(m -> m.setMediaCount(counts.getOrDefault(m.getId(), 0)));
+        }
+        return page;
+    }
+
+    /** Deletes the room (media rows cascade in the DB) and best-effort removes its stored objects. */
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteById(Long id) {
+        List<String> uris = roomMediaSupport == null ? List.of() : roomMediaSupport.collectStorageUris(List.of(id));
+        ProjectScopedService.super.deleteById(id);
+        if (roomMediaSupport != null) {
+            roomMediaSupport.deleteObjectsAfterCommit(uris);
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void deleteAll(List<Long> ids) {
+        List<String> uris = roomMediaSupport == null ? List.of() : roomMediaSupport.collectStorageUris(ids);
+        ProjectScopedService.super.deleteAll(ids);
+        if (roomMediaSupport != null) {
+            roomMediaSupport.deleteObjectsAfterCommit(uris);
+        }
     }
 
     // --- Pre-persist normalization (task 4.4) ---
@@ -337,6 +384,10 @@ public class RoomService
                 || opening.getHeight() <= 0
                 || opening.getWidth() <= 0) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, OPENING_INVALID_MESSAGE);
+        }
+        Double offset = opening.getOffset();
+        if (offset != null && (offset.isNaN() || offset.isInfinite() || offset < 0)) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, GEOMETRY_INVALID_MESSAGE);
         }
     }
 

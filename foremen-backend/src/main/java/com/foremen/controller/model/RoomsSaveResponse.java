@@ -13,6 +13,8 @@ import java.util.List;
  * @param estimateChanges  the number of estimate cells the save changed
  * @param totalNetBefore   the estimate net total before the save ({@code null} when no estimate)
  * @param totalNetAfter    the estimate net total after the save ({@code null} when no estimate)
+ * @param skippedMedia      additive (FOR-05-02 R9.5): import-media refs that could not be attached
+ * @param skippedImportRefs additive (FOR-05-02 R22.2): import job ids that failed verification
  */
 public record RoomsSaveResponse(
         List<Long> created,
@@ -21,5 +23,7 @@ public record RoomsSaveResponse(
         boolean estimateChanged,
         int estimateChanges,
         BigDecimal totalNetBefore,
-        BigDecimal totalNetAfter) {
+        BigDecimal totalNetAfter,
+        List<com.foremen.service.roomsimport.model.ImportMediaRef> skippedMedia,
+        List<Long> skippedImportRefs) {
 }

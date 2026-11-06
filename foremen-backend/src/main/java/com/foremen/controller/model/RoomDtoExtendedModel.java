@@ -31,5 +31,7 @@ public record RoomDtoExtendedModel(
         MeasureValueDto doorArea,
         MeasureValueDto windowArea,
         BigDecimal narrowPlace,
-        java.util.Map<String, String> dimensionFormulas
+        java.util.Map<String, String> dimensionFormulas,
+        // FOR-05-02 (R22): read-only marker, true for rooms created from an AI import.
+        boolean aiImported
 ) {}

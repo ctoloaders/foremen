@@ -266,6 +266,18 @@ public class GcsImageStorage implements ImageStorage {
         return properties.isConfigured();
     }
 
+    @Override
+    public java.util.List<StoredObject> listObjects(String prefix) {
+        java.util.List<StoredObject> out = new java.util.ArrayList<>();
+        for (Blob blob : storage().list(properties.bucket(), Storage.BlobListOption.prefix(prefix)).iterateAll()) {
+            if (blob != null && blob.getName() != null) {
+                java.time.OffsetDateTime created = blob.getCreateTimeOffsetDateTime();
+                out.add(new StoredObject(blob.getName(), created == null ? null : created.toInstant()));
+            }
+        }
+        return out;
+    }
+
     /**
      * List every object key currently present in the configured bucket. Used by the periodic
      * {@link ImageReconciliationJob} (Requirement 7.10) to compute the set of bucket objects to

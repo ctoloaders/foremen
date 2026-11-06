@@ -81,6 +81,10 @@ dependencies {
     // import (FOR-05-08 task 10.1). Not managed by the Spring Boot BOM, so pin the version.
     implementation "org.apache.poi:poi-ooxml:${apachePoiVersion}"
 
+    // Apache POI (scratchpad) - legacy binary Office formats (.doc) for the FOR-05-02 rooms
+    // auto-import OfficeInputExtractor. Same version as poi-ooxml (apachePoiVersion).
+    implementation "org.apache.poi:poi-scratchpad:${apachePoiVersion}"
+
     // Apache PDFBox - PDF page rasterization (PDFRenderer) for the FOR-06-03 OCR pipeline
     // (GoogleOcrService, task 4.2). Declared directly because GoogleOcrService uses PDFBox APIs
     // directly (it is otherwise only a transitive dep of openhtmltopdf-pdfbox). Not managed by the

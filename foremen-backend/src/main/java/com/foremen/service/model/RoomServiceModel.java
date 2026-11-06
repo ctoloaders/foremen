@@ -40,6 +40,10 @@ public class RoomServiceModel {
     private BigDecimal narrowPlace;
     /** FOR-05-02 Round 5 #1 — per-dimension value formulas keyed by dimension field. */
     private java.util.Map<String, String> dimensionFormulas;
+    /** FOR-05-02 (R22): read-only AI-import marker; set only by the import attach flow. */
+    private boolean aiImported;
+    /** FOR-05-02 (R10.4): number of attached media files; filled by a grouped count on the read path. */
+    private Integer mediaCount;
     private BigDecimal floorArea;
     private MeasureSource floorAreaSource;
     private BigDecimal wallArea;

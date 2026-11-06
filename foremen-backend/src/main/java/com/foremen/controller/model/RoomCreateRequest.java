@@ -40,5 +40,10 @@ public record RoomCreateRequest(
         // FOR-05-02 Round 5: narrow place (mb) + per-dimension value formulas, e.g.
         // {"ceilingHeight": "=2,5+0,2"}. A formula wins over the submitted number (evaluated here).
         BigDecimal narrowPlace,
-        java.util.Map<String, String> dimensionFormulas
+        java.util.Map<String, String> dimensionFormulas,
+        // FOR-05-02 (R9.4, R22.2): optional, additive. Draft media of an AI import to attach to the
+        // created room, and the import job that produced the room (derives the read-only aiImported
+        // marker after verification). Both are create-only and soft-failing.
+        java.util.List<com.foremen.service.roomsimport.model.ImportMediaRef> importMedia,
+        Long importJobId
 ) {}

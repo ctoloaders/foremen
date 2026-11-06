@@ -55,10 +55,14 @@ public class ForemenControllerAdvice {
                 status.value(),
                 HttpStatus.valueOf(status.value()).getReasonPhrase(),
                 message,
-                request.getRequestURI()
+                request.getRequestURI(),
+                null,
+                ex.getParams().isEmpty() ? null : ex.getParams()
         );
 
-        return ResponseEntity.status(status).body(response);
+        ResponseEntity.BodyBuilder builder = ResponseEntity.status(status);
+        ex.getHeaders().forEach(builder::header);
+        return builder.body(response);
     }
 
     /**

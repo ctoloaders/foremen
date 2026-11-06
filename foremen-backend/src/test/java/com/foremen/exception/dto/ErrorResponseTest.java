@@ -53,14 +53,14 @@ class ErrorResponseTest {
     void recordComponents() {
         var components = ErrorResponse.class.getRecordComponents();
 
-        assertThat(components).hasSize(6);
+        assertThat(components).hasSize(7);
 
         var componentNames = java.util.Arrays.stream(components)
                 .map(java.lang.reflect.RecordComponent::getName)
                 .toList();
 
         assertThat(componentNames).containsExactly(
-                "timestamp", "status", "error", "message", "path", "fieldErrors"
+                "timestamp", "status", "error", "message", "path", "fieldErrors", "params"
         );
     }
 

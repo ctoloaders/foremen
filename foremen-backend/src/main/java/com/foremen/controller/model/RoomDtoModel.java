@@ -35,5 +35,9 @@ public record RoomDtoModel(
         Integer sortOrder,
         // FOR-05-02 Round 5: narrow place (mb) + per-dimension value formulas (shown while editing).
         BigDecimal narrowPlace,
-        java.util.Map<String, String> dimensionFormulas
+        java.util.Map<String, String> dimensionFormulas,
+        // FOR-05-02 (R22): read-only marker, true for rooms created from an AI import.
+        boolean aiImported,
+        // FOR-05-02 (R10.4): number of attached media files (badge); no binary data.
+        Integer mediaCount
 ) {}

@@ -3,6 +3,12 @@ spring:
     active: local
   liquibase:
     change-log: classpath:database_files/changelog.xml
+  # FOR-05-02: multipart limits are global in Spring. Endpoints with smaller limits (e.g.
+  # foremen.image-storage.max-upload-size) keep enforcing them in code.
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 220MB
   # FOR-05-13 collaborative estimate: Redis holds only ephemeral collaboration state (presence +
   # shared staged-edit drafts). No Spring Data Redis repositories are used.
   data:
@@ -100,6 +106,35 @@ foremen:
       credentials:
         path: ${FOREMEN_OCR_LLM_CREDENTIALS_PATH:}
         location: ${FOREMEN_OCR_LLM_CREDENTIALS_LOCATION:}
+  rooms-import:
+    # FOR-05-02 rooms auto-import. Only `enabled` has its own switch (default off); every llm.*
+    # value defaults to what OCR already resolves (foremen.ocr.llm.*) and can be overridden with
+    # FOREMEN_ROOMS_IMPORT_LLM_*.
+    enabled: ${FOREMEN_ROOMS_IMPORT_ENABLED:false}
+    llm:
+      # true => deterministic StubRoomsVisionClient (tests / Docker); markers `STUB:*` in the prompt.
+      stub: ${FOREMEN_ROOMS_IMPORT_LLM_STUB:false}
+      model: ${FOREMEN_ROOMS_IMPORT_LLM_MODEL:${foremen.ocr.llm.model:gemini-3.8-flash}}
+      project: ${FOREMEN_ROOMS_IMPORT_LLM_PROJECT:${foremen.ocr.llm.project:}}
+      location: ${FOREMEN_ROOMS_IMPORT_LLM_LOCATION:${foremen.ocr.llm.location:}}
+      api-key: ${FOREMEN_ROOMS_IMPORT_LLM_API_KEY:${foremen.ocr.llm.api-key:}}
+      credentials:
+        path: ${FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_PATH:${foremen.ocr.llm.credentials.path:}}
+        location: ${FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_LOCATION:${foremen.ocr.llm.credentials.location:}}
+    limits:
+      max-files: 10
+      max-file-size: 20MB
+      max-pdf-pages: 50
+      min-pdf-text-chars: 40
+    ttl:
+      result: 72h
+      stuck-timeout: 15m
+    max-concurrency: 4
+    validation:
+      area-tolerance: 0.02
+      ceiling-min: 1.8
+      ceiling-max: 6.0
+      low-confidence: 0.6
   translation:
     # Backend client<->staff message translation service (FOR-06-12). All values from environment;
     # no secrets committed. When enabled is false (or absent), the DisabledMessageTranslationService

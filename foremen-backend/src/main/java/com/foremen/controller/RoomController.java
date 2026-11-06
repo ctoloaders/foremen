@@ -112,7 +112,9 @@ public class RoomController implements AdminController<
                 !impact.isEmpty(),
                 impact.changes().size(),
                 impact.totalNetBefore(),
-                impact.totalNetAfter()));
+                impact.totalNetAfter(),
+                result.skippedMedia(),
+                result.skippedImportRefs()));
     }
 
     /**

@@ -8,6 +8,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -21,12 +22,11 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.ImageType;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.io.DefaultResourceLoader;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Node;
 
 import com.foremen.config.ocr.OcrProperties;
+import com.foremen.service.ai.GeminiClientFactory;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.vision.v1.AnnotateImageRequest;
 import com.google.cloud.vision.v1.AnnotateImageResponse;
@@ -401,26 +401,12 @@ public class GoogleOcrService implements OcrService {
 
     private Client buildGenAiClient() {
         OcrProperties.Llm llm = properties.llm();
-        Client.Builder builder = Client.builder();
-        String apiKey = llm.apiKey();
-        if (apiKey != null && !apiKey.isBlank()) {
-            // Gemini Developer API backend, keyed.
-            builder.apiKey(apiKey.strip());
-        } else {
-            // Gemini Enterprise Agent Platform (Vertex) backend via ADC + project/location.
-            builder.vertexAI(true);
-            if (llm.project() != null && !llm.project().isBlank()) {
-                builder.project(llm.project().strip());
-            }
-            if (llm.location() != null && !llm.location().isBlank()) {
-                builder.location(llm.location().strip());
-            }
-            GoogleCredentials credentials = resolveCredentials(llm.credentials());
-            if (credentials != null) {
-                builder.credentials(credentials);
-            }
+        try {
+            return GeminiClientFactory.build(llm.apiKey(), llm.project(), llm.location(),
+                    llm.credentials().path(), llm.credentials().location());
+        } catch (UncheckedIOException e) {
+            throw new OcrFailedException(e.getMessage(), e.getCause());
         }
-        return builder.build();
     }
 
     /**
@@ -429,19 +415,10 @@ public class GoogleOcrService implements OcrService {
      * sentinel is used. Mirrors {@link com.foremen.service.image.GcsImageStorage}'s resolution.
      */
     private GoogleCredentials resolveCredentials(OcrProperties.Credentials creds) {
-        String location = creds.path() != null && !creds.path().isBlank()
-                ? creds.path()
-                : creds.location();
-        if (location == null || location.isBlank()
-                || "application-default".equalsIgnoreCase(location.strip())) {
-            return null; // fall back to Application Default Credentials
-        }
-        Resource resource = new DefaultResourceLoader().getResource(location.strip());
-        try (InputStream in = resource.getInputStream()) {
-            return GoogleCredentials.fromStream(in);
-        } catch (IOException e) {
-            throw new OcrFailedException(
-                    "failed to load Google credentials from '" + location + "': " + e.getMessage(), e);
+        try {
+            return GeminiClientFactory.resolveCredentials(creds.path(), creds.location());
+        } catch (UncheckedIOException e) {
+            throw new OcrFailedException(e.getMessage(), e.getCause());
         }
     }
 

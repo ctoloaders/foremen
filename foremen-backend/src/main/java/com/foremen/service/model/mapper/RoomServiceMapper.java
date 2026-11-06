@@ -59,12 +59,14 @@ public abstract class RoomServiceMapper
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "project", expression = "java(projectRef(source.getProjectId()))")
     @Mapping(target = "roomType", expression = "java(roomTypeRef(source.getRoomTypeId()))")
+    @Mapping(target = "aiImported", ignore = true)
     public abstract RoomEntity toCreateDaoModel(RoomServiceExtendedModel source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "project", expression = "java(projectRef(source.getProjectId()))")
     @Mapping(target = "roomType", expression = "java(roomTypeRef(source.getRoomTypeId()))")
+    @Mapping(target = "aiImported", ignore = true)
     public abstract void updateFields(RoomServiceExtendedModel source, @MappingTarget RoomEntity target);
 
     @Override

@@ -94,6 +94,19 @@ services:
       BANK_AI_LOCATION: ${BANK_AI_LOCATION:-europe-central2}
       BANK_AI_API_KEY: ${BANK_AI_API_KEY:-}
       BANK_AI_CREDENTIALS: ${BANK_AI_CREDENTIALS:-}
+      # FOR-05-02 rooms auto-import. Local/CI default: feature ON with the deterministic stub LLM
+      # (no credentials needed). For live Gemini set FOREMEN_ROOMS_IMPORT_LLM_STUB=false and provide
+      # either FOREMEN_ROOMS_IMPORT_LLM_API_KEY or PROJECT/LOCATION(+CREDENTIALS_*) in .env.
+      # The LLM_* values below are null-valued on purpose: they are passed through only when set, so
+      # an unset one is NOT exported as "" and the backend falls back to foremen.ocr.llm.* (chained default).
+      FOREMEN_ROOMS_IMPORT_ENABLED: ${FOREMEN_ROOMS_IMPORT_ENABLED:-true}
+      FOREMEN_ROOMS_IMPORT_LLM_STUB: ${FOREMEN_ROOMS_IMPORT_LLM_STUB:-true}
+      FOREMEN_ROOMS_IMPORT_LLM_MODEL:
+      FOREMEN_ROOMS_IMPORT_LLM_PROJECT:
+      FOREMEN_ROOMS_IMPORT_LLM_LOCATION:
+      FOREMEN_ROOMS_IMPORT_LLM_API_KEY:
+      FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_PATH:
+      FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_LOCATION:
     depends_on:
       postgres:
         condition: service_healthy

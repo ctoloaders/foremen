@@ -44,7 +44,9 @@ public class ImageReferenceLookup {
             // white-background rendition in the same bucket, so both keys must count as referenced
             // — otherwise deleteIfOrphan on a re-process/delete could reclaim a key still in use.
             new ImageColumn("procurement_documents", "raw_object_key"),
-            new ImageColumn("procurement_documents", "processed_object_key"));
+            new ImageColumn("procurement_documents", "processed_object_key"),
+            // FOR-05-02: room media (uploads and AI source crops) keep their object key here.
+            new ImageColumn("room_media", "storage_uri"));
 
     @PersistenceContext
     private EntityManager entityManager;

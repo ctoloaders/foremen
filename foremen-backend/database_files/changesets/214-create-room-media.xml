@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 (Requirements 10.1, 22.1; design B3): room_media — files attached to a room
+        (AI source crops and manual uploads), modelled on document_media (144). Bytes live in
+        object storage; only metadata + kind (SOURCE_CROP | UPLOAD) is kept here.
+          - room_id        : FK -> rooms, NOT NULL, ON DELETE CASCADE (media cannot outlive its room).
+          - uploaded_by_id : FK -> users, NOT NULL, ON DELETE RESTRICT.
+        Plus the four BaseEntity audit columns. Index on room_id.
+        Idempotent via NOT tableExists + MARK_RAN. Registered LAST, after 213.
+    -->
+    <changeSet id="214-create-room-media" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="room_media"/>
+            </not>
+        </preConditions>
+        <createTable tableName="room_media">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="room_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="file_name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content_type" type="VARCHAR(128)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="size_bytes" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="storage_uri" type="VARCHAR(512)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="uploaded_by_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <!-- Owner room: media cannot outlive its room. -->
+        <addForeignKeyConstraint
+            constraintName="fk_room_media_room"
+            baseTableName="room_media"
+            baseColumnNames="room_id"
+            referencedTableName="rooms"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint
+            constraintName="fk_room_media_uploaded_by"
+            baseTableName="room_media"
+            baseColumnNames="uploaded_by_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="RESTRICT"/>
+        <createIndex tableName="room_media" indexName="idx_room_media_room_id">
+            <column name="room_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

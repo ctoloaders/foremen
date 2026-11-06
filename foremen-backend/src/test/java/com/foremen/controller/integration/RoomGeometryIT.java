@@ -265,4 +265,62 @@ class RoomGeometryIT {
         org.junit.jupiter.api.Assertions.assertEquals(before, roomDao.count(),
                 "no room should be persisted when an opening is invalid");
     }
+
+    // --- Opening.offset: optional, >= 0 (FOR-05-02, Req 12.8) ---
+
+    private String offsetBody(long projectId, long roomTypeId, String offsetJson) {
+        return """
+                {
+                    "projectId": %d,
+                    "roomTypeId": %d,
+                    "geometry": {
+                        "vertices": [
+                            { "x": 0, "y": 0 },
+                            { "x": 4, "y": 0 },
+                            { "x": 4, "y": 3 }
+                        ],
+                        "walls": [
+                            { "openings": [ { "type": "DOOR", "count": 1, "height": 2, "width": 1%s } ] },
+                            {},
+                            {}
+                        ]
+                    }
+                }
+                """.formatted(projectId, roomTypeId, offsetJson);
+    }
+
+    @Test
+    @DisplayName("POST /api/rooms with a negative opening offset is rejected 400 error.room.geometry.invalid")
+    void createWithNegativeOffset_isRejected() throws Exception {
+        long projectId = createProject();
+        long roomTypeId = createRoomType();
+        entityManager.flush();
+        long before = roomDao.count();
+
+        mockMvc.perform(post("/api/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(offsetBody(projectId, roomTypeId, ", \"offset\": -0.1")))
+                .andExpect(status().isBadRequest());
+
+        entityManager.flush();
+        entityManager.clear();
+        org.junit.jupiter.api.Assertions.assertEquals(before, roomDao.count());
+    }
+
+    @Test
+    @DisplayName("POST /api/rooms accepts a zero or positive opening offset")
+    void createWithNonNegativeOffset_isAccepted() throws Exception {
+        long projectId = createProject();
+        long roomTypeId = createRoomType();
+        entityManager.flush();
+
+        mockMvc.perform(post("/api/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(offsetBody(projectId, roomTypeId, ", \"offset\": 0")))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(offsetBody(projectId, roomTypeId, ", \"offset\": 0.4")))
+                .andExpect(status().isOk());
+    }
 }

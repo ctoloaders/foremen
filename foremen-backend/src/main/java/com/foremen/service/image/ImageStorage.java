@@ -122,4 +122,25 @@ public interface ImageStorage {
      *         {@code objectKey} is {@code null}
      */
     String signedDownloadUrl(String objectKey, long ttlSeconds);
+
+    /**
+     * An object present in the bucket: its key and creation time (when known).
+     *
+     * @param key       the bucket-relative object key
+     * @param createdAt the creation instant, or {@code null} when unknown
+     */
+    record StoredObject(String key, java.time.Instant createdAt) {
+    }
+
+    /**
+     * List the objects whose key starts with the given prefix. Used by cleanup passes that must find
+     * objects no database row points at (FOR-05-02 rooms-import orphan sweep). The default returns an
+     * empty list, which is correct for implementations without a bucket.
+     *
+     * @param prefix the bucket-relative key prefix, e.g. {@code "rooms-import/"}
+     * @return the matching objects, never {@code null}
+     */
+    default java.util.List<StoredObject> listObjects(String prefix) {
+        return java.util.List.of();
+    }
 }

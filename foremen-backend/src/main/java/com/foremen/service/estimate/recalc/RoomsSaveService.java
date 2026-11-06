@@ -31,6 +31,9 @@ import com.foremen.service.estimate.EstimateAssignmentService;
 import com.foremen.service.estimate.EstimateRecomputeService;
 import com.foremen.service.model.RoomServiceExtendedModel;
 import com.foremen.service.offer.OfferEstimateReactionService;
+import com.foremen.service.room.media.RoomMediaAttachService;
+import com.foremen.service.roomsimport.RoomImportLinkService;
+import com.foremen.service.roomsimport.model.ImportMediaRef;
 
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +78,8 @@ public class RoomsSaveService {
     private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
     private final OfferEstimateReactionService offerReactionService;
+    private final RoomMediaAttachService roomMediaAttachService;
+    private final RoomImportLinkService roomImportLinkService;
 
     /** An existing room's update: its id and the normalized-on-write service model. */
     public record RoomUpdate(Long id, RoomServiceExtendedModel model) {
@@ -87,8 +92,11 @@ public class RoomsSaveService {
      * @param updated        ids of the updated rooms
      * @param deleted        ids of the deleted rooms
      * @param estimateImpact what the save changed in the estimate (empty when nothing)
+     * @param skippedMedia   FOR-05-02 (R9.5): import-media refs that could not be attached (never fails the save)
+     * @param skippedImportRefs FOR-05-02 (R22.2): import job ids that failed verification (room created unmarked)
      */
-    public record Result(List<Long> created, List<Long> updated, List<Long> deleted, EstimateImpact estimateImpact) {
+    public record Result(List<Long> created, List<Long> updated, List<Long> deleted, EstimateImpact estimateImpact,
+                         List<ImportMediaRef> skippedMedia, List<Long> skippedImportRefs) {
     }
 
     /**
@@ -152,9 +160,18 @@ public class RoomsSaveService {
 
         // --- 3. Creates: persist the room, then apply a same-room-type sibling's works. ---
         List<Long> created = new ArrayList<>();
+        List<ImportMediaRef> skippedMedia = new ArrayList<>();
+        List<Long> skippedImportRefs = new ArrayList<>();
         for (RoomServiceExtendedModel model : createList) {
             requireSameProject(model, projectId);
-            created.add(roomService.create(model).getId());
+            Long newRoomId = roomService.create(model).getId();
+            created.add(newRoomId);
+            // FOR-05-02: create-only, soft-failing import hooks (R9.4/9.5/9.7, R22.2); never touch other rooms.
+            skippedMedia.addAll(roomMediaAttachService.attach(newRoomId, model.getImportMedia()));
+            if (model.getImportJobId() != null && !roomImportLinkService.link(newRoomId, model.getImportJobId())
+                    && !skippedImportRefs.contains(model.getImportJobId())) {
+                skippedImportRefs.add(model.getImportJobId());
+            }
         }
         entityManager.flush();
         if (estimate != null && !created.isEmpty()) {
@@ -186,7 +203,8 @@ public class RoomsSaveService {
                         projectId, estimate.getId(), currentUserId(), EstimateChangedEvent.Trigger.ROOMS_CHANGED));
             }
         }
-        return new Result(List.copyOf(created), List.copyOf(updated), List.copyOf(deleteList), impact);
+        return new Result(List.copyOf(created), List.copyOf(updated), List.copyOf(deleteList), impact,
+                List.copyOf(skippedMedia), List.copyOf(skippedImportRefs));
     }
 
     // --- helpers ---------------------------------------------------------------------------

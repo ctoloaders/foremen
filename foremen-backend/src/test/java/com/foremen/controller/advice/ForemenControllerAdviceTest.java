@@ -204,4 +204,32 @@ class ForemenControllerAdviceTest {
         assertThat(offerArea.percentage()).isZero();
         assertThat(offerArea.items()).containsExactly("No offer prepared");
     }
+
+    @Test
+    @DisplayName("ForemenApiException with named params and a header: envelope carries params, response carries the header")
+    void foremenApiExceptionParamsAndHeaders() {
+        when(messageResolver.resolve(eq("error.x"), any(), any(Locale.class))).thenReturn("msg");
+
+        ForemenApiException ex = new ForemenApiException(HttpStatus.TOO_MANY_REQUESTS, "error.x")
+                .withParams(Map.of("jobId", 5))
+                .withHeader("Retry-After", "30");
+
+        ResponseEntity<ErrorResponse> response = advice.handleForemenApiException(ex, request, Locale.ENGLISH);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(response.getHeaders().getFirst("Retry-After")).isEqualTo("30");
+        assertThat(response.getBody().params()).containsEntry("jobId", 5);
+    }
+
+    @Test
+    @DisplayName("ForemenApiException without params keeps the envelope unchanged (params null, no extra headers)")
+    void foremenApiExceptionWithoutParams() {
+        when(messageResolver.resolve(eq("error.y"), any(), any(Locale.class))).thenReturn("msg");
+
+        ResponseEntity<ErrorResponse> response = advice.handleForemenApiException(
+                new ForemenApiException(HttpStatus.NOT_FOUND, "error.y"), request, Locale.ENGLISH);
+
+        assertThat(response.getBody().params()).isNull();
+        assertThat(response.getHeaders().getFirst("Retry-After")).isNull();
+    }
 }

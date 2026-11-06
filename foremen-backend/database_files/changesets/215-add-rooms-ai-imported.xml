@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 (Requirements 22.1, 22.3, 22.4; design B3): rooms.ai_imported — marker set only
+        when a room was created from a valid same-project AI import job. Never changed by updates.
+        Idempotent: guarded by NOT columnExists + MARK_RAN. Registered LAST, after 214.
+    -->
+    <changeSet id="215-add-rooms-ai-imported" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="rooms" columnName="ai_imported"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="rooms">
+            <column name="ai_imported" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

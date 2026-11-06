@@ -39,6 +39,12 @@ public class RoomServiceExtendedModel {
     private BigDecimal narrowPlace;
     /** FOR-05-02 Round 5 #1 — per-dimension value formulas keyed by dimension field. */
     private java.util.Map<String, String> dimensionFormulas;
+    /** FOR-05-02 (R22): read-only AI-import marker; set only by the import attach flow. */
+    private boolean aiImported;
+    /** FOR-05-02 (R9.4): draft media to attach on create (create-only, never persisted on the room). */
+    private java.util.List<com.foremen.service.roomsimport.model.ImportMediaRef> importMedia;
+    /** FOR-05-02 (R22.2): the import job to verify on create (create-only, never persisted on the room). */
+    private Long importJobId;
     private BigDecimal floorArea;
     private MeasureSource floorAreaSource;
     private BigDecimal wallArea;

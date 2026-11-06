@@ -114,6 +114,13 @@ public class RoomEntity extends BaseEntity {
     @Column(name = "door_area_source", length = 20)
     private MeasureSource doorAreaSource;
 
+    /**
+     * FOR-05-02 (R22): true only when the room was created from a valid same-project AI import job.
+     * Never part of create/update payloads, so an edit cannot set or clear it.
+     */
+    @Column(name = "ai_imported", nullable = false)
+    private boolean aiImported;
+
     @Column(name = "window_area", precision = 12, scale = 2)
     private BigDecimal windowArea;
 
