@@ -120,12 +120,12 @@ The Docker frontend serves a prebuilt image: after UI changes rebuild it with
     - _Requirements: 13.1, 13.2, 13.3, 14.2_
     - _Depends on: 4.1, 4.2, 4.3_
 
-- [ ] 6. Verification
+- [x] 6. Verification
   - [x] 6.1 Checkpoint: type-check, lint and rooms tests
     - `npx tsc --noEmit -p tsconfig.app.json`, eslint on changed files, `npx vitest --run src/features/rooms src/components/ui` (log to `/tmp/for-05-02-visual-test.log`).
     - _Requirements: 15.2, 15.3, 15.4_
     - _Depends on: 2.1, 2.2, 2.3, 5.1, 5.2, 5.3_
-  - [-] 6.2 Browser verification on the Docker stack
+  - [x] 6.2 Browser verification on the Docker stack
     - Rebuild the frontend image; execute the UI scenarios of `test-cases.md` on `http://localhost:3000` (room 1701, an AI-generated draft, a from-scratch room); write the MD report with tables.
     - _Requirements: 1–13_
     - _Depends on: 6.1_
@@ -133,7 +133,7 @@ The Docker frontend serves a prebuilt image: after UI changes rebuild it with
     - Created `test-cases.md` in the spec folder following the `.kiro/steering/test-cases.md` standard (feature grouping, step-by-step scenarios, repeatability via generator/clean-up, regression group, MD report template). UI spec: browser-engine scenarios; results are MD reports with tables.
     - _Requirements: 1–13_
     - _Depends on: 6.1_
-  - [~] 6.4 Final checkpoint
+  - [x] 6.4 Final checkpoint
     - All tests green, report from 6.2 attached, frontend changes committed in the `foremen-frontend/` repo and spec files in the root repo (on request).
     - _Requirements: 1–15_
     - _Depends on: 6.2, 6.3_
