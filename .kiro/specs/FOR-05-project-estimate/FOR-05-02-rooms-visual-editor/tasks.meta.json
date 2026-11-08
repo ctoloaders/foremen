@@ -1,0 +1,474 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 `lib/visual/limits.ts` and `lib/visual/outline.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206596
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144213720
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144415490
+      }
+    ],
+    "1.2 `lib/visual/viewport.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206688
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144213750
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144416290
+      }
+    ],
+    "1.3 `lib/visual/snapping.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206722
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144428062
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144551536
+      }
+    ],
+    "1.4 `lib/visual/gestures/cornerWall.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206753
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144727458
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144867641
+      }
+    ],
+    "1.5 `lib/visual/gestures/openings.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206776
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144728412
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144868425
+      }
+    ],
+    "1.6 `lib/visual/gestures/draw.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206802
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144428374
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144551463
+      }
+    ],
+    "1.7 `lib/visual/projection.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206826
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144429122
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144552181
+      }
+    ],
+    "1.8 `lib/visual/liveSizes.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206852
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144429921
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144552958
+      }
+    ],
+    "1.9 `state/useOutlineHistory.ts`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206878
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144430478
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144553607
+      }
+    ],
+    "2.1 Outline / viewport / projection tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206901
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144729024
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144869189
+      }
+    ],
+    "2.2 Snapping, corner, wall tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206927
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144872529
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145209631
+      }
+    ],
+    "2.3 Opening, draw, live-size, history tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206953
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144873341
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145210510
+      }
+    ],
+    "3.1 Extract `PlanLayers` from `components/RoomPlanPreview.tsx`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144206987
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144214567
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144417385
+      }
+    ],
+    "3.2 i18n keys `rooms.visual.*` in `src/locales/pl.json` and `ru.json`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207018
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144215357
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144418371
+      }
+    ],
+    "3.3 Presentational components (`components/visual/`)": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207109
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144561870
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144723858
+      }
+    ],
+    "3.4 `components/visual/PlanCanvas.tsx`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207134
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144874056
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145211133
+      }
+    ],
+    "3.5 `RoomWallsEditor` selection support": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207162
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144215886
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144419055
+      }
+    ],
+    "3.6 `components/visual/RoomVisualEditor.tsx`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207191
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145214725
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145465565
+      }
+    ],
+    "4.1 `pages/RoomEditorPage.tsx`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207219
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145469925
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145757228
+      }
+    ],
+    "4.2 `components/workspace/NewRoomEditorDialog.tsx`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207244
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145470200
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145757243
+      }
+    ],
+    "4.3 `components/RoomFormSheet.tsx`": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207269
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145470958
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145757359
+      }
+    ],
+    "5.1 `PlanCanvas` tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207291
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145215241
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145465532
+      }
+    ],
+    "5.2 `RoomVisualEditor` tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207317
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145471708
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145757810
+      }
+    ],
+    "5.3 Host and existing-test updates": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207343
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145765925
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794146172743
+      }
+    ],
+    "6.1 Checkpoint: type-check, lint and rooms tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207361
+      },
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794146176202
+      }
+    ],
+    "6.2 Browser verification on the Docker stack": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207395
+      }
+    ],
+    "6.4 Final checkpoint": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144207419
+      }
+    ],
+    "1. Pure model and maths (`lib/visual/`, `state/`)": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794144868532
+      }
+    ],
+    "2. Tests of the pure layer": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145210699
+      }
+    ],
+    "3. Canvas and composite editor": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145465623
+      }
+    ],
+    "4. Hosts": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794145757382
+      }
+    ],
+    "5. Component and regression tests": [
+      {
+        "executionId": "ad0a3f47-83e2-4c3d-855f-f3cc6b73f469",
+        "chatSessionId": "sess_bb62db69-6061-4504-a31a-806255c848ec",
+        "timestamp": 1794146172840
+      }
+    ]
+  }
+}
