@@ -70,3 +70,8 @@ docker-compose.override.yml
 # Google OAuth client credentials (never commit; FOR-03-10)
 infra/dev/google/
 client_secret_*.json
+
+# Local artifacts: jqwik test cache, root-level screenshots, private agreement documents
+.jqwik-database
+/*.png
+docs/Agreement_*.pdf
