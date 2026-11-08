@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-04-19 (Requirement 7.5): index on work_material_consumptions (work_item_id, branch)
+        to back the per-work norm counts. Idempotent: guarded by NOT indexExists + MARK_RAN.
+        Registered LAST, after 217.
+    -->
+    <changeSet id="218-add-wmc-work-item-branch-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="work_material_consumptions" indexName="ix_wmc_work_item_branch"/>
+            </not>
+        </preConditions>
+        <createIndex tableName="work_material_consumptions" indexName="ix_wmc_work_item_branch">
+            <column name="work_item_id"/>
+            <column name="branch"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

@@ -16,7 +16,12 @@ import java.util.List;
  * row, so it never multiplies the paginated distinct-{@code WorkItem} rows. The list is filterable via
  * the generic query DSL as {@code packages.id==<id>} / {@code packages.id~in~<id1>,<id2>}, backed by an
  * EXISTS subquery over the membership rows (single and multiple both supported).
+ *
+ * <p>{@link #constructionConsumptionCount} / {@link #finishingConsumptionCount} (FOR-04-19 rework)
+ * are the numbers of material-consumption norms the work has per branch. Computed per page with one
+ * grouped query; {@code 0} when the work has none.
  */
 public record WorkItemDtoModel(Long id, Long workCategoryId, String workCategoryName, Long unitId, String unitName,
                                String name, String code, boolean active,
-                               WorkCostCellDto costCell, List<RefDto> packages) {}
+                               WorkCostCellDto costCell, List<RefDto> packages,
+                               long constructionConsumptionCount, long finishingConsumptionCount) {}

@@ -105,6 +105,15 @@ public class WorkItemController implements AdminController<
         fields.add(new MetadataResponse.FieldInfo(
                 "costCell", MetadataResponse.DataType.NUMBER, false, costParts));
 
+        // Synthetic per-branch consumption counts (FOR-04-19-work-catalog-rework, Req 2.5/2.6/7.3/7.4):
+        // numbers, filterable (has / has-none via EXISTS), NOT sortable. The pivot descriptor carries
+        // the sortable=false / filterable=true flags; it has no discriminator id or labels.
+        for (String countField : List.of("constructionConsumptionCount", "finishingConsumptionCount")) {
+            fields.add(new MetadataResponse.FieldInfo(
+                    countField, MetadataResponse.DataType.NUMBER, false, null, null,
+                    new MetadataResponse.PivotInfo(null, null, null, false, true)));
+        }
+
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.maxAge(Duration.ofDays(1)))
                 .body(new MetadataResponse(fields));

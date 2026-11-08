@@ -6,7 +6,6 @@ import com.foremen.qa.pages.DictionaryPage;
 import com.foremen.qa.pages.ProjectsPage;
 import com.foremen.qa.pages.ReferenceFilter;
 import com.foremen.qa.pages.WorkCatalogPage;
-import com.foremen.qa.pages.WorkPricesPage;
 import com.foremen.qa.support.ApiHelper;
 import com.foremen.qa.support.DataGen;
 import com.foremen.qa.support.Hooks;
@@ -16,7 +15,6 @@ import com.microsoft.playwright.Page;
 import io.cucumber.java.en.Then;
 import io.cucumber.java.en.When;
 
-import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -38,9 +36,6 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       and a unit through the two FK reference selects, then appears in the list. The FK category
  *       and unit are run-created via the API so the pick is deterministic; teardown removes the work
  *       item and its FK rows ({@link WorkCatalogPage}).</li>
- *   <li><b>Work prices</b> (8.3) — the list renders and a current price ({@code validTo == null}) is
- *       shown. A full chain (unit → category → work item → seeded currency → open-ended price) is
- *       set up via the API with LIFO teardown ({@link WorkPricesPage}).</li>
  *   <li><b>Projects</b> (8.4) — the list renders and a project is created via the happy path
  *       (name only) and appears in the list; teardown deletes it ({@link ProjectsPage}).</li>
  *   <li><b>Menu grouping</b> (8.6) — the Catalog and Dictionaries nav groups are present and their
@@ -59,14 +54,11 @@ public class DictionarySteps {
     private static final String WORK_CATEGORIES = "/api/work-categories";
     private static final String MEASUREMENT_UNITS = "/api/measurement-units";
     private static final String WORK_ITEMS = "/api/work-items";
-    private static final String WORK_PRICES = "/api/work-prices";
-    private static final String CURRENCIES = "/api/currencies";
 
     private final World world;
 
     private DictionaryPage dictionaryPage;
     private WorkCatalogPage workCatalogPage;
-    private WorkPricesPage workPricesPage;
     private ProjectsPage projectsPage;
     private AppShell appShell;
 
@@ -75,7 +67,6 @@ public class DictionarySteps {
     private String createdUnitName;
     private String createdWorkItemNameRu;
     private String filterCategoryName;
-    private String pricedWorkItemNameRu;
     private String createdProjectName;
 
     /** Cucumber (picocontainer) injects the per-scenario {@link World}. */
@@ -249,64 +240,6 @@ public class DictionarySteps {
                 .isTrue();
     }
 
-    // ================= Work prices (Requirement 8.3) =================
-
-    /**
-     * Set up a current (open-ended) work price via the API: a run-created unit → category → work
-     * item, priced in a seeded currency ({@code PLN}) with {@code validTo = null}. Registers LIFO
-     * teardown for the price, work item, category, and unit so the run stays self-cleaning.
-     */
-    @When("a current work price exists")
-    public void aCurrentWorkPriceExists() {
-        ApiHelper api = adminApi();
-        long unitId = createUnit(api);
-        long categoryId = createCategory(api);
-        long workItemId = createWorkItem(api, categoryId, unitId);
-        pricedWorkItemNameRu = createdWorkItemNameRu;
-
-        long currencyId = api.resolveDictionaryIdByCode(CURRENCIES, "PLN");
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("workItemId", workItemId);
-        body.put("currencyId", currencyId);
-        body.put("netPrice", 100.00);
-        body.put("validFrom", LocalDate.now().toString());
-        body.put("validTo", null); // null => current price
-        long priceId = api.createDictionaryRow(WORK_PRICES, body);
-        world.registerTeardown(() -> world.api().deleteDictionaryRow(WORK_PRICES, priceId));
-    }
-
-    @When("I open the Work Prices page")
-    public void iOpenTheWorkPricesPage() {
-        workPricesPage = new WorkPricesPage(page()).open();
-        workPricesPage.table().waitUntilLoaded();
-    }
-
-    @Then("the work prices list renders and a current price is shown")
-    public void theWorkPricesListRendersAndACurrentPriceIsShown() {
-        DataTablePage table = workPricesPage.table().waitUntilLoaded();
-        assertThat(table.isLoaded())
-                .as("the work prices list table should render")
-                .isTrue();
-        assertThat(table.columnHeaders())
-                .as("the work prices list should render at least one column header")
-                .isNotEmpty();
-
-        // Surface the just-created current price by searching for its work-item name, then assert it
-        // shows an open-ended validTo (the visible signal of a current price) and a current badge.
-        assertThat(pricedWorkItemNameRu)
-                .as("a current price must have been set up before this assertion")
-                .isNotNull();
-        table.search(pricedWorkItemNameRu);
-        page().waitForCondition(() -> workPricesPage.table().containsRow(pricedWorkItemNameRu));
-        assertThat(workPricesPage.rowValidToIsOpen(pricedWorkItemNameRu))
-                .as("the created current price row should show an open-ended validTo (—)")
-                .isTrue();
-        assertThat(workPricesPage.currentBadge().count())
-                .as("at least one current-price badge should be visible")
-                .isGreaterThan(0);
-    }
-
     // ================= Projects (Requirement 8.4) =================
 
     @When("I open the Projects page")
@@ -371,8 +304,19 @@ public class DictionarySteps {
     @Then("the Catalog navigation group items route correctly")
     public void theCatalogNavigationGroupItemsRouteCorrectly() {
         appShell().waitUntilRendered();
-        // The Catalog group holds Work Catalog (/catalog/works) and Work Prices (/catalog/prices).
-        assertNavItemRoutes(WorkCatalogPage.ROUTE, WorkPricesPage.ROUTE);
+        // The Catalog group holds only the Work Catalog (/catalog/works) since FOR-04-19.
+        assertNavItemRoutes(WorkCatalogPage.ROUTE);
+    }
+
+    @Then("the retired catalog routes redirect to the Work Catalog")
+    public void theRetiredCatalogRoutesRedirectToTheWorkCatalog() {
+        for (String retired : new String[] {"/catalog/prices", "/catalog/material-consumption"}) {
+            page().navigate(com.foremen.qa.support.TestConfig.frontendUrl() + retired);
+            page().waitForCondition(() -> appShell().isOnRoute(WorkCatalogPage.ROUTE));
+            assertThat(appShell().isOnRoute(WorkCatalogPage.ROUTE))
+                    .as("%s should redirect to %s", retired, WorkCatalogPage.ROUTE)
+                    .isTrue();
+        }
     }
 
     @Then("the Dictionaries navigation group items route correctly")

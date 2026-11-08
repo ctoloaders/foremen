@@ -938,6 +938,10 @@
     <include file="database_files/changesets/214-create-room-media.xml"/>
     <!-- FOR-05-02 (task 1.2): rooms.ai_imported. Registered LAST, after 214. -->
     <include file="database_files/changesets/215-add-rooms-ai-imported.xml"/>
-    <!-- FOR-07-05 (R6.1): grant FOREMAN READ on COMPANY_SCHEDULE. Registered LAST. -->
+    <!-- users.status: normalise values outside UserStatus (e.g. INACTIVE) and add a CHECK. Registered LAST, after 215. -->
+    <include file="database_files/changesets/216-users-status-check.xml"/>
+    <!-- FOR-07-05 (R6.1): grant FOREMAN READ on COMPANY_SCHEDULE. Registered LAST, after 216. -->
     <include file="database_files/changesets/217-grant-foreman-company-schedule.xml"/>
+    <!-- FOR-04-19 (R7.5): index ix_wmc_work_item_branch. Registered LAST, after 217. -->
+    <include file="database_files/changesets/218-add-wmc-work-item-branch-index.xml"/>
 </databaseChangeLog>

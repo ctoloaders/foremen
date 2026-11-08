@@ -45,4 +45,10 @@ public class WorkItemServiceModel {
 
     /** The offer packages this work is a member of (member=true); empty when it belongs to none. */
     private List<RefDto> packages = new ArrayList<>();
+
+    /** Number of construction-branch consumption norms of this work (computed per page; default 0). */
+    private long constructionConsumptionCount;
+
+    /** Number of finishing-branch consumption norms of this work (computed per page; default 0). */
+    private long finishingConsumptionCount;
 }

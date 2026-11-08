@@ -147,5 +147,5 @@ role-matrix grant applies (step 2 equivalent); no new resource row.
 | Add-work-report has no standalone page | Slot deep-links into the existing `workReporting` project tab; no new screen. A "create report" auto-open (e.g. `?new=1`) is a possible follow-up, not in scope. |
 | FOREMAN could not see the company Gantt | Fixed by the 217 grant; scoped by project membership. |
 | `ADMIN` bottom bar not specified | Same as MANAGER; trivial to change in the profile map. |
-| Orphaned `/catalog/prices`, `/catalog/material-consumption` | Routes kept, menu entries removed; resolved by FOR-04-19-work-catalog-rework. |
+| Orphaned `/catalog/prices`, `/catalog/material-consumption` | Routes kept, menu entries removed; resolved by FOR-04-19-work-catalog-rework: both routes now redirect to `/catalog/works`. |
 | Dostawy is still a placeholder | Slot kept on `/deliveries`; new child `FOR-07-07-company-deliveries` replaces the page. |

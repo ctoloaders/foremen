@@ -4,8 +4,8 @@ Feature: Catalog and Dictionaries navigation groups
 
   # FOR-04 base-entities smoke coverage (Requirements 8.6, 4.1, FOR-04-15).
   # The "Catalog" and "Dictionaries" navigation groups are present in the shell and their items
-  # route to the correct pages: Catalog -> Work Catalog (/catalog/works) + Work Prices
-  # (/catalog/prices); Dictionaries -> the nine flat dictionary routes (a representative subset is
+  # route to the correct pages: Catalog -> Work Catalog (/catalog/works); the retired
+  # /catalog/prices and /catalog/material-consumption redirect to it; Dictionaries -> the nine flat dictionary routes (a representative subset is
   # verified to route).
 
   Background:
@@ -23,3 +23,9 @@ Feature: Catalog and Dictionaries navigation groups
     And the Dictionaries navigation group items route correctly
     # что: Проверяем маршрутизацию пунктов группы «Справочники».
     # ожидание: Пункты группы «Справочники» ведут на корректные страницы.
+
+  Scenario: Retired catalog routes redirect to the Work Catalog
+    Проверка, что старые маршруты цен и расхода материалов ведут в каталог работ.
+    Then the retired catalog routes redirect to the Work Catalog
+    # что: Открываем /catalog/prices и /catalog/material-consumption.
+    # ожидание: Оба маршрута перенаправляют на /catalog/works.

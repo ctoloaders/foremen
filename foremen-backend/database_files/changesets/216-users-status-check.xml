@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        users.status is mapped to the UserStatus enum (INVITED / ACTIVE / DEACTIVATED) as a plain
+        VARCHAR. A value outside the enum (e.g. 'INACTIVE' written directly by a test clean-up) makes
+        Hibernate fail to load the row, so every user list containing it returns 500
+        ("No enum constant com.foremen.dao.model.UserStatus.INACTIVE").
+
+        1. Normalise any unknown status to DEACTIVATED (the application's "inactive user" state);
+           re-runnable, touches only invalid rows.
+        2. Add a CHECK constraint so the database rejects such values from now on.
+        Registered LAST, after 215.
+    -->
+    <changeSet id="216-normalise-users-status" author="foremen" runOnChange="true">
+        <sql>
+            UPDATE users
+               SET status = 'DEACTIVATED'
+             WHERE status IS NULL
+                OR status NOT IN ('INVITED', 'ACTIVE', 'DEACTIVATED');
+        </sql>
+    </changeSet>
+    <changeSet id="216-add-users-status-check" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM pg_constraint
+                 WHERE conrelid = 'users'::regclass AND conname = 'ck_users_status'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            ALTER TABLE users
+              ADD CONSTRAINT ck_users_status
+              CHECK (status IN ('INVITED', 'ACTIVE', 'DEACTIVATED'));
+        </sql>
+        <rollback>
+            <sql>ALTER TABLE users DROP CONSTRAINT IF EXISTS ck_users_status;</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

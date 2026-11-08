@@ -153,7 +153,7 @@ foremen-qa-auto/
    │  ├─ pages/               # page objects (one per screen/component)
    │  │  ├─ LoginPage, AppShell, DataTablePage, ReferenceFilter, ForbiddenPage   # core
    │  │  ├─ UsersPage, UserFormSheet, RolesPage, RoleMatrix, ThemeSettingsPage   # FOR-02
-   │  │  └─ DictionaryPage, WorkCatalogPage, WorkPricesPage, ProjectsPage        # FOR-04
+   │  │  └─ DictionaryPage, WorkCatalogPage, ProjectsPage        # FOR-04
    │  ├─ steps/               # Gherkin step definitions (glue)
    │  │  ├─ CommonSteps, AuthSteps, NavVisibilitySteps       # FOR-03
    │  │  ├─ AdminPanelSteps                                  # FOR-02
@@ -163,7 +163,7 @@ foremen-qa-auto/
    └─ resources/features/     # .feature files, grouped by source spec
       ├─ for02/  app_shell, roles_admin, users_admin, theme_settings
       ├─ for03/  auth_login, auth_guard, auth_logout, menu_visibility
-      └─ for04/  dictionaries, reference_filter, work_catalog, work_prices, projects, menu_grouping
+      └─ for04/  dictionaries, reference_filter, work_catalog, projects, menu_grouping
 ```
 
 ### How the layers fit together
