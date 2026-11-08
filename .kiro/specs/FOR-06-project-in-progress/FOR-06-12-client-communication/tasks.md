@@ -245,7 +245,7 @@ changeset follows the `017`/`158`/`175` two-changeSet resource+grant pattern.
     - _Requirements: 13.3, and the requirements covered by the test cases (1–12)_
     - _Depends on: 9.2, 10.1, 10.2, 11.1_
 
-- [~] 13. Checkpoint — full verification + two-repo commit
+- [x] 13. Checkpoint — full verification + two-repo commit
   - Run the affected backend test classes (`--tests`, redirected log) including the converter +
     `UserEntity.locale` migration regression; frontend unit tests + locale parity; confirm the tab
     appears on an ACTIVE project for permitted roles and is hidden otherwise. Commit the root repo

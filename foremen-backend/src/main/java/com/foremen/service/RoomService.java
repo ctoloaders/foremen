@@ -12,6 +12,7 @@ import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.formula.DimensionFormulaEvaluator;
+import com.foremen.service.geometry.PolygonChecks;
 import com.foremen.service.model.RoomMetrics;
 import com.foremen.service.model.RoomServiceExtendedModel;
 import com.foremen.service.model.RoomServiceModel;
@@ -77,6 +78,12 @@ public class RoomService
 
     /** Message code for a polygon with fewer than 3 vertices (400). */
     static final String GEOMETRY_INVALID_MESSAGE = "error.room.geometry.invalid";
+
+    /**
+     * Message code for a polygon that is not a closed simple polygon: non-finite vertex, ~zero area,
+     * self-intersection, or a walls list whose size differs from the vertex count (400).
+     */
+    static final String GEOMETRY_NOT_CLOSED_MESSAGE = "error.room.geometry.not.closed";
 
     /** Message code for an opening with a bad type/count/height/width (400). */
     static final String OPENING_INVALID_MESSAGE = "error.room.opening.invalid";
@@ -363,6 +370,12 @@ public class RoomService
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, GEOMETRY_INVALID_MESSAGE);
         }
         List<RoomGeometry.Wall> walls = geometry.getWalls();
+        if (!PolygonChecks.allFinite(vertices)
+                || Math.abs(PolygonChecks.area(vertices)) < PolygonChecks.MIN_AREA
+                || PolygonChecks.isSelfIntersecting(vertices)
+                || (walls != null && !walls.isEmpty() && walls.size() != vertices.size())) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, GEOMETRY_NOT_CLOSED_MESSAGE);
+        }
         if (walls == null) {
             return;
         }
@@ -575,6 +588,13 @@ public class RoomService
             if (text == null || text.isBlank()) {
                 continue;
             }
+            java.util.regex.Matcher geometryKey = field == null ? null : GEOMETRY_FORMULA_KEY.matcher(field);
+            if (geometryKey != null && geometryKey.matches()) {
+                if (applyGeometryFormula(model.getGeometry(), geometryKey, field, text)) {
+                    cleaned.put(field, text.trim());
+                }
+                continue;
+            }
             if (field == null || !FORMULA_FIELDS.contains(field)) {
                 throw formulaInvalid(field);
             }
@@ -593,6 +613,78 @@ public class RoomService
             cleaned.put(field, text.trim());
         }
         model.setDimensionFormulas(cleaned);
+    }
+
+    /**
+     * Strict grammar of a geometry formula key (FOR-05-02 Round 10):
+     * {@code geometry.walls[i].length|turn|wallGap|finishGap} or
+     * {@code geometry.walls[i].openings[j].width|height|offset|count}.
+     */
+    private static final java.util.regex.Pattern GEOMETRY_FORMULA_KEY = java.util.regex.Pattern.compile(
+            "geometry\\.walls\\[(\\d{1,6})]\\.(?:(length|turn|wallGap|finishGap)"
+                    + "|openings\\[(\\d{1,6})]\\.(width|height|offset|count))");
+
+    private static final BigDecimal TURN_LIMIT = new BigDecimal("360");
+
+    /**
+     * Evaluates one geometry-path formula. Returns {@code false} (key dropped, nothing written)
+     * when the addressed wall/opening does not exist in the submitted geometry. Otherwise the value
+     * is validated (400 on violation) and, for gaps and opening fields, written into the geometry
+     * (formula wins). {@code length} and {@code turn} are validated only: the vertices are built
+     * client-side and the formula text is merely stored. Lengths round HALF_UP to 3 decimals, the
+     * turn to a whole degree.
+     */
+    private static boolean applyGeometryFormula(RoomGeometry geometry, java.util.regex.Matcher key,
+                                                String field, String text) {
+        int wallIndex = Integer.parseInt(key.group(1));
+        List<RoomGeometry.Wall> walls = geometry == null ? null : geometry.getWalls();
+        if (walls == null || wallIndex >= walls.size() || walls.get(wallIndex) == null) {
+            return false;
+        }
+        RoomGeometry.Wall wall = walls.get(wallIndex);
+        RoomGeometry.Opening opening = null;
+        String leaf = key.group(2);
+        if (leaf == null) {
+            leaf = key.group(4);
+            int openingIndex = Integer.parseInt(key.group(3));
+            List<RoomGeometry.Opening> openings = wall.getOpenings();
+            if (openings == null || openingIndex >= openings.size() || openings.get(openingIndex) == null) {
+                return false;
+            }
+            opening = openings.get(openingIndex);
+        }
+
+        if ("turn".equals(leaf)) {
+            BigDecimal turn = DimensionFormulaEvaluator.evaluate(field, text, 0);
+            if (turn.abs().compareTo(TURN_LIMIT) > 0) {
+                throw formulaInvalid(field);
+            }
+            return true;
+        }
+        if ("count".equals(leaf)) {
+            BigDecimal count = DimensionFormulaEvaluator.evaluate(field, text, 2);
+            if (count.stripTrailingZeros().scale() > 0
+                    || count.signum() <= 0 || count.compareTo(new BigDecimal(Integer.MAX_VALUE)) > 0) {
+                throw formulaInvalid(field);
+            }
+            opening.setCount(count.intValueExact());
+            return true;
+        }
+
+        BigDecimal value = DimensionFormulaEvaluator.evaluate(field, text, 3);
+        if (value.compareTo(METRIC_MIN) < 0 || value.compareTo(METRIC_MAX) > 0
+                || (("width".equals(leaf) || "height".equals(leaf)) && value.signum() <= 0)) {
+            throw formulaInvalid(field);
+        }
+        switch (leaf) {
+            case "wallGap" -> wall.setWallGap(value.doubleValue());
+            case "finishGap" -> wall.setFinishGap(value.doubleValue());
+            case "width" -> opening.setWidth(value.doubleValue());
+            case "height" -> opening.setHeight(value.doubleValue());
+            case "offset" -> opening.setOffset(value.doubleValue());
+            default -> { /* length: validated only */ }
+        }
+        return true;
     }
 
     private static void setIntegerDimension(RoomServiceExtendedModel model, String field, int value) {

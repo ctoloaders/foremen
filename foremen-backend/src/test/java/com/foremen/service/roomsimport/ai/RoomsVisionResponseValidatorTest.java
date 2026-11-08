@@ -146,6 +146,70 @@ class RoomsVisionResponseValidatorTest {
                 response("m", "EXPLICIT", new Measured(null, null, null), stated, null))).isNull();
     }
 
+    // --- Template answers (autoimport Round 2) ---------------------------------------------
+
+    private static MeasureResponse withTemplate(MeasureResponse.Template t) {
+        return new MeasureResponse("mm", "EXPLICIT", List.of(), List.of(), M, 0, null, Map.of(), true, 0.8, t);
+    }
+
+    private static Map<String, Measured> lDims() {
+        Map<String, Measured> d = new LinkedHashMap<>();
+        d.put("width", Measured.explicit(5000, "mm"));
+        d.put("length", Measured.explicit(4000, "mm"));
+        d.put("cutWidth", Measured.explicit(2000, "mm"));
+        d.put("cutLength", Measured.explicit(2000, "mm"));
+        return d;
+    }
+
+    @Test
+    void templateAnswerWithoutVerticesIsValid() {
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template("L_SHAPE", 90, lDims(), 0.9)))).isNull();
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template("L_SHAPE", null, lDims(), null)))).isNull();
+    }
+
+    @Test
+    void unknownTemplateIdIsInvalid() {
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template("Z_SHAPE", 0, lDims(), 0.9))))
+                .isEqualTo("unknown template id");
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template(null, 0, lDims(), 0.9))))
+                .isEqualTo("unknown template id");
+    }
+
+    @Test
+    void missingTemplateDimIsInvalid() {
+        Map<String, Measured> dims = lDims();
+        dims.remove("cutLength");
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template("L_SHAPE", 0, dims, 0.9))))
+                .isEqualTo("missing template dimension");
+    }
+
+    @Test
+    void templateDimNeedsLengthUnitAndSource() {
+        Map<String, Measured> dims = lDims();
+        dims.put("width", Measured.explicit(5000, "mm2"));
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template("L_SHAPE", 0, dims, 0.9))))
+                .isEqualTo("area unit on a length field");
+        dims.put("width", new Measured(5000.0, "mm", null));
+        assertThat(RoomsVisionResponseValidator.validate(
+                withTemplate(new MeasureResponse.Template("L_SHAPE", 0, dims, 0.9))))
+                .isEqualTo("missing unitSource");
+    }
+
+    @Test
+    void templateRotationMustBeAQuarterTurn() {
+        for (int bad : new int[] {45, -90, 360}) {
+            assertThat(RoomsVisionResponseValidator.validate(
+                    withTemplate(new MeasureResponse.Template("L_SHAPE", bad, lDims(), 0.9))))
+                    .isEqualTo("invalid template rotation");
+        }
+    }
+
     @Test
     void textOnlyResponseNeedsNoGeometryUnit() {
         MeasureResponse r = new MeasureResponse(null, null, List.of(), List.of(), M, null, null,

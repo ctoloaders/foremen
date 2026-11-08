@@ -5,6 +5,7 @@ import com.foremen.dao.model.MeasureSource;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.RoomGeometry;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.testsupport.MockMvcSecurityConfig;
 import com.jayway.jsonpath.JsonPath;
@@ -175,6 +176,101 @@ class RoomDimensionFormulaIT {
                     .andExpect(status().isBadRequest());
         }
         assertThat(roomDao.count()).isEqualTo(before);
+    }
+
+    // ---- Round 10: geometry path keys -------------------------------------------------------
+
+    private static final String GEOMETRY_JSON = """
+            { "vertices": [ { "x": 0, "y": 0 }, { "x": 4, "y": 0 }, { "x": 4, "y": 3 }, { "x": 0, "y": 3 } ],
+              "walls": [ { "openings": [ { "type": "DOOR", "count": 1, "height": 2, "width": 1 } ] }, {}, {}, {} ] }
+            """;
+
+    private MvcResult postRoom(String formulas, int expectedStatus) throws Exception {
+        String body = """
+                { "projectId": %d, "roomTypeId": %d, "ceilingHeight": 3, "geometry": %s,
+                  "dimensionFormulas": %s }
+                """.formatted(persistProject(), persistRoomType(), GEOMETRY_JSON, formulas);
+        return mockMvc.perform(post("/api/rooms").contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().is(expectedStatus)).andReturn();
+    }
+
+    private RoomEntity persistedFrom(MvcResult result) throws Exception {
+        long id = ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
+        return roomDao.findById(id).orElseThrow();
+    }
+
+    @Test
+    @DisplayName("geometry formulas: wall gap and opening width are written into the geometry, doorArea recalculated, texts stored")
+    void geometryFormulasWriteValuesAndRecalculate() throws Exception {
+        MvcResult result = postRoom("""
+                { "geometry.walls[1].wallGap": "=0.5+0.25",
+                  "geometry.walls[0].openings[0].width": " =0.4+0.5 ",
+                  "geometry.walls[0].length": "=2+2",
+                  "geometry.walls[0].turn": "=45*2" }
+                """, 200);
+        RoomEntity room = persistedFrom(result);
+
+        assertThat(room.getGeometry().getWalls().get(1).getWallGap()).isEqualTo(0.75);
+        assertThat(room.getGeometry().getWalls().get(0).getOpenings().get(0).getWidth()).isEqualTo(0.9);
+        // 1 x 2.0 x 0.9
+        assertThat(room.getDoorArea()).isEqualByComparingTo("1.80");
+        assertThat(room.getDimensionFormulas()).containsOnlyKeys(
+                "geometry.walls[1].wallGap", "geometry.walls[0].openings[0].width",
+                "geometry.walls[0].length", "geometry.walls[0].turn");
+        assertThat(room.getDimensionFormulas()).containsEntry("geometry.walls[0].openings[0].width", "=0.4+0.5");
+        assertThat(room.getDimensionFormulas()).containsEntry("geometry.walls[0].turn", "=45*2");
+    }
+
+    @Test
+    @DisplayName("geometry formulas: a fractional turn is rounded HALF_UP to a whole degree and accepted; count/height/offset/finishGap evaluate")
+    void geometryTurnRoundedAndOtherLeaves() throws Exception {
+        MvcResult result = postRoom("""
+                { "geometry.walls[2].turn": "=12.5",
+                  "geometry.walls[0].openings[0].count": "=1+1",
+                  "geometry.walls[0].openings[0].height": "=2.1",
+                  "geometry.walls[0].openings[0].offset": "=0.1+0.2",
+                  "geometry.walls[3].finishGap": "=0.0005+0.0005" }
+                """, 200);
+        RoomEntity room = persistedFrom(result);
+
+        assertThat(room.getDimensionFormulas()).containsEntry("geometry.walls[2].turn", "=12.5");
+        RoomGeometry.Opening opening = room.getGeometry().getWalls().get(0).getOpenings().get(0);
+        assertThat(opening.getCount()).isEqualTo(2);
+        assertThat(opening.getHeight()).isEqualTo(2.1);
+        assertThat(opening.getOffset()).isEqualTo(0.3);
+        assertThat(room.getGeometry().getWalls().get(3).getFinishGap()).isEqualTo(0.001);
+    }
+
+    @Test
+    @DisplayName("geometry formulas: indices that do not exist are dropped silently, other keys are kept")
+    void geometryFormulasOutOfRangeDropped() throws Exception {
+        MvcResult result = postRoom("""
+                { "geometry.walls[9].wallGap": "=1+1",
+                  "geometry.walls[0].openings[5].width": "=1+1",
+                  "geometry.walls[1].openings[0].width": "=1+1",
+                  "geometry.walls[0].turn": "=90" }
+                """, 200);
+        RoomEntity room = persistedFrom(result);
+        assertThat(room.getDimensionFormulas()).containsOnlyKeys("geometry.walls[0].turn");
+    }
+
+    @Test
+    @DisplayName("geometry formulas: invalid values and unknown paths are rejected with 400")
+    void geometryFormulasInvalidRejected() throws Exception {
+        for (String formulas : new String[] {
+                "{ \"geometry.walls[0].openings[0].count\": \"=1.5\" }",   // fractional count
+                "{ \"geometry.walls[0].openings[0].count\": \"=0\" }",     // not positive
+                "{ \"geometry.walls[0].openings[0].width\": \"=0\" }",     // width must be > 0
+                "{ \"geometry.walls[0].wallGap\": \"=1-2\" }",             // negative
+                "{ \"geometry.walls[0].turn\": \"=361\" }",                // out of range
+                "{ \"geometry.walls[0].turn\": \"=-361\" }",
+                "{ \"geometry.walls[0].length\": \"=abc\" }",
+                "{ \"geometry.walls[0].foo\": \"=1\" }",                   // unknown path
+                "{ \"geometry.walls[x].length\": \"=1\" }",
+                "{ \"geometry.walls[0].openings[0].type\": \"=1\" }"
+        }) {
+            postRoom(formulas, 400);
+        }
     }
 
     private long persistProject() {

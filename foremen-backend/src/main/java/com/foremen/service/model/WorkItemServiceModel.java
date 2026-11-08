@@ -16,8 +16,8 @@ import lombok.NoArgsConstructor;
  * <p>The synthetic {@link #costCell} carries the FOR-04-19 work-catalog aggregation, collapsed to a
  * package-less shape by FOR-05-04 (Requirement 7.1): the single labour price plus the construction
  * and finishing material money ranges. It is a computed, never-persisted field assembled by the
- * service mapper via {@code WorkCatalogAggregationResolver} in an {@code @AfterMapping} (task
- * 6.2/14.2). Being attached onto the existing row, it never multiplies or splits the paginated
+ * service via {@code WorkCatalogAggregationResolver#resolveAll} in ONE page-level batch, together
+ * with the consumption counts (no per-row statements). Being attached onto the existing row, it never multiplies or splits the paginated
  * distinct-{@code WorkItem} rows (Requirement 5.3).
  *
  * <p>{@link #packages} is the set of offer packages this work is a MEMBER of — every package for

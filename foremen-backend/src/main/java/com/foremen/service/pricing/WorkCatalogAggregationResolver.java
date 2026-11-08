@@ -70,6 +70,13 @@ public class WorkCatalogAggregationResolver {
     public record WorkCostCell(BigDecimal labourPrice, MoneyRange construction, MoneyRange finishing) {
     }
 
+    /**
+     * Per-work-item read data computed in ONE batch: the cost cell plus the number of consumption
+     * norms per branch (FOR-04-19 rework), all derived from the same consumption-row query.
+     */
+    public record WorkCatalogData(WorkCostCell costCell, long constructionCount, long finishingCount) {
+    }
+
     private final WorkMaterialConsumptionDao consumptionDao;
     private final WorkPriceDao workPriceDao;
     private final MaterialBatchLookup materialBatchLookup;
@@ -94,7 +101,18 @@ public class WorkCatalogAggregationResolver {
      */
     @Transactional(readOnly = true)
     public Map<Long, WorkCostCell> resolve(Collection<Long> workItemIds) {
-        Map<Long, WorkCostCell> result = new LinkedHashMap<>();
+        Map<Long, WorkCostCell> cells = new LinkedHashMap<>();
+        resolveAll(workItemIds).forEach((id, data) -> cells.put(id, data.costCell()));
+        return cells;
+    }
+
+    /**
+     * Same batch as {@link #resolve(Collection)} plus the per-branch norm counts, computed from the
+     * same consumption/price/batch queries (no extra statement).
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, WorkCatalogData> resolveAll(Collection<Long> workItemIds) {
+        Map<Long, WorkCatalogData> result = new LinkedHashMap<>();
         if (workItemIds == null || workItemIds.isEmpty()) {
             return result;
         }
@@ -114,12 +132,15 @@ public class WorkCatalogAggregationResolver {
         // offerPackage dimension left on the entity, R7.2).
         List<WorkMaterialConsumptionEntity> rows = consumptionDao.findByWorkItemIdIn(ids);
         Map<Long, List<ConsumptionRowInput>> consumptionByWork = new LinkedHashMap<>();
+        Map<Long, long[]> countsByWork = new LinkedHashMap<>();
         for (WorkMaterialConsumptionEntity row : rows) {
             if (row == null || row.getWorkItem() == null || row.getWorkItem().getId() == null
                     || row.getBranch() == null) {
                 continue;
             }
             Long workItemId = row.getWorkItem().getId();
+            long[] counts = countsByWork.computeIfAbsent(workItemId, k -> new long[2]);
+            counts[row.getBranch() == ConsumptionBranch.construction ? 0 : 1]++;
             Long typeId = materialTypeId(row);
             if (typeId == null) {
                 continue; // XOR guaranteed at the write path; skip a malformed row defensively
@@ -159,7 +180,10 @@ public class WorkCatalogAggregationResolver {
 
             BranchRanges ranges = MaterialRangeResolver.compute(rowsForWork, batchProvider);
 
-            result.put(workItemId, new WorkCostCell(labourPrice, ranges.construction(), ranges.finishing()));
+            long[] counts = countsByWork.getOrDefault(workItemId, new long[2]);
+            result.put(workItemId, new WorkCatalogData(
+                    new WorkCostCell(labourPrice, ranges.construction(), ranges.finishing()),
+                    counts[0], counts[1]));
         }
 
         return result;

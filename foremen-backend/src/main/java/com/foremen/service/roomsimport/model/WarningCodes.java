@@ -43,6 +43,9 @@ public final class WarningCodes {
     // Media (Requirement 9)
     public static final String CROP_UNAVAILABLE = "CROP_UNAVAILABLE";
 
+    // Template geometry (autoimport Round 2)
+    public static final String GEOMETRY_FROM_TEMPLATE = "GEOMETRY_FROM_TEMPLATE";
+
     /** Every code above; the frontend {@code WARNING_CODES} must mirror this list. */
     public static final List<String> ALL = List.of(
             ROOM_COUNT_MISMATCH, NO_ROOMS_DETECTED, DUPLICATE_ROOM_SUSPECTED, POSSIBLE_DUPLICATE_OF_EXISTING,
@@ -50,5 +53,6 @@ public final class WarningCodes {
             OPENING_DROPPED, GEOMETRY_SYNTHESIZED, DIMENSION_MISSING, FILE_UNREADABLE,
             GEOMETRY_INVALID, AREA_MISMATCH, PERIMETER_MISMATCH, OPENINGS_EXCEED_WALL,
             OPENING_TOO_WIDE, CEILING_HEIGHT_OUT_OF_RANGE, INTERNAL_CORNERS_MISMATCH,
-            DIMENSION_OUT_OF_RANGE, UNIT_CORRECTED, CROP_UNAVAILABLE);
+            DIMENSION_OUT_OF_RANGE, UNIT_CORRECTED, CROP_UNAVAILABLE,
+            GEOMETRY_FROM_TEMPLATE);
 }

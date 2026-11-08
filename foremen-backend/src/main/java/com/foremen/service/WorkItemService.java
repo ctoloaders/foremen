@@ -1,7 +1,6 @@
 package com.foremen.service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,11 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.foremen.controller.model.RefDto;
 import com.foremen.dao.RoomTypeDao;
 import com.foremen.dao.WorkItemDao;
-import com.foremen.dao.WorkMaterialConsumptionDao;
-import com.foremen.dao.WorkMaterialConsumptionDao.ConsumptionCountRow;
 import com.foremen.dao.WorkPackageOverrideDao;
 import com.foremen.dao.WorkPackageOverrideDao.WorkItemPackageMembership;
-import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.exception.ForemenApiException;
@@ -33,6 +29,8 @@ import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.WorkItemServiceExtendedModel;
 import com.foremen.service.model.WorkItemServiceModel;
 import com.foremen.service.model.mapper.WorkItemServiceMapper;
+import com.foremen.service.pricing.WorkCatalogAggregationResolver;
+import com.foremen.service.pricing.WorkCatalogAggregationResolver.WorkCatalogData;
 
 import jakarta.persistence.EntityManager;
 import lombok.Getter;
@@ -50,7 +48,7 @@ public class WorkItemService implements AdminService<
     private final EntityManager entityManager;
     private final RoomTypeDao roomTypeDao;
     private final WorkPackageOverrideDao workPackageOverrideDao;
-    private final WorkMaterialConsumptionDao workMaterialConsumptionDao;
+    private final WorkCatalogAggregationResolver workCatalogAggregationResolver;
     private final Class<WorkItemEntity> daoModelClass = WorkItemEntity.class;
 
     /**
@@ -72,42 +70,44 @@ public class WorkItemService implements AdminService<
         Page<WorkItemServiceModel> page =
                 AdminService.super.find(pageable, rawQuery);
         attachPackages(page.getContent());
-        attachConsumptionCounts(page.getContent());
+        attachCatalogData(page.getContent());
         return page;
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public WorkItemServiceModel findByIdLocalized(Long id) {
+        WorkItemServiceModel model = AdminService.super.findByIdLocalized(id);
+        attachCatalogData(List.of(model));
+        return model;
+    }
+
     /**
-     * Batch-loads and attaches the per-branch consumption-norm counts onto each row in ONE grouped
-     * query for the whole page (no N+1). Rows without norms keep the default {@code 0}. Also usable
-     * for a single-item read by passing a one-element list.
+     * Attaches the cost cell AND the per-branch consumption-norm counts onto each row with ONE
+     * aggregation for the whole page (one consumption-row query, one price query, analog batches),
+     * so neither part issues per-row statements. Rows without data keep the defaults.
      */
-    public void attachConsumptionCounts(List<WorkItemServiceModel> rows) {
+    public void attachCatalogData(List<WorkItemServiceModel> rows) {
         if (rows == null || rows.isEmpty()) {
             return;
         }
         List<Long> ids = rows.stream()
+                .filter(Objects::nonNull)
                 .map(WorkItemServiceModel::getId)
                 .filter(Objects::nonNull)
                 .toList();
         if (ids.isEmpty()) {
             return;
         }
-
-        Map<Long, long[]> counts = new HashMap<>();
-        for (ConsumptionCountRow r : workMaterialConsumptionDao.countByWorkItemIdsGroupedByBranch(ids)) {
-            long[] c = counts.computeIfAbsent(r.getWorkItemId(), k -> new long[2]);
-            long n = r.getCnt() == null ? 0L : r.getCnt();
-            if (r.getBranch() == ConsumptionBranch.construction) {
-                c[0] = n;
-            } else if (r.getBranch() == ConsumptionBranch.finishing) {
-                c[1] = n;
-            }
-        }
-
+        Map<Long, WorkCatalogData> data = workCatalogAggregationResolver.resolveAll(ids);
         for (WorkItemServiceModel row : rows) {
-            long[] c = counts.get(row.getId());
-            row.setConstructionConsumptionCount(c == null ? 0L : c[0]);
-            row.setFinishingConsumptionCount(c == null ? 0L : c[1]);
+            WorkCatalogData d = row == null ? null : data.get(row.getId());
+            if (d == null) {
+                continue;
+            }
+            row.setCostCell(WorkItemServiceMapper.toCostCellDto(d.costCell()));
+            row.setConstructionConsumptionCount(d.constructionCount());
+            row.setFinishingConsumptionCount(d.finishingCount());
         }
     }
 

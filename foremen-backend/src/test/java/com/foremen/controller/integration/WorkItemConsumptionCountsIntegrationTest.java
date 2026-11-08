@@ -230,6 +230,9 @@ class WorkItemConsumptionCountsIntegrationTest {
             result.andExpect(jsonPath(item(s.code(), "finishingConsumptionCount")).value(
                     org.hamcrest.Matchers.contains((int) s.finishing())));
         }
+        // costCell is batch-resolved in the same aggregation as the counts.
+        result.andExpect(jsonPath("$.content[*].costCell.construction").isNotEmpty())
+                .andExpect(jsonPath("$.content[*].costCell.finishing").isNotEmpty());
         // Sanity: the population genuinely contains 0, 1 and N (>1) on both branches.
         assertThat(seeded).anyMatch(s -> s.construction() == 0).anyMatch(s -> s.construction() == 1)
                 .anyMatch(s -> s.construction() > 1).anyMatch(s -> s.finishing() == 0)
@@ -311,18 +314,13 @@ class WorkItemConsumptionCountsIntegrationTest {
     }
 
     /**
-     * N+1 guard for the consumption counts: for page sizes 5 and 50 the grouped count query runs
-     * exactly once per list request, so the statements contributed by the counts are constant in page
-     * size.
-     *
-     * <p>Note: the TOTAL prepared-statement count of the list is NOT constant today because the
-     * pre-existing {@code WorkItemServiceMapper.resolveCostCell} resolves the {@code costCell} per row
-     * (and loads consumption rows for it), outside this spec's scope. The guard therefore targets the
-     * count path specifically.
+     * N+1 guard for the whole list read: the cost cell and the consumption counts are resolved in ONE
+     * page-level aggregation, so the TOTAL prepared-statement count of a list request is the same for
+     * page sizes 5 and 50 (no per-row statements).
      */
     @Test
-    @DisplayName("N+1 guard: consumption-count statements are constant for page sizes 5 and 50")
-    void countStatementsAreConstantAcrossPageSizes() throws Exception {
+    @DisplayName("N+1 guard: list statement count is constant for page sizes 5 and 50")
+    void listStatementsAreConstantAcrossPageSizes() throws Exception {
         String prefix = unique("N1");
         seed(prefix);
         Statistics stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
@@ -331,27 +329,18 @@ class WorkItemConsumptionCountsIntegrationTest {
         // Warm-up (query plan caches, lazy metadata) so measured runs are comparable.
         list(prefix, 50);
 
-        Measured small = measure(prefix, 5);
-        Measured large = measure(prefix, 50);
+        long small = measure(prefix, 5);
+        long large = measure(prefix, 50);
 
-        assertThat(small.countQueryExecutions()).as("grouped count query runs once for size=5").isEqualTo(1L);
-        assertThat(large.countQueryExecutions()).as("grouped count query runs once for size=50").isEqualTo(1L);
+        assertThat(large).as("statements for size=50 equal statements for size=5").isEqualTo(small);
     }
 
-    private record Measured(long countQueryExecutions) {}
-
-    private Measured measure(String prefix, int size) throws Exception {
+    private long measure(String prefix, int size) throws Exception {
         entityManager.clear();
         Statistics stats = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
         stats.clear();
         list(prefix, size);
-        long countExecutions = 0;
-        for (String q : stats.getQueries()) {
-            if (q.contains("GROUP BY c.workItem.id, c.branch")) {
-                countExecutions += stats.getQueryStatistics(q).getExecutionCount();
-            }
-        }
-        return new Measured(countExecutions);
+        return stats.getPrepareStatementCount();
     }
 
     private void list(String prefix, int size) throws Exception {

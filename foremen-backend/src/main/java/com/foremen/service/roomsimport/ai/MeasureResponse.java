@@ -20,7 +20,28 @@ import java.util.Map;
 public record MeasureResponse(String geometryUnit, String geometryUnitSource, List<Vertex> vertices,
                               List<Wall> walls, Measured ceilingHeight, Integer internalCorners,
                               Measured narrowPlace, Map<String, Measured> stated, Boolean scaleEstablished,
-                              Double confidence) {
+                              Double confidence, Template template) {
+
+    /** Constructor without a template answer (free vertices / text-only). */
+    public MeasureResponse(String geometryUnit, String geometryUnitSource, List<Vertex> vertices,
+                           List<Wall> walls, Measured ceilingHeight, Integer internalCorners,
+                           Measured narrowPlace, Map<String, Measured> stated, Boolean scaleEstablished,
+                           Double confidence) {
+        this(geometryUnit, geometryUnitSource, vertices, walls, ceilingHeight, internalCorners, narrowPlace,
+                stated, scaleEstablished, confidence, null);
+    }
+
+    /**
+     * Room-template answer (autoimport Round 2): {@code id} is one of the six template ids,
+     * {@code rotation} is 0|90|180|270 clockwise, {@code dims} maps the template's dimension keys to
+     * {@link Measured} lengths (each with its own unit).
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Template(String id, Integer rotation, Map<String, Measured> dims, Double confidence) {
+        public Template {
+            dims = dims == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(dims));
+        }
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Vertex(Double x, Double y) {}

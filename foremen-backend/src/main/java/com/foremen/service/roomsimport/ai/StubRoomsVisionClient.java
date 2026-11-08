@@ -28,7 +28,8 @@ import org.springframework.stereotype.Component;
  * present), {@code STUB:AREA_MISMATCH}, {@code STUB:OPENINGS_TOO_BIG}, {@code STUB:UNKNOWN_TYPE},
  * {@code STUB:TEXT_ONLY_SCALARS}, {@code STUB:IMAGE_CROPS}, {@code STUB:ROOM_COUNT_MISMATCH},
  * {@code STUB:LLM_DOWN}, {@code STUB:MM_UNITS} (plan dimensioned in mm, Requirement 25) and
- * {@code STUB:AMBIGUOUS_UNIT} (a value no single rescale fixes). All answers use the per-value
+ * {@code STUB:AMBIGUOUS_UNIT} (a value no single rescale fixes) and
+ * {@code STUB:TEMPLATE_L} (an L_SHAPE template answer, rotation 90, dims in mm). All answers use the per-value
  * {@code { value, unit, unitSource }} shape. The modifier {@code STUB:SLOW=<seconds>} (default 20) delays every measuring
  * call so an active job can be observed.
  */
@@ -39,7 +40,7 @@ public class StubRoomsVisionClient implements RoomsVisionClient {
     /** Canned scenarios selectable by marker. */
     public enum Scenario {
         THREE_ROOMS, AREA_MISMATCH, OPENINGS_TOO_BIG, UNKNOWN_TYPE, TEXT_ONLY_SCALARS, IMAGE_CROPS,
-        ROOM_COUNT_MISMATCH, LLM_DOWN, MM_UNITS, AMBIGUOUS_UNIT
+        ROOM_COUNT_MISMATCH, LLM_DOWN, MM_UNITS, AMBIGUOUS_UNIT, TEMPLATE_L
     }
 
     /** Sleeps for the SLOW modifier; replaceable in tests. */
@@ -225,8 +226,31 @@ public class StubRoomsVisionClient implements RoomsVisionClient {
             case MM_UNITS -> List.of(new Canned("r1", "Pokój MM", "bedroom", null, mmPlan()));
             case AMBIGUOUS_UNIT -> List.of(new Canned("r1", "Pokój niejednoznaczny", "bedroom", null,
                     ambiguousUnit()));
+            case TEMPLATE_L -> List.of(new Canned("r1", "Pokój L", "bedroom", null, templateL()));
             case LLM_DOWN -> List.of();
         };
+    }
+
+    /**
+     * STUB:TEMPLATE_L — an L-shaped room as a template answer: L_SHAPE rotated 90 degrees clockwise, dims
+     * in mm (width 5000, length 4000, cutWidth 2000, cutLength 2000), a door 900 x 2050 mm on wall 0,
+     * ceiling 2600 mm. Area 5 x 4 - 2 x 2 = 16 m2.
+     */
+    private static MeasureResponse templateL() {
+        Map<String, Measured> dims = new LinkedHashMap<>();
+        dims.put("width", Measured.explicit(5000, "mm"));
+        dims.put("length", Measured.explicit(4000, "mm"));
+        dims.put("cutWidth", Measured.explicit(2000, "mm"));
+        dims.put("cutLength", Measured.explicit(2000, "mm"));
+        Opening door = new Opening("DOOR", 1, Measured.explicit(2050, "mm"), Measured.explicit(900, "mm"),
+                Measured.explicit(500, "mm"));
+        List<Wall> walls = new ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            walls.add(wall(i == 0 ? List.of(door) : List.of()));
+        }
+        MeasureResponse.Template template = new MeasureResponse.Template("L_SHAPE", 90, dims, 0.9);
+        return new MeasureResponse("mm", Measured.EXPLICIT, List.of(), walls, Measured.explicit(2600, "mm"), 1,
+                null, stated(16.0, 18.0), true, 0.9, template);
     }
 
     /** Opening with all three sizes explicitly in metres. */

@@ -266,6 +266,69 @@ class RoomGeometryIT {
                 "no room should be persisted when an opening is invalid");
     }
 
+    // --- Closed simple polygon required (Round 7, error.room.geometry.not.closed) ---
+
+    private String polygonBody(long projectId, long roomTypeId, String vertices, String walls) {
+        return """
+                {
+                    "projectId": %d,
+                    "roomTypeId": %d,
+                    "geometry": { "vertices": %s, "walls": %s }
+                }
+                """.formatted(projectId, roomTypeId, vertices, walls);
+    }
+
+    @Test
+    @DisplayName("POST /api/rooms with a bow-tie (self-intersecting) polygon is rejected 400")
+    void createWithBowTie_isRejected() throws Exception {
+        long projectId = createProject();
+        long roomTypeId = createRoomType();
+        entityManager.flush();
+        long before = roomDao.count();
+
+        mockMvc.perform(post("/api/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(polygonBody(projectId, roomTypeId,
+                                "[{\"x\":0,\"y\":0},{\"x\":4,\"y\":4},{\"x\":4,\"y\":0},{\"x\":0,\"y\":4}]",
+                                "[{},{},{},{}]")))
+                .andExpect(status().isBadRequest());
+
+        entityManager.flush();
+        entityManager.clear();
+        org.junit.jupiter.api.Assertions.assertEquals(before, roomDao.count());
+    }
+
+    @Test
+    @DisplayName("POST /api/rooms with walls count different from vertices count is rejected 400")
+    void createWithMismatchedWalls_isRejected() throws Exception {
+        long projectId = createProject();
+        long roomTypeId = createRoomType();
+        entityManager.flush();
+
+        mockMvc.perform(post("/api/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(polygonBody(projectId, roomTypeId,
+                                "[{\"x\":0,\"y\":0},{\"x\":4,\"y\":0},{\"x\":4,\"y\":3},{\"x\":0,\"y\":3}]",
+                                "[{},{},{}]")))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("POST /api/rooms with a valid L-shaped polygon is accepted")
+    void createWithLShape_isAccepted() throws Exception {
+        long projectId = createProject();
+        long roomTypeId = createRoomType();
+        entityManager.flush();
+
+        mockMvc.perform(post("/api/rooms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(polygonBody(projectId, roomTypeId,
+                                "[{\"x\":0,\"y\":0},{\"x\":4,\"y\":0},{\"x\":4,\"y\":2},{\"x\":2,\"y\":2},"
+                                        + "{\"x\":2,\"y\":4},{\"x\":0,\"y\":4}]",
+                                "[{},{},{},{},{},{}]")))
+                .andExpect(status().isOk());
+    }
+
     // --- Opening.offset: optional, >= 0 (FOR-05-02, Req 12.8) ---
 
     private String offsetBody(long projectId, long roomTypeId, String offsetJson) {

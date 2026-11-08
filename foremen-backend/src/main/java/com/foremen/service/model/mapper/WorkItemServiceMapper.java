@@ -10,7 +10,6 @@ import com.foremen.controller.model.WorkCostCellDto;
 import com.foremen.service.model.WorkItemServiceExtendedModel;
 import com.foremen.service.model.WorkItemServiceModel;
 import com.foremen.service.pricing.MaterialRangeResolver.MoneyRange;
-import com.foremen.service.pricing.WorkCatalogAggregationResolver;
 import com.foremen.service.pricing.WorkCatalogAggregationResolver.WorkCostCell;
 import jakarta.persistence.EntityManager;
 import org.mapstruct.AfterMapping;
@@ -20,9 +19,7 @@ import org.mapstruct.MappingTarget;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.i18n.LocaleContextHolder;
 
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -46,9 +43,6 @@ public abstract class WorkItemServiceMapper
 
     @Autowired
     protected EntityManager entityManager;
-
-    @Autowired
-    protected WorkCatalogAggregationResolver workCatalogAggregationResolver;
 
     protected WorkCategoryEntity workCategoryRef(Long id) {
         return id == null ? null : entityManager.getReference(WorkCategoryEntity.class, id);
@@ -104,39 +98,12 @@ public abstract class WorkItemServiceMapper
     }
 
     /**
-     * Attaches the FOR-04-19 work-catalog cost cell ({@code costCell}) onto the read model, exactly
-     * as the FOR-04-12b {@code WorkPrice} mapper attaches its price field in an
-     * {@code @AfterMapping}. The cell carries the THREE cost parts — the single labour price plus
-     * the construction and finishing material money ranges — resolved by
-     * {@link WorkCatalogAggregationResolver}, collapsed to a package-less shape by FOR-05-04
-     * (Requirement 7.1).
-     *
-     * <p>The field is attached onto the existing row, so the list read stays paginated over DISTINCT
-     * {@code WorkItem} rows and the synthetic field never multiplies or splits rows (Requirement
-     * 5.1, 5.2, 5.3). The aggregation resolver batches by work-item id (here a batch of the single row),
-     * loading consumption rows, work prices, and analog batches with grouped {@code IN} queries.
-     */
-    @AfterMapping
-    protected void resolveCostCell(@MappingTarget WorkItemServiceModel target, WorkItemEntity source) {
-        Long workItemId = source.getId();
-        if (workItemId == null) {
-            return;
-        }
-        Map<Long, WorkCostCell> cells = workCatalogAggregationResolver.resolve(List.of(workItemId));
-        WorkCostCell cell = cells.get(workItemId);
-        if (cell == null) {
-            return;
-        }
-        target.setCostCell(toCostCellDto(cell));
-    }
-
-    /**
      * Decouples the internal {@link WorkCostCell} (with its {@code MoneyRange} bands) into the
      * controller-model {@link WorkCostCellDto} (with {@link MoneyRangeDto} bands), so the read
      * model carries no pricing-internal type — mirroring how the FOR-04-19 consumption mapper surfaces
      * its {@code typeBatchRange} as a {@code MoneyRangeDto}.
      */
-    private static WorkCostCellDto toCostCellDto(WorkCostCell cell) {
+    public static WorkCostCellDto toCostCellDto(WorkCostCell cell) {
         if (cell == null) {
             return null;
         }

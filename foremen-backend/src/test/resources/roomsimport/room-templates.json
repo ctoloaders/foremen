@@ -1,0 +1,866 @@
+[
+  {
+    "id": "RECTANGLE",
+    "dims": {
+      "width": 4,
+      "length": 3
+    },
+    "quarterTurns": 0,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "RECTANGLE",
+    "dims": {
+      "width": 4,
+      "length": 3
+    },
+    "quarterTurns": 1,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "id": "RECTANGLE",
+    "dims": {
+      "width": 4,
+      "length": 3
+    },
+    "quarterTurns": 2,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "RECTANGLE",
+    "dims": {
+      "width": 4,
+      "length": 3
+    },
+    "quarterTurns": 3,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "id": "L_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "cutWidth": 2,
+      "cutLength": 2
+    },
+    "quarterTurns": 0,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 2
+      },
+      {
+        "x": 3,
+        "y": 2
+      },
+      {
+        "x": 3,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "id": "L_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "cutWidth": 2,
+      "cutLength": 2
+    },
+    "quarterTurns": 1,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 2,
+        "y": 0
+      },
+      {
+        "x": 2,
+        "y": 2
+      },
+      {
+        "x": 4,
+        "y": 2
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      }
+    ]
+  },
+  {
+    "id": "L_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "cutWidth": 2,
+      "cutLength": 2
+    },
+    "quarterTurns": 2,
+    "vertices": [
+      {
+        "x": 2,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 2
+      },
+      {
+        "x": 2,
+        "y": 2
+      }
+    ]
+  },
+  {
+    "id": "L_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "cutWidth": 2,
+      "cutLength": 2
+    },
+    "quarterTurns": 3,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 2,
+        "y": 5
+      },
+      {
+        "x": 2,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "CUT_CORNER",
+    "dims": {
+      "width": 4,
+      "length": 3,
+      "cutSize": 1
+    },
+    "quarterTurns": 0,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 2
+      },
+      {
+        "x": 3,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "CUT_CORNER",
+    "dims": {
+      "width": 4,
+      "length": 3,
+      "cutSize": 1
+    },
+    "quarterTurns": 1,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 2,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 1
+      },
+      {
+        "x": 3,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "id": "CUT_CORNER",
+    "dims": {
+      "width": 4,
+      "length": 3,
+      "cutSize": 1
+    },
+    "quarterTurns": 2,
+    "vertices": [
+      {
+        "x": 1,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 3
+      },
+      {
+        "x": 0,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "id": "CUT_CORNER",
+    "dims": {
+      "width": 4,
+      "length": 3,
+      "cutSize": 1
+    },
+    "quarterTurns": 3,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 4
+      },
+      {
+        "x": 1,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "T_SHAPE",
+    "dims": {
+      "width": 5,
+      "topDepth": 2.5,
+      "stemWidth": 2,
+      "stemDepth": 1.5
+    },
+    "quarterTurns": 0,
+    "vertices": [
+      {
+        "x": 1.5,
+        "y": 0
+      },
+      {
+        "x": 3.5,
+        "y": 0
+      },
+      {
+        "x": 3.5,
+        "y": 1.5
+      },
+      {
+        "x": 5,
+        "y": 1.5
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 1.5
+      },
+      {
+        "x": 1.5,
+        "y": 1.5
+      }
+    ]
+  },
+  {
+    "id": "T_SHAPE",
+    "dims": {
+      "width": 5,
+      "topDepth": 2.5,
+      "stemWidth": 2,
+      "stemDepth": 1.5
+    },
+    "quarterTurns": 1,
+    "vertices": [
+      {
+        "x": 1.5,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 1.5,
+        "y": 5
+      },
+      {
+        "x": 1.5,
+        "y": 3.5
+      },
+      {
+        "x": 0,
+        "y": 3.5
+      },
+      {
+        "x": 0,
+        "y": 1.5
+      },
+      {
+        "x": 1.5,
+        "y": 1.5
+      }
+    ]
+  },
+  {
+    "id": "T_SHAPE",
+    "dims": {
+      "width": 5,
+      "topDepth": 2.5,
+      "stemWidth": 2,
+      "stemDepth": 1.5
+    },
+    "quarterTurns": 2,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 2.5
+      },
+      {
+        "x": 3.5,
+        "y": 2.5
+      },
+      {
+        "x": 3.5,
+        "y": 4
+      },
+      {
+        "x": 1.5,
+        "y": 4
+      },
+      {
+        "x": 1.5,
+        "y": 2.5
+      },
+      {
+        "x": 0,
+        "y": 2.5
+      }
+    ]
+  },
+  {
+    "id": "T_SHAPE",
+    "dims": {
+      "width": 5,
+      "topDepth": 2.5,
+      "stemWidth": 2,
+      "stemDepth": 1.5
+    },
+    "quarterTurns": 3,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 2.5,
+        "y": 0
+      },
+      {
+        "x": 2.5,
+        "y": 1.5
+      },
+      {
+        "x": 4,
+        "y": 1.5
+      },
+      {
+        "x": 4,
+        "y": 3.5
+      },
+      {
+        "x": 2.5,
+        "y": 3.5
+      },
+      {
+        "x": 2.5,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      }
+    ]
+  },
+  {
+    "id": "U_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "notchWidth": 2,
+      "notchDepth": 1
+    },
+    "quarterTurns": 0,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 3.5,
+        "y": 4
+      },
+      {
+        "x": 3.5,
+        "y": 3
+      },
+      {
+        "x": 1.5,
+        "y": 3
+      },
+      {
+        "x": 1.5,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "id": "U_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "notchWidth": 2,
+      "notchDepth": 1
+    },
+    "quarterTurns": 1,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 1.5
+      },
+      {
+        "x": 3,
+        "y": 1.5
+      },
+      {
+        "x": 3,
+        "y": 3.5
+      },
+      {
+        "x": 4,
+        "y": 3.5
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      }
+    ]
+  },
+  {
+    "id": "U_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "notchWidth": 2,
+      "notchDepth": 1
+    },
+    "quarterTurns": 2,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 1.5,
+        "y": 0
+      },
+      {
+        "x": 1.5,
+        "y": 1
+      },
+      {
+        "x": 3.5,
+        "y": 1
+      },
+      {
+        "x": 3.5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      }
+    ]
+  },
+  {
+    "id": "U_SHAPE",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "notchWidth": 2,
+      "notchDepth": 1
+    },
+    "quarterTurns": 3,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 3.5
+      },
+      {
+        "x": 1,
+        "y": 3.5
+      },
+      {
+        "x": 1,
+        "y": 1.5
+      },
+      {
+        "x": 0,
+        "y": 1.5
+      }
+    ]
+  },
+  {
+    "id": "CHAMFERED",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "chamferSize": 1
+    },
+    "quarterTurns": 0,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 3
+      },
+      {
+        "x": 4,
+        "y": 4
+      },
+      {
+        "x": 1,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 3
+      }
+    ]
+  },
+  {
+    "id": "CHAMFERED",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "chamferSize": 1
+    },
+    "quarterTurns": 1,
+    "vertices": [
+      {
+        "x": 0,
+        "y": 0
+      },
+      {
+        "x": 3,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 1
+      },
+      {
+        "x": 4,
+        "y": 4
+      },
+      {
+        "x": 3,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 5
+      }
+    ]
+  },
+  {
+    "id": "CHAMFERED",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "chamferSize": 1
+    },
+    "quarterTurns": 2,
+    "vertices": [
+      {
+        "x": 1,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 5,
+        "y": 1
+      },
+      {
+        "x": 5,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 1
+      }
+    ]
+  },
+  {
+    "id": "CHAMFERED",
+    "dims": {
+      "width": 5,
+      "length": 4,
+      "chamferSize": 1
+    },
+    "quarterTurns": 3,
+    "vertices": [
+      {
+        "x": 1,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 0
+      },
+      {
+        "x": 4,
+        "y": 5
+      },
+      {
+        "x": 1,
+        "y": 5
+      },
+      {
+        "x": 0,
+        "y": 4
+      },
+      {
+        "x": 0,
+        "y": 1
+      }
+    ]
+  }
+]

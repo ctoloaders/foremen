@@ -8,7 +8,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.WorkMaterialConsumptionEntity;
 
 /**
@@ -43,22 +42,4 @@ public interface WorkMaterialConsumptionDao extends AdminDao<WorkMaterialConsump
     @EntityGraph(attributePaths = {"workItem", "constructionMaterialType", "finishingMaterialType"})
     @Query("SELECT c FROM WorkMaterialConsumptionEntity c WHERE c.workItem.id IN :workItemIds")
     List<WorkMaterialConsumptionEntity> findByWorkItemIdIn(@Param("workItemIds") Collection<Long> workItemIds);
-
-    /**
-     * Counts consumption rows per {@code (workItem, branch)} for a whole page of work items in ONE
-     * grouped statement (no per-row N+1, no join into the work-item list query).
-     */
-    @Query("SELECT c.workItem.id AS workItemId, c.branch AS branch, COUNT(c) AS cnt "
-            + "FROM WorkMaterialConsumptionEntity c WHERE c.workItem.id IN :ids "
-            + "GROUP BY c.workItem.id, c.branch")
-    List<ConsumptionCountRow> countByWorkItemIdsGroupedByBranch(@Param("ids") Collection<Long> ids);
-
-    /** Projection row of {@link #countByWorkItemIdsGroupedByBranch}. */
-    interface ConsumptionCountRow {
-        Long getWorkItemId();
-
-        ConsumptionBranch getBranch();
-
-        Long getCnt();
-    }
 }

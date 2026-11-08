@@ -102,6 +102,26 @@ class StubRoomsVisionClientTest {
     }
 
     @Test
+    void templateLIsAnLShapeTemplateAnswerInMillimetres() {
+        DetectResponse d = stub.detectRooms(detect("STUB:TEMPLATE_L"));
+        assertThat(d.rooms()).extracting(DetectResponse.DetectedRoom::label).containsExactly("Pokój L");
+        MeasureResponse m = stub.measureRoom(measure("STUB:TEMPLATE_L", d.rooms().get(0)));
+        assertThat(RoomsVisionResponseValidator.validate(m)).isNull();
+        assertThat(m.vertices()).isEmpty();
+        assertThat(m.template().id()).isEqualTo("L_SHAPE");
+        assertThat(m.template().rotation()).isEqualTo(90);
+        assertThat(m.template().dims()).containsEntry("width", new Measured(5000.0, "mm", "EXPLICIT"))
+                .containsEntry("length", new Measured(4000.0, "mm", "EXPLICIT"))
+                .containsEntry("cutWidth", new Measured(2000.0, "mm", "EXPLICIT"))
+                .containsEntry("cutLength", new Measured(2000.0, "mm", "EXPLICIT"));
+        assertThat(m.walls()).hasSize(6);
+        var door = m.walls().get(0).openings().get(0);
+        assertThat(door.width()).isEqualTo(new Measured(900.0, "mm", "EXPLICIT"));
+        assertThat(door.height()).isEqualTo(new Measured(2050.0, "mm", "EXPLICIT"));
+        assertThat(m.ceilingHeight()).isEqualTo(new Measured(2600.0, "mm", "EXPLICIT"));
+    }
+
+    @Test
     void ambiguousUnitHasADoorWidthNoSingleRescaleFixes() {
         DetectResponse d = stub.detectRooms(detect("STUB:AMBIGUOUS_UNIT"));
         MeasureResponse m = stub.measureRoom(measure("STUB:AMBIGUOUS_UNIT", d.rooms().get(0)));

@@ -43,6 +43,14 @@ public final class DimensionFormulaEvaluator {
      * @throws ForemenApiException {@code 400 error.room.dimension.formula.invalid}
      */
     public static BigDecimal evaluate(String field, String formula) {
+        return evaluate(field, formula, SCALE);
+    }
+
+    /**
+     * Same as {@link #evaluate(String, String)} but rounds HALF_UP to {@code scale} decimals
+     * (used by the geometry path keys: 3 for lengths, 0 for angles).
+     */
+    public static BigDecimal evaluate(String field, String formula, int scale) {
         if (formula == null || formula.isBlank()) {
             throw invalid(field);
         }
@@ -61,7 +69,7 @@ public final class DimensionFormulaEvaluator {
         }
         try {
             BigDecimal value = FormulaEvaluator.evaluate(ast, Map.of(), ref -> BigDecimal.ZERO);
-            return value.setScale(SCALE, RoundingMode.HALF_UP);
+            return value.setScale(scale, RoundingMode.HALF_UP);
         } catch (ForemenApiException | ArithmeticException e) {
             throw invalid(field); // e.g. division by zero
         }

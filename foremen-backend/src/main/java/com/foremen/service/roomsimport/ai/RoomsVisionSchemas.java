@@ -1,6 +1,7 @@
 package com.foremen.service.roomsimport.ai;
 
 import com.foremen.service.roomsimport.ai.MeasureUnits.Kind;
+import com.foremen.service.roomsimport.geometry.RoomTemplates;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,12 @@ import java.util.TreeMap;
 public final class RoomsVisionSchemas {
 
     private RoomsVisionSchemas() {}
+
+    /** Template ids (same as the editor's templates) and every dimension key used by any of them. */
+    static final List<String> TEMPLATE_IDS = java.util.Arrays.stream(RoomTemplates.TemplateId.values())
+            .map(Enum::name).toList();
+    static final List<String> TEMPLATE_DIM_KEYS = RoomTemplates.all().stream()
+            .flatMap(t -> t.dimKeys().stream()).distinct().toList();
 
     /** Schema of {@link DetectResponse}. */
     public static Map<String, Object> detect() {
@@ -52,15 +59,29 @@ public final class RoomsVisionSchemas {
         Map<String, Object> stated = nullable(obj(statedProps, List.of()));
         stated.put("description", "Values written in the source keyed by field name, each with its own unit; "
                 + "null when absent");
+        Map<String, Object> dimProps = new LinkedHashMap<>();
+        for (String key : TEMPLATE_DIM_KEYS) {
+            dimProps.put(key, nullable(measured(Kind.LENGTH)));
+        }
+        Map<String, Object> template = nullable(obj(
+                props("id", Map.of("type", "string", "enum", TEMPLATE_IDS),
+                        "rotation", Map.of("type", "integer",
+                                "description", "Clockwise rotation in degrees: 0, 90, 180 or 270"),
+                        "dims", obj(dimProps, List.of()),
+                        "confidence", num()),
+                List.of("id", "rotation", "dims")));
+        template.put("description", "Closest room template, rotation in degrees clockwise and its dimensions; "
+                + "null when no template fits");
         return obj(
                 props("geometryUnit", Map.of("type", "string", "enum", MeasureUnits.LENGTH_UNITS),
                         "geometryUnitSource", Map.of("type", "string", "enum", MeasureUnits.UNIT_SOURCES),
+                        "template", template,
                         "vertices", array(vertex),
                         "walls", array(wall),
                         "ceilingHeight", nullable(measured(Kind.LENGTH)), "internalCorners", nullable(integer()),
                         "narrowPlace", nullable(measured(Kind.LENGTH)), "stated", stated,
                         "scaleEstablished", Map.of("type", "boolean"), "confidence", num()),
-                List.of("geometryUnit", "geometryUnitSource", "vertices", "walls", "confidence"));
+                List.of("geometryUnit", "geometryUnitSource", "walls", "confidence"));
     }
 
     /**

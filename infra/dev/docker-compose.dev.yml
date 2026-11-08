@@ -112,6 +112,11 @@ services:
       FOREMEN_OCR_ENABLED: ${FOREMEN_OCR_ENABLED:-false}
       FOREMEN_OCR_LLM_API_KEY: ${FOREMEN_OCR_LLM_API_KEY:-}
       FOREMEN_OCR_LLM_MODEL: ${FOREMEN_OCR_LLM_MODEL:-gemini-3.8-flash}
+      # --- FOR-05-02 rooms auto-import (live Gemini) -------------------------
+      # Backend default is OFF (503 error.roomsimport.unavailable). Reuses the
+      # OCR Gemini key/model above via the foremen.ocr.llm.* fallback chain.
+      FOREMEN_ROOMS_IMPORT_ENABLED: ${FOREMEN_ROOMS_IMPORT_ENABLED:-true}
+      FOREMEN_ROOMS_IMPORT_LLM_STUB: ${FOREMEN_ROOMS_IMPORT_LLM_STUB:-false}
       # --- FOR-08 loaders-bot ------------------------------------------------
       # Reconciled from the live VM file (it was hand-edited there). The identity
       # secret is REQUIRED — the backend fails fast on a blank value — and comes

@@ -160,7 +160,15 @@ class GeminiRoomsVisionClientTest {
     void schemasDescribeTheResponses() {
         assertThat(RoomsVisionSchemas.detect()).containsEntry("type", "object");
         assertThat(RoomsVisionSchemas.measure().get("required")).isEqualTo(
-                List.of("geometryUnit", "geometryUnitSource", "vertices", "walls", "confidence"));
+                List.of("geometryUnit", "geometryUnitSource", "walls", "confidence"));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> props = (Map<String, Object>) RoomsVisionSchemas.measure().get("properties");
+        assertThat(props).containsKeys("template", "vertices");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> idSchema = (Map<String, Object>) ((Map<String, Object>)
+                ((Map<String, Object>) props.get("template")).get("properties")).get("id");
+        assertThat(idSchema.get("enum")).isEqualTo(
+                List.of("RECTANGLE", "L_SHAPE", "CUT_CORNER", "T_SHAPE", "U_SHAPE", "CHAMFERED"));
     }
 
     @Test

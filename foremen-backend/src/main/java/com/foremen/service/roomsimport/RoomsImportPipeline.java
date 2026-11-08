@@ -27,6 +27,7 @@ import com.foremen.controller.model.RoomCreateRequest;
 import com.foremen.dao.model.OpeningType;
 import com.foremen.dao.model.RoomGeometry;
 import com.foremen.dao.model.RoomsImportStatus;
+import com.foremen.service.geometry.PolygonChecks;
 import com.foremen.service.roomsimport.RoomsImportContextLoader.JobContext;
 import com.foremen.service.roomsimport.ai.DetectRequest;
 import com.foremen.service.roomsimport.ai.DetectResponse;
@@ -45,6 +46,7 @@ import com.foremen.service.roomsimport.extract.PageImage;
 import com.foremen.service.roomsimport.extract.PdfPageLimitExceededException;
 import com.foremen.service.roomsimport.extract.RoomsInputExtractors;
 import com.foremen.service.roomsimport.geometry.GeometryNormalizer;
+import com.foremen.service.roomsimport.geometry.RoomTemplates;
 import com.foremen.service.roomsimport.model.CalculatedMetrics;
 import com.foremen.service.roomsimport.model.DraftMedia;
 import com.foremen.service.roomsimport.model.DraftRoom;
@@ -513,7 +515,12 @@ public class RoomsImportPipeline {
 
         if (m != null) {
             boolean scaleKnown = !Boolean.FALSE.equals(m.scaleEstablished());
-            if (!m.vertices().isEmpty()) {
+            if (m.template() != null && (scaleKnown || !hadImage)) {
+                geometry = geometryFromTemplate(m, tempId, warnings);
+            }
+            if (geometry != null) {
+                // outline already built from the template
+            } else if (!m.vertices().isEmpty()) {
                 if (!scaleKnown && hadImage) {
                     warnings.add(new Warning(WarningCodes.SCALE_UNKNOWN, Severity.WARNING, tempId, "geometry",
                             Map.of(), null));
@@ -546,6 +553,14 @@ public class RoomsImportPipeline {
             }
         }
 
+        // A structurally invalid outline (zero area, self-intersecting, ...) is dropped before the
+        // plausibility correction so it is reported as GEOMETRY_INVALID rather than as a scale problem.
+        if (geometry != null && !isSaveableGeometry(geometry)) {
+            geometry = null;
+            warnings.add(new Warning(WarningCodes.GEOMETRY_INVALID, Severity.WARNING, tempId, "geometry",
+                    Map.of("reason", "NOT_CLOSED_POLYGON"), null));
+        }
+
         // Stage B: PlausibilityCorrector on the converted values and the metric geometry.
         PlausibilityResult pr = corrector.correct(new PlausibilityInput(tempId, quantities, geometry, geometryUnit));
         warnings.addAll(pr.warnings());
@@ -559,6 +574,16 @@ public class RoomsImportPipeline {
                 geometry = n.geometry();
                 warnings.addAll(n.warnings());
             }
+            roundGeometry(geometry); // at most 3 decimals (rescaling / mirroring may add float noise)
+        }
+
+        // A geometry that RoomService would reject on save (zero area, self-intersecting, walls/vertices
+        // mismatch, non-finite) is dropped so a later bulk save of the draft cannot fail on it; the room
+        // keeps its scalar values and the calculated mirror is derived from them.
+        if (geometry != null && !isSaveableGeometry(geometry)) {
+            geometry = null;
+            warnings.add(new Warning(WarningCodes.GEOMETRY_INVALID, Severity.WARNING, tempId, "geometry",
+                    Map.of("reason", "NOT_CLOSED_POLYGON"), null));
         }
 
         // The draft's `stated` holds converted (target-unit) numbers, with corrections applied where the
@@ -595,6 +620,17 @@ public class RoomsImportPipeline {
                 List.copyOf(warnings));
     }
 
+
+    /** Mirrors {@code RoomService.validateGeometry}'s closed-polygon rules. */
+    static boolean isSaveableGeometry(RoomGeometry g) {
+        List<RoomGeometry.Vertex> vs = g.getVertices();
+        if (!PolygonChecks.isValidSimplePolygon(vs)) {
+            return false;
+        }
+        List<RoomGeometry.Wall> walls = g.getWalls();
+        return walls == null || walls.isEmpty() || walls.size() == vs.size();
+    }
+
     /**
      * Builds the geometry in metres: vertices by {@code geometryUnit} (null ⇒ metres), every wall gap and
      * opening size/offset by its own unit. A unit that fails conversion makes the value unreadable (see
@@ -615,11 +651,17 @@ public class RoomsImportPipeline {
         List<RoomGeometry.Vertex> vertices = new ArrayList<>();
         for (MeasureResponse.Vertex v : m.vertices()) {
             RoomGeometry.Vertex out = new RoomGeometry.Vertex();
-            out.setX(v == null || v.x() == null ? Double.NaN : round(v.x() * factor));
-            out.setY(v == null || v.y() == null ? Double.NaN : round(v.y() * factor));
+            out.setX(v == null || v.x() == null ? Double.NaN : round3(v.x() * factor));
+            out.setY(v == null || v.y() == null ? Double.NaN : round3(v.y() * factor));
             vertices.add(out);
         }
         g.setVertices(vertices);
+        g.setWalls(convertWalls(m, tempId, warnings));
+        return g;
+    }
+
+    /** Wall gaps and opening sizes/offsets of the response converted to metres (3 decimals). */
+    private List<RoomGeometry.Wall> convertWalls(MeasureResponse m, String tempId, List<Warning> warnings) {
         List<RoomGeometry.Wall> walls = new ArrayList<>();
         for (int i = 0; i < m.walls().size(); i++) {
             MeasureResponse.Wall w = m.walls().get(i);
@@ -651,8 +693,103 @@ public class RoomsImportPipeline {
             out.setOpenings(openings);
             walls.add(out);
         }
-        g.setWalls(walls);
-        return g;
+        return walls;
+    }
+
+    /**
+     * Builds the outline from the model's template answer (dims to metres, validated, rotated, 3 decimals)
+     * with the response's walls attached, or returns {@code null} after a {@code GEOMETRY_INVALID}
+     * ({@code TEMPLATE_INVALID}) warning when the answer cannot be used.
+     */
+    private RoomGeometry geometryFromTemplate(MeasureResponse m, String tempId, List<Warning> warnings) {
+        MeasureResponse.Template t = m.template();
+        RoomTemplates.TemplateId id = RoomTemplates.TemplateId.parse(t.id()).orElse(null);
+        int rotation = t.rotation() == null ? 0 : t.rotation();
+        if (id == null || rotation < 0 || rotation % 90 != 0) {
+            return templateInvalid(tempId, warnings);
+        }
+        RoomTemplates.Template tpl = RoomTemplates.get(id);
+        Map<String, Double> dims = new LinkedHashMap<>();
+        for (String key : tpl.dimKeys()) {
+            Double d = convertScalar(t.dims().get(key), UnitConverter.Dimension.LENGTH,
+                    "geometry.template.dims." + key, tempId, warnings);
+            if (d == null) {
+                return templateInvalid(tempId, warnings);
+            }
+            dims.put(key, d);
+        }
+        if (tpl.validate(dims) != null) {
+            return templateInvalid(tempId, warnings);
+        }
+        RoomGeometry g = new RoomGeometry();
+        List<RoomGeometry.Vertex> vertices = new ArrayList<>();
+        for (RoomTemplates.Pt p : RoomTemplates.build(id, dims, (rotation / 90) % 4)) {
+            RoomGeometry.Vertex v = new RoomGeometry.Vertex();
+            v.setX(round3(p.x()));
+            v.setY(round3(p.y()));
+            vertices.add(v);
+        }
+        g.setVertices(vertices);
+        g.setWalls(convertWalls(m, tempId, warnings)); // padded / trimmed to the vertex count by the normalizer
+        GeometryNormalizer.Result n = normalizer.normalize(g, "m", tempId);
+        if (n.geometry() == null) {
+            return templateInvalid(tempId, warnings);
+        }
+        warnings.addAll(n.warnings());
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("template", id.name());
+        params.put("rotation", rotation % 360);
+        warnings.add(new Warning(WarningCodes.GEOMETRY_FROM_TEMPLATE, Severity.INFO, tempId, "geometry", params,
+                null));
+        return n.geometry();
+    }
+
+    private static RoomGeometry templateInvalid(String tempId, List<Warning> warnings) {
+        warnings.add(new Warning(WarningCodes.GEOMETRY_INVALID, Severity.WARNING, tempId, "geometry",
+                Map.of("reason", "TEMPLATE_INVALID"), null));
+        return null;
+    }
+
+    /** Imported geometry keeps at most 3 decimals (millimetres): vertices, gaps, opening sizes and offsets. */
+    static void roundGeometry(RoomGeometry g) {
+        if (g == null) {
+            return;
+        }
+        if (g.getVertices() != null) {
+            for (RoomGeometry.Vertex v : g.getVertices()) {
+                if (v != null) {
+                    v.setX(round3(v.getX()));
+                    v.setY(round3(v.getY()));
+                }
+            }
+        }
+        if (g.getWalls() == null) {
+            return;
+        }
+        for (RoomGeometry.Wall w : g.getWalls()) {
+            if (w == null) {
+                continue;
+            }
+            w.setWallGap(round3(w.getWallGap()));
+            w.setFinishGap(round3(w.getFinishGap()));
+            if (w.getOpenings() != null) {
+                for (RoomGeometry.Opening o : w.getOpenings()) {
+                    if (o != null) {
+                        o.setHeight(round3(o.getHeight()));
+                        o.setWidth(round3(o.getWidth()));
+                        o.setOffset(round3(o.getOffset()));
+                    }
+                }
+            }
+        }
+    }
+
+    private static double round3(double v) {
+        return Double.isFinite(v) ? Math.round(v * 1e3) / 1e3 : v;
+    }
+
+    private static Double round3(Double v) {
+        return v == null ? null : round3(v.doubleValue());
     }
 
     /** Target dimension of a stated field; {@code null} ⇒ plain number (counts, unknown keys without a unit). */

@@ -45,6 +45,7 @@ import com.foremen.service.roomsimport.geometry.GeometryNormalizer;
 import com.foremen.service.roomsimport.model.DraftRoom;
 import com.foremen.service.roomsimport.model.ImportResult;
 import com.foremen.service.roomsimport.model.Warning;
+import com.foremen.service.roomsimport.model.Severity;
 import com.foremen.service.roomsimport.model.WarningCodes;
 import com.foremen.service.roomsimport.units.PlausibilityCorrector;
 import com.foremen.service.roomsimport.validate.DraftValidator;
@@ -168,6 +169,144 @@ class RoomsImportPipelineTest {
         assertThat(has(d.warnings(), WarningCodes.AREA_MISMATCH)).isFalse();
         assertThat(has(d.warnings(), WarningCodes.UNIT_CORRECTED)).isFalse();
         assertThat(has(d.warnings(), WarningCodes.DIMENSION_OUT_OF_RANGE)).isFalse();
+    }
+
+    // --- Template geometry (autoimport Round 2) ---------------------------------------------
+
+    private static MeasureResponse withTemplate(MeasureResponse r, MeasureResponse.Template t,
+                                                List<MeasureResponse.Vertex> vertices) {
+        return new MeasureResponse(r.geometryUnit(), r.geometryUnitSource(), vertices, r.walls(),
+                r.ceilingHeight(), r.internalCorners(), r.narrowPlace(), r.stated(), r.scaleEstablished(),
+                r.confidence(), t);
+    }
+
+    private static java.util.Map<String, Measured> lDimsMm(double cutWidth) {
+        java.util.Map<String, Measured> d = new java.util.LinkedHashMap<>();
+        d.put("width", Measured.explicit(5000, "mm"));
+        d.put("length", Measured.explicit(4000, "mm"));
+        d.put("cutWidth", Measured.explicit(cutWidth, "mm"));
+        d.put("cutLength", Measured.explicit(2000, "mm"));
+        return d;
+    }
+
+    @Test
+    void templateL_rotated90_buildsCleanOutline_withInfoWarning() {
+        job("STUB:TEMPLATE_L");
+
+        DraftRoom d = pipeline(client, 1).run(JOB).rooms().get(0);
+
+        var vs = d.room().geometry().getVertices();
+        double[][] expected = {{0, 0}, {2, 0}, {2, 2}, {4, 2}, {4, 5}, {0, 5}};
+        assertThat(vs).hasSize(6);
+        for (int i = 0; i < 6; i++) {
+            assertThat(vs.get(i).getX()).isEqualTo(expected[i][0]);
+            assertThat(vs.get(i).getY()).isEqualTo(expected[i][1]);
+        }
+        assertThat(d.room().geometry().getWalls()).hasSize(6);
+        var door = d.room().geometry().getWalls().get(0).getOpenings().get(0);
+        assertThat(door.getWidth()).isEqualTo(0.9);
+        assertThat(door.getHeight()).isEqualTo(2.05);
+        assertThat(door.getOffset()).isEqualTo(0.5);
+        assertThat(d.calculated().floorArea().doubleValue()).isEqualTo(16.0);
+        Warning w = d.warnings().stream().filter(x -> x.code().equals(WarningCodes.GEOMETRY_FROM_TEMPLATE))
+                .findFirst().orElseThrow();
+        assertThat(w.severity()).isEqualTo(Severity.INFO);
+        assertThat(w.field()).isEqualTo("geometry");
+        assertThat(w.params()).containsEntry("template", "L_SHAPE").containsEntry("rotation", 90);
+        assertThat(has(d.warnings(), WarningCodes.GEOMETRY_INVALID)).isFalse();
+        assertThat(has(d.warnings(), WarningCodes.UNIT_CORRECTED)).isFalse();
+    }
+
+    @Test
+    void invalidTemplate_withoutVertices_fallsBackToScalarsWithTemplateInvalid() {
+        job("STUB:TEMPLATE_L");
+        // cutWidth 5000 == width: the notch swallows the room.
+        RoomsVisionClient c = measuring(r -> withTemplate(r,
+                new MeasureResponse.Template("L_SHAPE", 90, lDimsMm(5000), 0.9), List.of()));
+
+        DraftRoom d = pipeline(c, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().geometry()).isNull();
+        assertThat(has(d.warnings(), WarningCodes.GEOMETRY_FROM_TEMPLATE)).isFalse();
+        Warning w = d.warnings().stream().filter(x -> x.code().equals(WarningCodes.GEOMETRY_INVALID))
+                .findFirst().orElseThrow();
+        assertThat(w.params()).containsEntry("reason", "TEMPLATE_INVALID");
+    }
+
+    @Test
+    void invalidTemplate_withVertices_fallsBackToModelVertices() {
+        job("STUB:TEMPLATE_L");
+        List<MeasureResponse.Vertex> rect = List.of(new MeasureResponse.Vertex(0.0, 0.0),
+                new MeasureResponse.Vertex(3000.0, 0.0), new MeasureResponse.Vertex(3000.0, 2000.0),
+                new MeasureResponse.Vertex(0.0, 2000.0));
+        RoomsVisionClient c = measuring(r -> withTemplate(r,
+                new MeasureResponse.Template("L_SHAPE", 0, lDimsMm(5000), 0.9), rect));
+
+        DraftRoom d = pipeline(c, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().geometry().getVertices()).hasSize(4);
+        assertThat(d.room().geometry().getVertices().get(2).getX()).isEqualTo(3.0);
+        assertThat(has(d.warnings(), WarningCodes.GEOMETRY_FROM_TEMPLATE)).isFalse();
+        assertThat(d.warnings()).filteredOn(x -> x.code().equals(WarningCodes.GEOMETRY_INVALID))
+                .anyMatch(x -> "TEMPLATE_INVALID".equals(x.params().get("reason")));
+    }
+
+    @Test
+    void unknownTemplateId_isTemplateInvalid() {
+        job("STUB:TEMPLATE_L");
+        RoomsVisionClient c = measuring(r -> withTemplate(r,
+                new MeasureResponse.Template("Z_SHAPE", 0, lDimsMm(2000), 0.9), List.of()));
+
+        DraftRoom d = pipeline(c, 1).run(JOB).rooms().get(0);
+
+        assertThat(d.room().geometry()).isNull();
+        assertThat(d.warnings()).anyMatch(x -> x.code().equals(WarningCodes.GEOMETRY_INVALID)
+                && "TEMPLATE_INVALID".equals(x.params().get("reason")));
+    }
+
+    @Test
+    void importedGeometry_isRoundedToThreeDecimals() {
+        job("STUB:THREE_ROOMS");
+        List<MeasureResponse.Vertex> v = List.of(new MeasureResponse.Vertex(0.0, 0.0),
+                new MeasureResponse.Vertex(3.20049, 0.0), new MeasureResponse.Vertex(3.20049, 4.10051),
+                new MeasureResponse.Vertex(0.0, 4.10051));
+        var door = new MeasureResponse.Opening("DOOR", 1, Measured.explicit(2.0501, "m"),
+                Measured.explicit(0.90049, "m"), Measured.explicit(0.50049, "m"));
+        List<MeasureResponse.Wall> walls = List.of(new MeasureResponse.Wall(null, null, List.of(door)),
+                new MeasureResponse.Wall(null, null, List.of()), new MeasureResponse.Wall(null, null, List.of()),
+                new MeasureResponse.Wall(null, null, List.of()));
+        RoomsVisionClient c = measuring(r -> new MeasureResponse("m", "EXPLICIT", v, walls, r.ceilingHeight(),
+                0, null, java.util.Map.of(), true, 0.9));
+
+        DraftRoom d = room(pipeline(c, 1).run(JOB), "Sypialnia");
+
+        var vs = d.room().geometry().getVertices();
+        assertThat(vs.get(2).getX()).isEqualTo(3.2);
+        assertThat(vs.get(2).getY()).isEqualTo(4.101);
+        var o = d.room().geometry().getWalls().get(0).getOpenings().get(0);
+        assertThat(o.getHeight()).isEqualTo(2.05);
+        assertThat(o.getWidth()).isEqualTo(0.9);
+        assertThat(o.getOffset()).isEqualTo(0.5);
+    }
+
+    @Test
+    void selfIntersectingGeometry_isDroppedWithGeometryInvalid_andScalarsKept() {
+        job("STUB:THREE_ROOMS");
+        // bow-tie outline: (0,0) -> (4,4) -> (4,0) -> (0,4)
+        List<MeasureResponse.Vertex> bowTie = List.of(new MeasureResponse.Vertex(0.0, 0.0),
+                new MeasureResponse.Vertex(4.0, 4.0), new MeasureResponse.Vertex(4.0, 0.0),
+                new MeasureResponse.Vertex(0.0, 4.0));
+        RoomsVisionClient c = measuring(r -> new MeasureResponse("m", r.geometryUnitSource(), bowTie, List.of(),
+                r.ceilingHeight(), r.internalCorners(), r.narrowPlace(),
+                java.util.Map.of(), true, r.confidence()));
+
+        DraftRoom d = room(pipeline(c, 1).run(JOB), "Sypialnia");
+
+        assertThat(d.room().geometry()).isNull();
+        assertThat(d.warnings()).filteredOn(x -> x.code().equals(WarningCodes.GEOMETRY_INVALID)).isNotEmpty();
+        // scalar mirror: no outline, so metrics come from (absent) scalar values only
+        assertThat(d.room().floorArea()).isNull();
+        assertThat(d.calculated().floorArea()).isNull();
     }
 
     @Test

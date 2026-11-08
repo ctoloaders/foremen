@@ -499,7 +499,7 @@ repo, the Procurement panel + locale files in `foremen-frontend/`.
     scenario. Keep the repeatability (run-id / teardown) and MD-report template. Russian.
   - _Requirements: 14.1, 16.2, 17.1, 18.3, 19.2_
   - _Depends on: A1.4, A1.5, A1.7, A1.8, A1.9, A1.10_
-- [ ] A1.12 Final verification + deploy + checkpoint
+- [x] A1.12 Final verification + deploy + checkpoint
   - Compile backend (`./gradlew compileJava compileTestJava`), run only affected classes with
     `--tests`; type-check + unit-test the frontend; locale-parity passes. Deploy to dev (both repos
     push → Cloud Build), confirm an upload returns `QUEUED` immediately (no 504), the stage chain is

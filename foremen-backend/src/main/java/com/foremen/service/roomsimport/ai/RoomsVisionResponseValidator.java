@@ -1,6 +1,7 @@
 package com.foremen.service.roomsimport.ai;
 
 import com.foremen.service.roomsimport.ai.MeasureUnits.Kind;
+import com.foremen.service.roomsimport.geometry.RoomTemplates;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -93,6 +94,10 @@ public final class RoomsVisionResponseValidator {
                 return measuredProblem;
             }
         }
+        String templateProblem = validateTemplate(r.template());
+        if (templateProblem != null) {
+            return templateProblem;
+        }
         for (MeasureResponse.Vertex v : r.vertices()) {
             if (v == null || v.x() == null || v.y() == null
                     || !Double.isFinite(v.x()) || !Double.isFinite(v.y())) {
@@ -129,6 +134,34 @@ public final class RoomsVisionResponseValidator {
                         return measuredProblem;
                     }
                 }
+            }
+        }
+        return null;
+    }
+
+    /** A template answer needs a known id, a quarter-turn rotation and a length for every dim key of the id. */
+    private static String validateTemplate(MeasureResponse.Template t) {
+        if (t == null) {
+            return null;
+        }
+        RoomTemplates.TemplateId id = RoomTemplates.TemplateId.parse(t.id()).orElse(null);
+        if (id == null) {
+            return "unknown template id";
+        }
+        if (t.rotation() != null && (t.rotation() < 0 || t.rotation() > 270 || t.rotation() % 90 != 0)) {
+            return "invalid template rotation";
+        }
+        if (t.confidence() != null && !(t.confidence() >= 0 && t.confidence() <= 1)) {
+            return "confidence out of range";
+        }
+        for (String key : RoomTemplates.get(id).dimKeys()) {
+            Measured m = t.dims().get(key);
+            if (m == null || m.value() == null) {
+                return "missing template dimension";
+            }
+            String problem = validateMeasured(m, Kind.LENGTH);
+            if (problem != null) {
+                return problem;
             }
         }
         return null;

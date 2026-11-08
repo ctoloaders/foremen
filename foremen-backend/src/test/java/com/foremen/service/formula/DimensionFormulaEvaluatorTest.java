@@ -19,6 +19,15 @@ class DimensionFormulaEvaluatorTest {
     }
 
     @Test
+    @DisplayName("explicit scale: 3 decimals for lengths, 0 for angles, HALF_UP")
+    void explicitScale() {
+        assertThat(DimensionFormulaEvaluator.evaluate("f", "=10/3", 3)).isEqualByComparingTo("3.333");
+        assertThat(DimensionFormulaEvaluator.evaluate("f", "=0.0005+0.0005", 3)).isEqualByComparingTo("0.001");
+        assertThat(DimensionFormulaEvaluator.evaluate("f", "=12.5", 0)).isEqualByComparingTo("13");
+        assertThat(DimensionFormulaEvaluator.evaluate("f", "=45*2", 0)).isEqualByComparingTo("90");
+    }
+
+    @Test
     @DisplayName("operators, parentheses, decimal comma and dot; leading = is optional; rounded to 2 decimals")
     void arithmeticSubset() {
         assertThat(DimensionFormulaEvaluator.evaluate("f", "=(2,5+0,2)*2")).isEqualByComparingTo("5.40");

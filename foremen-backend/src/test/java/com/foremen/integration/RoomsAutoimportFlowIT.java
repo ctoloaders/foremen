@@ -155,6 +155,31 @@ class RoomsAutoimportFlowIT extends RoomsAutoimportItBase {
     }
 
     @Test
+    @DisplayName("STUB:TEMPLATE_L -> clean rotated L outline from the template, area 16, GEOMETRY_FROM_TEMPLATE info")
+    void templateLBuildsACleanLShape() throws Exception {
+        long projectId = createProject("template-l");
+
+        long jobId = startOk(projectId, prompt("STUB:TEMPLATE_L"));
+        String done = awaitStatus(jobId, "COMPLETED");
+
+        assertThat(JsonPath.<Integer>read(done, "$.result.rooms.length()")).isEqualTo(1);
+        assertThat(JsonPath.<Integer>read(done, "$.result.rooms[0].room.geometry.vertices.length()")).isEqualTo(6);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].room.geometry.vertices[4].x").doubleValue())
+                .isEqualTo(4.0);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].room.geometry.vertices[4].y").doubleValue())
+                .isEqualTo(5.0);
+        assertThat(JsonPath.<Number>read(done, "$.result.rooms[0].calculated.floorArea").doubleValue())
+                .isEqualTo(16.0);
+        assertThat(JsonPath.<Number>read(done,
+                "$.result.rooms[0].room.geometry.walls[0].openings[0].width").doubleValue()).isEqualTo(0.9);
+        List<String> codes = JsonPath.read(done, "$.result.rooms[0].warnings[*].code");
+        assertThat(codes).contains("GEOMETRY_FROM_TEMPLATE").doesNotContain("GEOMETRY_INVALID");
+        List<String> templates = JsonPath.read(done,
+                "$.result.rooms[0].warnings[?(@.code=='GEOMETRY_FROM_TEMPLATE')].params.template");
+        assertThat(templates).containsExactly("L_SHAPE");
+    }
+
+    @Test
     @DisplayName("STUB:AMBIGUOUS_UNIT -> the unfixable door width is dropped with DIMENSION_OUT_OF_RANGE")
     void ambiguousUnitIsFlaggedNotGuessed() throws Exception {
         long projectId = createProject("ambiguous");
