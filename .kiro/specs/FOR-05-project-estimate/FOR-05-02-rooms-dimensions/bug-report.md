@@ -564,3 +564,170 @@ Stack: local Docker (`postgres`/`redis`/`liquibase` up, `backend` :8080, `fronte
   all green.
 
 Result: 1 fixed / 0 failed. All Round 6 bugs closed.
+
+## Round 7 (2026-11-06)
+
+Screen URL: `http://localhost:3000/projects/2/rooms/1697` (room editor, AI-imported room "Przedpokój", 8 walls).
+
+- [ ] 1. I want to see full wall definition — there is no way to edit a wall or create one with dimensions
+  - Triage: observed — the editor's geometry section (`RoomOpeningsEditor`) lists walls only as "Wall N" with `wallGap`, `finishGap` and openings; there is no wall length, no angle/direction, no vertex data, and a room without geometry cannot get one (only manual metrics). The plan SVG shows the stored geometry only and does not follow unsaved edits. Expected — every wall is shown and editable with its dimensions, and a room plan can be created from scratch by entering walls.
+  - **Critical defect found during triage (same area):** `wallsToGeometry` in `RoomEditorPage.tsx` (L98-118) and `RoomFormSheet.tsx` (L79-99) always sends `vertices: []`. Saving any room that has a polygon (for example every AI-imported room) erases its vertices; the backend then sees no geometry (`RoomService.hasGeometry` is false) and stops recalculating the metrics. This is fixed as part of this item.
+  - Proposed behaviour ("wall-by-wall" editor, replaces the openings-only editor in the room editor and `RoomFormSheet`):
+    - Each wall row: **length (m)**, **turn to the next wall** (default 90°, left/right or a signed angle), `wallGap`, `finishGap`, and its openings (type, count, width, height, offset from the wall start).
+    - Vertices are derived from the lengths and turns (start at (0,0), first wall along +x). Existing geometry is loaded by computing lengths and turns from its vertices, so a saved plan round-trips without change.
+    - A closure check shows the gap between the last wall's end and the start point; if the gap is within a small tolerance (e.g. 0.02 m) the outline is closed automatically, otherwise a localized warning is shown and Save is blocked while geometry mode is on.
+    - Rectangle helper: "Create rectangle" from width × length generates 4 walls.
+    - The plan SVG renders from the editor state live (Requirement 12.5 of FOR-05-02-rooms-autoimport), with the edited wall highlighted.
+    - Validation: wall length > 0; opening width ≤ wall length; offset + width ≤ wall length.
+  - Layer: frontend (new `RoomWallsEditor` + pure `wallsGeometry.ts` with property tests: lengths/turns → vertices → lengths/turns is identity; closed rectangle round-trip); backend unchanged except an optional guard in `RoomService.validateGeometry` that `walls.size == vertices.size` (verify existing data first).
+  - i18n (PL/RU, under `rooms.form.*`): wall length, turn/angle, turn left/right, closure gap, outline not closed warning, create rectangle (width, length), opening offset hint, opening wider than wall. No backend i18n fields; no notifications.
+  - Size: bug (confirmed by the user 2026-11-06: wall editing was in the initial FOR-05-02 scope). A newly added wall is rendered in the plan SVG immediately.
+  - _Requirements: 11.3, 11.4 (to be amended), FOR-04-14-room Requirement 2_
+  - _Depends on: none_
+- [ ] 2. Add a check that the room is a finished (closed) polygon
+  - Triage (added by the user at approval): a room plan must be a finished polygon before it can be saved as geometry. Checks: at least 3 walls, every wall length > 0, the outline closes (gap between the last wall's end and the start ≤ 0.02 m; a smaller gap is snapped closed), the turns add up to a full turn (±360°), no self-intersection, area > 0.
+  - Frontend: a status line under the wall editor ("Outline closed" / "Outline not closed: gap X m" / "Walls cross each other" / "Area is zero"), the open end and crossing walls highlighted in the plan SVG, and Save disabled while geometry mode has an unfinished outline.
+  - Backend (`RoomService.validateGeometry`): reject with `400 error.room.geometry.not.closed` when the polygon is self-intersecting, has zero area or `walls.size != vertices.size`; the AI import pipeline drops such geometry (keeps the room with scalar values and the existing `GEOMETRY_INVALID` warning) so a later bulk save cannot fail on it.
+  - i18n (PL/RU): `rooms.form.outline.*` status texts; backend message `error.room.geometry.not.closed` in `messages*.properties`.
+  - Layer: both. _Requirements: 11.4, FOR-04-14-room Requirement 2_
+  - _Depends on: none_
+- [ ] V7. Validate Round 7 in browser
+  - Rebuild frontend and backend, open `/projects/2/rooms/1697`: every wall shows its length and turn; "Add wall" immediately draws the new wall in the plan SVG; edit a wall length and an opening and see the plan update live; an unclosed outline shows the gap and blocks Save; save a closed outline and reopen — vertices are kept and metrics are recalculated; on a room without geometry, create a rectangle and save.
+  - _Depends on: 1, 2_
+
+## Parallel execution plan (waves) — Round 7
+
+- **Wave 1 (parallel):** 1 (frontend wall editor + vertex-wipe fix + polygon status UI from 2), 2-backend (`RoomService` + pipeline guard) — different repos/files.
+- **Wave 2:** V7 — browser validation; depends on 1 and 2.
+
+## Round 8 (2026-11-06)
+
+Screen URL: `http://localhost:3000/projects/2/rooms/1697` (room editor, walls editor from Round 7).
+
+- [x] 1. When change any value (for example angle) — save button is not active
+  - Triage: observed — Save is `disabled={isPending || wallsInvalid}` (`RoomEditorPage.tsx` ~L685). With walls defined by length + turn, changing ONE value (an angle or a length) always moves the end of the last wall away from the start, so the outline becomes "not closed" and Save is disabled with no explanation next to the button. Expected — editing a value keeps the room savable.
+  - Fix: the **last wall closes the outline automatically** ("closing wall", on by default, can be switched off): its length and the two turns at its ends are computed from the other walls, shown read-only with a "calculated" badge. Any edit of the other walls keeps a closed outline, so Save stays active; the outline check (Round 7 #2) still blocks only real problems (crossing walls, zero area, < 3 walls). When Save is disabled, the reason is shown next to the button (same text as the outline status).
+  - Layer: frontend. Suspect: `lib/wallsGeometry.ts`, `lib/editorWalls.ts`, `RoomWallsEditor.tsx`, `RoomEditorPage.tsx`, `RoomFormSheet.tsx`.
+  - _Requirements: 11.4_
+  - _Depends on: none_
+- [x] 2. Compact each wall card — make the height less
+  - Triage: observed — each wall card is ~170–240 px high (title row, then length/turn row, then gaps row, then a 5-field opening row, then "Add opening"). Expected — a compact row.
+  - Fix: one line per wall: `Wall N | length | turn (with ⟲/⟳) | gaps (collapsed behind a small "gaps" toggle, shown when non-empty) | + opening | delete`; openings as compact sub-rows under the wall (type icon, count, width × height, offset); smaller paddings (`p-2`, `gap-1.5`, `h-8` inputs). Labels move to a single header row above the list and to `aria-label`s (accessibility kept).
+  - Layer: frontend (`RoomWallsEditor.tsx`).
+  - _Requirements: 11.3_
+  - _Depends on: 1_
+- [x] 3. When changes are made — re-calculate the measures (perimeter, square)
+  - Triage: observed — the "Metrics" block shows the persisted values (`calculated` from `room.floorArea` etc., `RoomEditorPage.tsx` ~L268), so they do not change until the room is saved and reloaded. Expected — floor area, perimeter, wall area, door area and window area update live while the walls, openings or ceiling height are edited.
+  - Fix: pure `lib/roomMetrics.ts` mirroring the backend `RoomCalculationService` formulas (shoelace area, perimeter, wall area = perimeter × ceiling height − wall gaps … − openings, door/window area = Σ count × w × h) fed from the editor preview geometry; the read-only "Calculated" fields show these live values (backend stays authoritative on save). Parity test against the backend formula with shared fixtures (rectangle, L-shape, room 1697: 4.80 m² / 10.14 m).
+  - Layer: frontend; read `RoomCalculationService.java` for the exact formulas.
+  - _Requirements: 11.4, FOR-04-14-room Requirement 3_
+  - _Depends on: 1_
+- [x] 4. When scroll down — the rendered room should be pinned to top
+  - Triage: observed — the plan SVG and media sit in the right `<aside>` that scrolls away with the page. Expected — the plan stays visible at the top while the wall list is scrolled.
+  - Fix: make the plan block `sticky top-<header height>` (`self-start` on the aside) on `lg` and wider; media stays below the plan inside the sticky column with its own scroll if taller than the viewport; on narrow screens the plan stays above the form (no sticky).
+  - Layer: frontend (`RoomEditorPage.tsx` layout).
+  - _Requirements: 11.3_
+  - _Depends on: none_
+- [x] 5. Add more types of room templates with visual (not only rectangle — IKEA planner as example)
+  - Triage: observed — only "Create rectangle" (width × length). Expected — a template picker with thumbnails like the IKEA planner screenshot: **Rectangular, L-shaped, Cut corner (Ścięty), T-shaped, U-shaped, Chamfered (Fazowane)**.
+  - Fix: `lib/roomTemplates.ts` — each template has a few named dimensions (e.g. L-shape: width, length, cut width, cut length; cut corner: width, length, cut size; T: width, length, stem width, stem depth; U: width, length, notch width, notch depth; chamfered: width, length, chamfer size) with sensible defaults and validation (cuts smaller than the outer size), and a `build(dims) → walls` producing a closed CCW outline. UI: "Templates" button opens a small dialog with a 3 × 2 grid of SVG thumbnails (drawn from the template itself, so the picture always matches), selecting one shows its dimension inputs with a live preview, "Apply" replaces the walls (confirm when walls exist; undo by Cancel). Openings are not kept when a template replaces the walls (confirm text says so).
+  - Property tests: every template with valid dimensions gives a closed, non-self-intersecting outline with the expected area.
+  - i18n (PL/RU, `rooms.form.templates.*`): names (PL as in the screenshot: "Prostokątne", "W kształcie litery L", "Ścięty", "W kształcie litery T", "W kształcie litery U", "Fazowane"; RU: "Прямоугольная", "Г-образная", "Со срезанным углом", "Т-образная", "П-образная", "Со скошенными углами"), dimension labels, dialog title, apply, replace confirm.
+  - Layer: frontend.
+  - _Requirements: 11.3, 11.4_
+  - _Depends on: 1_
+- [x] V8. Validate Round 8 in browser
+  - Rebuild the frontend; on `/projects/2/rooms/1697`: change an angle and a length → Save stays active, closing wall recalculated; metrics change live; wall cards are compact; scrolling keeps the plan visible; on room 2 apply each template, check the plan and metrics, then Cancel (no save).
+  - _Depends on: 1, 2, 3, 4, 5_
+
+## Parallel execution plan (waves) — Round 8
+
+- **Wave 1 (parallel):** 1 (geometry/closing wall in `lib/*` + editor wiring), 4 (page layout only).
+- **Wave 2 (parallel):** 3 (`lib/roomMetrics.ts` + metrics block), 5 (`lib/roomTemplates.ts` + templates dialog) — new files, small wiring.
+- **Wave 3:** 2 — compact layout of `RoomWallsEditor.tsx` (last, so it doesn't conflict with 1 and 5).
+- **Wave 4:** V8 — browser validation.
+
+## Round 8 — validation results (2026-11-07)
+
+Stack: local Docker, frontend rebuilt (browser cache cleared to load the new `index.html`). Screens: `/projects/2/rooms/1697`, `/projects/2/rooms/2` (room 2 not saved).
+
+- **#1 Save stays active — FIXED.** Turn of wall 3 → 80°: Save enabled, no blocked reason, closing wall recalculated. Wall 1 length → 1.5: Save enabled. Calculated angles display rounded (`90`, not `89.999999`).
+- **#2 Compact wall cards — FIXED.** A wall row without openings is 42 px high (was ~170 px).
+- **#3 Live measures — FIXED.** Room 1697: 4.80 m² / 10.14 m / 20.98 m² (matches backend). Turn 80° → 4.88 / 10.37; length 1.5 → 5.91 / 10.77; restoring values → 4.80 / 10.14.
+- **#4 Pinned plan — FIXED.** After scrolling to the bottom the plan column top stays at 16 px.
+- **#5 Templates — FIXED.** Dialog shows 6 tiles with pictures. Applied on room 2 with default sizes, all with "Контур замкнут": rectangle 12.00 m² / 14.00 m, L 16.00 / 18.00, cut corner 11.50 / 13.41, T 15.50 / 18.00, U 18.00 / 20.00, chamfered 19.00 / 16.83.
+- Also: media card reworked (picture on top, name, kind + size on one line). The thumbnail could not be shown in this run because the Google ADC expired again (`invalid_rapt`, media content 500).
+- Tests: `src/features/rooms` 855 passed, `tsc` clean.
+
+Result: 5 fixed / 0 failed.
+
+## Round 9 (2026-11-07)
+
+Screen URL: `http://localhost:3000/projects/2/rooms/1697` (room editor → "Шаблоны" dialog).
+
+- [x] 1. For each template add rotation icon (top right corner); clicking rotates right 90 degrees
+  - Triage: observed — templates always come in one orientation (e.g. the L-shape cut is always top-right). Expected — every tile has a rotate icon in its top-right corner; each click turns that template 90° clockwise (0 → 90 → 180 → 270 → 0); the tile thumbnail, the large preview and the applied walls all use the chosen rotation.
+  - Fix: `lib/roomTemplates.ts` — pure `rotateOutline(vertices, quarterTurnsClockwise)`: rotate, translate to min x = min y = 0, keep counter-clockwise order, and start at the vertex whose outgoing edge points along +x (the bottom-most, then left-most one) so the walls editor (first wall always along +x) keeps the rotation instead of undoing it. `RoomTemplatesDialog.tsx` — per-tile rotation state (kept while the dialog is open), rotate button (`RotateCw` icon, `aria-label` "Rotate 90° right" with the template name, does not select/deselect the tile), dimension inputs unchanged (width/length keep their meaning in the template's own frame).
+  - Tests: property — 4 rotations return the original outline; area, perimeter and simplicity are unchanged by rotation; applied rotated L-shape hydrates to walls whose rebuilt vertices equal the rotated outline.
+  - i18n (PL/RU): `rooms.form.templates.rotate` ("Obróć o 90° w prawo — {{name}}" / "Повернуть на 90° вправо — {{name}}").
+  - Layer: frontend. _Requirements: 11.3, 11.4_
+  - _Depends on: none_
+- [x] 2. The numbers in measurements must be maximum 3 decimal digits (as we work with meters) and 0 decimal digits for angles
+  - Triage (added by the user 2026-11-07): observed — hydrated lengths/turns keep up to 6 decimals (`0.59439`, `12.633362`), calculated ones showed `89.999999`. Expected — every length, gap, opening size and offset in the walls editor and the templates dialog has at most 3 decimals (mm); every angle is a whole number of degrees.
+  - Fix: hydration from stored vertices rounds lengths to 3 decimals and turns to integers (`verticesToWalls` precision); inputs reject/round more decimals (lengths `step=0.001`, angles integer); calculated (closing-wall) values are shown and stored with the same precision; vertices sent on save are rounded to 3 decimals. With "last wall closes the outline" on, the closing wall absorbs the rounding drift, so outlines stay closed; a slanted wall (room 1697: 12.633° → 13°) moves slightly — accepted by the user. Templates produce exact values already. The AI import (autoimport Round 2) uses the same precision.
+  - Layer: frontend (+ backend vertex rounding for imported geometry in autoimport Round 2). _Requirements: 11.4_
+  - _Depends on: none_
+- [x] V9. Validate Round 9 in browser
+  - Open the templates dialog, rotate the L, T and U tiles once/twice, check the thumbnails and preview, apply a rotated L on room 2 (no save): plan matches the rotated preview, outline closed, area unchanged.
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 9
+
+- **Wave 1:** 1 — rotation (frontend).
+- **Wave 2:** V9 — browser validation.
+
+## Round 9 — validation results (2026-11-07)
+
+Stack: local Docker, backend and frontend rebuilt. Screens: `/projects/2/rooms/1697`, `/projects/2/rooms/2` (room 2 not saved).
+
+- **#1 Template rotation — FIXED.** Every tile shows a ⟳ button in its top-right corner; clicking it on "Г-образная" turned the thumbnail and the large preview 90° right. Applied on room 2: walls 2/2/2/3/4/5 m with turns 90/−90/90/90/90/90, "Контур замкнут", plan 16.00 m² matching the rotated preview. Fixture `lib/__tests__/fixtures/room-templates.json` (24 entries) is shared with the backend parity test.
+- **#2 Precision — FIXED.** Room 1697 hydrates with integer angles (90, −90, 90, 13, −13, 90, 90, 90) and ≤ 3-decimal lengths (0.594, closing wall 3.809); outline closed; floor area 4.80 m². Inputs limit lengths to 3 decimals and angles to integers.
+- Tests: frontend `src/features/rooms` 886 passed, `tsc` clean.
+
+Result: 2 fixed / 0 failed.
+
+## Round 10 (2026-11-07)
+
+Screen URL: `http://localhost:3000/projects/2/rooms/1697` (walls editor and "Шаблоны" dialog).
+
+- [x] 1. In the template and in wall constructor — the value should support the formula (like in the rooms table for various dimensions)
+  - Triage: observed — the walls editor and the templates dialog use plain `NumberInput` (no `allowFormula`), so `=2.4+1.15` cannot be typed. The rooms table and the room fields (ceiling height, narrow places, metrics) already accept `=…` via `allowFormula` + `evaluateDimensionFormula`/`parseDimensionInput` (`lib/dimensionFormula.ts`), show the result under/next to the field, and persist the formula in `room.dimensionFormulas`.
+  - Fix:
+    - Inputs: wall length, wallGap, finishGap, opening width/height/offset, opening count, and every template dimension accept a formula (`allowFormula`); the evaluated value is shown next to the input (`= 3.55`) and is what geometry, live metrics, plan and outline checks use. Angles accept a formula too (result rounded to a whole degree); lengths results are rounded to 3 decimals (Round 9 #2). Invalid formula → inline error, Save blocked.
+    - Persistence (decided by the user 2026-11-08: "save formula the same way as we already do"): wall formulas go into the existing `room.dimensionFormulas` map with geometry path keys — `geometry.walls[i].length|turn|wallGap|finishGap` and `geometry.walls[i].openings[j].width|height|offset|count`. Backend `RoomService.applyDimensionFormulas` accepts these keys, evaluates them (lengths/gaps/sizes/offset ≥ 0 and ≤ 3 decimals after rounding, turn a whole number in [−360, 360], count a positive integer; otherwise `400 error.room.dimension.formula.invalid`), writes the result into the geometry for gaps and opening fields (formula wins, as for the other dimensions), only validates + stores length/turn (vertices are built client-side), and drops keys pointing at walls/openings that do not exist. The editor sends the full map (existing room-field formulas preserved) and hydrates formulas back into the inputs.
+    - Templates dialog: formulas only evaluated (template dims are not stored).
+  - i18n: reuse the existing formula texts of the room fields (invalid formula message); no new keys expected.
+  - Layer: frontend (+ backend `RoomGeometry` fields for option a). _Requirements: 11.4, FOR-05-02-rooms-dimensions Round 5 #1 (formulas)_
+  - _Depends on: none_
+- [x] V10. Validate Round 10 in browser
+  - Type `=2+1.5` into a wall length, a door width and a template dimension; the field shows `= 3.5`, the plan and metrics follow; save and reopen (option a: the formula is shown again).
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 10
+
+- **Wave 1:** 1 — frontend inputs (+ backend geometry fields if option a).
+- **Wave 2:** V10 — browser validation.
+
+## Round 10 — validation results (2026-11-08)
+
+Stack: local Docker, backend and frontend rebuilt. Screen: `/projects/2/rooms/2`.
+
+- **#1 Formulas in walls and templates — FIXED.**
+  - Templates dialog: rectangle width `=2+1.5` shows `= 3.5`; applied outline 3.5 m wide.
+  - Walls editor: wall 2 length `=1.2+1.8` shows `= 3`; live floor area 10.50 m².
+  - Save request carries `dimensionFormulas: {"geometry.walls[1].length": "=1.2+1.8"}` and the evaluated geometry (vertex (3.5, 3)); the backend accepted the formula (the save stopped at the estimate approval, 409, which was declined — project 2's estimate untouched, nothing persisted).
+  - Reopen: with that geometry + formula written to room 2 directly in the DB, the editor shows `=1.2+1.8` in wall 2 with `= 3`, outline closed; room 2 then restored to its original state (no geometry, no formulas, manual metrics).
+  - Backend: `geometry.walls[i]…` / `…openings[j]…` keys evaluated (gaps and opening fields written into the geometry, length/turn validated and stored), unknown paths 400, stale indices dropped — `RoomDimensionFormulaIT`, `DimensionFormulaEvaluatorTest`, `RoomGeometryIT`, `RoomBulkUpdateIT`: 31 passed.
+  - Frontend: `src/features/rooms` 903 passed, `tsc` clean.
+
+Result: 1 fixed / 0 failed.

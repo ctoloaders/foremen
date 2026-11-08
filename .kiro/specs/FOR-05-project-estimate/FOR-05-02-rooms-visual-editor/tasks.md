@@ -121,11 +121,11 @@ The Docker frontend serves a prebuilt image: after UI changes rebuild it with
     - _Depends on: 4.1, 4.2, 4.3_
 
 - [ ] 6. Verification
-  - [-] 6.1 Checkpoint: type-check, lint and rooms tests
+  - [x] 6.1 Checkpoint: type-check, lint and rooms tests
     - `npx tsc --noEmit -p tsconfig.app.json`, eslint on changed files, `npx vitest --run src/features/rooms src/components/ui` (log to `/tmp/for-05-02-visual-test.log`).
     - _Requirements: 15.2, 15.3, 15.4_
     - _Depends on: 2.1, 2.2, 2.3, 5.1, 5.2, 5.3_
-  - [~] 6.2 Browser verification on the Docker stack
+  - [-] 6.2 Browser verification on the Docker stack
     - Rebuild the frontend image; execute the UI scenarios of `test-cases.md` on `http://localhost:3000` (room 1701, an AI-generated draft, a from-scratch room); write the MD report with tables.
     - _Requirements: 1–13_
     - _Depends on: 6.1_
