@@ -231,6 +231,43 @@ class CrossProjectScheduleControllerStartupSeedIntegrationTest {
     }
 
     @Test
+    @DisplayName("Changeset 217 (FOR-07-05) grants FOREMAN READ only; WORKER/FINANCIER/CLIENT stay denied")
+    void foremanHoldsReadGrantFromChangeset217() throws Exception {
+        assertThat(operationsFor("FOREMAN"))
+                .as("FOREMAN operations on COMPANY_SCHEDULE")
+                .containsExactly("READ");
+        // SALESMAN mirrors MANAGER's READ surface by design (changeset 189), so the audience is
+        // asserted by inclusion/exclusion rather than as an exact set.
+        assertThat(rolesWithOperation("READ"))
+                .as("roles holding READ on COMPANY_SCHEDULE")
+                .contains("ADMIN", "FOREMAN", "MANAGER")
+                .doesNotContain("WORKER", "FINANCIER", "CLIENT");
+    }
+
+    @Test
+    @DisplayName("Changeset 217 is idempotent: re-running the changelog adds no duplicate FOREMAN rows")
+    void changeset217IsIdempotent() throws Exception {
+        int rolesResourcesBefore = foremanRoleResourceCount();
+        int operationsBefore = operationsFor("FOREMAN").size();
+
+        // A fresh Liquibase run against the already-migrated schema must be a no-op for 217.
+        try (Connection connection = DriverManager.getConnection(
+                postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword())) {
+            Database database = DatabaseFactory.getInstance()
+                    .findCorrectDatabaseImplementation(new JdbcConnection(connection));
+            try (Liquibase liquibase = new Liquibase(
+                    "database_files/changelog.xml", new ClassLoaderResourceAccessor(), database)) {
+                liquibase.update(new Contexts());
+            }
+        }
+
+        assertThat(foremanRoleResourceCount())
+                .as("FOREMAN x COMPANY_SCHEDULE role_resources rows").isEqualTo(rolesResourcesBefore).isEqualTo(1);
+        assertThat(operationsFor("FOREMAN").size())
+                .as("FOREMAN operations on COMPANY_SCHEDULE").isEqualTo(operationsBefore).isEqualTo(1);
+    }
+
+    @Test
     @DisplayName("No role holds a CREATE/UPDATE/DELETE grant on COMPANY_SCHEDULE (read-only resource)")
     void noWriteGrantOnCompanyScheduleForAnyRole() throws Exception {
         assertThat(rolesWithOperation("CREATE"))
@@ -249,6 +286,21 @@ class CrossProjectScheduleControllerStartupSeedIntegrationTest {
         String sql = "SELECT COUNT(*) FROM resources WHERE code = ?";
         try (Connection c = dataSource.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, code);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
+        }
+    }
+
+    /** Number of FOREMAN x COMPANY_SCHEDULE role_resources rows (must stay exactly 1). */
+    private int foremanRoleResourceCount() throws Exception {
+        String sql = "SELECT COUNT(*) FROM role_resources rr "
+                + "JOIN roles r ON rr.role_id = r.id "
+                + "JOIN resources res ON rr.resource_id = res.id "
+                + "WHERE r.code = 'FOREMAN' AND res.code = ?";
+        try (Connection c = dataSource.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, RESOURCE_CODE);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
                 return rs.getInt(1);

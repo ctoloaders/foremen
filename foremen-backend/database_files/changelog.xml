@@ -938,4 +938,6 @@
     <include file="database_files/changesets/214-create-room-media.xml"/>
     <!-- FOR-05-02 (task 1.2): rooms.ai_imported. Registered LAST, after 214. -->
     <include file="database_files/changesets/215-add-rooms-ai-imported.xml"/>
+    <!-- FOR-07-05 (R6.1): grant FOREMAN READ on COMPANY_SCHEDULE. Registered LAST. -->
+    <include file="database_files/changesets/217-grant-foreman-company-schedule.xml"/>
 </databaseChangeLog>

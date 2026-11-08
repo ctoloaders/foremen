@@ -69,8 +69,9 @@ import jakarta.persistence.PersistenceContext;
  * {@code 187-seed-company-schedule-resource.xml} would normally seed is NOT present at runtime. This
  * test therefore seeds the matrix directly via the JPA layer per test (mirroring the sibling ABAC
  * test): the {@code COMPANY_SCHEDULE} resource, the READ operation, and the per-role READ grants of
- * changeset 187 — ADMIN + MANAGER READ only (no CREATE/UPDATE/DELETE). FOREMAN is deliberately left
- * without the grant so it drives the 403 case; ADMIN bypasses the matrix at the evaluator level.
+ * changeset 187 — ADMIN + MANAGER READ only (no CREATE/UPDATE/DELETE) — plus the FOREMAN READ grant
+ * of changeset 217 (FOR-07-05). WORKER is deliberately left without the grant so it drives the 403
+ * case; ADMIN bypasses the matrix at the evaluator level.
  *
  * <p>Covered cases (Requirements 7.1, 7.8, 9.4, 11.1, 11.2, 11.4):
  * <ul>
@@ -78,7 +79,9 @@ import jakarta.persistence.PersistenceContext;
  *       a well-formed {@code CompanyScheduleView} (rows + legend);</li>
  *   <li>a {@code from > to} Date_Window is rejected with HTTP 400
  *       {@code error.company.schedule.window.invalid} and changes no data (R7.8);</li>
- *   <li>a FOREMAN caller without the {@code COMPANY_SCHEDULE} READ grant gets 403 (R9.4);</li>
+ *   <li>a FOREMAN with the {@code COMPANY_SCHEDULE} READ grant (changeset 217) gets 200 limited to
+ *       the projects they are a member of (FOR-07-05 R6.2);</li>
+ *   <li>a WORKER caller without the {@code COMPANY_SCHEDULE} READ grant gets 403 (R9.4);</li>
  *   <li>the same filter set replayed twice yields a byte-identical projection
  *       (Persisted_View_State deterministic replay, R11.2).</li>
  * </ul>
@@ -190,7 +193,8 @@ class CrossProjectScheduleControllerIntegrationTest {
 
         ensureRole(ADMIN);          // ADMIN bypasses the matrix; the role must exist to mint a token.
         grantRole(MANAGER, companySchedule, read);
-        ensureRole(FOREMAN);        // FOREMAN gets NO COMPANY_SCHEDULE grant → 403 case.
+        grantRole(FOREMAN, companySchedule, read);  // changeset 217 (FOR-07-05): FOREMAN READ.
+        ensureRole(WORKER);         // WORKER gets NO COMPANY_SCHEDULE grant → 403 case.
 
         // Invalidate the long-lived permission cache for every seeded role so this test's freshly
         // seeded (and later rolled-back) matrix is read, never a sibling test's cached PermissionSet.
@@ -228,6 +232,23 @@ class CrossProjectScheduleControllerIntegrationTest {
                     .andExpect(jsonPath("$.legend[0].projectId").value(project.getId()))
                     .andExpect(jsonPath("$.legend[0].projectName").value(project.getName()))
                     .andExpect(jsonPath("$.legend[0].colorIndex").value(0));
+        }
+
+        @Test
+        @DisplayName("a FOREMAN member (changeset 217 READ grant) gets 200 limited to member projects (FOR-07-05 R6.2)")
+        void foremanMember_getsMemberProjectsOnly() throws Exception {
+            long userId = persistMemberWithRole(FOREMAN);
+
+            // A second anchored project the caller is NOT a member of must not leak into the view.
+            ProjectEntity otherProject = persistAnchoredProjectWithWorkerBarAndForeman();
+            entityManager.flush();
+
+            mockMvc.perform(get(BASE_PATH).header("Authorization", bearer(FOREMAN, userId)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.rows").isArray())
+                    .andExpect(jsonPath("$.legend.length()").value(1))
+                    .andExpect(jsonPath("$.legend[0].projectId").value(project.getId()))
+                    .andExpect(jsonPath("$.legend[?(@.projectId == " + otherProject.getId() + ")]").isEmpty());
         }
 
         @Test
@@ -304,13 +325,13 @@ class CrossProjectScheduleControllerIntegrationTest {
     class Forbidden {
 
         @Test
-        @DisplayName("a FOREMAN member (no COMPANY_SCHEDULE grant) -> 403")
-        void foremanWithoutGrant_returns403() throws Exception {
-            // FOREMAN is a project member (passes any scope gate) but holds no COMPANY_SCHEDULE grant,
+        @DisplayName("a WORKER member (no COMPANY_SCHEDULE grant) -> 403")
+        void workerWithoutGrant_returns403() throws Exception {
+            // WORKER is a project member (passes any scope gate) but holds no COMPANY_SCHEDULE grant,
             // so the PermissionInterceptor rejects READ with 403 before any business logic.
-            long userId = persistMemberWithRole(FOREMAN);
+            long userId = persistMemberWithRole(WORKER);
 
-            mockMvc.perform(get(BASE_PATH).header("Authorization", bearer(FOREMAN, userId)))
+            mockMvc.perform(get(BASE_PATH).header("Authorization", bearer(WORKER, userId)))
                     .andExpect(status().isForbidden())
                     .andExpect(jsonPath("$.status").value(403));
         }

@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-07-05 (R6.1): grant FOREMAN read access to the COMPANY_SCHEDULE resource so the company
+        staffing Gantt can sit in the FOREMAN mobile bottom bar. READ only; no other role/resource
+        grants change. The service behind the resource is project-scoped (FOR-07-01), so a FOREMAN
+        sees only the projects they are a member of.
+
+        Idempotency: both changeSets are guarded by onFail="MARK_RAN" preconditions and every insert
+        is INSERT ... SELECT ... WHERE NOT EXISTS, so re-runs insert nothing. Registered LAST in
+        changelog.xml, after 216.
+    -->
+
+    <!-- changeSet 1: FOREMAN x COMPANY_SCHEDULE role_resources row. -->
+    <changeSet id="217-grant-foreman-company-schedule-role-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'COMPANY_SCHEDULE'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'FOREMAN' AND res.code = 'COMPANY_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resources rr
+                  JOIN roles r2 ON rr.role_id = r2.id
+                  JOIN resources res2 ON rr.resource_id = res2.id
+                  WHERE r2.code = 'FOREMAN' AND res2.code = 'COMPANY_SCHEDULE'
+              );
+        </sql>
+    </changeSet>
+
+    <!-- changeSet 2: FOREMAN x COMPANY_SCHEDULE operations: READ only. -->
+    <changeSet id="217-grant-foreman-company-schedule-read" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resource_operations rro
+                JOIN role_resources rr ON rro.role_resource_id = rr.id
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                JOIN operations o ON rro.operation_id = o.id
+                WHERE r.code = 'FOREMAN' AND res.code = 'COMPANY_SCHEDULE' AND o.code = 'READ'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('READ')
+            WHERE r.code = 'FOREMAN' AND res.code = 'COMPANY_SCHEDULE'
+              AND NOT EXISTS (
+                  SELECT 1 FROM role_resource_operations rro
+                  WHERE rro.role_resource_id = rr.id
+                    AND rro.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>
