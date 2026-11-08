@@ -2,55 +2,54 @@
 inclusion: always
 ---
 
-# Standard: tasks.md â€” tasks AND parallel-execution waves (mandatory)
+# Standard: tasks.md â€” parallel-execution waves (mandatory)
 
-Every spec's `tasks.md` MUST express not only the ordered task list but also an explicit
-**parallel-execution plan**: a declaration of which tasks may run **simultaneously** (in the same
-wave) and which must run after others (dependencies). This lets the task-execution orchestrator
-dispatch independent tasks concurrently (wave-based scheduling) instead of strictly one at a time.
+Every spec's `tasks.md` MUST end with a **"Task Dependency Graph"** section: a JSON block that
+groups the leaf tasks into ordered **waves**. All tasks in one wave are mutually independent and
+safe to run at the same time; a wave runs only after every earlier wave has completed. This lets the
+task-execution orchestrator dispatch independent tasks concurrently.
 
 This applies to EVERY spec and EVERY workflow (feature requirements-first / design-first, bugfix,
-quick spec). A `tasks.md` that lists tasks with no wave / dependency information is incomplete.
+quick spec). A `tasks.md` without this section is incomplete.
 
-## What every tasks.md MUST contain
+## Required section (at the END of tasks.md)
 
-1. **The ordered task list** â€” the normal checkbox list of leaf tasks, each with its
-   `_Requirements:_` reference, exactly as today.
-2. **An explicit dependency annotation on each leaf task** â€2. **An explicit dependency annotation on each leaf task** â€2. **An explicit dependency annotation on eachpredeces2. **An exppendenc2.graph
-   MUST be a DAG (no cycles).
-3. **A "Parallel execution plan (waves)" section** â€” a dedicated section (near the top, right after
-   the intro, or at the end) that groups the leaf tasks into ordered **waves**. All tasks in one
-   wave MUST be mutually independent and therefore safe to run at the same time; a wave runs only
-   after every earlier wave has completed.
+The section MUST be the last section of the file, with exactly this heading and format:
 
-## Rules for waves
+````markdown
+## Task Dependency Graph
 
-- **A wave is a set of tasks with no dependency on each other.** Two tasks share a wave ONLY if
-  neither (directly or transitively) depends on the other and they touch no conflicting files /
-  shared mutable state.
-- **Waves are ordered.** Wave N may depend only on tasks in waves `1..N-1`. Never put a task in a
-  wave earlier than any task it depends on.
-- **Keep waves honest about real conflicts.** Do NOT place two tasks in the same wave if they edit
-  the same file, the same DB changeset chain, or otherwise cannot be committed independently. When
-  in doubt, serialize them into separate waves.
-- **Every leaf task MUST appe- **Every leaf task MUST appe - **Every leaf task MUST appe- **Every leaf task MUST appe - **Every leaf task MUST appe- **Every leduled â€” only their leaves are.
-- **Checkpoints / regression / final-verification tasks** (and the `Author test-cases.md` task) are
-  almost always a late, dependency-heavy wave of their own â€” they depend on the implementation
-  tasks and  tasks and  task- B  tasks and  tasks and  task- B  tasks and  tasks and  task- B  tasks and  tasks and  task- B ng  tasks and  tasks and  task- B  tasks and  tasks and  task- B  tasks and  tasks a Required form  tasks and  each leaf task with its dependencies, and add the waves section. Example:
+```json
+{
+  "waves": [
+    { "id": 0, "tasks": ["1.1"] },
+    { "id": 1, "tasks": ["1.2", "2.1"] },
+    { "id": 2, "tasks": ["2.2", "2.3", "4.1"] },
+    { "id": 3, "tasks": ["2.4", "2.5", "4.2", "4.3"] },
+    { "id": 4, "tasks": ["2.6", "4.4", "5.1", "5.2", "5.3", "5.5", "8.1", "8.2"] },
+    { "id": 5, "tasks": ["5.4", "5.6", "8.3", "9.2", "10.1"] },
+    { "id": 6, "tasks": ["5.7", "6.1", "8.4", "9.1", "10.2"] },
+    { "id": 7, "tasks": ["6.2", "9.3"] },
+    { "id": 8, "tasks": ["11", "12"] }
+  ]
+}
+```
+````
 
-```markdown
-- [ ] 1. Data model
-  - [ ] 1.1 Changeset A
-    - _Requirements: 1.1_
-    - _Depends on: none_
-  - [ ] 1.2 Changeset B
-    - _Requirements: 1.2_
-    - _Depends on: 1    - _Depends on: 1    - _Depends on: 1    - _Depends on: 1    - _Depends on: 1    - _Depends on:     - _Depends on: 1    - _Depends on: 1    - rements: 4.1_
-    - _Depends on: none_
+## Rules
 
-## Parallel execution plan (waves)
-
-- **Wave 1 (parallel):** 1.1, 2.1, 2.2  â€” independent; data-model root + pure helpers.
-- **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 nd- **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **W” dep- **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 nd- **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **W” dep- **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):** 1.2 - **Wave 2 (parallel):**ne - **Wave 2one`).
-- [ ] The dependency graph is acyclic.
-- [ ] A "Parallel executio- [ ] A "Parallel exion e- [ ] A "Parallel execf - [ ] A "Parallel executon- [ ] A "Parallel executio- [ ] A "Parallel exion e- [ ] A "Parallel execf - [ ] A "Parallel executon- [ ] A "Parallel executio- [ ] A "Parallel exion e- [ression / `Author test-c- [ ] A "Parallel execu final, dependency-heavy wave.
+- Wave `id`s start at `0` and increase by 1. Task entries are the task numbers exactly as they
+  appear in `tasks.md` (e.g. `"2.3"`, `"11"`), as strings.
+- **A wave is a set of tasks with no dependency on each other**, directly or transitively.
+- **Waves are ordered.** A task may depend only on tasks in earlier waves. Never place a task in a
+  wave earlier than or equal to any task it depends on.
+- **Be honest about conflicts.** Do NOT put two tasks in the same wave if they edit the same file,
+  the same DB changeset chain, or otherwise cannot be committed independently. When in doubt,
+  serialize into separate waves.
+- **Every leaf task appears in exactly one wave.** Parent/group tasks are not scheduled; only their
+  leaves are. Optional tasks (marked `*`) are included too.
+- **The dependency graph MUST be acyclic.**
+- **Checkpoints, regression, final-verification and `Author test-cases.md` tasks** belong in the
+  last waves, since they depend on the implementation tasks.
+- Keep the JSON valid (no comments, no trailing commas) so it can be parsed.
+- When tasks are added, removed or renumbered, update this section in the same edit.
