@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-10 (task 3.1; Requirement 14): default dashboard widget library (20 widgets).
+        One changeSet per widget, idempotent by code (MARK_RAN when the code already exists).
+        Each config is a single-line JSON literal cast to jsonb; it is validated by
+        DashboardWidgetLibrarySeedTest with the production WidgetConfigValidator.
+        Registered LAST in changelog.xml, after 220.
+    -->
+    <changeSet id="221-seed-dashboard-widget-active-projects" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'ACTIVE_PROJECTS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('ACTIVE_PROJECTS', 'Активные проекты', 'Aktywne projekty', 'Карточки активных проектов с быстрыми переходами', 'Karty aktywnych projektów ze skrótami nawigacji',
+                    '{"schemaVersion":1,"dataset":"PROJECTS","visualization":"PROJECT_CARD","title":{"ru":"Активные проекты","pl":"Aktywne projekty"},"columns":[{"field":"id","label":{"ru":"ID","pl":"ID"},"format":"NUMBER"},{"field":"name","label":{"ru":"Название","pl":"Nazwa"},"format":"TEXT"},{"field":"managerName","label":{"ru":"Менеджер","pl":"Kierownik"},"format":"TEXT"},{"field":"address","label":{"ru":"Адрес","pl":"Adres"},"format":"TEXT"},{"field":"area","label":{"ru":"Площадь","pl":"Powierzchnia"},"format":"NUMBER"},{"field":"status","label":{"ru":"Статус","pl":"Status"},"format":"STATUS"},{"field":"startDate","label":{"ru":"Начало","pl":"Początek"},"format":"DATE"},{"field":"endDate","label":{"ru":"Окончание","pl":"Zakończenie"},"format":"DATE"}],"filters":[{"field":"status","op":"IN","value":["ACTIVE"]}],"sort":[{"by":"name","dir":"ASC"}],"limit":50,"links":[{"element":"CARD_TITLE","route":"/projects/{projectId}","params":{"projectId":"$row.id"}},{"element":"CARD_CHIP","label":{"ru":"Смета","pl":"Kosztorys"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.id","tab":"estimate"}},{"element":"CARD_CHIP","label":{"ru":"График","pl":"Harmonogram"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.id","tab":"scheduleDesign"}},{"element":"CARD_CHIP","label":{"ru":"Платежи","pl":"Płatności"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.id","tab":"clientPayments"}},{"element":"CARD_CHIP","label":{"ru":"Документы","pl":"Dokumenty"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.id","tab":"documentSigning"}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 4, 3, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-projects-by-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PROJECTS_BY_STATUS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PROJECTS_BY_STATUS', 'Проекты по статусам', 'Projekty wg statusu', 'Количество проектов по статусам', 'Liczba projektów wg statusu',
+                    '{"schemaVersion":1,"dataset":"PROJECTS","visualization":"DONUT","title":{"ru":"Проекты по статусам","pl":"Projekty wg statusu"},"dimensions":[{"field":"status","label":{"ru":"Статус","pl":"Status"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"presentation":{"legend":true,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-project-card" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PROJECT_CARD'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PROJECT_CARD', 'Карточка проекта', 'Karta projektu', 'Карточка выбранного проекта', 'Karta wybranego projektu',
+                    '{"schemaVersion":1,"dataset":"PROJECTS","visualization":"PROJECT_CARD","title":{"ru":"Карточка проекта","pl":"Karta projektu"},"columns":[{"field":"id","label":{"ru":"ID","pl":"ID"},"format":"NUMBER"},{"field":"name","label":{"ru":"Название","pl":"Nazwa"},"format":"TEXT"},{"field":"managerName","label":{"ru":"Менеджер","pl":"Kierownik"},"format":"TEXT"},{"field":"address","label":{"ru":"Адрес","pl":"Adres"},"format":"TEXT"},{"field":"area","label":{"ru":"Площадь","pl":"Powierzchnia"},"format":"NUMBER"},{"field":"status","label":{"ru":"Статус","pl":"Status"},"format":"STATUS"},{"field":"startDate","label":{"ru":"Начало","pl":"Początek"},"format":"DATE"},{"field":"endDate","label":{"ru":"Окончание","pl":"Zakończenie"},"format":"DATE"}],"links":[{"element":"CARD_TITLE","route":"/projects/{projectId}","params":{"projectId":"$project"}},{"element":"CARD_CHIP","label":{"ru":"Смета","pl":"Kosztorys"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"estimate"}},{"element":"CARD_CHIP","label":{"ru":"График","pl":"Harmonogram"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"scheduleDesign"}},{"element":"CARD_CHIP","label":{"ru":"Платежи","pl":"Płatności"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"clientPayments"}},{"element":"CARD_CHIP","label":{"ru":"Документы","pl":"Dokumenty"},"route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"documentSigning"}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'SINGLE_PROJECT', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-work-reports-by-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'WORK_REPORTS_BY_STATUS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('WORK_REPORTS_BY_STATUS', 'Отчёты по статусам', 'Raporty wg statusu', 'Количество отчётов о работах по статусам', 'Liczba raportów z prac wg statusu',
+                    '{"schemaVersion":1,"dataset":"WORK_REPORTS","visualization":"BAR","title":{"ru":"Отчёты по статусам","pl":"Raporty wg statusu"},"dateField":"performedFrom","dimensions":[{"field":"status","label":{"ru":"Статус","pl":"Status"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"sort":[{"by":"cnt","dir":"DESC"}],"presentation":{"legend":false,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-work-reports-pending" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'WORK_REPORTS_PENDING'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('WORK_REPORTS_PENDING', 'Отчёты на утверждении', 'Raporty do zatwierdzenia', 'Отчёты о работах, ожидающие утверждения', 'Raporty z prac oczekujące na zatwierdzenie',
+                    '{"schemaVersion":1,"dataset":"WORK_REPORTS","visualization":"TABLE","title":{"ru":"Отчёты на утверждении","pl":"Raporty do zatwierdzenia"},"columns":[{"field":"project.id","label":{"ru":"ID проекта","pl":"ID projektu"},"format":"NUMBER"},{"field":"project.name","label":{"ru":"Проект","pl":"Projekt"},"format":"TEXT"},{"field":"workItem.nameRU","label":{"ru":"Работа (RU)","pl":"Praca (RU)"},"format":"TEXT"},{"field":"workItem.namePL","label":{"ru":"Работа (PL)","pl":"Praca (PL)"},"format":"TEXT"},{"field":"worker.name","label":{"ru":"Исполнитель","pl":"Wykonawca"},"format":"TEXT"},{"field":"performedFrom","label":{"ru":"Дата","pl":"Data"},"format":"DATE"}],"dateField":"performedFrom","filters":[{"field":"status","op":"EQ","value":"SUBMITTED"}],"sort":[{"by":"performedFrom","dir":"DESC"}],"limit":20,"links":[{"element":"ROW","route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.project.id","tab":"workReporting"}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 3, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-work-reports-trend" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'WORK_REPORTS_TREND'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('WORK_REPORTS_TREND', 'Динамика отчётов', 'Dynamika raportów', 'Количество отчётов о работах по неделям', 'Liczba raportów z prac tygodniowo',
+                    '{"schemaVersion":1,"dataset":"WORK_REPORTS","visualization":"LINE","title":{"ru":"Динамика отчётов","pl":"Dynamika raportów"},"dateField":"performedFrom","dimensions":[{"field":"performedFrom","bucket":"WEEK","label":{"ru":"Неделя","pl":"Tydzień"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"sort":[{"by":"performedFrom","dir":"ASC"}],"presentation":{"legend":false,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-my-work-reports" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'MY_WORK_REPORTS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('MY_WORK_REPORTS', 'Мои отчёты', 'Moje raporty', 'Отчёты о работах, выполненных пользователем', 'Raporty z prac wykonanych przez użytkownika',
+                    '{"schemaVersion":1,"dataset":"WORK_REPORTS","visualization":"LIST","title":{"ru":"Мои отчёты","pl":"Moje raporty"},"rowScope":"OWN","dateField":"performedFrom","columns":[{"field":"project.id","label":{"ru":"ID проекта","pl":"ID projektu"},"format":"NUMBER"},{"field":"project.name","label":{"ru":"Проект","pl":"Projekt"},"format":"TEXT"},{"field":"workItem.nameRU","label":{"ru":"Работа (RU)","pl":"Praca (RU)"},"format":"TEXT"},{"field":"workItem.namePL","label":{"ru":"Работа (PL)","pl":"Praca (PL)"},"format":"TEXT"},{"field":"performedFrom","label":{"ru":"Дата","pl":"Data"},"format":"DATE"},{"field":"status","label":{"ru":"Статус","pl":"Status"},"format":"STATUS"}],"sort":[{"by":"performedFrom","dir":"DESC"}],"limit":20,"links":[{"element":"ROW","route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.project.id","tab":"workReporting"}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-payments-received" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PAYMENTS_RECEIVED'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PAYMENTS_RECEIVED', 'Получено платежей', 'Otrzymane płatności', 'Сумма подтверждённых платежей клиентов за период', 'Suma potwierdzonych płatności klientów w okresie',
+                    '{"schemaVersion":1,"dataset":"PAYMENTS","visualization":"KPI","title":{"ru":"Получено платежей","pl":"Otrzymane płatności"},"dateField":"receivedAt","measures":[{"field":"amountGross","agg":"SUM","alias":"sum","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"filters":[{"field":"status","op":"EQ","value":"CONFIRMED"}],"presentation":{"compareToPrevious":true,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 1, 1, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-payments-by-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PAYMENTS_BY_PROJECT'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PAYMENTS_BY_PROJECT', 'Платежи по проектам', 'Płatności wg projektów', 'Сумма подтверждённых платежей по проектам', 'Suma potwierdzonych płatności wg projektów',
+                    '{"schemaVersion":1,"dataset":"PAYMENTS","visualization":"BAR","title":{"ru":"Платежи по проектам","pl":"Płatności wg projektów"},"dateField":"receivedAt","dimensions":[{"field":"schedule.project.name","label":{"ru":"Проект","pl":"Projekt"}}],"measures":[{"field":"amountGross","agg":"SUM","alias":"total","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"filters":[{"field":"status","op":"EQ","value":"CONFIRMED"}],"sort":[{"by":"total","dir":"DESC"}],"limit":10,"presentation":{"legend":false,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-payroll-total" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PAYROLL_TOTAL'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PAYROLL_TOTAL', 'Фонд оплаты труда', 'Fundusz płac', 'Сумма начислений за период', 'Suma naliczeń w okresie',
+                    '{"schemaVersion":1,"dataset":"PAYROLL","visualization":"KPI","title":{"ru":"Фонд оплаты труда","pl":"Fundusz płac"},"dateField":"month","measures":[{"field":"amount","agg":"SUM","alias":"sum","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"links":[{"element":"KPI","route":"/company/payroll","params":{}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 1, 1, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-payroll-by-worker" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PAYROLL_BY_WORKER'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PAYROLL_BY_WORKER', 'Начисления по работникам', 'Naliczenia wg pracowników', 'Сумма начислений по работникам', 'Suma naliczeń wg pracowników',
+                    '{"schemaVersion":1,"dataset":"PAYROLL","visualization":"TABLE","title":{"ru":"Начисления по работникам","pl":"Naliczenia wg pracowników"},"dateField":"month","dimensions":[{"field":"worker.name","label":{"ru":"Работник","pl":"Pracownik"}}],"measures":[{"field":"amount","agg":"SUM","alias":"total","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"sort":[{"by":"total","dir":"DESC"}],"limit":20,"links":[{"element":"ROW","route":"/company/payroll","params":{}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 3, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-purchases-by-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PURCHASES_BY_PROJECT'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PURCHASES_BY_PROJECT', 'Закупки по проектам', 'Zakupy wg projektów', 'Сумма закупочных документов по проектам', 'Suma dokumentów zakupu wg projektów',
+                    '{"schemaVersion":1,"dataset":"PURCHASES","visualization":"BAR","title":{"ru":"Закупки по проектам","pl":"Zakupy wg projektów"},"dateField":"documentDate","dimensions":[{"field":"project.name","label":{"ru":"Проект","pl":"Projekt"}}],"measures":[{"field":"documentTotal","agg":"SUM","alias":"total","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"sort":[{"by":"total","dir":"DESC"}],"limit":10,"presentation":{"legend":false,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-recent-purchases" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'RECENT_PURCHASES'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('RECENT_PURCHASES', 'Последние закупки', 'Ostatnie zakupy', 'Последние 10 закупочных документов', 'Ostatnie 10 dokumentów zakupu',
+                    '{"schemaVersion":1,"dataset":"PURCHASES","visualization":"TABLE","title":{"ru":"Последние закупки","pl":"Ostatnie zakupy"},"columns":[{"field":"project.id","label":{"ru":"ID проекта","pl":"ID projektu"},"format":"NUMBER"},{"field":"project.name","label":{"ru":"Проект","pl":"Projekt"},"format":"TEXT"},{"field":"supplierName","label":{"ru":"Поставщик","pl":"Dostawca"},"format":"TEXT"},{"field":"documentTotal","label":{"ru":"Сумма","pl":"Kwota"},"format":"CURRENCY"},{"field":"documentDate","label":{"ru":"Дата","pl":"Data"},"format":"DATE"}],"sort":[{"by":"documentDate","dir":"DESC"}],"limit":10,"links":[{"element":"ROW","route":"/projects/{projectId}/{tab}","params":{"projectId":"$row.project.id","tab":"purchases"}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 3, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-bank-flow" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'BANK_FLOW'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('BANK_FLOW', 'Движение по банку', 'Przepływ środków', 'Сумма операций по банку по дням (приход и расход)', 'Suma operacji bankowych dziennie (wpływy i wydatki)',
+                    '{"schemaVersion":1,"dataset":"BANK_LEDGER","visualization":"AREA","title":{"ru":"Движение по банку","pl":"Przepływ środków"},"dateField":"operationDate","dimensions":[{"field":"operationDate","bucket":"DAY","label":{"ru":"День","pl":"Dzień"}}],"measures":[{"field":"amount","agg":"SUM","alias":"flow","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"sort":[{"by":"operationDate","dir":"ASC"}],"limit":200,"links":[{"element":"CHART_SEGMENT","route":"/company/bank-transactions","params":{}}],"presentation":{"legend":false,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-bank-pending" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'BANK_PENDING'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('BANK_PENDING', 'Операции в ожидании', 'Operacje oczekujące', 'Количество банковских операций в статусе ожидания', 'Liczba operacji bankowych w statusie oczekiwania',
+                    '{"schemaVersion":1,"dataset":"BANK_LEDGER","visualization":"KPI","title":{"ru":"Операции в ожидании","pl":"Operacje oczekujące"},"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"filters":[{"field":"status","op":"EQ","value":"PENDING"}],"links":[{"element":"KPI","route":"/company/bank-transactions","params":{}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 1, 1, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-offers-by-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'OFFERS_BY_STATUS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('OFFERS_BY_STATUS', 'Предложения по статусам', 'Oferty wg statusu', 'Количество коммерческих предложений по статусам', 'Liczba ofert handlowych wg statusu',
+                    '{"schemaVersion":1,"dataset":"OFFERS","visualization":"DONUT","title":{"ru":"Предложения по статусам","pl":"Oferty wg statusu"},"dimensions":[{"field":"status","label":{"ru":"Статус","pl":"Status"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"presentation":{"legend":true,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-users-by-role" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'USERS_BY_ROLE'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('USERS_BY_ROLE', 'Пользователи по ролям', 'Użytkownicy wg ról', 'Количество пользователей по ролям', 'Liczba użytkowników wg ról',
+                    '{"schemaVersion":1,"dataset":"USERS","visualization":"DONUT","title":{"ru":"Пользователи по ролям","pl":"Użytkownicy wg ról"},"dimensions":[{"field":"role.code","label":{"ru":"Роль","pl":"Rola"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"links":[{"element":"CHART_SEGMENT","route":"/users","params":{}}],"presentation":{"legend":true,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 1, 2, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-project-payments" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PROJECT_PAYMENTS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PROJECT_PAYMENTS', 'Платежи проекта', 'Płatności projektu', 'Сумма подтверждённых платежей выбранного проекта', 'Suma potwierdzonych płatności wybranego projektu',
+                    '{"schemaVersion":1,"dataset":"PAYMENTS","visualization":"KPI","title":{"ru":"Платежи проекта","pl":"Płatności projektu"},"dateField":"receivedAt","measures":[{"field":"amountGross","agg":"SUM","alias":"sum","label":{"ru":"Сумма","pl":"Suma"},"format":"CURRENCY"}],"filters":[{"field":"status","op":"EQ","value":"CONFIRMED"}],"links":[{"element":"KPI","route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"clientPayments"}}],"presentation":{"compareToPrevious":true,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 1, 1, 'SINGLE_PROJECT', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-project-work-reports" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PROJECT_WORK_REPORTS'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PROJECT_WORK_REPORTS', 'Отчёты проекта', 'Raporty projektu', 'Количество отчётов о работах проекта по неделям', 'Liczba raportów z prac projektu tygodniowo',
+                    '{"schemaVersion":1,"dataset":"WORK_REPORTS","visualization":"LINE","title":{"ru":"Отчёты проекта","pl":"Raporty projektu"},"dateField":"performedFrom","dimensions":[{"field":"performedFrom","bucket":"WEEK","label":{"ru":"Неделя","pl":"Tydzień"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"sort":[{"by":"performedFrom","dir":"ASC"}],"links":[{"element":"CHART_SEGMENT","route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"workReporting"}}],"presentation":{"legend":false,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 2, 'SINGLE_PROJECT', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="221-seed-dashboard-widget-project-purchases" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PROJECT_PURCHASES'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PROJECT_PURCHASES', 'Закупки проекта', 'Zakupy projektu', 'Последние закупочные документы выбранного проекта', 'Ostatnie dokumenty zakupu wybranego projektu',
+                    '{"schemaVersion":1,"dataset":"PURCHASES","visualization":"TABLE","title":{"ru":"Закупки проекта","pl":"Zakupy projektu"},"dateField":"documentDate","columns":[{"field":"supplierName","label":{"ru":"Поставщик","pl":"Dostawca"},"format":"TEXT"},{"field":"documentTotal","label":{"ru":"Сумма","pl":"Kwota"},"format":"CURRENCY"},{"field":"documentDate","label":{"ru":"Дата","pl":"Data"},"format":"DATE"}],"sort":[{"by":"documentDate","dir":"DESC"}],"limit":10,"links":[{"element":"ROW","route":"/projects/{projectId}/{tab}","params":{"projectId":"$project","tab":"purchases"}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 3, 'SINGLE_PROJECT', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

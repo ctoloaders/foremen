@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-10 (task 3.2; Requirement 15; design "222-seed-dashboard-role-defaults"):
+          1. role_default_widgets for the System_Roles (final placements, grid 4 cols, cell = row*4 + col).
+             Project_Widgets are never seeded. Widget codes come from changeset 221.
+             Seed-time access check (Requirement 15.1): a default the role cannot access under the seeded
+             role_resource_operations matrix is dropped from the seed (see DashboardRoleDefaultsSeedTest).
+          2. Idempotent backfill of existing users that have no user_dashboard_state row: placements are
+             copied FIRST, then the state rows are created (same changeset = one transaction, so the
+             NOT EXISTS guard on user_dashboard_state is evaluated before the state rows exist).
+        Registered LAST in changelog.xml, after 221.
+    -->
+    <changeSet id="222-seed-dashboard-role-defaults" author="foremen">
+        <sql><![CDATA[
+            INSERT INTO role_default_widgets (role_id, widget_id, cell_index)
+            SELECT r.id, w.id, d.cell_index
+            FROM (VALUES
+                ('ADMIN',     'ACTIVE_PROJECTS',        0),
+                ('ADMIN',     'USERS_BY_ROLE',          12),
+                ('ADMIN',     'PROJECTS_BY_STATUS',     13),
+                ('ADMIN',     'BANK_PENDING',           15),
+                ('ADMIN',     'WORK_REPORTS_BY_STATUS', 20),
+
+                ('MANAGER',   'ACTIVE_PROJECTS',        0),
+                ('MANAGER',   'PAYMENTS_RECEIVED',      12),
+                ('MANAGER',   'WORK_REPORTS_PENDING',   14),
+                ('MANAGER',   'PAYMENTS_BY_PROJECT',    16),
+                ('MANAGER',   'OFFERS_BY_STATUS',       24),
+
+                ('FINANCIER', 'PAYMENTS_RECEIVED',      0),
+                ('FINANCIER', 'PAYROLL_TOTAL',          1),
+                ('FINANCIER', 'BANK_PENDING',           2),
+                ('FINANCIER', 'BANK_FLOW',              4),
+                ('FINANCIER', 'PAYMENTS_BY_PROJECT',    6),
+                ('FINANCIER', 'RECENT_PURCHASES',       12),
+
+                ('ESTIMATOR', 'ACTIVE_PROJECTS',        0),
+                ('ESTIMATOR', 'OFFERS_BY_STATUS',       12),
+                ('ESTIMATOR', 'PROJECTS_BY_STATUS',     14),
+
+                ('SALESMAN',  'ACTIVE_PROJECTS',        0),
+                ('SALESMAN',  'OFFERS_BY_STATUS',       12),
+                ('SALESMAN',  'PROJECTS_BY_STATUS',     14),
+
+                ('FOREMAN',   'ACTIVE_PROJECTS',        0),
+                ('FOREMAN',   'WORK_REPORTS_PENDING',   12),
+                ('FOREMAN',   'WORK_REPORTS_TREND',     14),
+                ('FOREMAN',   'RECENT_PURCHASES',       24),
+
+                ('WORKER',    'MY_WORK_REPORTS',        0),
+                ('WORKER',    'ACTIVE_PROJECTS',        8),
+
+                ('CLIENT',    'ACTIVE_PROJECTS',        0),
+                ('CLIENT',    'PAYMENTS_RECEIVED',      12)
+            ) AS d(role_code, widget_code, cell_index)
+            JOIN roles r ON r.code = d.role_code
+            JOIN dashboard_widgets w ON w.code = d.widget_code
+            ON CONFLICT (role_id, cell_index) DO NOTHING;
+        ]]></sql>
+    </changeSet>
+
+    <changeSet id="222-backfill-dashboard-user-defaults" author="foremen">
+        <!-- Placements first, then state rows; both NOT EXISTS-guarded, so re-running is a no-op. -->
+        <sql><![CDATA[
+            INSERT INTO user_dashboard_widgets (user_id, widget_id, cell_index, project_id, created_date, created_by)
+            SELECT u.id, rdw.widget_id, rdw.cell_index, NULL, NOW(), 'system'
+            FROM users u
+            JOIN role_default_widgets rdw ON rdw.role_id = u.role_id
+            WHERE NOT EXISTS (SELECT 1 FROM user_dashboard_state s WHERE s.user_id = u.id)
+              AND NOT EXISTS (SELECT 1 FROM user_dashboard_widgets p WHERE p.user_id = u.id);
+        ]]></sql>
+        <sql><![CDATA[
+            INSERT INTO user_dashboard_state (user_id, initialized_at)
+            SELECT u.id, NOW()
+            FROM users u
+            WHERE NOT EXISTS (SELECT 1 FROM user_dashboard_state s WHERE s.user_id = u.id);
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

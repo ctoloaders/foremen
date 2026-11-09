@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-10 (task 1.1; design "Data model"): configurable user dashboard tables.
+          - dashboard_widgets              : shared widget library (declarative JSONB config)
+          - user_dashboard_widgets         : per-user placements (cell_index + optional project)
+          - role_default_widgets           : default placements per role
+          - user_dashboard_state           : "defaults applied" marker per user
+          - user_dashboard_appearance      : per-user palette
+          - user_dashboard_widget_style    : per-placement style override
+        Idempotent: each changeset is guarded by NOT tableExists + onFail="MARK_RAN".
+        Registered LAST in changelog.xml, after 218.
+    -->
+    <changeSet id="219-create-dashboard-widgets" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="dashboard_widgets"/></not>
+        </preConditions>
+        <createTable tableName="dashboard_widgets">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="code" type="VARCHAR(64)">
+                <constraints nullable="false" unique="true" uniqueConstraintName="uq_dashboard_widgets_code"/>
+            </column>
+            <column name="name_ru" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name_pl" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description_ru" type="VARCHAR(1000)"/>
+            <column name="description_pl" type="VARCHAR(1000)"/>
+            <column name="config" type="JSONB">
+                <constraints nullable="false"/>
+            </column>
+            <column name="config_version" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="col_span" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="row_span" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_scope" type="VARCHAR(16)" defaultValue="NONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="system_seed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <sql>ALTER TABLE dashboard_widgets ADD CONSTRAINT ck_dashboard_widgets_col_span CHECK (col_span BETWEEN 1 AND 4)</sql>
+        <sql>ALTER TABLE dashboard_widgets ADD CONSTRAINT ck_dashboard_widgets_row_span CHECK (row_span BETWEEN 1 AND 9)</sql>
+        <sql>ALTER TABLE dashboard_widgets ADD CONSTRAINT ck_dashboard_widgets_project_scope CHECK (project_scope IN ('NONE', 'SINGLE_PROJECT'))</sql>
+    </changeSet>
+
+    <changeSet id="219-create-user-dashboard-widgets" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="user_dashboard_widgets"/></not>
+        </preConditions>
+        <createTable tableName="user_dashboard_widgets">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="widget_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cell_index" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_user_dashboard_widgets_user"
+            baseTableName="user_dashboard_widgets" baseColumnNames="user_id"
+            referencedTableName="users" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_user_dashboard_widgets_widget"
+            baseTableName="user_dashboard_widgets" baseColumnNames="widget_id"
+            referencedTableName="dashboard_widgets" referencedColumnNames="id" onDelete="RESTRICT"/>
+        <addForeignKeyConstraint constraintName="fk_user_dashboard_widgets_project"
+            baseTableName="user_dashboard_widgets" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id" onDelete="CASCADE"/>
+        <sql>ALTER TABLE user_dashboard_widgets ADD CONSTRAINT ck_user_dashboard_widgets_cell CHECK (cell_index BETWEEN 0 AND 35)</sql>
+        <createIndex tableName="user_dashboard_widgets" indexName="uq_user_dashboard_widgets_cell" unique="true">
+            <column name="user_id"/>
+            <column name="cell_index"/>
+        </createIndex>
+        <sql>CREATE UNIQUE INDEX uq_user_dashboard_widgets_widget_project ON user_dashboard_widgets (user_id, widget_id, COALESCE(project_id, 0))</sql>
+        <createIndex tableName="user_dashboard_widgets" indexName="ix_user_dashboard_widgets_widget">
+            <column name="widget_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="219-create-role-default-widgets" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="role_default_widgets"/></not>
+        </preConditions>
+        <createTable tableName="role_default_widgets">
+            <column name="role_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="widget_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cell_index" type="SMALLINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addPrimaryKey tableName="role_default_widgets" columnNames="role_id, cell_index"
+            constraintName="pk_role_default_widgets"/>
+        <addForeignKeyConstraint constraintName="fk_role_default_widgets_role"
+            baseTableName="role_default_widgets" baseColumnNames="role_id"
+            referencedTableName="roles" referencedColumnNames="id" onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_role_default_widgets_widget"
+            baseTableName="role_default_widgets" baseColumnNames="widget_id"
+            referencedTableName="dashboard_widgets" referencedColumnNames="id" onDelete="CASCADE"/>
+        <sql>ALTER TABLE role_default_widgets ADD CONSTRAINT ck_role_default_widgets_cell CHECK (cell_index BETWEEN 0 AND 35)</sql>
+    </changeSet>
+
+    <changeSet id="219-create-user-dashboard-state" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="user_dashboard_state"/></not>
+        </preConditions>
+        <createTable tableName="user_dashboard_state">
+            <column name="user_id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="initialized_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_user_dashboard_state_user"
+            baseTableName="user_dashboard_state" baseColumnNames="user_id"
+            referencedTableName="users" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="219-create-user-dashboard-appearance" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="user_dashboard_appearance"/></not>
+        </preConditions>
+        <createTable tableName="user_dashboard_appearance">
+            <column name="user_id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <!-- Ordered array of 1..8 #RRGGBB strings; NULL = follow theme. -->
+            <column name="palette" type="JSONB"/>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_user_dashboard_appearance_user"
+            baseTableName="user_dashboard_appearance" baseColumnNames="user_id"
+            referencedTableName="users" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="219-create-user-dashboard-widget-style" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="user_dashboard_widget_style"/></not>
+        </preConditions>
+        <createTable tableName="user_dashboard_widget_style">
+            <column name="placement_id" type="BIGINT">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="style" type="VARCHAR(32)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint constraintName="fk_user_dashboard_widget_style_placement"
+            baseTableName="user_dashboard_widget_style" baseColumnNames="placement_id"
+            referencedTableName="user_dashboard_widgets" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+</databaseChangeLog>

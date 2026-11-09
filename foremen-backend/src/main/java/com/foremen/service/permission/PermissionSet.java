@@ -16,6 +16,20 @@ public record PermissionSet(Set<String> grants) {
         return grants.contains(key(resource, operation));
     }
 
+    /** True when the role holds at least one operation on the resource (scans grant keys by prefix). */
+    public boolean hasAnyOperation(String resource) {
+        if (resource == null) {
+            return false;
+        }
+        String prefix = resource + ":";
+        for (String grant : grants) {
+            if (grant.startsWith(prefix)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static PermissionSet empty() {
         return new PermissionSet(Set.of());
     }

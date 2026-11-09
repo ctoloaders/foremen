@@ -72,3 +72,29 @@ implement `ProjectScopedService` and override `getProjectIdPath()`
   `addRequiredQuery()`, or `getProjectId()` unless a bespoke resolution is required.
 - Skip this step only for entities that are NOT project-scoped (global admin resources such as
   `USERS`, `ROLES`, `RESOURCES`, `OPERATIONS`, `AUDIT`).
+
+### 5. Provide the entity's Dataset to the widget registry (FOR-10 dashboard)
+
+Every new managed entity / resource MUST be checked for dashboard coverage. The dashboard widget
+registry (`com.foremen.service.dashboard.dataset.DatasetRegistry`) exposes data to widgets only
+through code-defined datasets, and `DatasetCoverageTest` fails when a seeded `resources` code is
+neither covered by a dataset nor on the explicit exclusion list.
+
+- Decide which case applies:
+  - **Reference data / dictionary** (units, categories, types, statuses, technical permission
+    catalogs) or **action-only permission** (no own data): add the resource code to the exclusion
+    list in `DatasetCoverage` with a one-line justification.
+  - **Data worth a dashboard** (transactional or catalog data with counts, sums, trends): implement a
+    `Dataset` class and register it.
+- A dataset declares: `code`, backing entity, `requiredResources` (the resource seeded in step 1),
+  field catalog (selectable / filterable / groupable / aggregatable flags), project path (same value
+  as `getProjectIdPath()` from step 4, or company-wide), optional owner path and owner-restricted
+  roles, and the date field the global dashboard date filter applies to.
+- Review the field catalog against the sensitive-field rule: never expose password hashes, tokens,
+  IBAN / account numbers / external ids, e-mail / phone / NIP, audit snapshots, free-text bodies of
+  messages or notifications, document URIs or storage keys. `SensitiveFieldGuardTest` enforces the
+  deny-list.
+- If the entity is project-scoped, the dataset MUST resolve its project path; a dataset whose path
+  does not resolve fails application startup.
+- Optionally add seeded library widgets for the new dataset (see FOR-10 `dashboard_widgets` seeds);
+  a dataset alone is already usable from the admin widget builder and the AI assistant.

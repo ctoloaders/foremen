@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-10: seed DASHBOARD_WIDGETS resource into resources table -->
+    <changeSet id="220-seed-dashboard-widgets-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'DASHBOARD_WIDGETS'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="resources">
+            <column name="code" value="DASHBOARD_WIDGETS"/>
+            <column name="name_ru" value="Виджеты панели"/>
+            <column name="name_pl" value="Widżety panelu"/>
+            <column name="description_ru" value="Управление библиотекой виджетов панели"/>
+            <column name="description_pl" value="Zarządzanie biblioteką widżetów panelu"/>
+        </insert>
+    </changeSet>
+
+    <!-- Grant ADMIN full CRUD on DASHBOARD_WIDGETS resource -->
+    <changeSet id="220-seed-dashboard-widgets-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'DASHBOARD_WIDGETS'
+            </sqlCheck>
+        </preConditions>
+
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'DASHBOARD_WIDGETS';
+        </sql>
+
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'DASHBOARD_WIDGETS';
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

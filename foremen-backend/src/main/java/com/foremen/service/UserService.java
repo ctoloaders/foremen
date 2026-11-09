@@ -60,6 +60,16 @@ public class UserService implements AdminService<
     private final WorkerTypeDao workerTypeDao;
     private final Class<UserEntity> daoModelClass = UserEntity.class;
 
+    /** FOR-10 (R15.3) — optional, field-injected; publishes UserCreatedEvent after a user is persisted. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
+    private void publishUserCreated(Long userId) {
+        if (eventPublisher != null && userId != null) {
+            eventPublisher.publishEvent(new com.foremen.service.dashboard.UserCreatedEvent(userId));
+        }
+    }
+
     // --- Validation hooks (framework reuses default create()/update() for audit/snapshot) ---
 
     /**
@@ -140,6 +150,7 @@ public class UserService implements AdminService<
         // FOR-07-06 (R3.1–R3.2) — role-gated seniority (0 for a non-WORKER user / no value).
         BigDecimal seniority = resolveSeniority(role, model.seniorityPct());
         UserServiceExtendedModel created = AdminService.super.create(model);
+        publishUserCreated(created.id());
         if (!categories.isEmpty() || workerType != null || seniority.signum() != 0) {
             UserEntity entity = dao.findById(created.id())
                     .orElseThrow(() -> new ForemenApiException(
@@ -340,6 +351,7 @@ public class UserService implements AdminService<
 
         // Exactly one CREATE audit row for the new worker user, mirroring the generic create audit.
         saveAudit(null, saved, "CREATE");
+        publishUserCreated(saved.getId());
         return saved;
     }
 

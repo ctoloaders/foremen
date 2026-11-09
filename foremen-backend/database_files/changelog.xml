@@ -944,4 +944,12 @@
     <include file="database_files/changesets/217-grant-foreman-company-schedule.xml"/>
     <!-- FOR-04-19 (R7.5): index ix_wmc_work_item_branch. Registered LAST, after 217. -->
     <include file="database_files/changesets/218-add-wmc-work-item-branch-index.xml"/>
+    <!-- FOR-10 (task 1.1): dashboard tables. Registered LAST, after 218. -->
+    <include file="database_files/changesets/219-create-dashboard-tables.xml"/>
+    <!-- FOR-10 (task 1.2): DASHBOARD_WIDGETS resource + ADMIN grant. Registered LAST, after 219. -->
+    <include file="database_files/changesets/220-seed-dashboard-widgets-resource.xml"/>
+    <!-- FOR-10 (task 3.1): default dashboard widget library (20 widgets). Registered LAST, after 220. -->
+    <include file="database_files/changesets/221-seed-dashboard-widget-library.xml"/>
+    <!-- FOR-10 (task 3.2): role default placements + existing-user backfill. Registered LAST, after 221. -->
+    <include file="database_files/changesets/222-seed-dashboard-role-defaults.xml"/>
 </databaseChangeLog>

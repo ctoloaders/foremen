@@ -149,6 +149,23 @@ foremen:
       narrow-place: { min: 0, max: 200 }
       gap: { min: 0, max: 0.5 }
       count: { min: 0, max: 50 }
+  dashboard:
+    # FOR-10 dashboard widget AI assistant. Only `enabled` has its own switch (default off); every
+    # llm.* value defaults to the rooms-import value (which itself defaults to foremen.ocr.llm.*)
+    # and can be overridden with FOREMEN_DASHBOARD_AI_*.
+    ai:
+      enabled: ${FOREMEN_DASHBOARD_AI_ENABLED:false}
+      rate-limit-per-minute: 10
+      llm:
+        # true => deterministic StubWidgetDraftClient (tests / Docker).
+        stub: ${FOREMEN_DASHBOARD_AI_LLM_STUB:${foremen.rooms-import.llm.stub:false}}
+        model: ${FOREMEN_DASHBOARD_AI_LLM_MODEL:${foremen.rooms-import.llm.model:gemini-3.8-flash}}
+        project: ${FOREMEN_DASHBOARD_AI_LLM_PROJECT:${foremen.rooms-import.llm.project:}}
+        location: ${FOREMEN_DASHBOARD_AI_LLM_LOCATION:${foremen.rooms-import.llm.location:}}
+        api-key: ${FOREMEN_DASHBOARD_AI_LLM_API_KEY:${foremen.rooms-import.llm.api-key:}}
+        credentials:
+          path: ${FOREMEN_DASHBOARD_AI_LLM_CREDENTIALS_PATH:${foremen.rooms-import.llm.credentials.path:}}
+          location: ${FOREMEN_DASHBOARD_AI_LLM_CREDENTIALS_LOCATION:${foremen.rooms-import.llm.credentials.location:}}
   translation:
     # Backend client<->staff message translation service (FOR-06-12). All values from environment;
     # no secrets committed. When enabled is false (or absent), the DisabledMessageTranslationService

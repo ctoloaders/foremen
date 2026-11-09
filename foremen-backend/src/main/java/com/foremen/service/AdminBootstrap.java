@@ -56,6 +56,10 @@ public class AdminBootstrap implements ApplicationRunner {
     private final RoleDao roleDao;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    /** FOR-10 (R15.3) — optional, field-injected so the constructor stays unchanged. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @Value("${foremen.admin.email:}")
     private String adminEmail;
 
@@ -105,7 +109,10 @@ public class AdminBootstrap implements ApplicationRunner {
         admin.setActive(true);
         admin.setStatus(UserStatus.ACTIVE);
         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
-        userDao.save(admin);
+        UserEntity saved = userDao.save(admin);
+        if (eventPublisher != null && saved != null && saved.getId() != null) {
+            eventPublisher.publishEvent(new com.foremen.service.dashboard.UserCreatedEvent(saved.getId()));
+        }
         log.info("Admin bootstrap created ADMIN user for email {}", adminEmail);
     }
 

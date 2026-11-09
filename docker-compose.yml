@@ -107,6 +107,17 @@ services:
       FOREMEN_ROOMS_IMPORT_LLM_API_KEY:
       FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_PATH:
       FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_LOCATION:
+      # FOR-10 dashboard widget AI assistant. Local/CI default: feature ON. The LLM_* values are
+      # null-valued on purpose (passed through only when set), so an unset one falls back to the
+      # rooms-import values (stub client by default in docker) instead of being exported as "".
+      FOREMEN_DASHBOARD_AI_ENABLED: ${FOREMEN_DASHBOARD_AI_ENABLED:-true}
+      FOREMEN_DASHBOARD_AI_LLM_STUB:
+      FOREMEN_DASHBOARD_AI_LLM_MODEL:
+      FOREMEN_DASHBOARD_AI_LLM_PROJECT:
+      FOREMEN_DASHBOARD_AI_LLM_LOCATION:
+      FOREMEN_DASHBOARD_AI_LLM_API_KEY:
+      FOREMEN_DASHBOARD_AI_LLM_CREDENTIALS_PATH:
+      FOREMEN_DASHBOARD_AI_LLM_CREDENTIALS_LOCATION:
     depends_on:
       postgres:
         condition: service_healthy
