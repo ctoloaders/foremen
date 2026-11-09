@@ -6,8 +6,8 @@ The parallel-execution plan (waves) is at the end.
 
 ## Tasks
 
-- [ ] 1. Backend: readiness gate foundation
-  - [ ] 1.1 Add the all-areas readiness variant
+- [x] 1. Backend: readiness gate foundation
+  - [x] 1.1 Add the all-areas readiness variant
     - Add `ProjectReadinessService.getReadinessAllAreas(Long projectId)` that computes readiness over
       EVERY contributor (skips the per-area READ filter), returning the same `ProjectReadinessResult`
       shape. Leave the existing caller-scoped `getReadiness` untouched. Factor the pre-activation
@@ -15,7 +15,7 @@ The parallel-execution plan (waves) is at the end.
       activation gate and `ProjectActivationSignal`.
     - _Requirements: 2.3, 2.4_
     - _Depends on: none_
-  - [ ] 1.2 Add the not-ready exception + 409 body + advice handler
+  - [x] 1.2 Add the not-ready exception + 409 body + advice handler
     - Add `ProjectNotReadyException(List<AreaContribution> notReadyAreas)`, the
       `ProjectNotReadyError(message, areas[])` DTO (localized strings), and a
       `ForemenControllerAdvice#handleProjectNotReady` `@ExceptionHandler` returning HTTP 409 with the
@@ -24,8 +24,8 @@ The parallel-execution plan (waves) is at the end.
     - _Requirements: 4.1, 4.2, 4.3, 4.4_
     - _Depends on: none_
 
-- [ ] 2. Backend: activation service + endpoint
-  - [ ] 2.1 Add `ProjectActivationService`
+- [x] 2. Backend: activation service + endpoint
+  - [x] 2.1 Add `ProjectActivationService`
     - `activate(projectId, force)`: access gate (404) → UPDATE gate (403) → pre-activation check
       (idempotent for ACTIVE, illegal-transition 409 for terminal) → compute full readiness
       (`getReadinessAllAreas`) → block with `ProjectNotReadyException` when `<100%` unless
@@ -33,41 +33,41 @@ The parallel-execution plan (waves) is at the end.
       authority (ADMIN bypass + explicit MANAGER).
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.5, 3.1, 3.2, 3.3, 3.4_
     - _Depends on: 1.1, 1.2_
-  - [ ] 2.2 Add `POST /api/projects/{id}/activate`
+  - [x] 2.2 Add `POST /api/projects/{id}/activate`
     - Add `ProjectController.activate(id, ActivateProjectRequest{force})` guarded
       `@RequiresPermission(PROJECTS, UPDATE)`, returning the updated project DTO; `force` defaults
       false when the body is omitted. App starts clean (`PermissionAnnotationValidator`).
     - _Requirements: 1.5, 3.1_
     - _Depends on: 2.1_
-  - [ ] 2.3 Gate the generic update path
+  - [x] 2.3 Gate the generic update path
     - In `ProjectService` update guard, detect a `pre-activation → ACTIVE` status change and route it
       through the activation gate (non-force), yielding the same 409 not-ready outcome; leave every
       other status change and the automatic `ProjectActivationSignal` untouched.
     - _Requirements: 6.3, 7.1, 7.2, 7.3_
     - _Depends on: 2.1_
 
-- [ ] 3. Backend: messages
-  - [ ] 3.1 Add backend message codes (PL + RU)
+- [x] 3. Backend: messages
+  - [x] 3.1 Add backend message codes (PL + RU)
     - Add `error.project.not.ready` (and `error.project.status.illegalTransition` if not already
       present) to `messages.properties` (PL) and `messages_ru.properties` (RU) at parity.
     - _Requirements: 8.1, 8.2_
     - _Depends on: none_
 
-- [ ] 4. Frontend: api client + mutation + error parsing
-  - [ ] 4.1 Add the activation client + hook + 409 parsing
+- [x] 4. Frontend: api client + mutation + error parsing
+  - [x] 4.1 Add the activation client + hook + 409 parsing
     - Add `activateProject(id, force)` to `projects-api.ts`, `useActivateProject()` in
       `mutation-hooks.ts` (invalidate `projectKeys` + `readinessKeys.view`), the `ProjectNotReadyError`
       type, and extend `ApiError` to expose the parsed 409 `notReady` body.
     - _Requirements: 1.1, 4.2, 6.5_
     - _Depends on: none_
 
-- [ ] 5. Frontend: surfaces
-  - [ ] 5.1 Readiness widget "Hand over to work" action
+- [x] 5. Frontend: surfaces
+  - [x] 5.1 Readiness widget "Hand over to work" action
     - In `ReadinessWidget.tsx`, render the action only when `overallPercentage === 100` and the
       caller holds `PROJECTS` UPDATE; on click call `activateProject(id,false)`; success toast.
     - _Requirements: 5.1, 5.2, 5.3, 5.4, 5.5_
     - _Depends on: 4.1_
-  - [ ] 5.2 Edit-form 409 breakdown + "anyway" force
+  - [x] 5.2 Edit-form 409 breakdown + "anyway" force
     - In `ProjectFormSheet.tsx`, on a `ProjectNotReadyError` 409 render the not-ready breakdown
       (reuse the readiness item rendering) and a "Hand over to work anyway" action for ADMIN/MANAGER
       that re-sends `activateProject(id,true)`; success toast + close/refresh. Keep other update
@@ -75,8 +75,8 @@ The parallel-execution plan (waves) is at the end.
     - _Requirements: 6.1, 6.2, 6.4, 6.5, 6.6_
     - _Depends on: 4.1_
 
-- [ ] 6. Frontend: i18n
-  - [ ] 6.1 Add frontend i18n keys (PL + RU)
+- [x] 6. Frontend: i18n
+  - [x] 6.1 Add frontend i18n keys (PL + RU)
     - Add `readiness.activate.action`, `projects.activate.anyway`, `projects.activate.success`,
       `projects.activate.notReadyTitle`, `projects.activate.notReadyHint` to `ru.json` and `pl.json`
       at parity; reuse existing `workspace.tab.*` / `readiness.*` for area names + items. Run the
@@ -84,8 +84,8 @@ The parallel-execution plan (waves) is at the end.
     - _Requirements: 8.1, 8.3_
     - _Depends on: 5.1, 5.2_
 
-- [ ] 7. Tests
-  - [ ] 7.1 Backend tests
+- [x] 7. Tests
+  - [x] 7.1 Backend tests
     - `ProjectActivationServiceTest` (gate matrix: 100% activate; <100% no force → 409 with correct
       not-ready areas; <100% + ADMIN/MANAGER force → ACTIVE; <100% + non-ADMIN/MANAGER force →
       rejected; already ACTIVE idempotent; terminal → illegal; gate over ALL areas), a
@@ -100,7 +100,7 @@ The parallel-execution plan (waves) is at the end.
     - _Requirements: 4.2, 5.1, 5.2, 6.4, 6.5_
     - _Depends on: 5.1, 5.2, 6.1_
 
-- [ ] 8. Author test-cases.md
+- [x] 8. Author test-cases.md
   - Create `test-cases.md` in the spec folder following the `.kiro/steering/test-cases.md` standard
     (feature grouping, step-by-step scenarios, repeatability via run-id generator + teardown,
     regression group, MD report template). Part A (API): `POST /api/projects/{id}/activate` at 100%
@@ -112,7 +112,7 @@ The parallel-execution plan (waves) is at the end.
   - _Requirements: 1.1, 2.1, 3.1, 5.1, 6.4_
   - _Depends on: 2.2, 2.3, 5.1, 5.2_
 
-- [ ] 9. Final verification + checkpoint
+- [x] 9. Final verification + checkpoint
   - Compile backend + run the affected test classes; type-check + unit-test the frontend; locale
     parity green; app starts clean. Confirm end-to-end on the live stack: activate at 100% via the
     widget, and edit-form status→ACTIVE at <100% → 409 breakdown → force (ADMIN) → ACTIVE, with a
