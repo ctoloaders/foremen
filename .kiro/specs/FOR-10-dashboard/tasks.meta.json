@@ -1,5 +1,10 @@
 {
-  "pbtResults": {},
+  "pbtResults": {
+    "11.6 Write service tests for move and swap": {
+      "status": "passed",
+      "lastRunTimestamp": 1794490358292
+    }
+  },
   "executionHistory": {
     "1.1 Create dashboard tables, entities and DAOs": [
       {
@@ -725,6 +730,452 @@
         "executionId": "f2ad30c9-63a7-4f55-9abe-173513d3fbaa",
         "chatSessionId": "sess_0c182c36-75ca-45f3-9415-de636ecca450",
         "timestamp": 1794264406838
+      }
+    ],
+    "11.1 GridMath additions and `classify`-based add": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775071
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487781479
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794488015785
+      }
+    ],
+    "11.2 Shared grid test vectors and backend contract test": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775172
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489760090
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490099651
+      }
+    ],
+    "11.3 Move and swap endpoints": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775247
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489760141
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490100002
+      }
+    ],
+    "11.4 Library `ThumbnailShape`": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775282
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487781534
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794488016370
+      }
+    ],
+    "11.5 Write property tests for GridMath": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775313
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490108249
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490171381
+      }
+    ],
+    "11.6 Write service tests for move and swap": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775341
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490178728
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490602203
+      }
+    ],
+    "11.7 Write Testcontainers integration test for move and swap": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775372
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490178810
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490602264
+      }
+    ],
+    "11.8 Write ThumbnailShape and message-bundle tests": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775407
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490108310
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490171816
+      }
+    ],
+    "12.1 `lib/grid.ts` mirror": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775439
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487781935
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794488017118
+      }
+    ],
+    "12.2 Write property tests for `grid.ts`": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775471
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489760177
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490100840
+      }
+    ],
+    "12.3 Frontend contract test against the shared vectors": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775503
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490610795
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490710928
+      }
+    ],
+    "12.4 Types, API client and optimistic mutation hooks": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775551
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489760220
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490101306
+      }
+    ],
+    "12.5 Write tests for the mutation hooks": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775624
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490178849
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490602409
+      }
+    ],
+    "13.1 Add the drag-and-drop dependency (needs user approval)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775657
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489665659
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489752640
+      }
+    ],
+    "13.2 Localization (RU/PL)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775689
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487782489
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794488017616
+      }
+    ],
+    "13.3 Add_Slots, visible rows and grid-full hint": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775716
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794489760253
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490101908
+      }
+    ],
+    "13.4 Drag and drop, keyboard move mode and tablet/mobile swap": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775748
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490178895
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490602593
+      }
+    ],
+    "13.5 Dashboard page wiring": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775772
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490716839
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503187860
+      }
+    ],
+    "13.6 Move `buildSampleResult` to the dashboard feature": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775807
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487783118
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794488018159
+      }
+    ],
+    "13.7 Thumbnail components": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775851
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490179294
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490603211
+      }
+    ],
+    "13.8 Fit-aware picker with thumbnails": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775892
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490716886
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503188352
+      }
+    ],
+    "13.9 Update existing tests affected by the amendment": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775936
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503191502
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503263551
+      }
+    ],
+    "13.10 Write component tests": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487775972
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503267941
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503375332
+      }
+    ],
+    "14. Author test-cases.md (Amendment A1)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487776007
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503378487
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503751908
+      }
+    ],
+    "15. Final checkpoint (Amendment A1)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794487776038
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503755788
+      },
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503826111
+      }
+    ],
+    "11. Amendment A1: Layout UX, backend (Requirements 19-22; root repo)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490602364
+      }
+    ],
+    "12. Amendment A1: Layout UX, frontend foundation (Requirements 19-22; foremen-frontend repo)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794490711034
+      }
+    ],
+    "13. Amendment A1: Layout UX, frontend UI (Requirements 19-22; foremen-frontend repo)": [
+      {
+        "executionId": "03351920-6766-4606-98fb-23adb460ab80",
+        "chatSessionId": "sess_2ab2a421-c9f2-47ff-a3af-061f42c89f34",
+        "timestamp": 1794503375408
       }
     ]
   }

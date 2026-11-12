@@ -224,6 +224,190 @@ Conventions: Liquibase changesets are numbered from `219` and registered LAST in
   - Run the affected test classes only (per the test-execution rules), frontend lint/type-check/tests,
     verify both repos with `git status`, and confirm every requirement is covered.
 
+- [x] 11. Amendment A1: Layout UX, backend (Requirements 19-22; root repo)
+  - [x] 11.1 GridMath additions and `classify`-based add
+    - Add to `GridMath`: `Placement {OK, INVALID, OCCUPIED}`, `Fit`, `isFree`, `freeCells`, `classify`,
+      `maximalFits`, `fitSize` (largest area, tie: wider), `fitsInAny`, `lastOccupiedRow`,
+      `visibleRows` (see design A1.2). Refactor `DashboardLayoutService.addPlacement` to call
+      `classify`; behavior and error codes stay unchanged.
+    - _Requirements: 19.3, 20.2, 20.10, 21.1, 21.8, 21.9, 21.10, 21.11_
+  - [x] 11.2 Shared grid test vectors and backend contract test
+    - Generate `foremen-backend/src/test/resources/dashboard/grid-vectors.json` from the Java
+      reference and review it by hand (empty grid, full grid, single tile, holes in a row, tall thin
+      gaps, edge cells 3/32/35, cell outside 0..35, oversized spans, the 2x1-fits-while-Fit_Size-is-1xN
+      case). Add `GridVectorsContractTest` asserting `occupiedCells`, `freeCells`, `lastOccupiedRow`,
+      `visibleRows`, `maximalFits`, `fitSize`, `classify`.
+    - _Requirements: 21.10_
+  - [x] 11.3 Move and swap endpoints
+    - `DashboardLayoutService.movePlacement` and `swapPlacements` (per-user advisory lock first;
+      missing and foreign both 403 `error.dashboard.forbidden`; idempotent move to the current cell
+      without write; 400 `cell.invalid` / 409 `cell.occupied` through `classify`; swap checks both
+      footprints against others and against each other, both or neither persisted; no Has_Access and
+      no active check). `DashboardController`: `PUT /api/dashboard/items/{id}/move` and
+      `POST /api/dashboard/items/swap` with `MoveItemRequest`, `SwapItemsRequest`, `SwapResponse`
+      (null body fields give 400 `error.dashboard.cell.invalid`). Self-service: no
+      `@PermissionResource`.
+    - _Requirements: 19.7, 19.8, 19.9, 19.10, 19.13, 19.14, 19.18_
+  - [x] 11.4 Library `ThumbnailShape`
+    - `ThumbnailShape` record, `ThumbnailShapeFactory.from(DashboardWidgetEntity)` built from the
+      stored config only, new last component `thumbnail` of `LibraryItem`, filled in
+      `DashboardLibraryService.toItem` for every entry regardless of access; no strings other than
+      `visualization` and `style`, no dataset lookup. `PlacementView` unchanged.
+    - _Requirements: 22.1, 22.2_
+  - [x] 11.5 Write property tests for GridMath
+    - Extend `GridMathPropertyTest` (jqwik, 100+ tries) with a brute-force reference.
+    - **Property 15: Placement classification is consistent between backend and frontend (backend side)**
+    - **Property 20: Free cells are disjoint from footprints and Add_Slots follow the visible rows**
+    - **Property 21: Fit_Size and maximal fits are correct**
+    - **Validates: Requirements 19.3, 20.1, 20.2, 20.5, 20.10, 21.1, 21.2, 21.8, 21.11**
+  - [x] 11.6 Write service tests for move and swap
+    - `DashboardLayoutServiceTest` with the existing DAO fakes: move OK / 400 / 409 / foreign and
+      missing give identical 403 / idempotent no-write / widget and project id untouched /
+      `NO_ACCESS`, `INACTIVE`, `PROJECT_UNAVAILABLE` placements movable; swap OK / 400 / 409 /
+      same id / mutual overlap / all-or-nothing. Sequence properties:
+    - **Property 16: Moves and swaps never create overlaps**
+    - **Property 17: Move round trip and idempotence**
+    - **Property 18: Moves change only the cell**
+    - **Validates: Requirements 19.7, 19.8, 19.9, 19.10, 19.13, 19.14, 19.17**
+  - [x] 11.7 Write Testcontainers integration test for move and swap
+    - Real HTTP: move and swap happy paths, foreign vs missing id give the same 403, swap rollback,
+      two concurrent moves/swaps/adds into the same cells give exactly one success and one 409
+      `error.dashboard.cell.occupied`, add with out-of-grid or occupied `cellIndex` gives 400/409
+      without fallback.
+    - _Requirements: 19.7, 19.8, 19.10, 19.13, 19.14, 19.18, 21.8, 21.9_
+  - [x] 11.8 Write ThumbnailShape and message-bundle tests
+    - `ThumbnailShapeTest`: exact key set, no names/labels/filters/dataset code/config value in the
+      serialized JSON, identical shape for `available = true` and `false`, malformed config gives
+      zeros/false. Assert `error.dashboard.cell.invalid`, `.cell.occupied`, `.forbidden` exist in both
+      `messages.properties` (PL) and `messages_ru.properties` (RU).
+    - **Property 23: Thumbnail shape exposes only the whitelisted structure**
+    - **Validates: Requirements 22.1, 22.2, 22.13**
+
+- [x] 12. Amendment A1: Layout UX, frontend foundation (Requirements 19-22; foremen-frontend repo)
+  - [x] 12.1 `lib/grid.ts` mirror
+    - Add `isFree`, `freeCells`, `classifyPlacement`, `maximalFits`, `fitSize`, `fitsInAny`,
+      `lastOccupiedRow`, `visibleRows`, `occupiedExcluding`, `dropTarget`, `canSwap`, `neighbor`,
+      `stepTarget`, `applyMove`, `applySwap`, `restoreCells`, with the same names and semantics as
+      `GridMath` (cells as index lists, no 32-bit bitwise on 36 cells). `firstFreeCell` stays.
+    - _Requirements: 19.3, 19.11, 19.12, 19.13, 20.2, 20.10, 21.1, 21.10, 21.11_
+  - [x] 12.2 Write property tests for `grid.ts`
+    - vitest + fast-check (100+ runs) against a brute-force reference.
+    - **Property 15: Placement classification is consistent between backend and frontend (drop target validity)**
+    - **Property 19: Keyboard targets stay in the grid**
+    - **Property 20: Free cells are disjoint from footprints and Add_Slots follow the visible rows**
+    - **Property 21: Fit_Size and maximal fits are correct**
+    - **Validates: Requirements 19.3, 19.11, 20.1, 20.2, 20.5, 20.10, 21.1, 21.2, 21.11**
+  - [x] 12.3 Frontend contract test against the shared vectors
+    - `grid-vectors.contract.test.ts` locating `grid-vectors.json` by walking up from
+      `process.cwd()` (like the route-whitelist contract), `describe.skipIf` when absent; asserts
+      `freeCells`, `lastOccupiedRow`, `visibleRows`, `maximalFits`, `fitSize`, `classifyPlacement`.
+    - _Requirements: 21.10_
+  - [x] 12.4 Types, API client and optimistic mutation hooks
+    - `ThumbnailShape` in `types/dashboard.ts` and `LibraryItem.thumbnail`; `moveDashboardItem` and
+      `swapDashboardItems` in `dashboard-api.ts`; `useMoveDashboardItem` and `useSwapDashboardItems`
+      in `api/mutation-hooks.ts` with `onMutate` (cancel queries, `applyMove`/`applySwap` on the
+      `dashboardKeys.layout()` cache), `onError` (`restoreCells` for the affected ids only) and
+      `onSettled` (invalidate layout). Widget data queries are not refetched.
+    - _Requirements: 19.4, 19.6, 19.14, 22.1_
+  - [x] 12.5 Write tests for the mutation hooks
+    - Optimistic update within one render, rollback restores only the affected placements, error
+      surfaces as localized message, swap rollback restores both.
+    - _Requirements: 19.4, 19.6, 19.14_
+
+- [x] 13. Amendment A1: Layout UX, frontend UI (Requirements 19-22; foremen-frontend repo)
+  - [x] 13.1 Add the drag-and-drop dependency (needs user approval)
+    - Add `@dnd-kit/core` at an exact pinned version (no caret; 6.3.1, confirm at install). It is a
+      new dependency: obtain user approval before installing, as was done for `recharts`.
+      `@dnd-kit/sortable` and `utilities` are not used.
+    - _Requirements: 19.1_
+  - [x] 13.2 Localization (RU/PL)
+    - Add all keys of design A1.5 to `ru.json` and `pl.json` (`dashboard.move.*`,
+      `dashboard.addSlot.*`, `dashboard.picker.position|fitsUpTo|showAll|doesNotFit|noFit`,
+      `dashboard.thumbnail.*`). Add a parity test that `ru.json` and `pl.json` have identical
+      `dashboard.*` key sets.
+    - _Requirements: 22.13, 19.15, 20.6, 21.2, 21.4, 21.7_
+  - [x] 13.3 Add_Slots, visible rows and grid-full hint
+    - `AddSlot` component (dashed neutral button, `data-testid="dashboard-add-slot-{cell}"`,
+      `aria-label` with 1-based row/column and Fit_Size, no data fetch). In `DashboardGrid` on
+      desktop render one `AddSlot` per `freeCells` cell in visible rows in ascending order, the
+      full-width "show all free rows" control with local `showAllRows` state, and the
+      `dashboard.addSlot.gridFull` hint when rows 0..8 have no free cell. `EmptyCellTile` stays as the
+      single trailing "+" on tablet/mobile.
+    - _Requirements: 20.1, 20.2, 20.3, 20.4, 20.5, 20.6, 20.7, 20.8, 20.10_
+  - [x] 13.4 Drag and drop, keyboard move mode and tablet/mobile swap
+    - `DashboardGrid` `interaction` state and `DndContext` (`PointerSensor` with distance 6, cell
+      collision detection, `onDragCancel`); 36 `DropCell`s with valid/invalid highlight and footprint
+      label during interaction; `onDragEnd` calls `onMove` only for a valid target different from the
+      current cell. `TileActions` used by `WidgetTile` and `DisabledWidgetTile` (drag handle with
+      listeners only on the handle, "Move" button; "Move earlier"/"Move later" on tablet/mobile via
+      `neighbor` + `canSwap`, `aria-disabled` with `aria-describedby` reason and tooltip; 44 px touch
+      targets). Keyboard move mode (`role="application"`, arrows via `stepTarget`, Enter, Escape,
+      focus return) with `role="status"` `aria-live="polite"` announcements. Hide Add_Slots while
+      `interaction !== idle`. Error banner `role="alert"` via `dashboardErrorMessage`.
+    - _Requirements: 19.1, 19.2, 19.3, 19.4, 19.5, 19.6, 19.10, 19.11, 19.12, 19.13, 19.14, 19.15, 19.16, 20.9_
+  - [x] 13.5 Dashboard page wiring
+    - `DashboardPage`: `pickerCell: number | null` replaces `freeCell`; header "Add widget" opens the
+      picker with `null` (add without `cellIndex`), an Add_Slot opens it with its cell, the
+      tablet/mobile trailing "+" opens it with `null`; wire move/swap mutations to `DashboardGrid`.
+    - _Requirements: 19.4, 20.7, 21.5_
+  - [x] 13.6 Move `buildSampleResult` to the dashboard feature
+    - Move `buildSampleResult` and its constants from `features/dashboard-widgets/lib/builder.ts` to
+      `features/dashboard/lib/sample-data.ts` taking a structural `{fields: {name; type}[]}`;
+      `builder.ts` re-exports it so the builder and `StylePreview` keep working.
+    - _Requirements: 22.4_
+  - [x] 13.7 Thumbnail components
+    - `lib/thumbnail-sample.ts#sampleFromShape`; `WidgetThumbnail` (`role="img"`, `aria-label` from
+      `dashboard.thumbnail.aria`, aspect ratio colSpan:rowSpan in a max box, `inert` + `aria-hidden`
+      inner markup, no links, user palette, default style, reduced opacity when disabled);
+      `ThumbnailErrorBoundary` with visualization icon fallback (also for unsupported visualization or
+      style); `LazyThumbnail` with `IntersectionObserver` (`rootMargin: '100px'`), same-size
+      placeholder, mount in `requestAnimationFrame`, unmount when leaving the viewport, immediate
+      mount without `IntersectionObserver`. Add `interactive={false}` to `WidgetRenderer` if its
+      tooltips/animation cannot otherwise be silenced.
+    - _Requirements: 22.3, 22.4, 22.5, 22.6, 22.7, 22.8, 22.9, 22.10, 22.11, 22.12_
+  - [x] 13.8 Fit-aware picker with thumbnails
+    - `WidgetPicker`: props `cellIndex`, `placements`, `showAll` toggle (off by default, reset on
+      close). `fitOf` through `classifyPlacement` when a cell is given, `firstFit` otherwise;
+      `listed = matchesSearch && (fits || showAll)`. Header with 1-based position and "fits up to"
+      from `fitSize`; non-fitting entries only with the toggle, disabled, with the does-not-fit reason
+      (plus the access warning when unavailable); "no widget fits here" message with Fit_Size and
+      toggle; `choose()` always sends `cellIndex` when set. Render `LazyThumbnail` per row.
+    - _Requirements: 21.2, 21.3, 21.4, 21.5, 21.6, 21.7, 21.9, 21.11, 21.12, 22.3, 22.5_
+  - [x] 13.9 Update existing tests affected by the amendment
+    - Rewrite the `WidgetPicker` tests that expect the `noSpace` warning from `firstFit` for the fit
+      filter; update `DashboardComponents.test.tsx` cases that look for the single
+      `dashboard-add-tile` on desktop to `dashboard-add-slot-{cell}`; keep tablet/mobile single "+"
+      cases. Add `LibraryItem.thumbnail` to test fixtures.
+    - _Requirements: 20.1, 20.7, 21.3, 21.4_
+  - [x] 13.10 Write component tests
+    - Drag cancel (Escape, invalid drop, outside grid, same cell) makes no backend call; valid drop
+      sends one move; optimistic update and rollback with banner; keyboard mode with `aria-live`;
+      tablet/mobile buttons with disabled reasons; Add_Slot rendering, ascending focus order and
+      "show all free rows"; grid-full hint; Add_Slots hidden during interaction; a click on a linked
+      element does not start a drag; picker fit filter + search AND, show-all reasons, no-fit message;
+      `WidgetThumbnail` (mocked `IntersectionObserver` lazy mount/unmount, fallback icon,
+      `aria-label`, `inert`, no data endpoint call).
+    - **Property 22: Picker filter matches backend acceptance**
+    - **Validates: Requirements 19.4, 19.5, 19.6, 19.11, 19.15, 19.16, 20.3, 20.6, 20.8, 20.9, 21.3, 21.4, 21.7, 21.11, 21.12, 22.4, 22.6, 22.8, 22.10, 22.12**
+
+- [x] 14. Author test-cases.md (Amendment A1)
+  - Update `test-cases.md` in the spec folder (Russian, per `.kiro/steering/test-cases.md`): add UI
+    scenarios (browser engine) and API scenarios (Dockerized app) for Requirements 19-22: drag and
+    drop incl. cancel and invalid drops, keyboard move mode, tablet/mobile move earlier/later,
+    move/swap API (400/409/403, idempotency, state-independent movability, concurrency), Add_Slots on
+    all free cells and "show all free rows", grid-full hint, Fit_Size and fit-aware picker with "show
+    all" and reasons, thumbnails and the library `thumbnail` shape (no leaks). Specify the
+    repeatability strategy (run-id generator and teardown) and extend the regression group with the add
+    flow (header "Add widget", Add_Slot, tablet "+", first-fit without `cellIndex`) and the MD report
+    template.
+  - _Requirements: 19.1–19.18, 20.1–20.10, 21.1–21.12, 22.1–22.13_
+
+- [x] 15. Final checkpoint (Amendment A1)
+  - Run only the affected backend test classes (per the test-execution rules, log in
+    `/tmp/for-10-test.log`, read the JUnit XML), frontend lint, type-check and the affected vitest
+    files, verify both repos with `git status`, and confirm Requirements 19-22 are covered.
+    Ensure all tests pass, ask the user if questions arise.
+
 ## Task Dependency Graph
 
 ```json
@@ -237,7 +421,15 @@ Conventions: Liquibase changesets are numbered from `219` and registered LAST in
     { "id": 5, "tasks": ["5.3", "6.11", "7.2"] },
     { "id": 6, "tasks": ["7.3"] },
     { "id": 7, "tasks": ["9"] },
-    { "id": 8, "tasks": ["10"] }
+    { "id": 8, "tasks": ["10"] },
+    { "id": 9, "tasks": ["11.1", "11.4", "12.1", "13.1", "13.2", "13.6"] },
+    { "id": 10, "tasks": ["11.2", "11.3", "11.5", "11.8", "12.2", "12.4", "13.3"] },
+    { "id": 11, "tasks": ["11.6", "11.7", "12.3", "12.5", "13.4", "13.7"] },
+    { "id": 12, "tasks": ["13.5", "13.8"] },
+    { "id": 13, "tasks": ["13.9"] },
+    { "id": 14, "tasks": ["13.10"] },
+    { "id": 15, "tasks": ["14"] },
+    { "id": 16, "tasks": ["15"] }
   ]
 }
 ```

@@ -41,8 +41,8 @@ In scope:
 - Two notifications (Requirement 17).
 
 Out of scope (explicit):
-- Drag-and-drop re-arranging and resizing of placed widgets (v1 supports add into a free area and
-  delete only).
+- Resizing of placed widgets (the span is defined by the library widget). Drag-and-drop moving of
+  placed widgets was out of scope in v1 and is brought into scope by Requirement 19.
 - Sharing dashboards between users, per-role forced dashboards, dashboard templates.
 - Custom (non-system) roles: defaults are defined for system roles only.
 - Email / SMS / Telegram delivery of notifications.
@@ -69,6 +69,21 @@ Out of scope (explicit):
 - **System_Role**: a role with `system = true` (ADMIN, MANAGER, FOREMAN, WORKER, FINANCIER, CLIENT,
   ESTIMATOR, SALESMAN).
 - **AI_Assistant**: the admin tool that drafts a Widget_Config from a text description.
+- **Free_Cell**: a desktop-grid cell (Cell_Index 0..35) not covered by the footprint of any Placement.
+- **Add_Slot**: a "+" tile rendered on a Free_Cell that opens the library picker for that Cell_Index.
+- **Fit_Size**: for a Free_Cell, the maximum `colSpan x rowSpan` rectangle that starts at that cell,
+  extends right and down, stays inside the 4x9 grid and covers only Free_Cells. Fit_Size has
+  `maxCols` (1..4) and `maxRows` (1..9); a widget fits when `colSpan <= maxCols` and
+  `rowSpan <= maxRows`.
+- **Thumbnail**: a small, non-interactive rendering of a library widget's visualization and default
+  style, built with the real renderers and synthetic Sample_Data.
+- **Sample_Data**: client-generated synthetic rows/series per visualization type; never fetched and
+  never derived from the user's data.
+- **Move**: relocation of an existing Placement to another Cell_Index, keeping widget id and project id.
+- **Thumbnail_Shape**: an access-independent descriptor of a library widget returned by the library endpoint (visualization, default style, counts of columns / dimensions / measures, temporal-dimension, stacked and compare-to-previous flags); it carries no field names, labels, filters or dataset code.
+- **Drop_Target**: the candidate Cell_Index under the dragged widget during a Move; valid when the
+  footprint fits the grid and overlaps no other Placement of the user (the moved Placement itself is
+  ignored).
 
 ## Requirements
 
@@ -126,13 +141,15 @@ the same period.
 #### Acceptance Criteria
 
 1. THE first free area large enough for at least a 1x1 widget (scanning in Cell_Index order) SHALL show
-   a "+" tile. Pressing it SHALL open the library picker.
+   a "+" tile. Pressing it SHALL open the library picker. (On desktop this is extended to every free
+   cell by Requirement 20; fit-aware picking is defined in Requirement 21.)
 2. THE picker SHALL list active library widgets with name, description, visualization type and span,
    with a text search. Widgets the user has no access to SHALL be shown DISABLED with a warning
    (Requirement 9) and SHALL NOT be addable.
 3. WHEN a widget is chosen, THE system SHALL place it at the "+" cell if its footprint fits there;
    otherwise at the first free position where it fits. IF no position fits, THE picker SHALL show a
    "no space" message and the backend SHALL return HTTP 409 `error.dashboard.grid.full`.
+   (When `cellIndex` is given, Requirement 21.9 applies: no first-fit fallback.)
 4. FOR a Project_Widget, THE picker SHALL ask for a project (Requirement 12) before placing.
 5. EACH placed widget SHALL show a remove action. Removal SHALL require a confirmation dialog with a
    warning that the widget will disappear from the dashboard.
@@ -634,3 +651,84 @@ Delivery channels beyond the in-app bell are future work.
 4. Audit: administrator create/update/activate/deactivate/delete of widgets SHALL be written to the
    existing audit log.
 5. Config JSON size SHALL be capped (64 KB).
+
+### Requirement 19: Moving widgets (drag and drop)
+
+**User Story:** As a user, I want to drag a widget to another place on my dashboard, so that I can arrange it the way I work.
+
+#### Acceptance Criteria
+
+1. WHERE the viewport is desktop (4 columns), THE Dashboard SHALL let the user drag any Placement tile by a dedicated drag handle and drop it on a Drop_Target, where a Drop_Target is a single grid cell identified by Cell_Index = row*4+col (row 0..8, col 0..3, Cell_Index 0..35) and the dragged Placement's top-left corner is anchored to the cell under the pointer.
+2. WHILE a drag is in progress, THE Dashboard SHALL highlight the Drop_Target under the pointer as valid or invalid and SHALL show the footprint (Cell_Index, colSpan, rowSpan) of the dragged widget at that position, updating the highlight within 100 ms of each pointer move onto a different cell.
+3. THE Dashboard SHALL treat a Drop_Target as valid only when (col of Cell_Index + colSpan) <= 4, (row of Cell_Index + rowSpan) <= 9, and the footprint overlaps no other Placement of the same user, where colSpan is 1..4 and rowSpan is 1..9, and the footprint of the dragged Placement at its original position SHALL be ignored in the overlap check.
+4. WHEN the user drops a Placement on a valid Drop_Target different from its current Cell_Index, THE Dashboard SHALL update the Placement position optimistically within 100 ms and SHALL send one move request to the move endpoint with the new `cellIndex`.
+5. WHEN the user drops a Placement on an invalid Drop_Target, releases it outside the grid, drops it on its current Cell_Index, or presses Escape during the drag, THE Dashboard SHALL leave the Placement at its original position and SHALL NOT call the backend.
+6. IF the move request fails, THEN THE Dashboard SHALL restore the previous position of the Placement and SHALL show the localized message of the returned error code, and no other Placement SHALL change position.
+7. THE move endpoint SHALL execute in one transaction under the same per-user `pg_advisory_xact_lock(userId)` as `addPlacement`, SHALL validate the new footprint with `GridMath`, and SHALL change only `cell_index` (widget id and project id stay unchanged).
+8. IF the new footprint is outside the 4x9 grid, THEN THE backend SHALL return HTTP 400 `error.dashboard.cell.invalid` and SHALL leave all Placements unchanged. IF the new footprint overlaps another Placement of the user, THEN THE backend SHALL return HTTP 409 `error.dashboard.cell.occupied` and SHALL leave all Placements unchanged. IF the Placement does not belong to the caller or does not exist, THEN THE backend SHALL return HTTP 403 `error.dashboard.forbidden` with an identical response for both cases, without revealing existence.
+9. WHEN the requested `cellIndex` equals the current one, THE backend SHALL return success without writing to the database (idempotent).
+10. THE move endpoint SHALL be self-service (no `@PermissionResource`) and SHALL NOT require Has_Access to the widget, so that Placements in state `NO_ACCESS`, `INACTIVE` or `PROJECT_UNAVAILABLE` remain movable. A Project_Widget Placement SHALL keep its `project_id`.
+11. THE Dashboard SHALL provide a keyboard-accessible alternative to dragging: a "Move" action on every tile that enters a move mode in which each arrow key press shifts the Drop_Target by one cell (Left/Right by 1 column, Up/Down by 1 row, not wrapping past grid edges), Enter confirms (sending a move request only if the target is valid and differs from the current Cell_Index), Escape cancels without a backend call, and an `aria-live` region announces the target position (row and column) and its validity within 500 ms of each change.
+12. WHERE the viewport is tablet (3 columns) or mobile (1 column), THE Dashboard SHALL NOT offer pointer drag, and the tile menu SHALL offer "Move earlier" and "Move later" actions that exchange the Cell_Index of the Placement with the previous or next Placement in Cell_Index order on the desktop grid.
+13. THE swap SHALL be performed by a single backend call (a swap endpoint accepting two Placement ids, or a batch move accepting both new `cellIndex` values) that executes both changes in one transaction under the per-user `pg_advisory_xact_lock(userId)`, validates both new footprints with `GridMath` against the grid and against all other Placements while ignoring the footprints of the two swapped Placements, and persists either both changes or neither.
+14. IF either footprint of the swap is outside the 4x9 grid or overlaps another Placement, or either Placement does not belong to the caller, THEN THE backend SHALL return respectively HTTP 400 `error.dashboard.cell.invalid`, HTTP 409 `error.dashboard.cell.occupied`, or HTTP 403 `error.dashboard.forbidden`, SHALL leave both Placements unchanged, and THE Dashboard SHALL restore the previous order and show the localized message of the error code.
+15. IF the swap would produce an invalid footprint for either Placement, or no previous (for "Move earlier") or no next (for "Move later") Placement exists, THEN THE Dashboard SHALL render the corresponding action as disabled and SHALL expose a tooltip (also readable by assistive technologies) stating the reason.
+16. THE drag handle and move actions SHALL have accessible names, SHALL have a touch target of at least 44x44 px on tablet and mobile, and SHALL NOT interfere with clicks on linked widget elements (Requirement 10), such that a click on a linked element outside the handle navigates and does not start a drag.
+17. FOR ALL valid sequences of moves and swaps, THE resulting set of Placements SHALL contain no overlaps and no out-of-grid footprints, and moving a Placement to a valid position and back to its original Cell_Index SHALL restore the original layout exactly (round-trip property).
+18. WHEN two concurrent moves, swaps or adds by the same user conflict, THE backend SHALL serialize them by the advisory lock so that exactly one conflicting result is persisted and the other receives HTTP 409 `error.dashboard.cell.occupied`.
+
+### Requirement 20: Showing all free places for adding a widget
+
+**User Story:** As a user, I want to see every free place where I can add a widget, so that I can fill gaps between widgets and not only the first free cell.
+
+#### Acceptance Criteria
+
+1. WHERE the viewport is desktop, THE Dashboard SHALL render one Add_Slot for every Free_Cell in the visible rows, each addressing its own Cell_Index (this replaces the single first-free "+" tile of Requirement 3.1 on desktop).
+2. THE Dashboard SHALL compute lastOccupiedRow as the maximum row index (0 to 8) covered by any Placement footprint, or -1 if the Dashboard has no Placements, and SHALL define the visible rows as rows 0 to min(8, lastOccupiedRow + 1), which includes exactly one trailing row of Add_Slots after the last occupied row (for an empty Dashboard, row 0 only).
+3. IF the number of visible rows is less than 9, THEN THE Dashboard SHALL render one "show all free rows" control in place of the hidden rows, and WHEN the user activates it, THE Dashboard SHALL render Add_Slots for the Free_Cells of rows 0 to 8 and SHALL remove the control.
+4. THE Add_Slots SHALL be rendered with a dashed outline and a neutral color, distinct from widget tiles, and SHALL NOT trigger any data fetch.
+5. THE Dashboard SHALL NOT render an Add_Slot on any cell covered by a Placement footprint, including every cell of a multi-cell footprint.
+6. THE Add_Slots SHALL receive keyboard focus in ascending Cell_Index order, and each Add_Slot SHALL have an accessible name containing its 1-based row number, its 1-based column number, and the Fit_Size (Requirement 21) available at that cell.
+7. WHERE the viewport is tablet or mobile, THE Dashboard SHALL render exactly one trailing Add_Slot after the last tile, and WHEN the user activates it, THE Dashboard SHALL open the picker with the first-fit rule of Requirement 3.3.
+8. IF the Dashboard has no Free_Cell in rows 0 to 8, THEN THE Dashboard SHALL render no Add_Slot and no "show all free rows" control, and SHALL display a "grid is full" hint.
+9. WHILE a drag or move mode (Requirement 19) is active, THE Dashboard SHALL hide all Add_Slots and the "show all free rows" control, and SHALL keep the Drop_Target highlight visible on every Free_Cell and on the cells of the candidate footprint under the pointer; WHEN the mode ends, THE Dashboard SHALL restore the Add_Slots.
+10. THE frontend `grid.ts` SHALL compute Free_Cells from the Placements using the same footprint rules as the backend `GridMath`, so that an Add_Slot is never offered on an occupied cell.
+
+### Requirement 21: Fit size and fit-aware picker
+
+**User Story:** As a user, I want to know what size of widget fits at the place I chose and to see only widgets that fit there.
+
+#### Acceptance Criteria
+
+1. THE system SHALL compute the Fit_Size at a Free_Cell c as follows: for each width w in 1..(4 - col(c)) such that the w cells to the right of and including c in row(c) are all Free_Cells, THE height h(w) SHALL be the greatest h in 1..(9 - row(c)) such that every cell of the w x h rectangle starting at c is a Free_Cell. THE set of rectangles (w, h(w)) SHALL be the maximal fits. THE displayed Fit_Size ("visible maximal Fit_Size") SHALL be the maximal fit with the largest area (ties: the wider one) and is a display value only. A widget fits IF its `colSpan x rowSpan` is contained in at least one maximal fit (colSpan <= w and rowSpan <= h(w) for some w), so a widget MAY fit although its size is not contained in the displayed Fit_Size (for example, a 2x1 widget fits at a position whose displayed Fit_Size is 1x3 when the maximal fits are 1x3 and 2x1).
+2. WHEN the picker is opened from an Add_Slot, THE picker SHALL show the displayed Fit_Size of that position in the localized form "fits up to {cols}×{rows}" and SHALL show the position as 1-based row and 1-based column numbers.
+3. THE picker SHALL by default list only active library widgets whose `colSpan x rowSpan` footprint fits at the chosen Cell_Index, that is, the footprint lies fully inside the 4x9 grid and overlaps no existing Placement footprint when its top-left corner is placed at that cell.
+4. THE picker SHALL provide a "show all" toggle, off by default. WHEN the toggle is turned on, THE picker SHALL additionally list the active widgets that do not fit, DISABLED and non-selectable, each with the reason "does not fit here: needs {c}×{r}, free {cols}×{rows}", where {cols}×{rows} is the displayed Fit_Size.
+5. WHEN the picker is opened from an Add_Slot on desktop, THE frontend SHALL send the slot's Cell_Index as `cellIndex` in the add request. THE system SHALL NOT place a non-fitting widget at another position from a chosen Add_Slot. First-fit placement (Requirement 3.3) SHALL apply only to the single trailing Add_Slot on tablet and mobile and to the picker opened without a position (add request without `cellIndex`).
+6. WHILE the access state of a widget is unavailable (Requirement 9.2), THE picker SHALL show it disabled with the access warning, and WHERE the widget is also non-fitting and "show all" is on, THE picker SHALL show both the access warning and the does-not-fit reason.
+7. IF no active widget fits at the chosen position, THEN THE picker SHALL show the message "no widget fits here" together with the displayed Fit_Size and the "show all" toggle, and SHALL keep the position unchanged.
+8. IF `cellIndex` is provided on add and the widget footprint at that cell is out of the 4x9 grid (including cellIndex outside 0..35), THEN THE backend SHALL reject the request with HTTP 400 and error code `error.dashboard.cell.invalid`. IF the footprint is inside the grid but overlaps an existing footprint, THEN THE backend SHALL reject it with HTTP 409 and error code `error.dashboard.cell.occupied`. In both cases no Placement SHALL be created or changed.
+9. WHEN `cellIndex` is provided on add, THE backend SHALL NOT fall back to first-fit. This amends Requirement 3.3: its first-fit fallback for a `cellIndex` that does not fit no longer applies; first-fit remains only for add requests without `cellIndex`.
+10. THE backend SHALL expose Fit_Size and fit computation as pure `GridMath` logic (fits, footprint, occupied bitmask, maximal fits), and the frontend `lib/grid.ts` mirror SHALL return identical results for the same Placements and Cell_Index, verified by a shared test vector set executed by both backend and frontend tests.
+11. FOR ALL Placements layouts, Cell_Indices and widget sizes, geometric acceptance by the frontend fit filter SHALL equal geometric acceptance by the backend add (accepted means no 400/409 cell error; rejected means 400 or 409 cell error). This property SHALL cover geometry only and SHALL exclude the duplicate, access and project rules.
+12. THE picker search of Requirement 3.2 SHALL combine with the fit filter by logical AND: a widget is listed only if it matches the search text and (fits, or "show all" is on).
+
+### Requirement 22: Widget thumbnails in the picker
+
+**User Story:** As a user, I want each library entry to show a small picture of how it looks, so that I can choose a widget visually.
+
+#### Acceptance Criteria
+
+1. WHEN the library endpoint returns an entry, THE System SHALL include in that entry a Thumbnail_Shape descriptor containing only: `visualization`, default `presentation.style`, the number of columns, the number of dimensions, the number of measures, a boolean flag indicating whether a dimension is temporal, a `stacked` flag, and a `compareToPrevious` flag. THE System SHALL include the Thumbnail_Shape for every entry, including entries with `available` equal to false.
+2. THE Thumbnail_Shape SHALL NOT contain field names, labels, filters, dataset code, widget `config` or any other value derived from the dataset, so that Requirement 8.8 holds for entries the caller cannot access. IF the caller lacks access to the dataset of an entry, THEN THE System SHALL return the same Thumbnail_Shape fields for that entry as it would for an accessible one, with no additional dataset information.
+3. THE picker SHALL render a Thumbnail for every library entry, based on the Thumbnail_Shape `visualization` and default `presentation.style`, using the same renderers as the Dashboard.
+4. THE Thumbnail SHALL be built from Sample_Data generated on the client for the visualization type and the counts and flags of the Thumbnail_Shape. THE Thumbnail SHALL NOT call any data endpoint, SHALL NOT use the user's data, and SHALL NOT include dataset field values.
+5. THE Thumbnail SHALL render for disabled entries (no access, does not fit) in the same way as for available ones, and SHALL be shown with reduced emphasis (opacity of 0.5 to 0.7) for disabled entries.
+6. THE Thumbnail SHALL be non-interactive: links, tooltips, clicks and keyboard focus inside it SHALL be disabled, and the localized sample labels SHALL be generic (for example "Category A", "Category B").
+7. THE Thumbnail SHALL be sized with aspect ratio colSpan:rowSpan within a fixed maximum box and SHALL use the user's current palette and appearance settings.
+8. WHILE an entry is outside the viewport of the picker list, THE picker SHALL NOT mount its Thumbnail and SHALL show a lightweight placeholder of the same size. WHEN the entry enters the viewport, THE picker SHALL mount the Thumbnail in place of the placeholder.
+9. WHEN the picker opens, THE picker SHALL display the list and entry text before any Thumbnail is rendered.
+10. IF a Thumbnail fails to render, THEN THE picker SHALL replace that Thumbnail with the static icon of its visualization type, and other entries SHALL remain unaffected.
+11. IF the Thumbnail_Shape contains a visualization or style that the renderer does not support, THEN THE Thumbnail SHALL show the static icon of the visualization type.
+12. EACH Thumbnail SHALL have a text alternative (`aria-label`) composed of the widget name, the visualization type and the style (for example "Bar chart, solid style") in the active locale, and SHALL hide the inner sample markup from assistive technologies.
+13. ALL new texts SHALL be defined in `ru.json` and `pl.json` under `dashboard.*`, and the error codes of Requirements 19 and 21 SHALL have RU and PL messages in the backend bundles.

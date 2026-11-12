@@ -1,6 +1,7 @@
 package com.foremen.service.dashboard.ai;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foremen.config.dashboard.DashboardAiProperties;
 import com.foremen.dao.RoleDao;
 import com.foremen.dao.model.RoleEntity;
@@ -44,6 +45,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class DashboardAiService {
 
+    private static final ObjectMapper JSON = new ObjectMapper();
+
     public static final String ERR_DISABLED = "error.dashboard.ai.disabled";
     public static final String ERR_FAILED = "error.dashboard.ai.failed";
     public static final String ERR_RATE_LIMITED = "error.dashboard.ai.rate.limited";
@@ -53,7 +56,7 @@ public class DashboardAiService {
 
     /** Response of {@code POST /api/dashboard-widgets/ai-draft} (frontend {@code AiDraftResponse}). */
     public record AiDraftResponse(String nameRu, String namePl, String descriptionRu, String descriptionPl,
-                                  int colSpan, int rowSpan, String projectScope, JsonNode config,
+                                  int colSpan, int rowSpan, String projectScope, Map<String, Object> config,
                                   Localized explanation, List<Violation> warnings) {
     }
 
@@ -119,8 +122,14 @@ public class DashboardAiService {
         return new AiDraftResponse(
                 text(draft.names(), true), text(draft.names(), false),
                 text(draft.descriptions(), true), text(draft.descriptions(), false),
-                draft.colSpan(), draft.rowSpan(), draft.projectScope(), draft.config(),
+                draft.colSpan(), draft.rowSpan(), draft.projectScope(), toMap(draft.config()),
                 draft.explanation(), warnings(draft.config()));
+    }
+
+    /** Plain map so the response serializes the same under Jackson 2 or 3 (the HTTP layer is Jackson 3). */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> toMap(JsonNode node) {
+        return node == null ? null : JSON.convertValue(node, Map.class);
     }
 
     private ForemenApiException map(Long adminUserId, WidgetDraftException e) {

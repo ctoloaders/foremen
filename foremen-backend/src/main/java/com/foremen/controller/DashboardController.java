@@ -106,6 +106,33 @@ public class DashboardController {
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+    public record MoveItemRequest(Integer cellIndex) {
+    }
+
+    public record SwapItemsRequest(Long firstId, Long secondId) {
+    }
+
+    public record SwapResponse(List<PlacementView> items) {
+    }
+
+    /** Moves an own placement to another cell (R19.7-19.10); null {@code cellIndex} gives 400. */
+    @org.springframework.web.bind.annotation.PutMapping("/items/{id}/move")
+    public PlacementView move(@PathVariable Long id, @RequestBody(required = false) MoveItemRequest request) {
+        if (request == null || request.cellIndex() == null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
+        }
+        return layoutService.movePlacement(actingUserId(), id, request.cellIndex());
+    }
+
+    /** Atomically swaps the cells of two own placements (R19.13, 19.14). */
+    @PostMapping("/items/swap")
+    public SwapResponse swap(@RequestBody(required = false) SwapItemsRequest request) {
+        if (request == null || request.firstId() == null || request.secondId() == null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
+        }
+        return new SwapResponse(layoutService.swapPlacements(actingUserId(), request.firstId(), request.secondId()));
+    }
+
     @DeleteMapping("/items/{id}")
     public ResponseEntity<Void> remove(@PathVariable Long id) {
         layoutService.removePlacement(actingUserId(), id);

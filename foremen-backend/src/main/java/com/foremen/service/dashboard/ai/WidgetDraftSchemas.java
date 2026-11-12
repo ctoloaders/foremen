@@ -60,9 +60,8 @@ public final class WidgetDraftSchemas {
                 names.add(f.name());
             }
         }
-        if (!names.isEmpty()) {
-            field = enumOf(List.copyOf(names));
-        }
+        // A catalog-wide enum repeated in every field slot makes the schema too large for Gemini (HTTP 400);
+        // field names stay free strings and are checked by the config validator + corrective retry.
         Map<String, Object> route = routes.isEmpty() ? str() : enumOf(routes.stream().sorted().toList());
 
         Map<String, Object> column = obj(props("field", field, "label", localized(),
@@ -93,7 +92,7 @@ public final class WidgetDraftSchemas {
                 "emptyText", localized(), "compareToPrevious", bool()), List.of());
 
         return obj(props(
-                "schemaVersion", Map.of("type", "integer", "enum", List.of(WidgetConfig.SCHEMA_VERSION)),
+                "schemaVersion", range("integer", WidgetConfig.SCHEMA_VERSION, WidgetConfig.SCHEMA_VERSION),
                 "dataset", dataset,
                 "visualization", enumOf(names(Visualization.values())),
                 "title", localized(),

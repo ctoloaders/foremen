@@ -119,11 +119,10 @@ public class DashboardLayoutService {
                 .toList());
         int cell;
         if (cellIndex != null) {
-            if (!GridMath.fits(cellIndex, cs, rs)) {
-                throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
-            }
-            if ((GridMath.footprint(cellIndex, cs, rs) & occupied) != 0L) {
-                throw new ForemenApiException(HttpStatus.CONFLICT, "error.dashboard.cell.occupied");
+            switch (GridMath.classify(occupied, cellIndex, cs, rs)) {
+                case INVALID -> throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
+                case OCCUPIED -> throw new ForemenApiException(HttpStatus.CONFLICT, "error.dashboard.cell.occupied");
+                case OK -> { }
             }
             cell = cellIndex;
         } else {
@@ -153,6 +152,78 @@ public class DashboardLayoutService {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.dashboard.forbidden");
         }
         placementDao.delete(p);
+    }
+
+    /**
+     * Moves the caller's placement to {@code cellIndex} (R19.7-19.10). Missing and foreign placements both
+     * give 403 {@code error.dashboard.forbidden}. No Has_Access / active check, so unavailable tiles stay movable.
+     */
+    @Transactional
+    public PlacementView movePlacement(Long userId, Long placementId, int cellIndex) {
+        lockUser(userId);
+        UserDashboardWidgetEntity p = ownedOrForbidden(userId, placementId);
+        String role = roleCode(userId);
+        if (p.getCellIndex() == cellIndex) {
+            return toView(p, userId, role);
+        }
+        long others = occupiedExcluding(userId, Set.of(p.getId()));
+        throwIfNotOk(GridMath.classify(others, cellIndex, p.getWidget().getColSpan(), p.getWidget().getRowSpan()));
+        p.setCellIndex((short) cellIndex);
+        return toView(placementDao.save(p), userId, role);
+    }
+
+    /**
+     * Exchanges the cells of two placements atomically (R19.13, 19.14): both footprints are checked against
+     * all other placements and against each other; either both are persisted or neither.
+     */
+    @Transactional
+    public List<PlacementView> swapPlacements(Long userId, Long firstId, Long secondId) {
+        lockUser(userId);
+        UserDashboardWidgetEntity a = ownedOrForbidden(userId, firstId);
+        UserDashboardWidgetEntity b = ownedOrForbidden(userId, secondId);
+        if (a.getId().equals(b.getId())) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
+        }
+        long others = occupiedExcluding(userId, Set.of(a.getId(), b.getId()));
+        int aCell = b.getCellIndex();
+        int bCell = a.getCellIndex();
+        GridMath.Placement ra = GridMath.classify(others, aCell, a.getWidget().getColSpan(), a.getWidget().getRowSpan());
+        GridMath.Placement rb = GridMath.classify(others, bCell, b.getWidget().getColSpan(), b.getWidget().getRowSpan());
+        if (ra == GridMath.Placement.INVALID || rb == GridMath.Placement.INVALID) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
+        }
+        long fa = GridMath.footprint(aCell, a.getWidget().getColSpan(), a.getWidget().getRowSpan());
+        long fb = GridMath.footprint(bCell, b.getWidget().getColSpan(), b.getWidget().getRowSpan());
+        if (ra == GridMath.Placement.OCCUPIED || rb == GridMath.Placement.OCCUPIED || (fa & fb) != 0L) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, "error.dashboard.cell.occupied");
+        }
+        a.setCellIndex((short) aCell);
+        b.setCellIndex((short) bCell);
+        UserDashboardWidgetEntity sa = placementDao.save(a);
+        UserDashboardWidgetEntity sb = placementDao.save(b);
+        String role = roleCode(userId);
+        return List.of(toView(sa, userId, role), toView(sb, userId, role));
+    }
+
+    private UserDashboardWidgetEntity ownedOrForbidden(Long userId, Long placementId) {
+        return placementDao.findById(placementId)
+                .filter(p -> p.getUser().getId().equals(userId))
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.FORBIDDEN, "error.dashboard.forbidden"));
+    }
+
+    private long occupiedExcluding(Long userId, Set<Long> excludeIds) {
+        return GridMath.occupied(placementDao.findByUserIdOrdered(userId).stream()
+                .filter(x -> !excludeIds.contains(x.getId()))
+                .map(x -> new GridMath.Rect(x.getCellIndex(), x.getWidget().getColSpan(), x.getWidget().getRowSpan()))
+                .toList());
+    }
+
+    private static void throwIfNotOk(GridMath.Placement result) {
+        switch (result) {
+            case INVALID -> throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.cell.invalid");
+            case OCCUPIED -> throw new ForemenApiException(HttpStatus.CONFLICT, "error.dashboard.cell.occupied");
+            case OK -> { }
+        }
     }
 
     // ------------------------------------------------------------------ helpers

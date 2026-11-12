@@ -86,6 +86,10 @@ class DashboardLibraryServiceTest {
         assertThat(items.get(1).available()).isFalse();
         assertThat(items.get(1).unavailableReason()).isEqualTo("NO_ACCESS");
         assertThat(items.get(1).missingResources()).containsExactly("PAYROLL");
+        // Thumbnail_Shape is present and identical in structure for accessible and inaccessible entries.
+        assertThat(items.get(0).thumbnail()).isEqualTo(new ThumbnailShape("TABLE", "STANDARD", 0, 0, 0,
+                false, false, false));
+        assertThat(items.get(1).thumbnail()).isEqualTo(items.get(0).thumbnail());
     }
 
     @Test

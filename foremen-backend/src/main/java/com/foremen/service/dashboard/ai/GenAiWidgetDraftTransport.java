@@ -20,6 +20,8 @@ import java.util.Map;
  */
 public class GenAiWidgetDraftTransport implements WidgetDraftTransport {
 
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(GenAiWidgetDraftTransport.class);
+
     private final DashboardAiProperties properties;
     private volatile Client client;
     private final Object lock = new Object();
@@ -50,6 +52,8 @@ public class GenAiWidgetDraftTransport implements WidgetDraftTransport {
         } catch (WidgetDraftException e) {
             throw e;
         } catch (RuntimeException e) {
+            String detail = String.valueOf(e.getMessage());
+            LOG.warn("Gemini call failed: {}: {}", e.getClass().getSimpleName(), detail.length() > 400 ? detail.substring(0, 400) : detail);
             boolean timeoutLike = e.getCause() instanceof java.net.SocketTimeoutException
                     || e.getCause() instanceof java.net.http.HttpTimeoutException
                     || (e.getMessage() != null && e.getMessage().toLowerCase().contains("timed out"));

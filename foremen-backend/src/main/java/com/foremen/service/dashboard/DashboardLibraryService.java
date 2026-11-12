@@ -41,7 +41,7 @@ public class DashboardLibraryService {
     public record LibraryItem(Long id, String code, String nameRu, String namePl, String descriptionRu,
                               String descriptionPl, String visualization, int colSpan, int rowSpan,
                               String projectScope, boolean available, String unavailableReason,
-                              List<String> missingResources) {
+                              List<String> missingResources, ThumbnailShape thumbnail) {
     }
 
     public record ProjectOption(Long id, String name, String address) {
@@ -84,7 +84,8 @@ public class DashboardLibraryService {
         boolean available = missing.isEmpty();
         return new LibraryItem(w.getId(), w.getCode(), w.getNameRu(), w.getNamePl(), w.getDescriptionRu(),
                 w.getDescriptionPl(), vis == null ? null : vis.toString(), w.getColSpan(), w.getRowSpan(),
-                w.getProjectScope(), available, available ? null : NO_ACCESS, List.copyOf(missing));
+                w.getProjectScope(), available, available ? null : NO_ACCESS, List.copyOf(missing),
+                ThumbnailShapeFactory.from(w));
     }
 
     private static boolean contains(String value, String needle) {
