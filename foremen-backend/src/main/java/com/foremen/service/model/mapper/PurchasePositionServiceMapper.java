@@ -12,6 +12,7 @@ import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.PurchasePositionEntity;
 import com.foremen.dao.model.VatRateEntity;
+import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.model.PurchasePositionServiceExtendedModel;
 import com.foremen.service.model.PurchasePositionServiceModel;
@@ -93,6 +94,7 @@ public class PurchasePositionServiceMapper implements ServiceToDaoMapper<Purchas
         t.setPlannedDeliveryDate(s.getPlannedDeliveryDate());
         t.setPurchaseRequestId(s.getPurchaseRequest() == null ? null : s.getPurchaseRequest().getId());
         t.setEstimateReferenceId(s.getEstimateReference() == null ? null : s.getEstimateReference().getId());
+        t.setWorkCategoryId(s.getWorkCategory() == null ? null : s.getWorkCategory().getId());
         t.setNotes(s.getNotes());
     }
 
@@ -116,6 +118,7 @@ public class PurchasePositionServiceMapper implements ServiceToDaoMapper<Purchas
         e.setOrderByDate(s.getOrderByDate());
         e.setDecisionDeadline(s.getDecisionDeadline());
         e.setEstimateReference(ref(EstimateLineRoomMaterialEntity.class, s.getEstimateReferenceId()));
+        e.setWorkCategory(ref(WorkCategoryEntity.class, s.getWorkCategoryId()));
         e.setNotes(s.getNotes());
         return e;
     }
@@ -170,6 +173,9 @@ public class PurchasePositionServiceMapper implements ServiceToDaoMapper<Purchas
         if (s.getEstimateReferenceId() != null) {
             t.setEstimateReference(
                     entityManager.getReference(EstimateLineRoomMaterialEntity.class, s.getEstimateReferenceId()));
+        }
+        if (s.getWorkCategoryId() != null) {
+            t.setWorkCategory(entityManager.getReference(WorkCategoryEntity.class, s.getWorkCategoryId()));
         }
         if (s.getNotes() != null) {
             t.setNotes(s.getNotes());

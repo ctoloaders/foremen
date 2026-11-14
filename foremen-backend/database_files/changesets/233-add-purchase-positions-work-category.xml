@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-01 (task 1.1; design "Data model"): purchase_positions.work_category_id.
+          - work_category_id: nullable FK to work_categories, ON DELETE SET NULL.
+            Meaning: manual override of the position's work category; NULL = automatic.
+        Idempotent: each changeSet is guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml (task 1.2).
+    -->
+    <changeSet id="233-purchase-positions-add-work-category-id" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="purchase_positions" columnName="work_category_id"/></not>
+        </preConditions>
+        <addColumn tableName="purchase_positions">
+            <column name="work_category_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="233-purchase-positions-work-category-fk" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyTableName="purchase_positions" foreignKeyName="fk_purchase_positions_work_category"/></not>
+        </preConditions>
+        <addForeignKeyConstraint
+            constraintName="fk_purchase_positions_work_category"
+            baseTableName="purchase_positions"
+            baseColumnNames="work_category_id"
+            referencedTableName="work_categories"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="233-purchase-positions-work-category-idx" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="purchase_positions" indexName="idx_purchase_positions_work_category"/></not>
+        </preConditions>
+        <createIndex tableName="purchase_positions" indexName="idx_purchase_positions_work_category">
+            <column name="work_category_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

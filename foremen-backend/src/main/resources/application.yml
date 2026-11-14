@@ -196,6 +196,8 @@ foremen:
     # Connect/read timeout (Spring Duration format, e.g. 5s, 500ms).
     timeout: ${FOREMEN_NIP_LOOKUP_TIMEOUT:5s}
   procurement:
+    # FOR-11-01 (R2.5, R10.2): planner "urgent" horizon in days (1..90; out of range fails startup).
+    urgent-days: ${FOREMEN_PROCUREMENT_URGENT_DAYS:14}
     request-overdue-sweep:
       # FOR-11-00 (R15.2, R13.2): cron for PurchaseRequestOverdueSweepService, which stamps
       # overdueNotifiedAt and publishes the one-shot notification.request.overdue event. The

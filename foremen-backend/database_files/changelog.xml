@@ -965,4 +965,6 @@
     <!-- FOR-11-00 (task 15.2): procurement dashboard widgets and role defaults. Registered LAST, after 230. -->
     <include file="database_files/changesets/231-seed-procurement-dashboard-widgets.xml"/>
     <include file="database_files/changesets/232-seed-procurement-dashboard-defaults.xml"/>
+    <!-- FOR-11-01 (task 1.2): purchase_positions.work_category_id. Registered LAST, after 232. -->
+    <include file="database_files/changesets/233-add-purchase-positions-work-category.xml"/>
 </databaseChangeLog>

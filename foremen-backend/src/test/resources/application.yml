@@ -16,6 +16,8 @@ spring:
     port: 3025
 
 foremen:
+  procurement:
+    urgent-days: 14
   jwt:
     secret: test-only-jwt-secret-value-0123456789-abcdef
     access-ttl-minutes: 30

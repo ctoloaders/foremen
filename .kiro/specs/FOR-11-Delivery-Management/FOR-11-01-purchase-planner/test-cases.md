@@ -26,7 +26,7 @@
   категории работ (через UI/API FOR-05-10); дата старта проекта задаётся генератором.
 - Роли прогона: ADMIN, MANAGER, FOREMAN, BUYER, FINANCIER (учётки создаются генератором). Нотификаций
   в этой спеке нет — проверяется только то, что 00-уведомление `request.assigned` приходит один раз при
-  создании заявки с закупщиком (TC-A6-03).
+  создании заявки с закупщиком (TC-A5-03).
 
 ## Стратегия повторяемости (обязательно)
 
@@ -213,6 +213,14 @@
 ### TC-A5-04 — права
 **Шаги:** токен BUYER → `403`; FOREMAN → `403`.
 
+### TC-A5-05 — список закупщиков для диалога заявки
+**Шаги:**
+1. Токеном MANAGER (нет права `USERS` READ) `GET /api/procurement/buyers` → `200`, массив `{id, name}`: содержит `qa.buyer` и `qa.buyer2` текущего прогона.
+2. Деактивировать `qa.buyer2` (teardown-шаг прогона или `PUT` пользователя через ADMIN) → повторный запрос не содержит `qa.buyer2`; пользователи без роли BUYER (MANAGER, FOREMAN) в списке отсутствуют.
+3. Токеном FOREMAN → `403` (нет `PURCHASE_REQUESTS` READ); токеном FINANCIER → `403`.
+4. Id из ответа принимается как `assignedBuyerId` в `POST /from-positions` (TC-A5-03).
+**Ожидаемый результат:** эндпоинт отдаёт только активных BUYER и доступен ролям с `PURCHASE_REQUESTS` READ.
+
 ## Фича A6. Доска закупщика
 
 ### TC-A6-01 — колонки и карточки
@@ -276,7 +284,7 @@
 1. `PUT /api/purchase-positions/{P12}` с `workCategoryId = C3` → `200`, в DTO `workCategoryId = C3`; в
    строке `workCategorySource = MANUAL`, `effectiveWorkCategoryId = C3`, `workStartDate` = старт C3 (`+20`).
 2. Сменить материал позиции на `QA-MAT-NOTYPE` → ручная категория **сохраняется** (MANUAL).
-3. `PUT` с `workCategoryId = null` → снова авто-результат (или `NONE` для материала без типа).
+3. `DELETE /api/purchase-positions/{P12}/property?properties=workCategory` → `204`; повторный `planner` возвращает `workCategoryId = null` и снова авто-результат (или `NONE` для материала без типа). `PUT` с `workCategoryId = null` путём сброса **не** является (поле не очищается). Для позиции в стадии `ORDERED` (фикстура) тот же `DELETE` → `409`.
 4. Ручная категория, которой **нет в графике** (C2 без полосы) → `200`, `workCategorySource = MANUAL`,
    `workStartDate = null`, `deliveryRisk = false`.
 5. Несуществующая/неактивная категория → `400` `error.purchasePosition.workCategory.invalid`.
@@ -308,13 +316,14 @@
 ### TC-A8-01 — матрица
 **Шаги:** для эндпоинтов `planner`, `planner/slice-counts`, `planner/groups`, `board`, `scheduled-categories`,
 `work-link-preview`,
-`selection-total`, `from-positions` выполнить запрос токеном каждой роли и свести в таблицу:
+`selection-total`, `from-positions`, `procurement/buyers` выполнить запрос токеном каждой роли и свести в таблицу:
 
 | Эндпоинт | ADMIN | MANAGER | BUYER | FOREMAN | FINANCIER |
 |----------|-------|---------|-------|---------|-----------|
 | planner / counts / groups / board / scheduled-categories / work-link-preview | 200 | 200 | 200 | 200 (money null) | 403 |
 | selection-total | 200 | 200 | 200 | 403 | 403 |
 | from-positions | 200 | 200 | 403 | 403 | 403 |
+| procurement/buyers (`PURCHASE_REQUESTS` READ) | 200 | 200 | 200 | 403 | 403 |
 
 **Ожидаемый результат:** фактические коды совпадают с таблицей.
 
@@ -410,7 +419,7 @@ PLANNED) есть `SEND_TO_BUYER`; для FOREMAN `allowedActions = []`; для 
 **Шаги:**
 1. Отметить P1, P4 → «Utwórz zlecenie/Создать заявку».
 2. Диалог: дата по умолчанию = самая ранняя дата поставки выбранных; ввести номер `QA-{run-id}-UI`,
-   выбрать закупщика.
+   выбрать закупщика (список приходит из `GET /api/procurement/buyers`: только активные BUYER; у MANAGER список доступен, хотя `/api/users` ему закрыт).
 3. Сохранить.
 **Ожидаемый результат:** тост «Заявка создана», новая группа в списке с двумя позициями; BUYER получает
 уведомление (колокольчик, ссылка ведёт на `/deliveries?request={id}`).
@@ -443,7 +452,7 @@ PLANNED) есть `SEND_TO_BUYER`; для FOREMAN `allowedActions = []`; для 
 3. Открыть выпадающий список → видны только категории, запланированные в проекте (с датами старта);
    другие совпадения авто-определения показаны первыми («Inne dopasowania»); ввести часть названия
    (PL/RU) → список фильтруется поиском; выбрать C3 → бейдж «Ręcznie / Вручную», дата старта обновилась.
-4. «Przywróć automatyczne / Вернуть автоматический выбор» → снова C1 с бейджем «Автоматически».
+4. «Przywróć automatyczne / Вернуть автоматический выбор» → в сетевом журнале уходит `DELETE /api/purchase-positions/{id}/property?properties=workCategory` (для существующей позиции); снова C1 с бейджем «Автоматически».
 5. Выбрать материал без типа → блок подсвечен, подсказка «Nie znaleziono — wybierz prace…», кнопка «Взять
    из графика» неактивна; выбрать категорию в списке → бейдж «Вручную».
 6. Сменить материал на другой тип при ручной категории → ручная категория сохраняется; при авто — пересчёт.
@@ -510,7 +519,7 @@ CLIENT_OWN — «Klient kupił sam — w dostawie» → «W dostawie»; «Anuluj
 
 ### TC-B8-01 — PL/RU
 **Шаги:** переключить язык PL ↔ RU на планировщике, форме, диалоге заявки, доске; проверить отсутствие
-сырых ключей (`purchasePlanner.…`), корректность подписей этапов, срезов и причин пропуска.
+сырых ключей (`purchasePlanner.…`, `buyerKanban.…`), корректность подписей этапов, срезов и причин пропуска. Группы ключей, которые должны быть переведены на PL и RU: `purchasePlanner.{title, tabs, toolbar, groupBy, slice, empty, clearFilters, requestNotFound, column, badge, sourcing, stage, group, selection, request, form (включая workCategory*, setFromSchedule, noSchedule), projectMaterial, variants, action}` и `buyerKanban.{title, column, count, loadMore, empty, hiddenDelivered, ceiling, purchase, overCeiling, siteDelivery, selectColumn, drawerTitle}`; ключи `pages.deliveries.*` отсутствуют (удалены). Серверные ошибки (`error.purchasePlanner.*`, `error.purchaseRequest.fromPositions.*`, `error.purchasePosition.workCategory.invalid`) приходят локализованными по `Accept-Language`.
 
 ### TC-B8-02 — мобильный вид
 **Шаги:** viewport 390×844. Таблица отображается карточками; группы — сворачиваемые карточки; панель

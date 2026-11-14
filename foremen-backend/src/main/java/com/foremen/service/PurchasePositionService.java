@@ -27,6 +27,7 @@ import com.foremen.dao.ProjectDao;
 import com.foremen.dao.PurchasePositionDao;
 import com.foremen.dao.PurchasePositionVariantDao;
 import com.foremen.dao.VatRateDao;
+import com.foremen.dao.WorkCategoryDao;
 import com.foremen.dao.model.EstimateLineRoomMaterialEntity;
 import com.foremen.dao.model.FinishingMaterialEntity;
 import com.foremen.dao.model.PositionKind;
@@ -35,6 +36,7 @@ import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectStatus;
 import com.foremen.dao.model.PurchasePositionEntity;
 import com.foremen.dao.model.VatRateEntity;
+import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.audit.AuditLogDao;
@@ -80,6 +82,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
     static final String FIELD_READ_ONLY = "error.purchasePosition.field.readOnly";
     static final String FIELD_FORBIDDEN = "error.purchasePosition.field.forbidden";
     static final String DELETE_NOT_ALLOWED = "error.purchasePosition.delete.notAllowed";
+    static final String WORK_CATEGORY_INVALID = "error.purchasePosition.workCategory.invalid";
     static final String ACCESS_DENIED = "error.access.denied";
 
     /** Default VAT rates (R7.7): purchase side 23 %, sale side 8 %. */
@@ -95,7 +98,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
     private static final Set<String> CLEARABLE_PROPERTIES = Set.of(
             "notes", "blockNo", "deliveryCategory", "needByDate", "orderByDate", "decisionDeadline",
             "actualMaterial", "actualPurchasePrice", "plannedPurchasePrice", "salePrice",
-            "purchaseVatRate", "saleVatRate", "estimateReference");
+            "purchaseVatRate", "saleVatRate", "estimateReference", "workCategory");
 
     private final PurchasePositionDao dao;
     private final PurchasePositionServiceMapper mapper;
@@ -109,6 +112,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
     private final DeliveryCategoryDao deliveryCategoryDao;
     private final VatRateDao vatRateDao;
     private final PurchasePositionVariantDao variantDao;
+    private final WorkCategoryDao workCategoryDao;
 
     public PurchasePositionService(PurchasePositionDao dao,
                                    PurchasePositionServiceMapper mapper,
@@ -121,7 +125,8 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
                                    MeasurementUnitDao unitDao,
                                    DeliveryCategoryDao deliveryCategoryDao,
                                    VatRateDao vatRateDao,
-                                   PurchasePositionVariantDao variantDao) {
+                                   PurchasePositionVariantDao variantDao,
+                                   WorkCategoryDao workCategoryDao) {
         this.dao = dao;
         this.mapper = mapper;
         this.auditLogDao = auditLogDao;
@@ -134,6 +139,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         this.deliveryCategoryDao = deliveryCategoryDao;
         this.vatRateDao = vatRateDao;
         this.variantDao = variantDao;
+        this.workCategoryDao = workCategoryDao;
     }
 
     // --- CRUD plumbing ---
@@ -331,6 +337,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         requireVatRate(model.getSaleVatRateId(), "saleVatRateId");
         requireDeliveryCategory(model.getDeliveryCategoryId());
         requireEstimateReference(model.getEstimateReferenceId());
+        requireWorkCategory(model.getWorkCategoryId());
     }
 
     /** Bulk create bypasses the single-entity hook in {@link AdminService}; validate each row here. */
@@ -406,6 +413,14 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         requireVatRate(model.getSaleVatRateId(), "saleVatRateId");
         requireDeliveryCategory(model.getDeliveryCategoryId());
         requireEstimateReference(model.getEstimateReferenceId());
+        if (model.getWorkCategoryId() != null
+                && !Objects.equals(model.getWorkCategoryId(),
+                        existing.getWorkCategory() == null ? null : existing.getWorkCategory().getId())) {
+            if (!beforeOrdered(status)) {
+                throw readOnly("workCategoryId", HttpStatus.CONFLICT);
+            }
+            requireWorkCategory(model.getWorkCategoryId());
+        }
     }
 
     private void rejectSuppliedSystemFields(PurchasePositionServiceExtendedModel model) {
@@ -489,6 +504,14 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
                 throw readOnly(name, HttpStatus.BAD_REQUEST);
             }
         }
+        if (propertyNames.contains("workCategory")) {
+            // Reset to automatic follows the same stage lock as setting the override (R5.4).
+            dao.findById(id).ifPresent(existing -> {
+                if (!beforeOrdered(existing.getStatus())) {
+                    throw readOnly("workCategoryId", HttpStatus.CONFLICT);
+                }
+            });
+        }
         ProjectScopedService.super.setPropertiesToNull(id, propertyNames);
     }
 
@@ -533,6 +556,23 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         if (id != null && deliveryCategoryDao.findById(id).isEmpty()) {
             throw new ForemenApiException(HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND, "deliveryCategoryId", id);
         }
+    }
+
+    /** The category must exist and be active; it need not be present in the project schedule (R5.4). */
+    private void requireWorkCategory(Long id) {
+        if (id == null) {
+            return;
+        }
+        WorkCategoryEntity category = workCategoryDao.findById(id).orElse(null);
+        if (category == null || !category.isActive()) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, WORK_CATEGORY_INVALID);
+        }
+    }
+
+    /** The work-category link is editable only while the position is before ORDERED (and not cancelled). */
+    private static boolean beforeOrdered(PositionStatus status) {
+        return status != PositionStatus.CANCELLED
+                && PositionStage.rank(status) < PositionStage.rank(PositionStatus.ORDERED);
     }
 
     private void requireEstimateReference(Long id) {
@@ -641,6 +681,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         snap.put("plannedDeliveryDate", e.getPlannedDeliveryDate());
         snap.put("purchaseRequestId", e.getPurchaseRequest() == null ? null : e.getPurchaseRequest().getId());
         snap.put("estimateReferenceId", e.getEstimateReference() == null ? null : e.getEstimateReference().getId());
+        snap.put("workCategoryId", e.getWorkCategory() == null ? null : e.getWorkCategory().getId());
         snap.put("notes", e.getNotes());
         try {
             return AUDIT_OBJECT_MAPPER.writeValueAsString(snap);

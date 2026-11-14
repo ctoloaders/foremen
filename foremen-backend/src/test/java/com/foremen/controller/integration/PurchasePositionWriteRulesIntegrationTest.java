@@ -21,6 +21,7 @@ import com.foremen.dao.model.PurchasePositionVariantEntity;
 import com.foremen.dao.model.SourcingPath;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.VariantReason;
+import com.foremen.dao.model.WorkCategoryEntity;
 
 /**
  * FOR-11-00 task 11.3 - create / update / delete rules of {@code /api/purchase-positions}.
@@ -281,6 +282,65 @@ class PurchasePositionWriteRulesIntegrationTest extends ProcurementIntegrationTe
         update(pos.getId(), "{\"needByDate\": \"2031-02-03\", \"salePrice\": -5}")
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value(PL_PRICE));
+    }
+
+    // --- FOR-11-01 R5.4: manual work-category override ---
+
+    private WorkCategoryEntity workCategory(boolean active) {
+        WorkCategoryEntity c = new WorkCategoryEntity();
+        String u = unique();
+        c.setCode("WC-" + u);
+        c.setOrderNo(9000);
+        c.setNameRU("Категория " + u);
+        c.setNamePL("Kategoria " + u);
+        c.setActive(active);
+        em.persist(c);
+        em.flush();
+        return c;
+    }
+
+    @Test
+    @DisplayName("POST/PUT - workCategoryId is stored, returned and may be cleared via DELETE property (before ORDERED)")
+    void workCategory_setAndReset() throws Exception {
+        ProjectEntity project = project(ProjectStatus.ACTIVE);
+        WorkCategoryEntity cat = workCategory(true);
+        create(createPositionJson(project.getId(), material(null).getId(), "\"workCategoryId\": " + cat.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workCategoryId").value(cat.getId()));
+        PurchasePositionEntity pos = position(project, SourcingPath.AGREED, PositionStatus.ACCEPTED);
+        update(pos.getId(), "{\"workCategoryId\": " + cat.getId() + "}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.workCategoryId").value(cat.getId()));
+        mockMvc.perform(delete(POSITIONS + "/" + pos.getId() + "/property").param("properties", "workCategory"))
+                .andExpect(status().is2xxSuccessful());
+        em.flush();
+        em.clear();
+        assertThat(em.find(PurchasePositionEntity.class, pos.getId()).getWorkCategory()).isNull();
+    }
+
+    @Test
+    @DisplayName("PUT/POST - unknown or inactive work category -> 400")
+    void workCategory_invalid_returns400() throws Exception {
+        ProjectEntity project = project(ProjectStatus.ACTIVE);
+        PurchasePositionEntity pos = position(project, SourcingPath.AGREED, PositionStatus.PLANNED);
+        update(pos.getId(), "{\"workCategoryId\": 987654321}").andExpect(status().isBadRequest());
+        update(pos.getId(), "{\"workCategoryId\": " + workCategory(false).getId() + "}")
+                .andExpect(status().isBadRequest());
+        create(createPositionJson(project.getId(), material(null).getId(), "\"workCategoryId\": 987654321"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("PUT - from ORDERED on the work-category override is locked (409); an unchanged value is accepted")
+    void workCategory_lockedFromOrdered() throws Exception {
+        ProjectEntity project = project(ProjectStatus.ACTIVE);
+        WorkCategoryEntity cat = workCategory(true);
+        PurchasePositionEntity pos = position(project, SourcingPath.AGREED, PositionStatus.ORDERED);
+        update(pos.getId(), "{\"workCategoryId\": " + cat.getId() + "}").andExpect(status().isConflict());
+        pos.setWorkCategory(cat);
+        em.flush();
+        update(pos.getId(), "{\"workCategoryId\": " + cat.getId() + ", \"notes\": \"n\"}")
+                .andExpect(status().isOk());
     }
 
     // --- delete ---

@@ -7,7 +7,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.foremen.config.security.RequiresPermission;
+import com.foremen.controller.model.ProcurementBuyerDto;
 import com.foremen.controller.model.ProcurementProjectDto;
+import com.foremen.dao.UserDao;
+import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.access.ProcurementProjectLookupService;
 
 import lombok.RequiredArgsConstructor;
@@ -22,12 +25,22 @@ import lombok.RequiredArgsConstructor;
 public class ProcurementProjectsController {
 
     private final ProcurementProjectLookupService lookupService;
+    private final UserDao userDao;
 
     @GetMapping("/projects")
     @RequiresPermission(resource = "PURCHASE_POSITIONS", operation = "READ")
     public List<ProcurementProjectDto> projects() {
         return lookupService.projectsForCaller().stream()
                 .map(p -> new ProcurementProjectDto(p.id(), p.name(), p.address(), p.status()))
+                .toList();
+    }
+
+    /** FOR-11-01: active BUYER users for the request dialog (same rule as the assigned-buyer validation). */
+    @GetMapping("/buyers")
+    @RequiresPermission(resource = "PURCHASE_REQUESTS", operation = "READ")
+    public List<ProcurementBuyerDto> buyers() {
+        return userDao.findActiveByRoleCode(ProcurementProjectAccess.BUYER_ROLE_CODE).stream()
+                .map(u -> new ProcurementBuyerDto(u.getId(), u.getName()))
                 .toList();
     }
 }

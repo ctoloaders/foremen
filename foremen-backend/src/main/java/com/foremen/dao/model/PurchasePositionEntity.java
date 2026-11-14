@@ -102,6 +102,10 @@ public class PurchasePositionEntity extends BaseEntity {
     @JoinColumn(name = "estimate_reference_id")
     private EstimateLineRoomMaterialEntity estimateReference;
 
+    /** FOR-11-01 (R5.4): manual work-category override; null means "resolved automatically". */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "work_category_id")
+    private WorkCategoryEntity workCategory;
     @Column(length = 2000)
     private String notes;
 }

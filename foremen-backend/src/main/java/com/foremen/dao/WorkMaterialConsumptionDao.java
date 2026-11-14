@@ -42,4 +42,32 @@ public interface WorkMaterialConsumptionDao extends AdminDao<WorkMaterialConsump
     @EntityGraph(attributePaths = {"workItem", "constructionMaterialType", "finishingMaterialType"})
     @Query("SELECT c FROM WorkMaterialConsumptionEntity c WHERE c.workItem.id IN :workItemIds")
     List<WorkMaterialConsumptionEntity> findByWorkItemIdIn(@Param("workItemIds") Collection<Long> workItemIds);
+
+    /**
+     * FOR-11-01 R5.2 tier 1: distinct (finishing material type, work category) pairs consumed by the
+     * given work items (the project's estimate works). Finishing branch only.
+     */
+    @Query("select distinct new com.foremen.dao.WorkMaterialConsumptionDao$TypeCategoryRow("
+            + "c.finishingMaterialType.id, c.workItem.workCategory.id) "
+            + "from WorkMaterialConsumptionEntity c "
+            + "where c.branch = com.foremen.dao.model.ConsumptionBranch.finishing "
+            + "and c.workItem.id in :workItemIds")
+    List<TypeCategoryRow> findFinishingTypeCategoryPairsByWorkItemIdIn(
+            @Param("workItemIds") Collection<Long> workItemIds);
+
+    /**
+     * FOR-11-01 R5.3 tier 2: distinct (finishing material type, work category) pairs over the whole
+     * catalog for the given material types. Finishing branch only.
+     */
+    @Query("select distinct new com.foremen.dao.WorkMaterialConsumptionDao$TypeCategoryRow("
+            + "c.finishingMaterialType.id, c.workItem.workCategory.id) "
+            + "from WorkMaterialConsumptionEntity c "
+            + "where c.branch = com.foremen.dao.model.ConsumptionBranch.finishing "
+            + "and c.finishingMaterialType.id in :typeIds")
+    List<TypeCategoryRow> findFinishingTypeCategoryPairsByTypeIdIn(
+            @Param("typeIds") Collection<Long> typeIds);
+
+    /** Projection row of the two type/category queries. */
+    record TypeCategoryRow(Long typeId, Long categoryId) {
+    }
 }

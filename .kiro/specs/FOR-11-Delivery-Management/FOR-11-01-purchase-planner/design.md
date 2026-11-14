@@ -207,7 +207,7 @@ matches are returned as `workCategoryCandidates` so the UI can show why and offe
   `variantCount` (existing batched `fillVariantCounts`), then `ScheduledCategoryService`,
   `WorkConsumptionLookup`, `WorkCategoryResolver` and `WorkStartResolver` for the page (a fixed number of
   batched queries). A test asserts a bounded statement count for 100 rows.
-- **Derived values per row:** `siteDeliveryDate`, `late`, `urgent`, `deliveryRisk` (R5.4), the Money block
+- **Derived values per row:** `siteDeliveryDate`, `late`, `urgent`, `deliveryRisk` (R5.7), the Money block
   (`PositionMoneyMath` + `PositionMarginCalculator`; VAT percent from `purchaseVatRate`/`saleVatRate`
   `rate`; missing VAT → treated as 0 and `vat = null`), then passed through
   `PositionPriceVisibility` (non-STAFF_FULL → block `null`).
@@ -305,6 +305,8 @@ mapped with the same visibility step as rows. `RECEIVED` returns count only when
 | `GET /api/purchase-positions/board` | READ | six columns |
 | `POST /api/purchase-positions/selection-total` | READ + STAFF_FULL | read-only |
 | `POST /api/purchase-requests/from-positions` | `PURCHASE_REQUESTS` CREATE | MANAGER/ADMIN |
+| `GET /api/procurement/buyers` | `PURCHASE_REQUESTS` READ | active BUYER users `{id, name}` for the request dialog |
+| `DELETE /api/purchase-positions/{id}/property?properties=workCategory` | `PURCHASE_POSITIONS` DELETE (00 generic endpoint) | reset the manual work category to automatic |
 
 All literal paths are declared in their own controllers so they cannot clash with `/{id}` of the 00
 controller (the existing `/upcoming` precedent). Handlers use `@RequiresPermission` with no class-level
@@ -400,8 +402,9 @@ the `pages.deliveries.*` keys are deleted.
 - **Work-category link (`WorkCategoryLink` component).** Shows the effective category with a source
   badge (`AUTO` / `MANUAL` / `NONE`) and its start date. A searchable combobox (debounced search over
   `GET /scheduled-categories?projectId=&q=`, candidates of an `AUTO` resolution listed first) lets the user
-  change it; selecting an option sets `workCategoryId` (manual); "Reset to automatic" sends
-  `workCategoryId = null`. When the source is `NONE` the control is highlighted with a hint. On create
+  change it; selecting an option sets `workCategoryId` (manual); "Reset to automatic" calls
+  `DELETE /api/purchase-positions/{id}/property?properties=workCategory` (the generic clear-property
+  endpoint; same stage lock as setting the override, 409 from `ORDERED`), not a `PUT` with null. When the source is `NONE` the control is highlighted with a hint. On create
   and when the material changes, the form asks the server for the automatic result with
   `GET /api/purchase-positions/work-link-preview?projectId=&materialId=` (read-only; same resolver, returns
   `{effectiveWorkCategoryId, name, source, candidates, startDate}`), so the badge is correct before the
@@ -423,10 +426,9 @@ the `pages.deliveries.*` keys are deleted.
 
 `RequestDialog` (create from selection, `POST /from-positions`) and `RequestHeaderActions` (edit via the
 00 `PUT /api/purchase-requests/{id}`, delete when empty). Buyers for the select come from
-`/api/users?role=BUYER` filtered to active (reusing the users list API; if the caller lacks `USERS` READ,
-the 00 request DTO's `assignedBuyerName` is shown and the select is hidden: **task 8.7 checks which
-endpoint a MANAGER may call and falls back to a small `GET /api/procurement/buyers` read endpoint (guarded
-by `PURCHASE_REQUESTS` READ) if needed**).
+`GET /api/procurement/buyers` (active users with the BUYER role, `{id, name}`, guarded by
+`PURCHASE_REQUESTS` READ), because a MANAGER lacks `USERS` READ and cannot use `/api/users`. If the call
+fails, the dialog hides the select and shows the request's `assignedBuyerName`.
 
 ### Board tab
 

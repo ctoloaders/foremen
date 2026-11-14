@@ -33,5 +33,6 @@ public record PurchasePositionCreateRequest(
         LocalDate orderByDate,
         LocalDate decisionDeadline,
         Long estimateReferenceId,
+        Long workCategoryId,
         @Size(max = 2000) String notes) {
 }

@@ -41,6 +41,7 @@ public record PurchasePositionDtoModel(
         LocalDate plannedDeliveryDate,
         Long purchaseRequestId,
         Long estimateReferenceId,
+        Long workCategoryId,
         String notes,
         int variantCount,
         boolean hasVariants) {

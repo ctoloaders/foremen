@@ -46,6 +46,8 @@ public class PurchasePositionServiceModel {
     private LocalDate plannedDeliveryDate;
     private Long purchaseRequestId;
     private Long estimateReferenceId;
+    /** Manual work-category override (FOR-11-01 R5.4); null = automatic. */
+    private Long workCategoryId;
     private String notes;
     /** Number of retired options in the variant history; filled in batch by the service (R21.2). */
     private Integer variantCount;

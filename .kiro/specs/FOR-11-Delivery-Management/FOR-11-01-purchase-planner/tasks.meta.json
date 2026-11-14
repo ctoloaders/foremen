@@ -1,0 +1,663 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `233-add-purchase-positions-work-category.xml`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558789
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656565698
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658057097
+      }
+    ],
+    "1.2 Register changeset 233 in `changelog.xml`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558817
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658612091
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658834540
+      }
+    ],
+    "1.3 Add `foremen.procurement.urgent-days` configuration": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558839
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656566073
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658057198
+      }
+    ],
+    "2.1 `PositionMoneyMath` and `DeliveryCostAllocator` with tests": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558917
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656566875
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658057511
+      }
+    ],
+    "2.2 `PlannerSliceRules` with pure functions and JPA predicate builders": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558938
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656567681
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658058322
+      }
+    ],
+    "2.3 `PositionMarginCalculator` with tests": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558957
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658612521
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658835238
+      }
+    ],
+    "3.1 Add the manual `workCategory` override to the position entity, requests, DTO and service": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558976
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658843569
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659605552
+      }
+    ],
+    "3.2 `WorkStartResolver`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656558999
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656568233
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658058987
+      }
+    ],
+    "3.3 `WorkCategoryResolver`, `WorkConsumptionLookup` and `ScheduledCategoryService`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559015
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658613572
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658835921
+      }
+    ],
+    "4.1 `PlannerFilter`, `PlannerRowDto` and `PlannerQueryService`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559034
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659612231
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794660136512
+      }
+    ],
+    "4.2 `PurchasePlannerController`: planner, slice counts, scheduled categories, work-link preview": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559057
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794660142323
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661117083
+      }
+    ],
+    "4.3 `PlannerGroupService` and the groups endpoint": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559131
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661124373
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661437214
+      }
+    ],
+    "4.4 `SelectionTotalService` and `PurchaseSelectionController`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559150
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658614439
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658837047
+      }
+    ],
+    "4.5 `RequestFromPositionsService` and `POST /api/purchase-requests/from-positions`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559166
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656569710
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658068055
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658492930
+      }
+    ],
+    "4.6 `BoardService` and `PurchaseBoardController`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559188
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794660142570
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661118090
+      }
+    ],
+    "5.1 Add the new `error.*` keys and the parity test": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559209
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661442412
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661501245
+      }
+    ],
+    "6.1 Planner integration tests": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559229
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661507499
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662270396
+      }
+    ],
+    "6.2 Groups integration test": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559251
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661507620
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662270509
+      }
+    ],
+    "6.3 Selection total and create-from-positions integration tests": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559273
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661508364
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662270644
+      }
+    ],
+    "6.4 Board integration test": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559294
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661509119
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662271577
+      }
+    ],
+    "6.5 ABAC and visibility matrix": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559322
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661509682
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662272529
+      }
+    ],
+    "7.1 Types, API client, query/mutation hooks and `lib/`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559344
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656569858
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658068106
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658607796
+      }
+    ],
+    "7.2 Locale keys": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559370
+      },
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656570392
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658068358
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658493269
+      }
+    ],
+    "8.1 Page shell, tabs, URL state and routing": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559396
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658615080
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658837762
+      }
+    ],
+    "8.2 Planner toolbar, slice bar and flat/grouped table skeleton": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559422
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658843622
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659605886
+      }
+    ],
+    "8.3 Group rows, selection bar and deep link": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559448
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659613055
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794660136805
+      }
+    ],
+    "8.4 Position form sheet and material picker": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559473
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658844035
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659606646
+      }
+    ],
+    "8.5 Project-material quick create": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559494
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659613578
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794660137460
+      }
+    ],
+    "8.6 Variant expander and row actions": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559515
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794660143118
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661118898
+      }
+    ],
+    "8.7 Request dialog and request header actions": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559540
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658844837
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659607720
+      }
+    ],
+    "8.8 Buyer board tab": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559564
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658845405
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659608492
+      }
+    ],
+    "9.1 Component and hook tests": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559584
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661124434
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661437977
+      }
+    ],
+    "10.1 Create `test-cases.md`": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559608
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662277701
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662503166
+      }
+    ],
+    "11. Checkpoint — verification and two-repo commit": [
+      {
+        "executionId": "7af6272f-39a8-46b1-b04f-ef9839641dd2",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794656559632
+      },
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662537421
+      }
+    ],
+    "7. Frontend foundation (inner repo `foremen-frontend/`)": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658607896
+      }
+    ],
+    "1. Database and configuration": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658834605
+      }
+    ],
+    "2. Pure helpers (backend, package `com.foremen.service.procurement.planner`)": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794658835274
+      }
+    ],
+    "3. Work-category link": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794659605667
+      }
+    ],
+    "8. Frontend screens": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661118931
+      }
+    ],
+    "4. Planner services and endpoints (backend)": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661437385
+      }
+    ],
+    "9. Frontend tests": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661438004
+      }
+    ],
+    "5. Backend i18n": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794661501412
+      }
+    ],
+    "6. Backend tests": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662272566
+      }
+    ],
+    "10. Author test-cases.md": [
+      {
+        "executionId": "f37cc0f1-4449-490a-8a60-b2dfd586efd1",
+        "chatSessionId": "sess_0d83eafe-3897-47eb-a864-5eb9cfc1cd31",
+        "timestamp": 1794662503231
+      }
+    ]
+  }
+}

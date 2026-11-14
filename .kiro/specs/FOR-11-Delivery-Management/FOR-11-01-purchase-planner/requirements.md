@@ -251,15 +251,41 @@ delivery is late for it without maintaining the link by hand.
    `GET /api/purchase-positions/scheduled-categories?projectId=&q=` (`PURCHASE_POSITIONS` READ, scoped by
    project access, 404 for an inaccessible project) returning `{ id, name, startDate }` of those categories
    (name in the caller's locale, `startDate` per Requirement 5.5, earliest bar start), filtered by a
-   case-insensitive `q` over `nameRU`/`namePL   case-insensitive `q` over `nameRU`/`namePL   case-insensitive `q` over `nameRU`/`namePL   case-inseg   case-insensitive `q` over `nameRU system SHALL pick
-   the one with the **earliest start date** (deli   the one with the **earliest staha   the one with the **earliest start date** (deli   the one with the **earliest staha  dates`   the one with the **earliest start date** (delichange the choice. WHEN none matches (no material type, no consumption norm, or
-   no matching category scheduled), the source is `NONE` and the position has no effective category.
-4. **Manual override.** THE syste4. **Manual override.** THE syste4. **Manual override.** THE syes4. **Manual override.** THE syste4. **Manual override.** THE syste4. **Manual override.** THE sd` field to4. **Manual override.** THE syste4. **Manual override.** THE syste4. **Manual override.** THE syesit is
-   set, the effective category is that category with `workCategorySource = MANUAL`; clearing it (null)
-                                                                                                                                                                                                           it                                                                                                                                                                                                           it                                                                                                     d                                                                                               calendar date of the **earliest** bar start of that category in the project's schedule, converted with
-   the same anchor and calendar rule as `ScheduleCalculator` (read it before implementing; half-day
-   offsets from the project start date), or `null` when there is no schedule, no bar or no project start
-   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   ose `workC   dat   dat   dat   dat   dat   dat   dat   dat   dat n   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat   dat  `WorkCategoryResolver` (inputs: material type id, estimate-work
+   case-insensitive `q` over `nameRU`/`namePL` (SQL wildcards in `q` escaped), ordered by `startDate`
+   then name, limited to 50 rows.
+3. **Choice among several matches.** WHEN more than one candidate category is scheduled in the first
+   tier that yields any, THE system SHALL pick the one with the **earliest start date** (the material
+   must arrive before the first work that consumes it). Ties are broken by name, then by id, so the
+   result is deterministic. The other scheduled candidates SHALL be returned as
+   `workCategoryCandidates` (with their start dates) and do not change the choice. WHEN nothing matches
+   (no material type, no consumption norm, or no matching category scheduled), `workCategorySource` is
+   `NONE` and the position has no effective category.
+4. **Manual override.** THE system SHALL add a nullable `workCategoryId` field to the position (create,
+   update and DTO). It stores only the manual override; the automatic result is never stored. The value
+   SHALL be validated (the category exists and is active; it need NOT be scheduled), otherwise 400
+   `error.purchasePosition.workCategory.invalid`. It SHALL be changeable only before stage `ORDERED`
+   (otherwise 409). WHEN it is set, the effective category is that category with
+   `workCategorySource = MANUAL`, and it survives a change of the material. Resetting to automatic is
+   `DELETE /api/purchase-positions/{id}/property?properties=workCategory` (the generic clear-property
+   endpoint of the CRUD framework, with the same stage lock); a `PUT` with a null value is not the reset
+   path.
+5. **Work start date.** `workStartDate` of a row SHALL be the calendar date of the **earliest** bar
+   start of the effective category in the project's schedule, converted with the same anchor and
+   calendar rule as `ScheduleCalculator` (read it before implementing; half-day offsets from the project
+   start date). It is `null` when there is no schedule, no bar, no project start date or no effective
+   category.
+6. **Row fields.** THE planner row SHALL expose `workCategoryId` (the manual override or null),
+   `effectiveWorkCategoryId`, `effectiveWorkCategoryName` (caller's locale), `workCategorySource`
+   (`MANUAL`, `AUTO`, `NONE`), `workCategoryCandidates`, `workStartDate` and `suggestedNeedByDate`.
+7. **Suggested need-by date and delivery risk.** `suggestedNeedByDate` SHALL equal `workStartDate`
+   (null when there is none); it is only a suggestion that the form can copy into `needByDate` ("set
+   from schedule"). `deliveryRisk` SHALL be true WHEN `workStartDate` and the Site_Delivery_Date are both
+   not null and the Site_Delivery_Date is after `workStartDate`; otherwise false. Board cards use the
+   same rule.
+8. **Computed on read.** THE automatic link SHALL be recomputed on every read and SHALL NOT be
+   persisted, so a variant replacement, an estimate change or a schedule change re-resolves without
+   editing the position.
+9. THE resolution SHALL be implemented as a pure class `WorkCategoryResolver` (inputs: material type id, estimate-work
    consumption map, catalog consumption map, scheduled categories with start dates; output: effective
    category, source, candidates) so the tiers and the earliest-start rule are unit- and property-tested
    without a database; the data loading SHALL be batched per page (no per-row queries).

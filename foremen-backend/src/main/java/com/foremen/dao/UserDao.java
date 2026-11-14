@@ -39,6 +39,10 @@ public interface UserDao extends AdminDao<UserEntity, Long> {
      */
     List<UserEntity> findByRoleCode(String roleCode);
 
+    /** FOR-11-01: active users of one role ordered by name (the buyer picker). */
+    @Query("SELECT u FROM UserEntity u WHERE u.active = true AND u.role.code = :roleCode ORDER BY u.name ASC, u.id ASC")
+    List<UserEntity> findActiveByRoleCode(@Param("roleCode") String roleCode);
+
     /**
      * FOR-07-03 R12.3 - the Company_Role code of a user, read without touching the lazy {@code role}
      * association (usable outside a transaction, e.g. from the OCR worker thread).

@@ -16,6 +16,7 @@ import com.foremen.config.security.PermissionOperation;
 import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.AttachPositionsRequest;
+import com.foremen.controller.model.FromPositionsRequest;
 import com.foremen.controller.model.PurchaseRequestCreateRequest;
 import com.foremen.controller.model.PurchaseRequestCreateResponse;
 import com.foremen.controller.model.PurchaseRequestDtoExtendedModel;
@@ -30,6 +31,7 @@ import com.foremen.service.PurchaseRequestService;
 import com.foremen.service.model.PurchaseRequestServiceExtendedModel;
 import com.foremen.service.model.PurchaseRequestServiceModel;
 import com.foremen.service.model.mapper.AuditServiceMapper;
+import com.foremen.service.procurement.planner.RequestFromPositionsService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -64,6 +66,7 @@ public class PurchaseRequestController implements AdminController<
     private final PurchaseRequestService service;
     private final PurchaseRequestControllerMapper controllerMapper;
     private final AuditServiceMapper auditServiceMapper;
+    private final RequestFromPositionsService fromPositionsService;
 
     @Override
     public ControllerToServiceMapper<PurchaseRequestServiceModel, PurchaseRequestServiceExtendedModel,
@@ -97,6 +100,16 @@ public class PurchaseRequestController implements AdminController<
     public ResponseEntity<Page<PurchaseRequestDtoModel>> find(
             Pageable pageable, @RequestParam(name = "query", required = false) String query) {
         return AdminController.super.find(pageable, query);
+    }
+
+    /** Creates a request from planner positions in one transaction (FOR-11-01 R7). */
+    @PostMapping("/from-positions")
+    @RequiresPermission(resource = RESOURCE, operation = "CREATE")
+    @Operation(summary = "Create a purchase request from positions",
+            description = "Creates the request and attaches the positions atomically; positions must all belong to one project.")
+    public ResponseEntity<PurchaseRequestDtoModel> createFromPositions(
+            @Valid @RequestBody FromPositionsRequest request) {
+        return ResponseEntity.ok(controllerMapper.toDto(fromPositionsService.create(request)));
     }
 
     /** Attaches positions to the request (R11.4). */

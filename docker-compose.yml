@@ -127,6 +127,8 @@ services:
       FOREMEN_NIP_LOOKUP_TIMEOUT: ${FOREMEN_NIP_LOOKUP_TIMEOUT:-5s}
       # Purchase-request overdue sweep cron; empty/unset => "-" (disabled; a blank cron would fail).
       FOREMEN_PROCUREMENT_OVERDUE_SWEEP_CRON: ${FOREMEN_PROCUREMENT_OVERDUE_SWEEP_CRON:--}
+      # Purchase planner urgent horizon in days (FOR-11-01).
+      FOREMEN_PROCUREMENT_URGENT_DAYS: ${FOREMEN_PROCUREMENT_URGENT_DAYS:-14}
     depends_on:
       postgres:
         condition: service_healthy

@@ -40,5 +40,6 @@ public record PurchasePositionUpdateRequest(
         LocalDate decisionDeadline,
         LocalDate plannedDeliveryDate,
         Long estimateReferenceId,
+        Long workCategoryId,
         @Size(max = 2000) String notes) {
 }

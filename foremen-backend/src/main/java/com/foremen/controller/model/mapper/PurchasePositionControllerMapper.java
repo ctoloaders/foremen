@@ -54,6 +54,7 @@ public class PurchasePositionControllerMapper implements ControllerToServiceMapp
         m.setOrderByDate(s.orderByDate());
         m.setDecisionDeadline(s.decisionDeadline());
         m.setEstimateReferenceId(s.estimateReferenceId());
+        m.setWorkCategoryId(s.workCategoryId());
         m.setNotes(s.notes());
         return m;
     }
@@ -84,6 +85,7 @@ public class PurchasePositionControllerMapper implements ControllerToServiceMapp
         m.setDecisionDeadline(s.decisionDeadline());
         m.setPlannedDeliveryDate(s.plannedDeliveryDate());
         m.setEstimateReferenceId(s.estimateReferenceId());
+        m.setWorkCategoryId(s.workCategoryId());
         m.setNotes(s.notes());
         return m;
     }
@@ -127,7 +129,7 @@ public class PurchasePositionControllerMapper implements ControllerToServiceMapp
                 visible.plannedPurchasePrice(), visible.salePrice(), visible.actualPurchasePrice(),
                 visible.purchaseVatRateId(), visible.saleVatRateId(), visible.deliveryCostShare(),
                 s.getNeedByDate(), s.getOrderByDate(), s.getDecisionDeadline(), s.getPlannedDeliveryDate(),
-                s.getPurchaseRequestId(), s.getEstimateReferenceId(), s.getNotes(),
+                s.getPurchaseRequestId(), s.getEstimateReferenceId(), s.getWorkCategoryId(), s.getNotes(),
                 variantCount, variantCount > 0);
     }
 }
