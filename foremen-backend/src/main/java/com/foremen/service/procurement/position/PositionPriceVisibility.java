@@ -11,9 +11,9 @@ public final class PositionPriceVisibility {
 
     public enum Audience { STAFF_FULL, SITE, CLIENT }
 
-    /** Stages from {@code ACCEPTED} onwards that a client may see a sale price for. */
+    /** Stages from {@code PROPOSED} onwards (FOR-11-02, R3.2) that a client may see a sale price for. */
     private static final Set<PositionStatus> CLIENT_VISIBLE = EnumSet.of(
-            PositionStatus.ACCEPTED, PositionStatus.IN_PROFORMA, PositionStatus.CLIENT_PAID,
+            PositionStatus.PROPOSED, PositionStatus.ACCEPTED, PositionStatus.IN_PROFORMA, PositionStatus.CLIENT_PAID,
             PositionStatus.WITH_BUYER, PositionStatus.ORDERED, PositionStatus.SUPPLIER_PAID,
             PositionStatus.IN_DELIVERY, PositionStatus.PARTIALLY_RECEIVED, PositionStatus.RECEIVED);
 

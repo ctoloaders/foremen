@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-02 (task 1.1; design "Data model"): position approval rounds and their options.
+          - position_approval_rounds  : one row per approval round of a purchase position
+          - position_approval_options : candidate materials offered in a round
+            (internal_unit_purchase_price is ADMIN-ONLY, never mapped to client types)
+        Depends on purchase_positions (227), finishing_materials, users.
+        Idempotent: every object is its own changeSet guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml (task 1.3).
+    -->
+    <changeSet id="234-create-position-approval-rounds" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="position_approval_rounds"/></not>
+        </preConditions>
+        <createTable tableName="position_approval_rounds">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="round_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision_deadline" type="DATE"/>
+            <column name="previous_status" type="VARCHAR(24)"/>
+            <column name="base_material_id" type="BIGINT"/>
+            <column name="base_unit_sale_price" type="NUMERIC(14,2)"/>
+            <column name="quantity" type="NUMERIC(14,3)"/>
+            <column name="manager_note" type="VARCHAR(1000)"/>
+            <column name="suggestion_link" type="VARCHAR(1000)"/>
+            <column name="source_suggestion_id" type="BIGINT"/>
+            <column name="decided_by_id" type="BIGINT"/>
+            <column name="decided_at" type="TIMESTAMP"/>
+            <column name="decided_side" type="VARCHAR(8)"/>
+            <column name="on_behalf" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="decision_comment" type="VARCHAR(1000)"/>
+            <column name="chosen_option_id" type="BIGINT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="234-create-position-approval-options" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="position_approval_options"/></not>
+        </preConditions>
+        <createTable tableName="position_approval_options">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="round_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="material_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sort_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_sale_price" type="NUMERIC(14,2)"/>
+            <column name="internal_unit_purchase_price" type="NUMERIC(14,2)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="234-uq-par-position-round" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="position_approval_rounds" indexName="uq_par_position_round"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="position_approval_rounds"
+            columnNames="position_id, round_no" constraintName="uq_par_position_round"/>
+    </changeSet>
+
+    <changeSet id="234-fk-par-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_par_position"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_par_position"
+            baseTableName="position_approval_rounds" baseColumnNames="position_id"
+            referencedTableName="purchase_positions" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="234-fk-par-base-material" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_par_base_material"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_par_base_material"
+            baseTableName="position_approval_rounds" baseColumnNames="base_material_id"
+            referencedTableName="finishing_materials" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="234-fk-par-source-suggestion" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_par_source_suggestion"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_par_source_suggestion"
+            baseTableName="position_approval_rounds" baseColumnNames="source_suggestion_id"
+            referencedTableName="position_approval_rounds" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="234-fk-par-decided-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_par_decided_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_par_decided_by"
+            baseTableName="position_approval_rounds" baseColumnNames="decided_by_id"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="234-fk-pao-round" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_pao_round"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_pao_round"
+            baseTableName="position_approval_options" baseColumnNames="round_id"
+            referencedTableName="position_approval_rounds" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="234-fk-pao-material" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_pao_material"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_pao_material"
+            baseTableName="position_approval_options" baseColumnNames="material_id"
+            referencedTableName="finishing_materials" referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- chosen_option_id FK is added only after the options table exists. -->
+    <changeSet id="234-fk-par-chosen-option" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_par_chosen_option"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_par_chosen_option"
+            baseTableName="position_approval_rounds" baseColumnNames="chosen_option_id"
+            referencedTableName="position_approval_options" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="234-ix-par-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="position_approval_rounds" indexName="ix_par_position"/></not>
+        </preConditions>
+        <createIndex tableName="position_approval_rounds" indexName="ix_par_position">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="234-ix-par-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="position_approval_rounds" indexName="ix_par_status"/></not>
+        </preConditions>
+        <createIndex tableName="position_approval_rounds" indexName="ix_par_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="234-ix-pao-round" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="position_approval_options" indexName="ix_pao_round"/></not>
+        </preConditions>
+        <createIndex tableName="position_approval_options" indexName="ix_pao_round">
+            <column name="round_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- At most one OPEN non-suggestion round per position (client suggestions may coexist). -->
+    <changeSet id="234-uq-par-open-per-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="position_approval_rounds" indexName="uq_par_open_per_position"/></not>
+        </preConditions>
+        <sql dbms="postgresql">CREATE UNIQUE INDEX uq_par_open_per_position ON position_approval_rounds (position_id) WHERE status = 'OPEN' AND kind &lt;&gt; 'CLIENT_SUGGESTION'</sql>
+    </changeSet>
+</databaseChangeLog>

@@ -33,8 +33,14 @@ class PositionPriceVisibilityTest {
     }
 
     @Test
-    void clientSeesNothingBeforeAcceptedOrWhenCancelled() {
+    void clientSeesSalePriceOfAgreedAtProposed() {
         assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.AGREED, PositionStatus.PROPOSED, RAW))
+                .isEqualTo(new PositionMoney(null, null, null, RAW.salePrice(), null, null));
+    }
+
+    @Test
+    void clientSeesNothingBeforeProposedOrWhenCancelled() {
+        assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.AGREED, PositionStatus.PLANNED, RAW))
                 .isEqualTo(PositionMoney.NONE);
         assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.AGREED, PositionStatus.CANCELLED, RAW))
                 .isEqualTo(PositionMoney.NONE);
@@ -45,6 +51,10 @@ class PositionPriceVisibilityTest {
         assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.PACKAGE, PositionStatus.RECEIVED, RAW))
                 .isEqualTo(PositionMoney.NONE);
         assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.CLIENT_OWN, PositionStatus.RECEIVED, RAW))
+                .isEqualTo(PositionMoney.NONE);
+        assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.PACKAGE, PositionStatus.PROPOSED, RAW))
+                .isEqualTo(PositionMoney.NONE);
+        assertThat(PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.CLIENT_OWN, PositionStatus.PROPOSED, RAW))
                 .isEqualTo(PositionMoney.NONE);
     }
 }

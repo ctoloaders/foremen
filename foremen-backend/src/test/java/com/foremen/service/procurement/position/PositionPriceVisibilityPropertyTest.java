@@ -48,8 +48,16 @@ class PositionPriceVisibilityPropertyTest {
         }
         if (r.salePrice() != null) {
             assertThat(p).isEqualTo(SourcingPath.AGREED);
-            assertThat(s.ordinal()).isGreaterThanOrEqualTo(PositionStatus.ACCEPTED.ordinal());
+            assertThat(s.ordinal()).isGreaterThanOrEqualTo(PositionStatus.PROPOSED.ordinal());
             assertThat(s).isNotEqualTo(PositionStatus.CANCELLED);
         }
+    }
+
+    /** **Validates: Requirements 3.2, 23.1** */
+    @Property
+    void clientSeesSalePriceOfAgreedFromProposedOnward(@ForAll PositionStatus s, @ForAll("money") PositionMoney m) {
+        PositionMoney r = PositionPriceVisibility.apply(Audience.CLIENT, SourcingPath.AGREED, s, m);
+        boolean visible = s != PositionStatus.PLANNED && s != PositionStatus.CANCELLED;
+        assertThat(r.salePrice()).isEqualTo(visible ? m.salePrice() : null);
     }
 }

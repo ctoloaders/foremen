@@ -35,4 +35,9 @@ public interface PurchasePositionDao extends AdminDao<PurchasePositionEntity, Lo
     /** Positions of a purchase request, ordered by id. */
     @Query("SELECT p FROM PurchasePositionEntity p WHERE p.purchaseRequest.id = :requestId ORDER BY p.id")
     List<PurchasePositionEntity> findByPurchaseRequestId(@Param("requestId") Long requestId);
+
+    /** Assigned buyer id of the position's purchase request; null when unassigned or no request. */
+    @Query("SELECT b.id FROM PurchasePositionEntity p LEFT JOIN p.purchaseRequest r "
+            + "LEFT JOIN r.assignedBuyer b WHERE p.id = :positionId")
+    Long findAssignedBuyerId(@Param("positionId") Long positionId);
 }

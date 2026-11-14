@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-02 (task 1.2): POSITION_APPROVALS ABAC resource and role grants (Requirements 1.1-1.4).
+        All changesets are idempotent (MARK_RAN preconditions / INSERT ... WHERE NOT EXISTS).
+        The APPROVE operation already exists (changeset 133).
+    -->
+
+    <!-- Seed POSITION_APPROVALS resource -->
+    <changeSet id="235-seed-position-approvals-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'POSITION_APPROVALS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="POSITION_APPROVALS"/>
+            <column name="name_ru" value="Согласование позиций"/>
+            <column name="name_pl" value="Zatwierdzanie pozycji"/>
+            <column name="description_ru" value="Согласование позиций закупок с клиентом"/>
+            <column name="description_pl" value="Uzgadnianie pozycji zakupów z klientem"/>
+        </insert>
+    </changeSet>
+
+    <!--
+        Grant matrix (Requirement 1.2-1.4):
+          POSITION_APPROVALS: ADMIN CRUDA, MANAGER CRUDA, BUYER R, CLIENT R+APPROVE
+    -->
+    <changeSet id="235-grant-position-approvals-resource" author="foremen">
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('ADMIN','POSITION_APPROVALS'), ('MANAGER','POSITION_APPROVALS'),
+                ('BUYER','POSITION_APPROVALS'), ('CLIENT','POSITION_APPROVALS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('ADMIN','POSITION_APPROVALS','CREATE'), ('ADMIN','POSITION_APPROVALS','READ'), ('ADMIN','POSITION_APPROVALS','UPDATE'), ('ADMIN','POSITION_APPROVALS','DELETE'), ('ADMIN','POSITION_APPROVALS','APPROVE'),
+                ('MANAGER','POSITION_APPROVALS','CREATE'), ('MANAGER','POSITION_APPROVALS','READ'), ('MANAGER','POSITION_APPROVALS','UPDATE'), ('MANAGER','POSITION_APPROVALS','DELETE'), ('MANAGER','POSITION_APPROVALS','APPROVE'),
+                ('BUYER','POSITION_APPROVALS','READ'),
+                ('CLIENT','POSITION_APPROVALS','READ'), ('CLIENT','POSITION_APPROVALS','APPROVE')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>
