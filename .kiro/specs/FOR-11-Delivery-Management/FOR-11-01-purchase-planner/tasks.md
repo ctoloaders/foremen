@@ -258,7 +258,7 @@ on the affected files only.
     - _Requirements: 18.4, and the requirements covered by the test cases (1-17)_
     - _Depends on: 6.1, 6.2, 6.3, 6.4, 6.5, 9.1_
 
-- [-] 11. Checkpoint — verification and two-repo commit
+- [x] 11. Checkpoint — verification and two-repo commit
   - Run the affected backend classes (`--tests`, redirected log, JUnit XML) for the new helpers, services,
     controllers, messages parity and the touched 00 position tests; run the affected frontend tests and
     locale parity; in the Docker stack check as BUYER (board default, company-wide planner, no bank/payroll),
