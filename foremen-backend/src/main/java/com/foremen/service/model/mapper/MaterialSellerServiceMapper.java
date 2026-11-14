@@ -22,10 +22,12 @@ public interface MaterialSellerServiceMapper
 
     @Override
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "nip", expression = "java(com.foremen.service.MaterialSellerService.normalizeNip(source.nip()))")
     MaterialSellerEntity toCreateDaoModel(MaterialSellerServiceExtendedModel source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "code", ignore = true)
+    @Mapping(target = "nip", expression = "java(com.foremen.service.MaterialSellerService.normalizeNip(source.nip()))")
     void updateFields(MaterialSellerServiceExtendedModel source, @MappingTarget MaterialSellerEntity target);
 }

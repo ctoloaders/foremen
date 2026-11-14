@@ -19,6 +19,7 @@ public final class RouteWhitelist {
             "/company/bank-transactions",
             "/company/procurement",
             "/company/staffing-gantt",
+            "/deliveries",
             "/users");
 
     /** Known project workspace tab slugs (keys of the frontend {@code WORKSPACE_TABS}). */

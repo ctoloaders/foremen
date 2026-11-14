@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-00 (task 7.1): procurement ABAC resources and role grants (Requirements 1.2, 14.1, 14.3, 14.5).
+        All changesets are idempotent (MARK_RAN preconditions / INSERT ... WHERE NOT EXISTS).
+    -->
+
+    <!-- Seed PURCHASE_POSITIONS resource -->
+    <changeSet id="229-seed-purchase-positions-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PURCHASE_POSITIONS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="PURCHASE_POSITIONS"/>
+            <column name="name_ru" value="Позиции закупок"/>
+            <column name="name_pl" value="Pozycje zakupowe"/>
+            <column name="description_ru" value="Позиции закупки материалов по проектам"/>
+            <column name="description_pl" value="Pozycje zakupu materiałów w projektach"/>
+        </insert>
+    </changeSet>
+
+    <!-- Seed PURCHASE_REQUESTS resource -->
+    <changeSet id="229-seed-purchase-requests-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PURCHASE_REQUESTS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="PURCHASE_REQUESTS"/>
+            <column name="name_ru" value="Заявки на закупку"/>
+            <column name="name_pl" value="Zlecenia zakupu"/>
+            <column name="description_ru" value="Внутренние заявки закупщику"/>
+            <column name="description_pl" value="Wewnętrzne zlecenia dla zakupowca"/>
+        </insert>
+    </changeSet>
+
+    <!-- Seed PROJECT_MATERIALS resource -->
+    <changeSet id="229-seed-project-materials-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'PROJECT_MATERIALS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="PROJECT_MATERIALS"/>
+            <column name="name_ru" value="Материалы проекта"/>
+            <column name="name_pl" value="Materiały projektu"/>
+            <column name="description_ru" value="Материалы, созданные внутри проекта"/>
+            <column name="description_pl" value="Materiały utworzone w projekcie"/>
+        </insert>
+    </changeSet>
+
+    <!--
+        Grant matrix (Requirement 14.3):
+          PURCHASE_POSITIONS: ADMIN CRUD, MANAGER CRUD, BUYER CRU, FOREMAN R
+          PURCHASE_REQUESTS:  ADMIN CRUD, MANAGER CRUD, BUYER RU,  FOREMAN R
+          PROJECT_MATERIALS:  ADMIN CRUD, MANAGER CRUD, BUYER CRUD, FOREMAN R
+    -->
+    <changeSet id="229-grant-procurement-resources" author="foremen">
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('ADMIN','PURCHASE_POSITIONS'), ('MANAGER','PURCHASE_POSITIONS'), ('BUYER','PURCHASE_POSITIONS'), ('FOREMAN','PURCHASE_POSITIONS'),
+                ('ADMIN','PURCHASE_REQUESTS'),  ('MANAGER','PURCHASE_REQUESTS'),  ('BUYER','PURCHASE_REQUESTS'),  ('FOREMAN','PURCHASE_REQUESTS'),
+                ('ADMIN','PROJECT_MATERIALS'),  ('MANAGER','PROJECT_MATERIALS'),  ('BUYER','PROJECT_MATERIALS'),  ('FOREMAN','PROJECT_MATERIALS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('ADMIN','PURCHASE_POSITIONS','CREATE'), ('ADMIN','PURCHASE_POSITIONS','READ'), ('ADMIN','PURCHASE_POSITIONS','UPDATE'), ('ADMIN','PURCHASE_POSITIONS','DELETE'),
+                ('MANAGER','PURCHASE_POSITIONS','CREATE'), ('MANAGER','PURCHASE_POSITIONS','READ'), ('MANAGER','PURCHASE_POSITIONS','UPDATE'), ('MANAGER','PURCHASE_POSITIONS','DELETE'),
+                ('BUYER','PURCHASE_POSITIONS','CREATE'), ('BUYER','PURCHASE_POSITIONS','READ'), ('BUYER','PURCHASE_POSITIONS','UPDATE'),
+                ('FOREMAN','PURCHASE_POSITIONS','READ'),
+                ('ADMIN','PURCHASE_REQUESTS','CREATE'), ('ADMIN','PURCHASE_REQUESTS','READ'), ('ADMIN','PURCHASE_REQUESTS','UPDATE'), ('ADMIN','PURCHASE_REQUESTS','DELETE'),
+                ('MANAGER','PURCHASE_REQUESTS','CREATE'), ('MANAGER','PURCHASE_REQUESTS','READ'), ('MANAGER','PURCHASE_REQUESTS','UPDATE'), ('MANAGER','PURCHASE_REQUESTS','DELETE'),
+                ('BUYER','PURCHASE_REQUESTS','READ'), ('BUYER','PURCHASE_REQUESTS','UPDATE'),
+                ('FOREMAN','PURCHASE_REQUESTS','READ'),
+                ('ADMIN','PROJECT_MATERIALS','CREATE'), ('ADMIN','PROJECT_MATERIALS','READ'), ('ADMIN','PROJECT_MATERIALS','UPDATE'), ('ADMIN','PROJECT_MATERIALS','DELETE'),
+                ('MANAGER','PROJECT_MATERIALS','CREATE'), ('MANAGER','PROJECT_MATERIALS','READ'), ('MANAGER','PROJECT_MATERIALS','UPDATE'), ('MANAGER','PROJECT_MATERIALS','DELETE'),
+                ('BUYER','PROJECT_MATERIALS','CREATE'), ('BUYER','PROJECT_MATERIALS','READ'), ('BUYER','PROJECT_MATERIALS','UPDATE'), ('BUYER','PROJECT_MATERIALS','DELETE'),
+                ('FOREMAN','PROJECT_MATERIALS','READ')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

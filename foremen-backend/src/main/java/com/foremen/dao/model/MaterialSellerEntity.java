@@ -26,4 +26,8 @@ public class MaterialSellerEntity extends BaseEntity {
 
     @Column(name = "website", length = 255)
     private String website;
+
+    /** Normalized 10-digit Polish NIP; unique when present (partial unique index, changeset 225). */
+    @Column(name = "nip", length = 10)
+    private String nip;
 }

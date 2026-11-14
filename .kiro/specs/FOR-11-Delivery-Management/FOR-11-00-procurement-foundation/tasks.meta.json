@@ -1,0 +1,943 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Create `223-seed-buyer-role.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285696
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644293380
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644360144
+      }
+    ],
+    "1.2 Create `224-add-finishing-materials-project-seller.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285732
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644293521
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644360736
+      }
+    ],
+    "1.3 Create `225-add-material-sellers-nip.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285804
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644294330
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644361518
+      }
+    ],
+    "1.4 Create `226-create-purchase-requests.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285832
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644295177
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644362301
+      }
+    ],
+    "1.5 Create `227-create-purchase-positions.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285862
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644295646
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644362883
+      }
+    ],
+    "1.6 Create `228-seed-procurement-delivery-stages.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285891
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644368297
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644494924
+      }
+    ],
+    "1.7 Register changesets 223–228 in `changelog.xml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285915
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644499895
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644935772
+      }
+    ],
+    "2.1 Interface, result, properties, conditions, disabled fallback": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644285980
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644368337
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644494127
+      }
+    ],
+    "2.2 `RestNipLookupService` + unit tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286006
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644500261
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644935921
+      }
+    ],
+    "3.1 Seller `nip`: entity, DTOs, mapper, service validation": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286037
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644501097
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644936658
+      }
+    ],
+    "3.2 `SellerLookupService` + `GET /api/material-sellers/lookup`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286062
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644995145
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645959419
+      }
+    ],
+    "4.1 Finishing material project/seller mapping and global-list filtering": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286090
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644501861
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644937454
+      }
+    ],
+    "4.2 `ProcurementProjectAccess`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286114
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644368514
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644495749
+      }
+    ],
+    "4.3 `ProjectMaterialService` + controller + DTOs + mapper": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286144
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644995394
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645960289
+      }
+    ],
+    "5.1 Enums, entities, DAOs": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286171
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644502511
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644938121
+      }
+    ],
+    "5.2 `PositionStage` + `PositionTransitionPolicy` with unit and property tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286194
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644996206
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645961098
+      }
+    ],
+    "5.3 `PositionPriceVisibility` with unit and property tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286224
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644997088
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645961884
+      }
+    ],
+    "5.4 `PurchaseRequestStatusDeriver` + overdue helper with property tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286257
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644997916
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645962766
+      }
+    ],
+    "5.5 `PurchasePositionService`, `PositionLifecycleService`, controller, DTOs, project lookup": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286288
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646070034
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646497495
+      }
+    ],
+    "5.6 `PurchaseRequestService` + controller + DTOs + assignment event": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286360
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646070243
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646497651
+      }
+    ],
+    "6.1 `PurchaseRequestOverdueSweepService`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286410
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646070347
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646497877
+      }
+    ],
+    "6.2 Events and `ProcurementNotificationEmitter`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286440
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645967308
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646061962
+      }
+    ],
+    "7.1 Create `229-seed-procurement-resources.xml` and `230-grant-buyer-reference-resources.xml`, register them": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286475
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794647667440
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648170741
+      }
+    ],
+    "7.2 Datasets and coverage": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286505
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794650940261
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651163060
+      }
+    ],
+    "8.1 `application.yml`, `.env.example`, `docker-compose.yml`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286529
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644945869
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644991062
+      }
+    ],
+    "9.1 Messages PL + RU and parity test": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286559
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644368990
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644493328
+      }
+    ],
+    "10.1 Seller types, schema and API": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286590
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646070441
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646498959
+      }
+    ],
+    "10.2 Seller form and table": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286621
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794647667487
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648170797
+      }
+    ],
+    "10.3 Navigation re-point and BUYER bottom bar": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286646
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794650940418
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651163681
+      }
+    ],
+    "10.4 Locale keys PL + RU": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286680
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651173341
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651383858
+      }
+    ],
+    "10.5 Frontend tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286719
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651886566
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652207240
+      }
+    ],
+    "11.1 NIP and seller tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286745
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646506767
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646669886
+      }
+    ],
+    "11.2 Project materials and finishing regression tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286776
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646673026
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794647050441
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794647659817
+      }
+    ],
+    "11.3 Position and request integration tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286809
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648298314
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794650935387
+      }
+    ],
+    "11.4 Sweep and emitter tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286838
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648179443
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648293971
+      }
+    ],
+    "11.5 Seed, ABAC and dataset tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286864
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651173456
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651384434
+      }
+    ],
+    "11.6 Quick seller, variants, hideDelivered and upcoming tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286897
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651388984
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651881505
+      }
+    ],
+    "12.1 Backend `POST /api/material-sellers/quick`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286924
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646071046
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646499654
+      }
+    ],
+    "12.2 Frontend `SellerPicker` and `SellerQuickCreate` (inner repo)": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286955
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794647667527
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648171850
+      }
+    ],
+    "13.1 `PurchasePositionVariantEntity` + DAO": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644286982
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645967345
+      },
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646062693
+      }
+    ],
+    "13.2 `PositionVariantService`, controller, DTOs, `variantCount`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287064
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794647667733
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648172761
+      }
+    ],
+    "14.1 `hideDelivered` for positions and requests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287091
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648179321
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648293539
+      }
+    ],
+    "14.2 `plannedDeliveryDate` synchronizer and `GET /api/purchase-positions/upcoming`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287121
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794650941137
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651164648
+      }
+    ],
+    "15.1 `RouteWhitelist` `/deliveries`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287147
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651173385
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651383616
+      }
+    ],
+    "15.2 Create `231-seed-procurement-dashboard-widgets.xml` and `232-seed-procurement-dashboard-defaults.xml`, register them": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287189
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651886929
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652206430
+      }
+    ],
+    "15.3 Widget tests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287238
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652211115
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652469096
+      }
+    ],
+    "16.1 Create `test-cases.md`": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287263
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652473230
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652508660
+      }
+    ],
+    "17. Checkpoint — full verification + two-repo commit": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644287297
+      },
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652513193
+      },
+      {
+        "executionId": "43a38b06-83e7-4be1-8728-474516b305a1",
+        "chatSessionId": "sess_b2460aec-3c34-4ad3-aadc-fb3b4ed0019f",
+        "timestamp": 1794655690585
+      },
+      {
+        "executionId": "43a38b06-83e7-4be1-8728-474516b305a1",
+        "chatSessionId": "sess_b2460aec-3c34-4ad3-aadc-fb3b4ed0019f",
+        "timestamp": 1794656534060
+      }
+    ],
+    "9. Backend i18n": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644493365
+      }
+    ],
+    "1. Database changesets": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644935811
+      }
+    ],
+    "2. NIP registry seam (shipped non-working)": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644935954
+      }
+    ],
+    "8. Configuration": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794644991091
+      }
+    ],
+    "3. Seller NIP": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645959464
+      }
+    ],
+    "4. Project-scoped materials": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794645960324
+      }
+    ],
+    "5. Positions and requests": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646497802
+      }
+    ],
+    "6. Notifications": [
+      {
+        "executionId": "e5fdb22b-841e-4ddb-ac56-00b82fb51ced",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794646497937
+      }
+    ],
+    "12. Inline seller creation": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648171890
+      }
+    ],
+    "13. Variant history": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794648172839
+      }
+    ],
+    "7. ABAC and datasets": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651163159
+      }
+    ],
+    "14. Planner filter and upcoming deliveries": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651164684
+      }
+    ],
+    "11. Backend integration and seed tests": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794651881555
+      }
+    ],
+    "10. Frontend (inner repo `foremen-frontend/`)": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652207286
+      }
+    ],
+    "15. Dashboard widgets": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652469233
+      }
+    ],
+    "16. Author test-cases.md": [
+      {
+        "executionId": "84f34be8-4da4-4653-93be-111024541e7d",
+        "chatSessionId": "sess_77c75c19-f83d-4e6f-a0db-84e535f9cf91",
+        "timestamp": 1794652508697
+      }
+    ]
+  }
+}

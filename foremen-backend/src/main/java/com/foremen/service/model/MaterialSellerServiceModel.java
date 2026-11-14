@@ -13,4 +13,5 @@ public class MaterialSellerServiceModel {
     private String name;
     private boolean active;
     private String website;
+    private String nip;
 }

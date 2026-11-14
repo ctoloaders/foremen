@@ -31,5 +31,7 @@ public record FinishingMaterialDtoModel(
         BigDecimal costNet,
         String link,
         String photoUrl,
-        boolean active
+        boolean active,
+        Long sellerId,
+        String sellerName
 ) {}

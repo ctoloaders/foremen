@@ -24,7 +24,8 @@ public interface FinishingMaterialDao extends AdminDao<FinishingMaterialEntity, 
      * + {@code type} initialized
      */
     @EntityGraph(attributePaths = {"packages", "type"})
-    @Query("SELECT DISTINCT m FROM FinishingMaterialEntity m WHERE m.active = true AND m.retailNet IS NOT NULL")
+    @Query("SELECT DISTINCT m FROM FinishingMaterialEntity m WHERE m.active = true AND m.retailNet IS NOT NULL "
+            + "AND m.project IS NULL")
     List<FinishingMaterialEntity> findByActiveTrueAndRetailNetNotNull();
 
     /**
@@ -50,7 +51,7 @@ public interface FinishingMaterialDao extends AdminDao<FinishingMaterialEntity, 
      */
     @EntityGraph(attributePaths = {"type", "material", "producer", "unit"})
     @Query("SELECT DISTINCT m FROM FinishingMaterialEntity m "
-            + "WHERE m.active = true AND m.type.id IN :typeIds "
+            + "WHERE m.active = true AND m.type.id IN :typeIds AND m.project IS NULL "
             + "ORDER BY m.id")
     List<FinishingMaterialEntity> findActiveByTypes(@Param("typeIds") List<Long> typeIds);
 }

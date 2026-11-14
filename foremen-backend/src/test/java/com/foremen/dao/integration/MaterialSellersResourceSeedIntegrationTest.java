@@ -71,7 +71,27 @@ class MaterialSellersResourceSeedIntegrationTest {
                 postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
+    /**
+     * Changeset 160 needs an ADMIN user that the changelog never seeds: on a bare DB the first pass
+     * stops there. Seed a minimal ADMIN user and resume (same harness as
+     * {@code AmendmentsResourceSeedIntegrationTest}).
+     */
     private void runLiquibase() throws Exception {
+        try {
+            runChangelogOnce();
+        } catch (Exception first) {
+            try (Connection connection = newConnection();
+                 var stmt = connection.createStatement()) {
+                stmt.executeUpdate(
+                        "INSERT INTO users (name, email, role_id, active, locale, created_date, created_by) "
+                                + "SELECT 'mig-admin', 'mig-admin@example.com', id, true, 'ru', NOW(), 'test' "
+                                + "FROM roles WHERE code = 'ADMIN'");
+            }
+            runChangelogOnce();
+        }
+    }
+
+    private void runChangelogOnce() throws Exception {
         try (Connection connection = newConnection()) {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
@@ -100,10 +120,16 @@ class MaterialSellersResourceSeedIntegrationTest {
                 .as("ADMIN operations on MATERIAL_SELLERS")
                 .containsExactlyInAnyOrder("CREATE", "READ", "UPDATE", "DELETE");
 
-        // MANAGER, FOREMAN, WORKER, FINANCIER: READ only.
+        // MANAGER: READ + CREATE (FOR-11-00 changeset 230: inline seller add from the position form).
         assertThat(operationsFor("MANAGER"))
                 .as("MANAGER operations on MATERIAL_SELLERS")
-                .containsExactly("READ");
+                .containsExactlyInAnyOrder("READ", "CREATE");
+        // BUYER (FOR-11-00 changeset 230): READ + CREATE + UPDATE.
+        assertThat(operationsFor("BUYER"))
+                .as("BUYER operations on MATERIAL_SELLERS")
+                .containsExactlyInAnyOrder("READ", "CREATE", "UPDATE");
+
+        // FOREMAN, WORKER, FINANCIER: READ only.
         assertThat(operationsFor("FOREMAN"))
                 .as("FOREMAN operations on MATERIAL_SELLERS")
                 .containsExactly("READ");

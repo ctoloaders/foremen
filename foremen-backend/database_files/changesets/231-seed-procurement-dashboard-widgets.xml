@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-00 (task 15.2; Requirement 24.2): three procurement library widgets over the
+        PURCHASE_POSITIONS dataset (no Money_Field). One changeSet per widget, idempotent by code
+        (MARK_RAN when the code already exists). Each config is validated with the production
+        WidgetConfigValidator. Registered LAST in changelog.xml, after 230.
+    -->
+    <changeSet id="231-seed-dashboard-widget-upcoming-deliveries" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'UPCOMING_DELIVERIES'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('UPCOMING_DELIVERIES', 'Ближайшие поставки', 'Najbliższe dostawy', 'Позиции закупок с плановой датой поставки, ближайшие первыми', 'Pozycje zakupowe z planowaną datą dostawy, najbliższe pierwsze',
+                    '{"schemaVersion":1,"dataset":"PURCHASE_POSITIONS","visualization":"TABLE","title":{"ru":"Ближайшие поставки","pl":"Najbliższe dostawy"},"dateField":"plannedDeliveryDate","columns":[{"field":"project.id","label":{"ru":"ID проекта","pl":"ID projektu"},"format":"NUMBER"},{"field":"project.name","label":{"ru":"Проект","pl":"Projekt"},"format":"TEXT"},{"field":"plannedMaterial.model","label":{"ru":"Материал","pl":"Materiał"},"format":"TEXT"},{"field":"quantity","label":{"ru":"Количество","pl":"Ilość"},"format":"NUMBER"},{"field":"unit.nameRU","label":{"ru":"Ед. (RU)","pl":"Jedn. (RU)"},"format":"TEXT"},{"field":"unit.namePL","label":{"ru":"Ед. (PL)","pl":"Jedn. (PL)"},"format":"TEXT"},{"field":"plannedDeliveryDate","label":{"ru":"Плановая поставка","pl":"Planowana dostawa"},"format":"DATE"},{"field":"status","label":{"ru":"Статус","pl":"Status"},"format":"STATUS"}],"filters":[{"field":"status","op":"IN","value":["WITH_BUYER","ORDERED","SUPPLIER_PAID","IN_DELIVERY","PARTIALLY_RECEIVED"]},{"field":"plannedDeliveryDate","op":"IS_NOT_NULL"}],"sort":[{"by":"plannedDeliveryDate","dir":"ASC"}],"limit":10,"links":[{"element":"ROW","route":"/deliveries","params":{}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 3, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="231-seed-dashboard-widget-procurement-by-stage" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'PROCUREMENT_BY_STAGE'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('PROCUREMENT_BY_STAGE', 'Закупки по этапам', 'Zakupy wg etapów', 'Количество позиций закупок по этапам (без отменённых)', 'Liczba pozycji zakupowych wg etapów (bez anulowanych)',
+                    '{"schemaVersion":1,"dataset":"PURCHASE_POSITIONS","visualization":"DONUT","title":{"ru":"Закупки по этапам","pl":"Zakupy wg etapów"},"dimensions":[{"field":"status","label":{"ru":"Этап","pl":"Etap"}}],"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"filters":[{"field":"status","op":"NE","value":"CANCELLED"}],"presentation":{"legend":true,"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 2, 1, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+    <changeSet id="231-seed-dashboard-widget-positions-with-buyer" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM dashboard_widgets WHERE code = 'POSITIONS_WITH_BUYER'</sqlCheck>
+        </preConditions>
+        <sql><![CDATA[
+            INSERT INTO dashboard_widgets (code, name_ru, name_pl, description_ru, description_pl, config, config_version,
+                                           col_span, row_span, project_scope, active, system_seed, created_date, created_by)
+            VALUES ('POSITIONS_WITH_BUYER', 'У закупщика', 'U kupca', 'Количество позиций закупок на этапе «У закупщика»', 'Liczba pozycji zakupowych na etapie „U kupca"',
+                    '{"schemaVersion":1,"dataset":"PURCHASE_POSITIONS","visualization":"KPI","title":{"ru":"У закупщика","pl":"U kupca"},"measures":[{"field":"id","agg":"COUNT","alias":"cnt","label":{"ru":"Кол-во","pl":"Liczba"},"format":"NUMBER"}],"filters":[{"field":"status","op":"EQ","value":"WITH_BUYER"}],"links":[{"element":"KPI","route":"/deliveries","params":{}}],"presentation":{"emptyText":{"ru":"Нет данных","pl":"Brak danych"}}}'::jsonb,
+                    1, 1, 1, 'NONE', TRUE, TRUE, NOW(), 'system');
+        ]]></sql>
+    </changeSet>
+</databaseChangeLog>

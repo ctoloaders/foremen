@@ -44,4 +44,7 @@ public class FinishingMaterialServiceModel {
     private String link;
     private String photoUrl;
     private boolean active;
+    /** Read-only seller (FOR-11-00 R2.7); null when the material has no seller. */
+    private Long sellerId;
+    private String sellerName;
 }

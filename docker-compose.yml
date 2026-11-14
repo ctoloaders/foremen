@@ -118,6 +118,15 @@ services:
       FOREMEN_DASHBOARD_AI_LLM_API_KEY:
       FOREMEN_DASHBOARD_AI_LLM_CREDENTIALS_PATH:
       FOREMEN_DASHBOARD_AI_LLM_CREDENTIALS_LOCATION:
+      # FOR-11-00 procurement. NIP registry lookup is OFF by default (disabled fallback wired).
+      # ENABLED/TIMEOUT carry real defaults because an empty value would break property binding.
+      # api-key comes from .env / shell only; never commit it.
+      FOREMEN_NIP_LOOKUP_ENABLED: ${FOREMEN_NIP_LOOKUP_ENABLED:-false}
+      FOREMEN_NIP_LOOKUP_BASE_URL: ${FOREMEN_NIP_LOOKUP_BASE_URL:-}
+      FOREMEN_NIP_LOOKUP_API_KEY: ${FOREMEN_NIP_LOOKUP_API_KEY:-}
+      FOREMEN_NIP_LOOKUP_TIMEOUT: ${FOREMEN_NIP_LOOKUP_TIMEOUT:-5s}
+      # Purchase-request overdue sweep cron; empty/unset => "-" (disabled; a blank cron would fail).
+      FOREMEN_PROCUREMENT_OVERDUE_SWEEP_CRON: ${FOREMEN_PROCUREMENT_OVERDUE_SWEEP_CRON:--}
     depends_on:
       postgres:
         condition: service_healthy

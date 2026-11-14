@@ -72,7 +72,23 @@ class DeliveryStatusesResourceSeedIntegrationTest {
                 postgres.getJdbcUrl(), postgres.getUsername(), postgres.getPassword());
     }
 
+    /** Changeset 160 needs an ADMIN user the changelog never seeds: seed one and resume. */
     private void runLiquibase() throws Exception {
+        try {
+            runChangelogOnce();
+        } catch (Exception first) {
+            try (Connection connection = newConnection();
+                 var stmt = connection.createStatement()) {
+                stmt.executeUpdate(
+                        "INSERT INTO users (name, email, role_id, active, locale, created_date, created_by) "
+                                + "SELECT 'mig-admin', 'mig-admin@example.com', id, true, 'ru', NOW(), 'test' "
+                                + "FROM roles WHERE code = 'ADMIN'");
+            }
+            runChangelogOnce();
+        }
+    }
+
+    private void runChangelogOnce() throws Exception {
         try (Connection connection = newConnection()) {
             Database database = DatabaseFactory.getInstance()
                     .findCorrectDatabaseImplementation(new JdbcConnection(connection));
@@ -141,9 +157,10 @@ class DeliveryStatusesResourceSeedIntegrationTest {
         assertThat(orderNos)
                 .as("each default delivery status is seeded with its expected order_no")
                 .containsEntry("new", 1)
-                .containsEntry("ordered", 2)
-                .containsEntry("delivered", 3)
-                .containsEntry("cancelled", 4);
+                // FOR-11-00 changeset 228 re-orders the original four into the procurement funnel.
+                .containsEntry("ordered", 7)
+                .containsEntry("delivered", 11)
+                .containsEntry("cancelled", 12);
     }
 
     // --- re-running the changelog does not duplicate rows ---

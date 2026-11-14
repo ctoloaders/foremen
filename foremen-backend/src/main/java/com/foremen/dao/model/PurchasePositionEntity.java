@@ -1,0 +1,107 @@
+package com.foremen.dao.model;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/** FOR-11-00 (R7.1): the unit of control for finishing-material procurement ({@code purchase_positions}). */
+@Entity
+@Table(name = "purchase_positions")
+@Getter
+@Setter
+@NoArgsConstructor
+public class PurchasePositionEntity extends BaseEntity {
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "project_id", nullable = false)
+    private ProjectEntity project;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 16)
+    private PositionKind kind;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sourcing_path", nullable = false, length = 16)
+    private SourcingPath sourcingPath;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 24)
+    private PositionStatus status = PositionStatus.PLANNED;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "planned_material_id", nullable = false)
+    private FinishingMaterialEntity plannedMaterial;
+
+    /** Null means the same item as {@link #plannedMaterial}. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "actual_material_id")
+    private FinishingMaterialEntity actualMaterial;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "delivery_category_id")
+    private DeliveryCategoryEntity deliveryCategory;
+
+    @Column(name = "block_no")
+    private Integer blockNo;
+
+    @Column(nullable = false, precision = 14, scale = 3)
+    private BigDecimal quantity;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "unit_id", nullable = false)
+    private MeasurementUnitEntity unit;
+
+    @Column(name = "ordered_quantity", nullable = false, precision = 14, scale = 3)
+    private BigDecimal orderedQuantity = BigDecimal.ZERO;
+
+    @Column(name = "accepted_quantity", nullable = false, precision = 14, scale = 3)
+    private BigDecimal acceptedQuantity = BigDecimal.ZERO;
+
+    @Column(name = "planned_purchase_price", precision = 14, scale = 2)
+    private BigDecimal plannedPurchasePrice;
+
+    @Column(name = "sale_price", precision = 14, scale = 2)
+    private BigDecimal salePrice;
+
+    @Column(name = "actual_purchase_price", precision = 14, scale = 2)
+    private BigDecimal actualPurchasePrice;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_vat_rate_id")
+    private VatRateEntity purchaseVatRate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "sale_vat_rate_id")
+    private VatRateEntity saleVatRate;
+
+    @Column(name = "delivery_cost_share", nullable = false, precision = 14, scale = 2)
+    private BigDecimal deliveryCostShare = BigDecimal.ZERO;
+
+    @Column(name = "need_by_date")
+    private LocalDate needByDate;
+
+    @Column(name = "order_by_date")
+    private LocalDate orderByDate;
+
+    @Column(name = "decision_deadline")
+    private LocalDate decisionDeadline;
+
+    /** System-owned: synced from the request's expected delivery date. */
+    @Column(name = "planned_delivery_date")
+    private LocalDate plannedDeliveryDate;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "purchase_request_id")
+    private PurchaseRequestEntity purchaseRequest;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "estimate_reference_id")
+    private EstimateLineRoomMaterialEntity estimateReference;
+
+    @Column(length = 2000)
+    private String notes;
+}

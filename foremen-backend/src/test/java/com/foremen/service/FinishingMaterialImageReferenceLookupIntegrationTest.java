@@ -274,6 +274,8 @@ class FinishingMaterialImageReferenceLookupIntegrationTest {
         model.setOfferPackageIds(new HashSet<>(Set.of(refs.packageId())));
         model.setModel("Model " + tag);
         model.setPhoto(photoKey);
+        // cost_net is NOT NULL; the mapper copies a null model value over the entity default.
+        model.setCostNet(java.math.BigDecimal.ZERO);
         model.setActive(true);
         return finishingMaterialService.create(model).getId();
     }

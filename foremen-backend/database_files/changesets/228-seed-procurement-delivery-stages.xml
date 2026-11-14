@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-11-00 (Requirement 12): procurement stages in delivery_statuses.
+
+        Funnel order_no: new 1, proposed 2, accepted 3, in_proforma 4, client_paid 5, with_buyer 6,
+        ordered 7, supplier_paid 8, in_delivery 9, partially_received 10, delivered 11, cancelled 12.
+
+        Idempotent: every insert is guarded by NOT EXISTS on code; every order_no update only fires
+        while the row still holds its original seeded value (admin edits are preserved).
+    -->
+
+    <!-- Insert the eight new stage rows -->
+    <changeSet id="228-seed-procurement-delivery-stages-insert" author="foremen">
+        <sql>
+            INSERT INTO delivery_statuses (code, order_no, name_ru, name_pl, active, created_date, created_by)
+            SELECT v.code, v.order_no, v.name_ru, v.name_pl, TRUE, NOW(), 'system'
+            FROM (VALUES
+                ('proposed',           2,  'Предложено',        'Zaproponowane'),
+                ('accepted',           3,  'Акцептовано',       'Zaakceptowane'),
+                ('in_proforma',        4,  'В проформе',        'W proformie'),
+                ('client_paid',        5,  'Оплачено клиентом', 'Opłacone przez klienta'),
+                ('with_buyer',         6,  'У закупщика',       'U zakupowca'),
+                ('supplier_paid',      8,  'Оплачено поставщику', 'Opłacone dostawcy'),
+                ('in_delivery',        9,  'В доставке',        'W dostawie'),
+                ('partially_received', 10, 'Частично принято',  'Częściowo odebrane')
+            ) AS v(code, order_no, name_ru, name_pl)
+            WHERE NOT EXISTS (SELECT 1 FROM delivery_statuses ds WHERE ds.code = v.code);
+        </sql>
+    </changeSet>
+
+    <!-- Re-order the four pre-existing rows, only if they still hold the original seeded order_no -->
+    <changeSet id="228-seed-procurement-delivery-stages-reorder" author="foremen">
+        <sql>
+            UPDATE delivery_statuses SET order_no = 7,  updated_date = NOW(), updated_by = 'system'
+            WHERE code = 'ordered' AND order_no = 2;
+            UPDATE delivery_statuses SET order_no = 11, updated_date = NOW(), updated_by = 'system'
+            WHERE code = 'delivered' AND order_no = 3;
+            UPDATE delivery_statuses SET order_no = 12, updated_date = NOW(), updated_by = 'system'
+            WHERE code = 'cancelled' AND order_no = 4;
+            -- 'new' already holds order_no 1; no update needed.
+        </sql>
+    </changeSet>
+
+</databaseChangeLog>

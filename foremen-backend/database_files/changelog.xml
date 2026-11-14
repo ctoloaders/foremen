@@ -952,4 +952,17 @@
     <include file="database_files/changesets/221-seed-dashboard-widget-library.xml"/>
     <!-- FOR-10 (task 3.2): role default placements + existing-user backfill. Registered LAST, after 221. -->
     <include file="database_files/changesets/222-seed-dashboard-role-defaults.xml"/>
+    <!-- FOR-11-00 (task 1.7): procurement foundation changesets 223-228. Registered LAST, in order, after 222. -->
+    <include file="database_files/changesets/223-seed-buyer-role.xml"/>
+    <include file="database_files/changesets/224-add-finishing-materials-project-seller.xml"/>
+    <include file="database_files/changesets/225-add-material-sellers-nip.xml"/>
+    <include file="database_files/changesets/226-create-purchase-requests.xml"/>
+    <include file="database_files/changesets/227-create-purchase-positions.xml"/>
+    <include file="database_files/changesets/228-seed-procurement-delivery-stages.xml"/>
+    <!-- FOR-11-00 (task 7.1): procurement resources and grants. Registered LAST, after 228. -->
+    <include file="database_files/changesets/229-seed-procurement-resources.xml"/>
+    <include file="database_files/changesets/230-grant-buyer-reference-resources.xml"/>
+    <!-- FOR-11-00 (task 15.2): procurement dashboard widgets and role defaults. Registered LAST, after 230. -->
+    <include file="database_files/changesets/231-seed-procurement-dashboard-widgets.xml"/>
+    <include file="database_files/changesets/232-seed-procurement-dashboard-defaults.xml"/>
 </databaseChangeLog>

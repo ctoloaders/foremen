@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -146,6 +147,15 @@ public class FinishingMaterialService
     }
 
     // --- CRUD plumbing ---
+
+    /**
+     * Global list/count/picker exclude Project_Materials (FOR-11-00 R2.3). Only the filtered list
+     * path uses this hook; {@code findById} stays unfiltered (R2.5).
+     */
+    @Override
+    public Specification<FinishingMaterialEntity> addRequiredQuery() {
+        return (root, query, cb) -> cb.isNull(root.get("project"));
+    }
 
     @Override
     public FinishingMaterialDao getDao() {

@@ -247,6 +247,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "typeId": %d,
@@ -284,6 +285,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -306,6 +308,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [],
@@ -322,6 +325,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
                                     "unitId": %d
@@ -337,6 +341,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "offerPackageIds": [%d],
                                     "unitId": %d
@@ -352,6 +357,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d]
@@ -370,6 +376,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -384,6 +391,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -402,6 +410,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -416,6 +425,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -434,6 +444,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -448,6 +459,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -490,6 +502,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "typeId": %d,
@@ -528,6 +541,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [],
@@ -715,6 +729,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],
@@ -739,6 +754,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d, %d],
@@ -758,6 +774,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "typeId": %d,
@@ -777,6 +794,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "producerId": %d,
@@ -796,6 +814,7 @@ class FinishingMaterialControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
+                                    "costNet": 0.00,
                                     "categoryId": %d,
                                     "materialId": %d,
                                     "offerPackageIds": [%d],

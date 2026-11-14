@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-11-00 (procurement foundation): seed the NEW system role BUYER
+        (Russian label "Закупщик", Polish label "Specjalista ds. zakupów").
+
+        Role row only; grants are seeded by later changesets. Idempotent: guarded by
+        onFail="MARK_RAN" on roles.code = 'BUYER'. Mirrors the SALESMAN seed (189).
+        Registered LAST in changelog.xml (task 1.7).
+    -->
+    <changeSet id="223-seed-buyer-role" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM roles WHERE code = 'BUYER'</sqlCheck>
+        </preConditions>
+
+        <insert tableName="roles">
+            <column name="code" value="BUYER"/>
+            <column name="name_ru" value="Закупщик"/>
+            <column name="name_pl" value="Specjalista ds. zakupów"/>
+            <column name="description_ru" value="Закупки: заказы поставщикам, поставки и приёмка материалов"/>
+            <column name="description_pl" value="Zakupy: zamówienia u dostawców, dostawy i odbiór materiałów"/>
+            <column name="system" valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

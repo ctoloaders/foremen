@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-00 (task 1.4; design "Liquibase changesets"): purchase_requests table.
+        Idempotent: guarded by NOT tableExists + onFail="MARK_RAN".
+        Registered in changelog.xml by task 1.7.
+    -->
+    <changeSet id="226-create-purchase-requests" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="purchase_requests"/></not>
+        </preConditions>
+        <createTable tableName="purchase_requests">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"
+                             foreignKeyName="fk_purchase_requests_project"
+                             references="projects(id)"/>
+            </column>
+            <column name="delivery_category_id" type="BIGINT">
+                <constraints foreignKeyName="fk_purchase_requests_delivery_category"
+                             references="delivery_categories(id)"/>
+            </column>
+            <column name="reference_number" type="VARCHAR(100)"/>
+            <column name="reference_link" type="VARCHAR(1000)"/>
+            <column name="expected_delivery_date" type="DATE"/>
+            <column name="assigned_buyer_id" type="BIGINT">
+                <constraints foreignKeyName="fk_purchase_requests_assigned_buyer"
+                             references="users(id)"/>
+            </column>
+            <column name="notes" type="VARCHAR(2000)"/>
+            <column name="overdue_notified_at" type="TIMESTAMPTZ"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <createIndex tableName="purchase_requests" indexName="idx_purchase_requests_project">
+            <column name="project_id"/>
+        </createIndex>
+        <createIndex tableName="purchase_requests" indexName="idx_purchase_requests_assigned_buyer">
+            <column name="assigned_buyer_id"/>
+        </createIndex>
+        <createIndex tableName="purchase_requests" indexName="idx_purchase_requests_expected_delivery">
+            <column name="expected_delivery_date"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

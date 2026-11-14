@@ -58,7 +58,7 @@ class DashboardRoleDefaultsSeedMigrationIntegrationTest {
 
     private static final String CHANGELOG = "database_files/changelog.xml";
     private static final Set<String> SYSTEM_ROLES = Set.of(
-            "ADMIN", "MANAGER", "FINANCIER", "ESTIMATOR", "SALESMAN", "FOREMAN", "WORKER", "CLIENT");
+            "ADMIN", "MANAGER", "FINANCIER", "ESTIMATOR", "SALESMAN", "FOREMAN", "WORKER", "CLIENT", "BUYER");
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")

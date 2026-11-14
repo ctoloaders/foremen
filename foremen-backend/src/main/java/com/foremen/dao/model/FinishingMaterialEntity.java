@@ -50,6 +50,19 @@ public class FinishingMaterialEntity extends BaseEntity {
     @JoinColumn(name = "unit_id", nullable = false)
     private MeasurementUnitEntity unit;
 
+    /**
+     * Owning project (FOR-11-00 R2.2). {@code null} = Global_Material (shared catalog); set =
+     * Project_Material, hidden from the global {@code /api/finishing-materials} list.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private ProjectEntity project;
+
+    /** Optional seller of the material (FOR-11-00 R2.2); nullable, ON DELETE SET NULL. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "seller_id")
+    private MaterialSellerEntity seller;
+
     @Column(name = "model", length = 255)
     private String model;
 

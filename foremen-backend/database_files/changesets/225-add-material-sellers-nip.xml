@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-00 (Requirement 4.1): seller NIP on material_sellers.
+        Nullable VARCHAR(10) + partial unique index (uniqueness only among non-null values).
+        Idempotent: each changeSet is guarded by a precondition with onFail=MARK_RAN.
+    -->
+    <changeSet id="225-add-material-sellers-nip-column" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="material_sellers" columnName="nip"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="material_sellers">
+            <column name="nip" type="VARCHAR(10)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="225-add-material-sellers-nip-unique-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists tableName="material_sellers" indexName="uk_material_sellers_nip"/>
+            </not>
+        </preConditions>
+        <sql>CREATE UNIQUE INDEX uk_material_sellers_nip ON material_sellers (nip) WHERE nip IS NOT NULL</sql>
+        <rollback>
+            <sql>DROP INDEX IF EXISTS uk_material_sellers_nip</sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

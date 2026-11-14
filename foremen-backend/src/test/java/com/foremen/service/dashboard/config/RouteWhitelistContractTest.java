@@ -34,6 +34,14 @@ class RouteWhitelistContractTest {
                 .isEqualTo(frontend);
     }
 
+    /** FOR-11-00 task 15.1 (Requirement 24.3): the deliveries screen is an exact-match whitelisted route. */
+    @Test
+    void deliveriesRouteIsWhitelisted() {
+        assertThat(RouteWhitelist.isAllowed("/deliveries")).isTrue();
+        assertThat(RouteWhitelist.isAllowed("/deliveries/x")).isFalse();
+        assertThat(RouteWhitelist.placeholders("/deliveries")).isEmpty();
+    }
+
     /** Walks up from the working directory (foremen-backend or repo root) looking for the export. */
     private static Path locateExport() {
         Path dir = Path.of("").toAbsolutePath();

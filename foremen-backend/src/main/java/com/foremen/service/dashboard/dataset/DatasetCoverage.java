@@ -32,6 +32,7 @@ public final class DatasetCoverage {
             Map.entry("CONSTRUCTION_MATERIAL_TYPES", REFERENCE),
             Map.entry("OFFER_PACKAGES", REFERENCE),
             Map.entry("PACKAGE_ASSORTMENT", REFERENCE),
+            Map.entry("PROJECT_MATERIALS", "project-scoped extension of the finishing-materials catalog, no own business data (FOR-11-00 R14.8)"),
             Map.entry("RESOURCES", PERMISSION_CATALOG),
             Map.entry("OPERATIONS", PERMISSION_CATALOG),
             Map.entry("EXPENSE_UPLOAD", "action-only permission (upload), no own data"),

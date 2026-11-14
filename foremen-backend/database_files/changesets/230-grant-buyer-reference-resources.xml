@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-00 (task 7.1): BUYER grants on reference resources, MANAGER CREATE on MATERIAL_SELLERS
+        (Requirements 1.4, 14.4, 14.5, 16.3). Idempotent: INSERT ... SELECT ... WHERE NOT EXISTS.
+    -->
+    <changeSet id="230-grant-buyer-reference-resources" author="foremen">
+        <!-- role_resources rows (BUYER on reference resources + NOTIFICATIONS; MANAGER x MATERIAL_SELLERS already exists) -->
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('BUYER','MATERIALS_FINISHING'), ('BUYER','MATERIALS'), ('BUYER','MATERIAL_CATEGORIES'),
+                ('BUYER','MATERIAL_TYPES'), ('BUYER','MATERIAL_PRODUCERS'), ('BUYER','MEASUREMENT_UNITS'),
+                ('BUYER','VAT_RATES'), ('BUYER','CURRENCIES'), ('BUYER','DELIVERY_CATEGORIES'),
+                ('BUYER','DELIVERY_STATUSES'), ('BUYER','MATERIAL_SELLERS'), ('BUYER','NOTIFICATIONS'),
+                ('MANAGER','MATERIAL_SELLERS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <!-- Operations: READ on reference resources; READ+CREATE+UPDATE on MATERIAL_SELLERS; MANAGER CREATE on MATERIAL_SELLERS -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('BUYER','MATERIALS_FINISHING','READ'), ('BUYER','MATERIALS','READ'), ('BUYER','MATERIAL_CATEGORIES','READ'),
+                ('BUYER','MATERIAL_TYPES','READ'), ('BUYER','MATERIAL_PRODUCERS','READ'), ('BUYER','MEASUREMENT_UNITS','READ'),
+                ('BUYER','VAT_RATES','READ'), ('BUYER','CURRENCIES','READ'), ('BUYER','DELIVERY_CATEGORIES','READ'),
+                ('BUYER','DELIVERY_STATUSES','READ'),
+                ('BUYER','MATERIAL_SELLERS','READ'), ('BUYER','MATERIAL_SELLERS','CREATE'), ('BUYER','MATERIAL_SELLERS','UPDATE'),
+                ('MANAGER','MATERIAL_SELLERS','CREATE')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+        <!-- BUYER x NOTIFICATIONS: same operations as FOREMAN -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT brr.id, frro.operation_id
+            FROM role_resources frr
+            JOIN roles fr ON fr.id = frr.role_id AND fr.code = 'FOREMAN'
+            JOIN resources res ON res.id = frr.resource_id AND res.code = 'NOTIFICATIONS'
+            JOIN role_resource_operations frro ON frro.role_resource_id = frr.id
+            JOIN roles br ON br.code = 'BUYER'
+            JOIN role_resources brr ON brr.role_id = br.id AND brr.resource_id = res.id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = brr.id AND x.operation_id = frro.operation_id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -183,6 +183,26 @@ foremen:
     credentials:
       path: ${FOREMEN_TRANSLATION_CREDENTIALS_PATH:}
       location: ${FOREMEN_TRANSLATION_CREDENTIALS_LOCATION:}
+  nip-lookup:
+    # FOR-11-00 (R15.1): external Polish company-registry lookup by NIP. When enabled is false
+    # (default) the DisabledNipLookupService fallback is wired and the app runs normally; the NIP
+    # lookup endpoint then answers registryAvailable=false. The REST implementation is wired only
+    # when enabled is true AND base-url is set. api-key is a secret: supply it via environment only,
+    # never commit it. enabled and timeout carry real defaults (not blank) because an EMPTY env value
+    # would bind as "" and break boolean/Duration binding; docker-compose passes real defaults too.
+    enabled: ${FOREMEN_NIP_LOOKUP_ENABLED:false}
+    base-url: ${FOREMEN_NIP_LOOKUP_BASE_URL:}
+    api-key: ${FOREMEN_NIP_LOOKUP_API_KEY:}
+    # Connect/read timeout (Spring Duration format, e.g. 5s, 500ms).
+    timeout: ${FOREMEN_NIP_LOOKUP_TIMEOUT:5s}
+  procurement:
+    request-overdue-sweep:
+      # FOR-11-00 (R15.2, R13.2): cron for PurchaseRequestOverdueSweepService, which stamps
+      # overdueNotifiedAt and publishes the one-shot notification.request.overdue event. The
+      # default "-" (Scheduled.CRON_DISABLED) registers the task but never fires it; an unset env
+      # var yields "-". Note a literally EMPTY env value would fail @Scheduled parsing, so leave the
+      # variable unset (docker-compose maps empty to "-") or give a real cron, e.g. "0 0 8 * * *".
+      cron: ${FOREMEN_PROCUREMENT_OVERDUE_SWEEP_CRON:-}
   google-places:
     # When enabled, api-key must be set or application startup fails fast.
     enabled: ${GOOGLE_PLACES_ENABLED:false}

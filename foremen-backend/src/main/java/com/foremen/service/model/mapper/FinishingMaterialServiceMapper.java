@@ -6,6 +6,7 @@ import com.foremen.dao.model.FinishingMaterialEntity;
 import com.foremen.dao.model.MaterialCategoryEntity;
 import com.foremen.dao.model.MaterialEntity;
 import com.foremen.dao.model.MaterialProducerEntity;
+import com.foremen.dao.model.MaterialSellerEntity;
 import com.foremen.dao.model.MaterialTypeEntity;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.OfferPackageEntity;
@@ -106,6 +107,8 @@ public abstract class FinishingMaterialServiceMapper
     @Mapping(target = "producer", expression = "java(producerRef(source.getProducerId()))")
     @Mapping(target = "unit", expression = "java(unitRef(source.getUnitId()))")
     @Mapping(target = "packages", ignore = true)
+    @Mapping(target = "project", ignore = true)
+    @Mapping(target = "seller", ignore = true)
     public abstract FinishingMaterialEntity toCreateDaoModel(FinishingMaterialServiceExtendedModel source);
 
     @Override
@@ -116,6 +119,8 @@ public abstract class FinishingMaterialServiceMapper
     @Mapping(target = "producer", expression = "java(producerRef(source.getProducerId()))")
     @Mapping(target = "unit", expression = "java(unitRef(source.getUnitId()))")
     @Mapping(target = "packages", ignore = true)
+    @Mapping(target = "project", ignore = true)
+    @Mapping(target = "seller", ignore = true)
     public abstract void updateFields(FinishingMaterialServiceExtendedModel source,
                                       @MappingTarget FinishingMaterialEntity target);
 
@@ -128,6 +133,8 @@ public abstract class FinishingMaterialServiceMapper
     @Mapping(target = "unit", ignore = true)
     @Mapping(target = "packages", ignore = true)
     @Mapping(target = "photoUrl", ignore = true)
+    @Mapping(target = "sellerId", ignore = true)
+    @Mapping(target = "sellerName", ignore = true)
     public abstract FinishingMaterialServiceModel toServiceModel(FinishingMaterialEntity source);
 
     @Override
@@ -209,6 +216,10 @@ public abstract class FinishingMaterialServiceMapper
             }
         }
         target.setPackages(packages);
+
+        MaterialSellerEntity seller = source.getSeller();
+        target.setSellerId(seller == null ? null : seller.getId());
+        target.setSellerName(seller == null ? null : (ru ? seller.getNameRU() : seller.getNamePL()));
 
         target.setLabel(buildLabel(source, ru));
         target.setPhotoUrl(imageStorage.toCdnUrl(source.getPhoto()));

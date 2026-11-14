@@ -7,5 +7,6 @@ public record MaterialSellerUpdateRequest(
     @NotBlank String nameRU,
     @NotBlank String namePL,
     Boolean active,
-    @Size(max = 255) String website
+    @Size(max = 255) String website,
+    @Size(max = 20) String nip
 ) {}
