@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-05 (task 1.1; design section 1): goods receipt tables.
+          - goods_receipts       : append-only receipt events (ACCEPTED / MISSING / RETURNED) per position
+          - goods_receipt_media  : photos per event
+          - shipments.origin_receipt_id : marks the system re-delivery shipment opened for a receipt event
+        Idempotent: every object is its own changeSet guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml, after 243.
+    -->
+    <changeSet id="244-create-goods-receipts" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="goods_receipts"/></not>
+        </preConditions>
+        <createTable tableName="goods_receipts">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="project_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="position_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="shipment_id" type="BIGINT"/>
+            <column name="kind" type="VARCHAR(10)"><constraints nullable="false"/></column>
+            <column name="quantity" type="NUMERIC(14,3)"><constraints nullable="false"/></column>
+            <column name="from_accepted" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="comment" type="VARCHAR(2000)"/>
+            <column name="occurred_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="received_by" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="client_request_id" type="UUID"/>
+            <column name="part_no" type="SMALLINT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="voided_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="voided_by" type="BIGINT"/>
+            <column name="void_reason" type="VARCHAR(500)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="244-create-goods-receipt-media" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="goods_receipt_media"/></not>
+        </preConditions>
+        <createTable tableName="goods_receipt_media">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="receipt_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="storage_uri" type="VARCHAR(512)"><constraints nullable="false"/></column>
+            <column name="content_type" type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="size_bytes" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="file_name" type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="244-fk-gr-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_gr_project"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_gr_project" baseTableName="goods_receipts" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="244-fk-gr-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_gr_position"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_gr_position" baseTableName="goods_receipts" baseColumnNames="position_id"
+            referencedTableName="purchase_positions" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="244-fk-gr-shipment" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_gr_shipment"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_gr_shipment" baseTableName="goods_receipts" baseColumnNames="shipment_id"
+            referencedTableName="shipments" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="244-fk-gr-received-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_gr_received_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_gr_received_by" baseTableName="goods_receipts" baseColumnNames="received_by"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="244-fk-gr-voided-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_gr_voided_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_gr_voided_by" baseTableName="goods_receipts" baseColumnNames="voided_by"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="244-fk-grm-receipt" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_grm_receipt"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_grm_receipt" baseTableName="goods_receipt_media" baseColumnNames="receipt_id"
+            referencedTableName="goods_receipts" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="244-ix-gr-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipts" indexName="ix_gr_position"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipts" indexName="ix_gr_position">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="244-ix-gr-project-occurred" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipts" indexName="ix_gr_project_occurred"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipts" indexName="ix_gr_project_occurred">
+            <column name="project_id"/>
+            <column name="occurred_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="244-ix-gr-shipment" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipts" indexName="ix_gr_shipment"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipts" indexName="ix_gr_shipment">
+            <column name="shipment_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="244-ix-grm-receipt" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipt_media" indexName="ix_grm_receipt"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipt_media" indexName="ix_grm_receipt">
+            <column name="receipt_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="244-uq-gr-client-request-part" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipts" indexName="uq_gr_client_request_part"/></not>
+        </preConditions>
+        <sql dbms="postgresql">CREATE UNIQUE INDEX uq_gr_client_request_part ON goods_receipts (client_request_id, part_no) WHERE client_request_id IS NOT NULL</sql>
+    </changeSet>
+
+    <changeSet id="244-ck-gr-kind" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_gr_kind'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE goods_receipts ADD CONSTRAINT ck_gr_kind CHECK (kind IN ('ACCEPTED','MISSING','RETURNED'))</sql>
+    </changeSet>
+
+    <changeSet id="244-ck-gr-quantity" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_gr_quantity'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE goods_receipts ADD CONSTRAINT ck_gr_quantity CHECK (quantity &gt; 0)</sql>
+    </changeSet>
+
+    <changeSet id="244-ck-gr-from-accepted" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_gr_from_accepted'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE goods_receipts ADD CONSTRAINT ck_gr_from_accepted CHECK (kind = 'RETURNED' OR from_accepted = false)</sql>
+    </changeSet>
+
+    <changeSet id="244-ck-gr-void-pair" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_gr_void_pair'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE goods_receipts ADD CONSTRAINT ck_gr_void_pair CHECK ((voided_at IS NULL) = (voided_by IS NULL))</sql>
+    </changeSet>
+
+    <changeSet id="244-ck-gr-void-reason" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_gr_void_reason'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE goods_receipts ADD CONSTRAINT ck_gr_void_reason CHECK (voided_at IS NULL OR void_reason IS NOT NULL)</sql>
+    </changeSet>
+
+    <!-- shipments.origin_receipt_id: marks the system re-delivery shipment opened for a receipt event. -->
+    <changeSet id="244-shipments-origin-receipt-id" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="shipments" columnName="origin_receipt_id"/></not>
+        </preConditions>
+        <addColumn tableName="shipments">
+            <column name="origin_receipt_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="244-fk-shp-origin-receipt" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_shp_origin_receipt"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_shp_origin_receipt" baseTableName="shipments" baseColumnNames="origin_receipt_id"
+            referencedTableName="goods_receipts" referencedColumnNames="id" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="244-ix-shp-origin-receipt" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipments" indexName="ix_shp_origin_receipt"/></not>
+        </preConditions>
+        <createIndex tableName="shipments" indexName="ix_shp_origin_receipt">
+            <column name="origin_receipt_id"/>
+        </createIndex>
+    </changeSet>
+</databaseChangeLog>

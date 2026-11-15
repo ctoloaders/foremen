@@ -41,6 +41,7 @@ import com.foremen.controller.model.ShipmentFilter;
 import com.foremen.controller.model.ShipmentRequest;
 import com.foremen.dao.ExternalOrderDao;
 import com.foremen.dao.ExternalOrderLineDao;
+import com.foremen.dao.GoodsReceiptDao;
 import com.foremen.dao.ProjectDao;
 import com.foremen.dao.ShipmentDao;
 import com.foremen.dao.ShipmentEventDao;
@@ -67,6 +68,7 @@ import com.foremen.service.procurement.PlannedDeliveryDateSynchronizer;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.position.PositionLifecycleService;
 import com.foremen.service.procurement.position.PositionTransitionPolicy.Actor;
+import com.foremen.service.procurement.receipt.GoodsReceiptLedgerService;
 import com.foremen.service.procurement.schedule.MaterialScheduleRiskService;
 import com.foremen.service.procurement.schedule.MaterialScheduleRiskService.ProjectCategory;
 import com.foremen.service.procurement.shipment.tracking.CarrierTrackingAdapter;
@@ -116,6 +118,8 @@ public class ShipmentService {
     static final String PROJECT_MISMATCH = "error.shipment.project.mismatch";
     static final String FIELDS_MISSING = "error.shipment.method.fieldsMissing";
     static final String REVERT_NOT_AVAILABLE = "error.shipment.eta.revertNotAvailable";
+    static final String HAS_RECEIPTS = "error.shipment.hasReceipts";
+    static final String POSITION_HAS_RECEIPTS = "error.shipment.position.hasReceipts";
 
     static final int EVENT_CAP = 50;
     static final int QUANTITY_SCALE = 3;
@@ -138,6 +142,8 @@ public class ShipmentService {
     private final AuditLogDao auditLogDao;
     private final EntityManager entityManager;
     private final ApplicationEventPublisher events;
+    private final GoodsReceiptLedgerService ledgerService;
+    private final GoodsReceiptDao receiptDao;
     private static final ZoneId WARSAW = ZoneId.of("Europe/Warsaw");
 
     private final Clock clock;
@@ -156,6 +162,8 @@ public class ShipmentService {
                            AuditLogDao auditLogDao,
                            EntityManager entityManager,
                            ApplicationEventPublisher events,
+                           GoodsReceiptLedgerService ledgerService,
+                           GoodsReceiptDao receiptDao,
                            Clock clock) {
         this.shipmentDao = shipmentDao;
         this.lineDao = lineDao;
@@ -171,6 +179,8 @@ public class ShipmentService {
         this.auditLogDao = auditLogDao;
         this.entityManager = entityManager;
         this.events = events;
+        this.ledgerService = ledgerService;
+        this.receiptDao = receiptDao;
         this.clock = clock;
     }
 
@@ -307,6 +317,9 @@ public class ShipmentService {
         if (shipment.getStatus().isTerminal()) {
             throw new ForemenApiException(HttpStatus.CONFLICT, TERMINAL);
         }
+        if (receiptDao.existsActiveByShipmentId(shipment.getId())) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, HAS_RECEIPTS);
+        }
         String before = snapshot(shipment, currentLines(shipment));
         shipment.setStatus(ShipmentStatus.CANCELLED);
         shipment.setStatusSource(ShipmentSource.MANUAL);
@@ -357,6 +370,90 @@ public class ShipmentService {
     @Transactional
     public void onStatusOrEtaChanged(ShipmentEntity shipment, Long actorUserId) {
         propagate(shipment, positionsOf(shipment), actorUserId);
+    }
+
+    // --- FOR-11-05: receipt-driven writes (internal, no ABAC; the caller has checked the scope) ---
+
+    /**
+     * FOR-11-05 R8.1, R8.2: opens a system re-delivery shipment for {@code quantity} units of a position
+     * after a receipt released units. No {@link ShipmentCreatedEvent} is published, so no "shipped" notice
+     * goes out. Returns the id of the new shipment.
+     */
+    @Transactional
+    public Long createRedelivery(Long positionId, BigDecimal quantity, Long originReceiptId) {
+        PurchasePositionEntity position = entityManager.find(PurchasePositionEntity.class, positionId,
+                LockModeType.PESSIMISTIC_WRITE);
+        if (position == null) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, POSITION_NOT_FOUND);
+        }
+        List<ShipmentRequest.Line> lines = validateLineShape(
+                List.of(new ShipmentRequest.Line(positionId, quantity)));
+        Map<Long, PurchasePositionEntity> positions = new LinkedHashMap<>();
+        positions.put(positionId, position);
+
+        Map<Long, ExternalOrderEntity> orders = new HashMap<>();
+        boolean anyWithoutOrder = false;
+        for (ShipmentLineEntity l : receiptDao.findFifoLinesByPositionId(positionId)) {
+            ExternalOrderEntity o = l.getShipment().getExternalOrder();
+            if (o == null) {
+                anyWithoutOrder = true;
+            } else {
+                orders.put(o.getId(), o);
+            }
+        }
+        ExternalOrderEntity order = !anyWithoutOrder && orders.size() == 1
+                ? orders.values().iterator().next() : null;
+
+        validateLines(lines, positions, order, -1L);
+
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        ShipmentEntity shipment = new ShipmentEntity();
+        shipment.setProject(position.getProject());
+        shipment.setExternalOrder(order);
+        shipment.setDeliveryMethod(DeliveryMethod.SHOP_DELIVERY);
+        shipment.setStatus(ShipmentStatus.CREATED);
+        shipment.setStatusSource(ShipmentSource.MANUAL);
+        shipment.setEtaSource(EtaSource.TRACKING);
+        shipment.setNote("Re-delivery after receipt " + originReceiptId);
+        shipment.setOriginReceiptId(originReceiptId);
+        shipment.setShippedAt(now);
+        shipment.setNextCheckAt(null);
+
+        ShipmentEntity saved = shipmentDao.save(shipment);
+        saveLines(saved, lines, positions);
+        addEvent(saved, ShipmentStatus.CREATED, ShipmentSource.MANUAL, now, null);
+        entityManager.flush();
+
+        moveToInDelivery(positions.values());
+        propagate(saved, positions.values(), currentUserId());
+        saveAudit(null, snapshot(saved, lines), saved, "CREATE");
+        return saved.getId();
+    }
+
+    /**
+     * FOR-11-05 R8.6: closes a non-terminal shipment whose lines are all resolved by receipt events. A
+     * terminal shipment is left as it is.
+     */
+    @Transactional
+    public void closeByReceipt(Long shipmentId) {
+        ShipmentEntity shipment = shipmentId == null ? null : shipmentDao.findById(shipmentId).orElse(null);
+        if (shipment == null) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND);
+        }
+        if (shipment.getStatus().isTerminal()) {
+            return;
+        }
+        String before = snapshot(shipment, currentLines(shipment));
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        shipment.setStatus(ShipmentStatus.DELIVERED);
+        shipment.setStatusSource(ShipmentSource.MANUAL);
+        shipment.setDeliveredAt(now);
+        shipment.setNextCheckAt(null);
+        shipmentDao.save(shipment);
+        addEvent(shipment, ShipmentStatus.DELIVERED, ShipmentSource.SYSTEM, now, "Closed by goods receipt");
+        entityManager.flush();
+        propagate(shipment, positionsOf(shipment), currentUserId());
+        saveAudit(before, snapshot(shipment, currentLines(shipment)), shipment, "UPDATE");
     }
 
     // --- Reads (R16) ---
@@ -511,8 +608,17 @@ public class ShipmentService {
                         .withParams(Map.of("positionId", p.getId()));
             }
         }
-        Map<Long, BigDecimal> shipped = sums(lineDao.sumActiveQuantityByPositionExcluding(
-                positions.keySet(), excludeShipmentId));
+        for (ShipmentRequest.Line line : lines) {
+            Long positionId = line.positionId();
+            if (receiptDao.existsActiveByPositionId(positionId)) {
+                BigDecimal onShipments = lineDao.sumActiveQuantityByPositionId(positionId);
+                if (onShipments == null || onShipments.signum() == 0) {
+                    throw new ForemenApiException(HttpStatus.CONFLICT, POSITION_HAS_RECEIPTS, positionId)
+                            .withParams(Map.of("positionId", positionId));
+                }
+            }
+        }
+        Map<Long, BigDecimal> shipped = ledgerService.committed(positions.keySet(), excludeShipmentId);
         for (ShipmentRequest.Line line : lines) {
             PurchasePositionEntity p = positions.get(line.positionId());
             BigDecimal cap = ShipmentRules.capFor(p.getSourcingPath(), p.getOrderedQuantity(), p.getQuantity());
@@ -529,9 +635,12 @@ public class ShipmentService {
             }
             Map<Long, BigDecimal> onOrder = sums(lineDao.sumActiveQuantityByOrderExcluding(
                     order.getId(), positions.keySet(), excludeShipmentId));
+            Map<Long, BigDecimal> released = ledgerService.releasedByOrder(order.getId(), positions.keySet());
             for (ShipmentRequest.Line line : lines) {
                 BigDecimal orderQty = orderLines.get(line.positionId());
-                BigDecimal total = onOrder.getOrDefault(line.positionId(), BigDecimal.ZERO).add(line.quantity());
+                BigDecimal open = onOrder.getOrDefault(line.positionId(), BigDecimal.ZERO)
+                        .subtract(released.getOrDefault(line.positionId(), BigDecimal.ZERO)).max(BigDecimal.ZERO);
+                BigDecimal total = open.add(line.quantity());
                 if (orderQty == null || total.compareTo(orderQty) > 0) {
                     throw new ForemenApiException(HttpStatus.CONFLICT, EXCEEDS_ORDER_LINE, line.positionId())
                             .withParams(Map.of("positionId", line.positionId()));
@@ -614,10 +723,14 @@ public class ShipmentService {
         return touched;
     }
 
-    /** R4.6: {@code SUPPLIER_PAID} positions go to {@code IN_DELIVERY}; others stay as they are. */
+    /**
+     * R4.6 and FOR-11-05 R8.3: {@code SUPPLIER_PAID} and {@code PARTIALLY_RECEIVED} positions go to
+     * {@code IN_DELIVERY}; others stay as they are.
+     */
     private void moveToInDelivery(Collection<PurchasePositionEntity> positions) {
         for (PurchasePositionEntity p : positions) {
-            if (p.getStatus() == PositionStatus.SUPPLIER_PAID) {
+            if (p.getStatus() == PositionStatus.SUPPLIER_PAID
+                    || p.getStatus() == PositionStatus.PARTIALLY_RECEIVED) {
                 lifecycle.transition(p.getId(), PositionStatus.IN_DELIVERY, Actor.SYSTEM);
             }
         }
@@ -643,7 +756,8 @@ public class ShipmentService {
                     && p.getSourcingPath() != SourcingPath.CLIENT_OWN
                     && noAcceptance
                     && !withOpenShipment.contains(p.getId())
-                    && !lineDao.existsDeliveredByPositionId(p.getId())) {
+                    && !lineDao.existsDeliveredByPositionId(p.getId())
+                    && !receiptDao.existsActiveByPositionId(p.getId())) {
                 lifecycle.transition(p.getId(), PositionStatus.SUPPLIER_PAID, Actor.SYSTEM);
             }
         }

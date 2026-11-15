@@ -46,6 +46,13 @@ springdoc:
     path: /api-docs
 
 foremen:
+  # FOR-11-05: goods receipt. Media limits and the author's void window; match the code fallbacks.
+  goods-receipt:
+    media:
+      max-per-request: 8
+      max-per-event: 10
+      max-file-size: 5MB
+    void-window: PT24H
   cache:
     spec: "maximumSize=500,expireAfterWrite=10m"
   cors:

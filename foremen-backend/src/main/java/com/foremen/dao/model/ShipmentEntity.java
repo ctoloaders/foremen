@@ -92,4 +92,8 @@ public class ShipmentEntity extends BaseEntity {
     /** One-shot guard: the ETA date for which the downtime-risk notification was already sent. */
     @Column(name = "downtime_notified_for")
     private LocalDate downtimeNotifiedFor;
+
+    /** FOR-11-05 (R8.1): the receipt event that opened this system re-delivery shipment; {@code null} otherwise. */
+    @Column(name = "origin_receipt_id")
+    private Long originReceiptId;
 }

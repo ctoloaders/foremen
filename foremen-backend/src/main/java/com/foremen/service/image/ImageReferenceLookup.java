@@ -48,7 +48,9 @@ public class ImageReferenceLookup {
             // FOR-05-02: room media (uploads and AI source crops) keep their object key here.
             new ImageColumn("room_media", "storage_uri"),
             // FOR-11-03: the stored PDF of an issued client proforma must never be reclaimed.
-            new ImageColumn("client_proformas", "pdf_object_key"));
+            new ImageColumn("client_proformas", "pdf_object_key"),
+            // FOR-11-05: goods-receipt photos must never be reclaimed as orphans.
+            new ImageColumn("goods_receipt_media", "storage_uri"));
 
     @PersistenceContext
     private EntityManager entityManager;

@@ -40,4 +40,7 @@ public interface ShipmentDao extends AdminDao<ShipmentEntity, Long> {
             + "AND EXISTS (SELECT 1 FROM ProjectScheduleEntity ps WHERE ps.project.id = p.id) "
             + "ORDER BY s.id")
     List<ShipmentEntity> findActiveWithEtaForProjectsWithSchedule();
+
+    /** FOR-11-05: system re-delivery shipments opened for one receipt event. */
+    List<ShipmentEntity> findByOriginReceiptId(Long originReceiptId);
 }

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -18,6 +19,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,6 +39,7 @@ import com.foremen.controller.model.ShipmentDto;
 import com.foremen.controller.model.ShipmentRequest;
 import com.foremen.dao.ExternalOrderDao;
 import com.foremen.dao.ExternalOrderLineDao;
+import com.foremen.dao.GoodsReceiptDao;
 import com.foremen.dao.ProjectDao;
 import com.foremen.dao.ShipmentDao;
 import com.foremen.dao.ShipmentEventDao;
@@ -60,6 +64,7 @@ import com.foremen.service.procurement.PlannedDeliveryDateSynchronizer;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.position.PositionLifecycleService;
 import com.foremen.service.procurement.position.PositionTransitionPolicy.Actor;
+import com.foremen.service.procurement.receipt.GoodsReceiptLedgerService;
 import com.foremen.service.procurement.schedule.MaterialScheduleRiskService;
 import com.foremen.service.procurement.shipment.tracking.CarrierTrackingAdapter;
 import com.foremen.service.procurement.shipment.tracking.CarrierTrackingRegistry;
@@ -85,6 +90,8 @@ class ShipmentServiceTest {
     private ProcurementProjectAccess access;
     private EntityManager em;
     private ApplicationEventPublisher events;
+    private GoodsReceiptLedgerService ledgerService;
+    private GoodsReceiptDao receiptDao;
     private ShipmentService service;
     private ProjectEntity project;
 
@@ -103,9 +110,20 @@ class ShipmentServiceTest {
         access = mock(ProcurementProjectAccess.class);
         em = mock(EntityManager.class);
         events = mock(ApplicationEventPublisher.class);
+        // Without receipt events the ledger's committed quantity equals the FOR-11-04 shipped sum.
+        ledgerService = mock(GoodsReceiptLedgerService.class);
+        when(ledgerService.committed(anyCollection(), any())).thenAnswer(inv -> {
+            Map<Long, BigDecimal> m = new HashMap<>();
+            for (Object[] row : lineDao.sumActiveQuantityByPositionExcluding(inv.getArgument(0), inv.getArgument(1))) {
+                m.put(((Number) row[0]).longValue(), (BigDecimal) row[1]);
+            }
+            return m;
+        });
+        receiptDao = mock(GoodsReceiptDao.class);
         Clock clock = Clock.fixed(Instant.parse("2030-01-05T10:00:00Z"), ZoneOffset.UTC);
         service = new ShipmentService(shipmentDao, lineDao, eventDao, projectDao, orderDao, orderLineDao,
-                lifecycle, synchronizer, riskService, registry, access, mock(AuditLogDao.class), em, events, clock);
+                lifecycle, synchronizer, riskService, registry, access, mock(AuditLogDao.class), em, events,
+                ledgerService, receiptDao, clock);
 
         project = new ProjectEntity();
         project.setId(PROJECT_ID);
@@ -595,5 +613,246 @@ class ShipmentServiceTest {
         service.cancel(50L);
         verify(lifecycle, never()).transition(anyLong(), any(), any());
         verify(synchronizer).onShipmentChanged(11L);
+    }
+
+    // --- FOR-11-05 task 3.4: ledger, receipts, re-delivery, closure ---
+
+    @Test
+    void capCheckUsesTheLedgerCommittedQuantity() {
+        position(11L, PositionStatus.SUPPLIER_PAID, "10");
+        doReturn(Map.of(11L, new BigDecimal("9"))).when(ledgerService).committed(anyCollection(), any());
+
+        ForemenApiException ex = failure(() -> service.create(request(null, line(11L, "1.001"))));
+
+        assertThat(ex.getMessage()).contains("error.shipment.line.exceedsCap");
+        assertThat(service.create(request(null, line(11L, "1"))).id()).isEqualTo(100L);
+        verify(ledgerService, org.mockito.Mockito.atLeastOnce()).committed(anyCollection(), eq(-1L));
+    }
+
+    @Test
+    void orderLineCheckSubtractsUnitsReleasedByReceipts() {
+        position(11L, PositionStatus.SUPPLIER_PAID, "10");
+        ExternalOrderEntity order = new ExternalOrderEntity();
+        order.setId(5L);
+        order.setProject(project);
+        when(orderDao.findById(5L)).thenReturn(Optional.of(order));
+        ExternalOrderLineEntity ol = new ExternalOrderLineEntity();
+        ol.setPosition(position(11L, PositionStatus.SUPPLIER_PAID, "10"));
+        ol.setQuantity(new BigDecimal("5"));
+        when(orderLineDao.findByExternalOrderId(5L)).thenReturn(List.of(ol));
+        when(lineDao.sumActiveQuantityByOrderExcluding(eq(5L), anyCollection(), eq(-1L)))
+                .thenReturn(List.<Object[]>of(new Object[] {11L, new BigDecimal("5")}));
+        doReturn(Map.of(11L, new BigDecimal("2"))).when(ledgerService).releasedByOrder(eq(5L), anyCollection());
+
+        assertThat(failure(() -> service.create(request(5L, line(11L, "2.001")))).getMessage())
+                .contains("error.shipment.line.exceedsOrderLine");
+        assertThat(service.create(request(5L, line(11L, "2"))).id()).isEqualTo(100L);
+    }
+
+    @Test
+    void orderLineCheckNeverGoesNegativeWhenReleasedExceedsOnOrder() {
+        position(11L, PositionStatus.SUPPLIER_PAID, "10");
+        ExternalOrderEntity order = new ExternalOrderEntity();
+        order.setId(5L);
+        order.setProject(project);
+        when(orderDao.findById(5L)).thenReturn(Optional.of(order));
+        ExternalOrderLineEntity ol = new ExternalOrderLineEntity();
+        ol.setPosition(position(11L, PositionStatus.SUPPLIER_PAID, "10"));
+        ol.setQuantity(new BigDecimal("5"));
+        when(orderLineDao.findByExternalOrderId(5L)).thenReturn(List.of(ol));
+        when(lineDao.sumActiveQuantityByOrderExcluding(eq(5L), anyCollection(), eq(-1L)))
+                .thenReturn(List.<Object[]>of(new Object[] {11L, new BigDecimal("1")}));
+        doReturn(Map.of(11L, new BigDecimal("4"))).when(ledgerService).releasedByOrder(eq(5L), anyCollection());
+
+        assertThat(failure(() -> service.create(request(5L, line(11L, "5.001")))).getMessage())
+                .contains("error.shipment.line.exceedsOrderLine");
+        assertThat(service.create(request(5L, line(11L, "5"))).id()).isEqualTo(100L);
+    }
+
+    @Test
+    void createMovesPartiallyReceivedPositionBackToInDelivery() {
+        position(11L, PositionStatus.PARTIALLY_RECEIVED, "10");
+
+        service.create(request(null, line(11L, "2")));
+
+        verify(lifecycle).transition(11L, PositionStatus.IN_DELIVERY, Actor.SYSTEM);
+    }
+
+    @Test
+    void cancelDoesNotReverseWhenThePositionHasActiveReceipts() {
+        ShipmentEntity s = shipment(ShipmentStatus.CREATED);
+        PurchasePositionEntity p = position(11L, PositionStatus.IN_DELIVERY, "10");
+        p.setAcceptedQuantity(BigDecimal.ZERO);
+        attach(s, p, "4");
+        when(lineDao.findActiveByPositionIds(anyCollection())).thenReturn(List.of());
+        when(receiptDao.existsActiveByPositionId(11L)).thenReturn(true);
+
+        service.cancel(50L);
+
+        verify(lifecycle, never()).transition(anyLong(), any(), any());
+        verify(synchronizer).onShipmentChanged(11L);
+    }
+
+    @Test
+    void cancelShipmentWithActiveLinkedReceiptIsConflict() {
+        ShipmentEntity s = shipment(ShipmentStatus.IN_TRANSIT);
+        attach(s, position(11L, PositionStatus.IN_DELIVERY, "10"), "4");
+        when(receiptDao.existsActiveByShipmentId(50L)).thenReturn(true);
+
+        ForemenApiException ex = failure(() -> service.cancel(50L));
+
+        assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(ex.getMessage()).contains("error.shipment.hasReceipts");
+        assertThat(s.getStatus()).isEqualTo(ShipmentStatus.IN_TRANSIT);
+        verify(shipmentDao, never()).save(any());
+        verify(lifecycle, never()).transition(anyLong(), any(), any());
+    }
+
+    @Test
+    void positionWithReceiptsAndNoShipmentLinesCannotJoinANewShipment() {
+        position(11L, PositionStatus.IN_DELIVERY, "10");
+        when(receiptDao.existsActiveByPositionId(11L)).thenReturn(true);
+        when(lineDao.sumActiveQuantityByPositionId(11L)).thenReturn(null);
+
+        ForemenApiException ex = failure(() -> service.create(request(null, line(11L, "1"))));
+
+        assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(ex.getMessage()).contains("error.shipment.position.hasReceipts");
+        verify(shipmentDao, never()).save(any());
+    }
+
+    @Test
+    void positionWithReceiptsAndExistingShipmentLinesMayJoinANewShipment() {
+        position(11L, PositionStatus.PARTIALLY_RECEIVED, "10");
+        when(receiptDao.existsActiveByPositionId(11L)).thenReturn(true);
+        when(lineDao.sumActiveQuantityByPositionId(11L)).thenReturn(new BigDecimal("4"));
+
+        assertThat(service.create(request(null, line(11L, "1"))).id()).isEqualTo(100L);
+    }
+
+    @Test
+    void createRedeliveryBuildsSystemShipmentWithoutCreatedEvent() {
+        PurchasePositionEntity p = position(11L, PositionStatus.PARTIALLY_RECEIVED, "10");
+        ShipmentEntity origin = new ShipmentEntity();
+        origin.setId(40L);
+        ShipmentLineEntity originLine = new ShipmentLineEntity();
+        originLine.setShipment(origin);
+        originLine.setPosition(p);
+        when(receiptDao.findFifoLinesByPositionId(11L)).thenReturn(List.of(originLine));
+
+        Long id = service.createRedelivery(11L, new BigDecimal("2"), 900L);
+
+        assertThat(id).isEqualTo(100L);
+        ArgumentCaptor<ShipmentEntity> saved = ArgumentCaptor.forClass(ShipmentEntity.class);
+        verify(shipmentDao).save(saved.capture());
+        ShipmentEntity s = saved.getValue();
+        assertThat(s.getDeliveryMethod()).isEqualTo(DeliveryMethod.SHOP_DELIVERY);
+        assertThat(s.getStatus()).isEqualTo(ShipmentStatus.CREATED);
+        assertThat(s.getStatusSource()).isEqualTo(ShipmentSource.MANUAL);
+        assertThat(s.getNote()).isEqualTo("Re-delivery after receipt 900");
+        assertThat(s.getOriginReceiptId()).isEqualTo(900L);
+        assertThat(s.getProject()).isSameAs(project);
+        assertThat(s.getExternalOrder()).isNull();
+        assertThat(s.getEtaDate()).isNull();
+        assertThat(s.getDriverName()).isNull();
+        assertThat(s.getDriverPhone()).isNull();
+        assertThat(s.getNextCheckAt()).isNull();
+        ArgumentCaptor<ShipmentLineEntity> lineCap = ArgumentCaptor.forClass(ShipmentLineEntity.class);
+        verify(lineDao).save(lineCap.capture());
+        assertThat(lineCap.getValue().getQuantity()).isEqualByComparingTo("2");
+        verify(lifecycle).transition(11L, PositionStatus.IN_DELIVERY, Actor.SYSTEM);
+        verify(synchronizer).onShipmentChanged(11L);
+        verify(events, never()).publishEvent(any(ShipmentCreatedEvent.class));
+        verify(events, never()).publishEvent(any(ShipmentRefreshRequestedEvent.class));
+    }
+
+    @Test
+    void createRedeliveryKeepsTheOrderOnlyWhenAllContributingShipmentsShareOne() {
+        PurchasePositionEntity p = position(11L, PositionStatus.PARTIALLY_RECEIVED, "10");
+        ExternalOrderEntity order = new ExternalOrderEntity();
+        order.setId(5L);
+        order.setProject(project);
+        ExternalOrderLineEntity ol = new ExternalOrderLineEntity();
+        ol.setPosition(p);
+        ol.setQuantity(new BigDecimal("10"));
+        when(orderLineDao.findByExternalOrderId(5L)).thenReturn(List.of(ol));
+        ShipmentEntity a = new ShipmentEntity();
+        a.setId(40L);
+        a.setExternalOrder(order);
+        ShipmentEntity b = new ShipmentEntity();
+        b.setId(41L);
+        b.setExternalOrder(order);
+        ShipmentLineEntity la = new ShipmentLineEntity();
+        la.setShipment(a);
+        ShipmentLineEntity lb = new ShipmentLineEntity();
+        lb.setShipment(b);
+        when(receiptDao.findFifoLinesByPositionId(11L)).thenReturn(List.of(la, lb));
+
+        service.createRedelivery(11L, new BigDecimal("1"), 901L);
+
+        ArgumentCaptor<ShipmentEntity> saved = ArgumentCaptor.forClass(ShipmentEntity.class);
+        verify(shipmentDao).save(saved.capture());
+        assertThat(saved.getValue().getExternalOrder()).isSameAs(order);
+    }
+
+    @Test
+    void createRedeliveryWithMixedOrdersLeavesTheOrderEmpty() {
+        PurchasePositionEntity p = position(11L, PositionStatus.PARTIALLY_RECEIVED, "10");
+        ExternalOrderEntity order = new ExternalOrderEntity();
+        order.setId(5L);
+        order.setProject(project);
+        ShipmentEntity withOrder = new ShipmentEntity();
+        withOrder.setId(40L);
+        withOrder.setExternalOrder(order);
+        ShipmentEntity without = new ShipmentEntity();
+        without.setId(41L);
+        ShipmentLineEntity l1 = new ShipmentLineEntity();
+        l1.setShipment(withOrder);
+        l1.setPosition(p);
+        ShipmentLineEntity l2 = new ShipmentLineEntity();
+        l2.setShipment(without);
+        l2.setPosition(p);
+        when(receiptDao.findFifoLinesByPositionId(11L)).thenReturn(List.of(l1, l2));
+
+        service.createRedelivery(11L, new BigDecimal("1"), 902L);
+
+        ArgumentCaptor<ShipmentEntity> saved = ArgumentCaptor.forClass(ShipmentEntity.class);
+        verify(shipmentDao).save(saved.capture());
+        assertThat(saved.getValue().getExternalOrder()).isNull();
+    }
+
+    @Test
+    void closeByReceiptMarksAnOpenShipmentDeliveredBySystem() {
+        ShipmentEntity s = shipment(ShipmentStatus.IN_TRANSIT);
+        s.setNextCheckAt(java.time.OffsetDateTime.now());
+        attach(s, position(11L, PositionStatus.IN_DELIVERY, "10"), "4");
+
+        service.closeByReceipt(50L);
+
+        assertThat(s.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+        assertThat(s.getStatusSource()).isEqualTo(ShipmentSource.MANUAL);
+        assertThat(s.getDeliveredAt()).isEqualTo(java.time.OffsetDateTime.now(
+                Clock.fixed(Instant.parse("2030-01-05T10:00:00Z"), ZoneOffset.UTC)));
+        assertThat(s.getNextCheckAt()).isNull();
+        ArgumentCaptor<com.foremen.dao.model.ShipmentEventEntity> ev =
+                ArgumentCaptor.forClass(com.foremen.dao.model.ShipmentEventEntity.class);
+        verify(eventDao).save(ev.capture());
+        assertThat(ev.getValue().getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+        assertThat(ev.getValue().getSource()).isEqualTo(ShipmentSource.SYSTEM);
+        assertThat(ev.getValue().getNote()).isEqualTo("Closed by goods receipt");
+        verify(synchronizer).onShipmentChanged(11L);
+        verify(lifecycle, never()).transition(anyLong(), any(), any());
+    }
+
+    @Test
+    void closeByReceiptOnTerminalShipmentIsANoOpAndUnknownIs404() {
+        ShipmentEntity s = shipment(ShipmentStatus.DELIVERED);
+
+        service.closeByReceipt(50L);
+
+        assertThat(s.getStatus()).isEqualTo(ShipmentStatus.DELIVERED);
+        verify(shipmentDao, never()).save(any());
+        verify(eventDao, never()).save(any());
+        assertThat(failure(() -> service.closeByReceipt(404L)).getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }

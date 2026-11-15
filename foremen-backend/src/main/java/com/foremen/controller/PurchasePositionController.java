@@ -38,7 +38,9 @@ import com.foremen.service.model.AuditServiceModel;
 import com.foremen.service.model.PurchasePositionServiceExtendedModel;
 import com.foremen.service.model.PurchasePositionServiceModel;
 import com.foremen.service.model.mapper.AuditServiceMapper;
+import com.foremen.controller.model.PositionLedgerDto;
 import com.foremen.controller.model.UpcomingDeliveryDto;
+import com.foremen.service.procurement.receipt.GoodsReceiptService;
 import com.foremen.service.procurement.UpcomingDeliveriesService;
 import com.foremen.service.procurement.position.PositionAudienceResolver;
 import com.foremen.service.procurement.position.PositionLifecycleService;
@@ -88,6 +90,7 @@ public class PurchasePositionController implements AdminController<
     private final PositionLifecycleService lifecycleService;
     private final PositionAudienceResolver audienceResolver;
     private final UpcomingDeliveriesService upcomingDeliveriesService;
+    private final GoodsReceiptService goodsReceiptService;
 
     @Override
     public ControllerToServiceMapper<PurchasePositionServiceModel, PurchasePositionServiceExtendedModel,
@@ -134,6 +137,14 @@ public class PurchasePositionController implements AdminController<
             @RequestParam(name = "projectId", required = false) Long projectId,
             @RequestParam(name = "shipmentId", required = false) Long shipmentId) {
         return ResponseEntity.ok(upcomingDeliveriesService.upcoming(days, projectId, shipmentId));
+    }
+
+    /** FOR-11-05 (R9.4): receipt ledger of one position; guarded by GOODS_RECEIPTS READ, not the class resource. */
+    @GetMapping("/{id}/ledger")
+    @RequiresPermission(resource = "GOODS_RECEIPTS", operation = "READ")
+    @Operation(summary = "Receipt ledger of a position")
+    public ResponseEntity<PositionLedgerDto> ledger(@PathVariable Long id) {
+        return ResponseEntity.ok(goodsReceiptService.ledger(id));
     }
 
     /** Manual stage change (R8.7). Requires MANAGER or ADMIN on top of the UPDATE grant. */
