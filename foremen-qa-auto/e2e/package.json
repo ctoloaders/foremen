@@ -1,0 +1,19 @@
+{
+  "name": "foremen-qa-e2e",
+  "private": true,
+  "type": "module",
+  "description": "e2e (agentic runner) UI tests for Foremen specs, run against the live Docker stack.",
+  "scripts": {
+    "test": "e2e run",
+    "test:for10": "e2e run tests/for10"
+  },
+  "engines": {
+    "node": ">=24.8.0"
+  },
+  "devDependencies": {
+    "@e2e-dev/web": "^0.16.0",
+    "@types/node": "^26.6.6",
+    "bcryptjs": "^3.0.3",
+    "e2e": "^0.23.1"
+  }
+}

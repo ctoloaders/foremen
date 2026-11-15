@@ -99,7 +99,9 @@ public class DashboardController {
     @PostMapping("/items")
     public ResponseEntity<PlacementView> add(@RequestBody AddItemRequest request) {
         if (request == null || request.widgetId() == null) {
-            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.dashboard.widget.notFound");
+            // A missing id is a validation error on the field, not an unknown widget.
+            throw new com.foremen.exception.FieldValidationException(
+                    java.util.Map.of("widgetId", "error.field.required"));
         }
         PlacementView created = layoutService.addPlacement(actingUserId(), request.widgetId(),
                 request.cellIndex(), request.projectId());
