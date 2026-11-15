@@ -48,7 +48,9 @@ import com.foremen.dao.model.BankConnectionEntity;
 import com.foremen.dao.model.BankTransactionEntity;
 import com.foremen.dao.model.BankTransactionLinkEntity;
 import com.foremen.dao.model.BankTransactionSuggestionEntity;
+import com.foremen.dao.model.ClientProformaEntity;
 import com.foremen.dao.model.DetectionSource;
+import com.foremen.dao.model.ExternalOrderEntity;
 import com.foremen.dao.model.DocumentPaymentStatus;
 import com.foremen.dao.model.LedgerOrigin;
 import com.foremen.dao.model.LinkKind;
@@ -132,9 +134,9 @@ public class BankLedgerQueryService {
             Sort.Order.desc("id"));
 
     static final Set<LinkKind> EXPENSE_KINDS = EnumSet.of(LinkKind.WORKER_PAYOUT, LinkKind.PROCUREMENT,
-            LinkKind.OTHER_EXPENSE, LinkKind.INTERNAL_TRANSFER);
+            LinkKind.OTHER_EXPENSE, LinkKind.INTERNAL_TRANSFER, LinkKind.EXTERNAL_ORDER_PAYMENT);
     static final Set<LinkKind> INCOME_KINDS = EnumSet.of(LinkKind.CLIENT_PAYMENT, LinkKind.OTHER_INCOME,
-            LinkKind.INTERNAL_TRANSFER);
+            LinkKind.INTERNAL_TRANSFER, LinkKind.PROFORMA_PAYMENT);
     static final Set<ProjectStatus> PICKER_PROJECT_STATUSES = EnumSet.of(ProjectStatus.APPROVED,
             ProjectStatus.ACTIVE, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED);
     static final Set<DocumentPaymentStatus> DEFAULT_DOCUMENT_STATUSES = EnumSet.of(DocumentPaymentStatus.UNMATCHED,
@@ -158,6 +160,7 @@ public class BankLedgerQueryService {
     private final UserDao userDao;
     private final DetectionCandidateProviders providers;
     private final EntityManager entityManager;
+    private final LedgerProcurementTargetSearch procurementSearch;
 
     @SuppressWarnings("java:S107")
     public BankLedgerQueryService(BankTransactionDao transactionDao, BankTransactionLinkDao linkDao,
@@ -165,7 +168,8 @@ public class BankLedgerQueryService {
                                   WorkerPayoutDao payoutDao, ProcurementDocumentDao documentDao,
                                   PaymentScheduleDao scheduleDao, UnplannedExpenseCategoryDao categoryDao,
                                   ProjectDao projectDao, UserDao userDao, DetectionCandidateProviders providers,
-                                  EntityManager entityManager) {
+                                  EntityManager entityManager, LedgerProcurementTargetSearch procurementSearch) {
+        this.procurementSearch = procurementSearch;
         this.transactionDao = transactionDao;
         this.linkDao = linkDao;
         this.suggestionDao = suggestionDao;
@@ -322,6 +326,10 @@ public class BankLedgerQueryService {
             case OTHER_EXPENSE -> concat(categoryTargets(needle), projectTargets(needle));
             case OTHER_INCOME -> projectTargets(needle);
             case INTERNAL_TRANSFER -> accountTargets(txn, needle);
+            // FOR-11-03 (R10.5): proformas for credit lines, external orders for debit lines.
+            case PROFORMA_PAYMENT -> procurementSearch.proformas(needle, projectId, lineRemainderOrAbs(txn));
+            case EXTERNAL_ORDER_PAYMENT ->
+                    procurementSearch.externalOrders(needle, projectId, lineRemainderOrAbs(txn));
         };
     }
 
@@ -683,7 +691,8 @@ public class BankLedgerQueryService {
 
     private LinkView linkView(BankTransactionLinkEntity l, Map<Long, BigDecimal> docSums) {
         Target t = target(l.getKind(), l.getWorkerPayout(), l.getProcurementDocument(), l.getPaymentSchedule(),
-                l.getProject(), l.getUnplannedCategory(), l.getCounterAccount(), l.getNote());
+                l.getProject(), l.getUnplannedCategory(), l.getCounterAccount(), l.getClientProforma(),
+                l.getExternalOrder(), l.getNote());
         ProcurementDocumentEntity doc = l.getProcurementDocument();
         DocumentPaymentStatus docStatus = null;
         if (doc != null) {
@@ -698,19 +707,24 @@ public class BankLedgerQueryService {
                 l.getPaymentSchedule() == null ? null : l.getPaymentSchedule().getId(),
                 l.getPaymentTransaction() == null ? null : l.getPaymentTransaction().getId(),
                 l.getUnplannedCategory() == null ? null : l.getUnplannedCategory().getId(),
-                l.getCounterAccount() == null ? null : l.getCounterAccount().getId());
+                l.getCounterAccount() == null ? null : l.getCounterAccount().getId(),
+                l.getClientProforma() == null ? null : l.getClientProforma().getId(),
+                l.getExternalOrder() == null ? null : l.getExternalOrder().getId());
     }
 
     private SuggestionView suggestionView(BankTransactionSuggestionEntity s) {
         Target t = target(s.getKind(), s.getWorkerPayout(), s.getProcurementDocument(), s.getPaymentSchedule(),
-                s.getProject(), s.getUnplannedCategory(), s.getCounterAccount(), s.getNote());
+                s.getProject(), s.getUnplannedCategory(), s.getCounterAccount(), s.getClientProforma(),
+                s.getExternalOrder(), s.getNote());
         return new SuggestionView(s.getId(), s.getKind(), scale(s.getAmount()), s.getRank(), s.getRationale(),
                 s.getSource(), s.getConfidence(), t.label(), t.projectId(), t.projectName(), t.url(),
                 id(s.getWorkerPayout()),
                 s.getProcurementDocument() == null ? null : s.getProcurementDocument().getId(),
                 s.getPaymentSchedule() == null ? null : s.getPaymentSchedule().getId(),
                 s.getUnplannedCategory() == null ? null : s.getUnplannedCategory().getId(),
-                s.getCounterAccount() == null ? null : s.getCounterAccount().getId());
+                s.getCounterAccount() == null ? null : s.getCounterAccount().getId(),
+                s.getClientProforma() == null ? null : s.getClientProforma().getId(),
+                s.getExternalOrder() == null ? null : s.getExternalOrder().getId());
     }
 
     /** Label / project / UI URL of a link or suggestion target (design §Frontend "Linked-entity URLs"). */
@@ -720,7 +734,8 @@ public class BankLedgerQueryService {
     @SuppressWarnings("java:S107")
     private Target target(LinkKind kind, WorkerPayoutEntity payout, ProcurementDocumentEntity doc,
                           PaymentScheduleEntity schedule, ProjectEntity linkProject,
-                          UnplannedExpenseCategoryEntity category, BankAccountEntity counterAccount, String note) {
+                          UnplannedExpenseCategoryEntity category, BankAccountEntity counterAccount,
+                          ClientProformaEntity proforma, ExternalOrderEntity externalOrder, String note) {
         ProjectEntity project = linkProject;
         if (project == null && doc != null) {
             project = doc.getProject();
@@ -747,6 +762,12 @@ public class BankLedgerQueryService {
             case OTHER_INCOME -> new Target(projectName != null ? projectName : note, projectId, projectName, projectUrl);
             case INTERNAL_TRANSFER -> new Target(counterAccount == null ? null : accountLabel(counterAccount),
                     projectId, projectName, null);
+            case PROFORMA_PAYMENT -> new Target(proforma == null ? null : proforma.getNumber(), projectId,
+                    projectName, projectId == null ? null
+                    : "/projects/" + projectId + "/clientProformas?proforma=" + (proforma == null ? "" : proforma.getId()));
+            case EXTERNAL_ORDER_PAYMENT -> new Target(externalOrder == null ? null : externalOrderLabel(externalOrder),
+                    projectId, projectName, externalOrder == null ? null
+                    : "/deliveries/external-orders?order=" + externalOrder.getId());
         };
     }
 
@@ -874,6 +895,12 @@ public class BankLedgerQueryService {
             out.put(r.targetId(), r.total() == null ? BigDecimal.ZERO : r.total());
         }
         return out;
+    }
+
+    /** FOR-11-03 (R7.6): "#{id} · seller name" — no purchase prices. */
+    private static String externalOrderLabel(ExternalOrderEntity order) {
+        String seller = order.getSeller() == null ? null : order.getSeller().getNamePL();
+        return seller == null ? "#" + order.getId() : "#" + order.getId() + " · " + seller;
     }
 
     private static Long id(WorkerPayoutEntity p) {

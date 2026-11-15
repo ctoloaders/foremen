@@ -64,4 +64,17 @@ public interface BankTransactionDao extends AdminDao<BankTransactionEntity, Long
             @Param("linkStatuses") Collection<LinkStatus> linkStatuses,
             @Param("from") LocalDate from,
             @Param("to") LocalDate to);
+
+    /**
+     * FOR-11-03 (R10.3) — POSTED income lines ({@code amount > 0}) in the given link statuses booked within
+     * {@code [from, to]}, account fetch-joined, by id (reverse proforma matching).
+     */
+    @Query("SELECT t FROM BankTransactionEntity t JOIN FETCH t.account "
+            + "WHERE t.status = com.foremen.dao.model.BankTxnStatus.POSTED AND t.amount > 0 "
+            + "AND t.linkStatus IN :linkStatuses AND t.bookingDate BETWEEN :from AND :to "
+            + "ORDER BY t.id")
+    List<BankTransactionEntity> findIncomeLinesForProformaMatching(
+            @Param("linkStatuses") Collection<LinkStatus> linkStatuses,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }

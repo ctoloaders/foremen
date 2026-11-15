@@ -46,7 +46,9 @@ public class ImageReferenceLookup {
             new ImageColumn("procurement_documents", "raw_object_key"),
             new ImageColumn("procurement_documents", "processed_object_key"),
             // FOR-05-02: room media (uploads and AI source crops) keep their object key here.
-            new ImageColumn("room_media", "storage_uri"));
+            new ImageColumn("room_media", "storage_uri"),
+            // FOR-11-03: the stored PDF of an issued client proforma must never be reclaimed.
+            new ImageColumn("client_proformas", "pdf_object_key"));
 
     @PersistenceContext
     private EntityManager entityManager;

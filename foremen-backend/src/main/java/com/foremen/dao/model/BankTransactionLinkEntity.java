@@ -88,4 +88,14 @@ public class BankTransactionLinkEntity extends BaseEntity {
 
     @Column(name = "note", columnDefinition = "text")
     private String note;
+
+    /** FOR-11-03 (R7.2): target of a {@code PROFORMA_PAYMENT} (changeset 238). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "client_proforma_id")
+    private ClientProformaEntity clientProforma;
+
+    /** FOR-11-03 (R7.2): target of an {@code EXTERNAL_ORDER_PAYMENT} (changeset 238). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "external_order_id")
+    private ExternalOrderEntity externalOrder;
 }

@@ -46,6 +46,8 @@ import com.foremen.dao.model.WorkerPayoutEntity;
 import com.foremen.service.bank.detect.MatchCandidate.TargetType;
 import com.foremen.service.bank.detect.MatchInputs.CounterpartyRule;
 import com.foremen.service.bank.detect.MatchInputs.DocumentCandidate;
+import com.foremen.service.bank.detect.MatchInputs.ExternalOrderCandidate;
+import com.foremen.service.bank.detect.MatchInputs.ProformaCandidate;
 import com.foremen.service.bank.detect.MatchInputs.OwnAccount;
 import com.foremen.service.bank.detect.MatchInputs.PayoutCandidate;
 import com.foremen.service.bank.detect.MatchInputs.ScheduleCandidate;
@@ -92,6 +94,7 @@ public class DetectionCandidateProviders {
     private final BankTransactionLinkDao linkDao;
     private final UnplannedExpenseCategoryDao categoryDao;
     private final ProjectDao projectDao;
+    private ProcurementMatchCandidates procurement;
 
     @SuppressWarnings("java:S107")
     public DetectionCandidateProviders(BankAccountDao accountDao, BankCounterpartyRuleDao ruleDao,
@@ -108,6 +111,24 @@ public class DetectionCandidateProviders {
         this.linkDao = linkDao;
         this.categoryDao = categoryDao;
         this.projectDao = projectDao;
+    }
+
+    /** FOR-11-03: optional so the FOR-07-04 constructor (and its tests) keep working. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setProcurementCandidates(ProcurementMatchCandidates procurement) {
+        this.procurement = procurement;
+    }
+
+    /** FOR-11-03 (R10.1): proformas in ISSUED / PARTIALLY_PAID with something left to pay. */
+    @Transactional(readOnly = true)
+    public List<ProformaCandidate> openProformas() {
+        return procurement == null ? List.of() : procurement.openProformas();
+    }
+
+    /** FOR-11-03 (R10.1): external orders in SENT_FOR_PAYMENT (and PAID by the financier). */
+    @Transactional(readOnly = true)
+    public List<ExternalOrderCandidate> payableExternalOrders() {
+        return procurement == null ? List.of() : procurement.payableExternalOrders();
     }
 
     /** The AI catalog: active categories (+ code → id) and active projects (R15.2). */
@@ -153,7 +174,17 @@ public class DetectionCandidateProviders {
             documents = procurementDocuments(min.minusDays(CandidatePool.DOC_DAYS_BEFORE),
                     max.plusDays(CandidatePool.DOC_DAYS_AFTER), labels);
         }
-        return new CandidatePool(own, schedules, payouts, documents, labels);
+        List<ProformaCandidate> proformas = List.of();
+        List<ExternalOrderCandidate> orders = List.of();
+        if (procurement != null) {
+            if (lines.stream().anyMatch(t -> t.direction() == TxnFacts.Direction.INCOME)) {
+                proformas = openProformas();
+            }
+            if (!expenseDates.isEmpty()) {
+                orders = payableExternalOrders();
+            }
+        }
+        return new CandidatePool(own, schedules, payouts, documents, proformas, orders, labels);
     }
 
     // ---------------------------------------------------------------- own account (R14.2)

@@ -8,6 +8,8 @@ import com.foremen.service.bank.detect.MatchCandidate.TargetRef;
 import com.foremen.service.bank.detect.MatchCandidate.TargetType;
 import com.foremen.service.bank.detect.MatchInputs.CounterpartyRule;
 import com.foremen.service.bank.detect.MatchInputs.DocumentCandidate;
+import com.foremen.service.bank.detect.MatchInputs.ExternalOrderCandidate;
+import com.foremen.service.bank.detect.MatchInputs.ProformaCandidate;
 import com.foremen.service.bank.detect.MatchInputs.OwnAccount;
 import com.foremen.service.bank.detect.MatchInputs.PayoutCandidate;
 import com.foremen.service.bank.detect.MatchInputs.ScheduleCandidate;
@@ -63,6 +65,14 @@ public final class RuleMatcher {
     public static final String R_INVOICE_NUMBER = "INVOICE_NUMBER";
     public static final String R_SUPPLIER = "SUPPLIER_MATCH";
 
+    // FOR-11-03 (R10.2) reason codes.
+    public static final String R_PROFORMA_NUMBER = "PROFORMA_NUMBER";
+    public static final String R_PROFORMA_AMOUNT = "PROFORMA_AMOUNT";
+    public static final String R_PROFORMA_CLIENT = "PROFORMA_CLIENT";
+    public static final String R_ORDER_AMOUNT = "EXTERNAL_ORDER_AMOUNT";
+    public static final String R_ORDER_SELLER = "EXTERNAL_ORDER_SELLER";
+    public static final String R_ORDER_DOCUMENT = "EXTERNAL_ORDER_DOCUMENT";
+
     // Score table in hundredths.
     static final int INTERNAL_TRANSFER = 100;
     static final int PROJECT_REFERENCE = 95;
@@ -79,6 +89,14 @@ public final class RuleMatcher {
     static final int DOC_SUPPLIER = 20;
     static final int DOC_DATE = 10;
     static final int RULE_KIND = 90;
+    // FOR-11-03: a number / document hit scores at least INVOICE_NUMBER (R10.2); number + exact amount
+    // reaches the auto threshold, a number alone only suggests.
+    static final int PROFORMA_NUMBER = 60;
+    static final int PROFORMA_AMOUNT = 50;
+    static final int PROFORMA_CLIENT = 20;
+    static final int ORDER_DOCUMENT = 60;
+    static final int ORDER_AMOUNT = 50;
+    static final int ORDER_SELLER = 20;
     static final int MAX = 100;
 
     /** Payout date window: ± days around the booking date. */
@@ -91,6 +109,9 @@ public final class RuleMatcher {
 
     private static final BigDecimal DOC_AMOUNT_TOLERANCE = new BigDecimal("0.01");
     private static final Pattern PROJECT_REF = Pattern.compile("(?i)(?<![A-Z0-9])FM-(\\d{1,18})(?![A-Z0-9])");
+    /** {@code PF/2026/000123}, tolerant of banks that strip or replace the slashes. */
+    private static final Pattern PROFORMA_REF =
+            Pattern.compile("(?i)(?<![A-Z0-9])PF[\\s/\\-]*(\\d{4})[\\s/\\-]*(\\d{6})(?!\\d)");
     private static final Pattern NON_ALNUM = Pattern.compile("[^A-Z0-9]");
     private static final Pattern NON_DIGIT = Pattern.compile("\\D");
     private static final Pattern SPACES_DASHES = Pattern.compile("[\\s-]");
@@ -143,7 +164,13 @@ public final class RuleMatcher {
         ruleKindCandidates(txn, rules).forEach(c -> keepBest(best, c));
         if (txn.direction() == TxnFacts.Direction.INCOME) {
             clientPayments(txn, in.schedules(), rules).forEach(c -> keepBest(best, c));
+            for (ProformaCandidate p : in.proformas()) {
+                scoreProforma(txn, p).ifPresent(c -> keepBest(best, c));
+            }
         } else {
+            for (ExternalOrderCandidate o : in.externalOrders()) {
+                scoreExternalOrder(txn, o).ifPresent(c -> keepBest(best, c));
+            }
             for (PayoutCandidate p : in.payouts()) {
                 scorePayout(txn, p, rules).ifPresent(c -> keepBest(best, c));
             }
@@ -155,7 +182,8 @@ public final class RuleMatcher {
         Set<String> allowed = ClassifierAnswerValidator.allowedKinds(txn.direction().name());
         List<MatchCandidate> ranked = new ArrayList<>();
         for (MatchCandidate c : best.values()) {
-            if (allowed.contains(c.kind().name()) && c.score().signum() > 0) {
+            if ((allowed.contains(c.kind().name()) || procurementKindAllowed(c.kind(), txn.direction()))
+                    && c.score().signum() > 0) {
                 ranked.add(c);
             }
         }
@@ -429,6 +457,96 @@ public final class RuleMatcher {
         }
         String inv = alnum(invoiceNumber);
         return inv.length() >= MIN_INVOICE_LENGTH && alnum(title).contains(inv);
+    }
+
+    // ---------------------------------------------------------------- proforma / external order (FOR-11-03)
+
+    /** The FOR-11-03 kinds are not offered to the AI, so their direction rule lives here (R7.1). */
+    private static boolean procurementKindAllowed(LinkKind kind, TxnFacts.Direction direction) {
+        return (kind == LinkKind.PROFORMA_PAYMENT && direction == TxnFacts.Direction.INCOME)
+                || (kind == LinkKind.EXTERNAL_ORDER_PAYMENT && direction == TxnFacts.Direction.EXPENSE);
+    }
+
+    /** Normalised proforma references ({@code "2026/000123"}) found in a title. */
+    public static Set<String> proformaReferences(String title) {
+        Set<String> out = new TreeSet<>();
+        if (title == null) {
+            return out;
+        }
+        Matcher m = PROFORMA_REF.matcher(title);
+        while (m.find()) {
+            out.add(m.group(1) + "/" + m.group(2));
+        }
+        return out;
+    }
+
+    /** {@code "PF/2026/000123"} to {@code "2026/000123"}, or {@code null} when it is not a proforma number. */
+    static String proformaKey(String number) {
+        Set<String> refs = proformaReferences(number);
+        return refs.isEmpty() ? null : refs.iterator().next();
+    }
+
+    /**
+     * Scores one open proforma against a credit line (R10.2): number in the title, amount equal to the
+     * remainder, client name / NIP.
+     */
+    public static Optional<MatchCandidate> scoreProforma(TxnFacts txn, ProformaCandidate p) {
+        if (txn.direction() != TxnFacts.Direction.INCOME) {
+            return Optional.empty();
+        }
+        List<String> reasons = new ArrayList<>();
+        int points = 0;
+        String key = proformaKey(p.number());
+        if (key != null && proformaReferences(txn.title()).contains(key)) {
+            points += PROFORMA_NUMBER;
+            reasons.add(R_PROFORMA_NUMBER);
+        }
+        if (p.remainder() != null && p.remainder().signum() > 0 && sameAmount(txn.amount(), p.remainder())) {
+            points += PROFORMA_AMOUNT;
+            reasons.add(R_PROFORMA_AMOUNT);
+        }
+        if (nameMatches(txn, p.clientName()) || nipMatches(txn, p.clientNip())) {
+            points += PROFORMA_CLIENT;
+            reasons.add(R_PROFORMA_CLIENT);
+        }
+        if (points <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(candidate(LinkKind.PROFORMA_PAYMENT,
+                new TargetRef(TargetType.CLIENT_PROFORMA, p.proformaId(), p.projectId()), points, reasons));
+    }
+
+    /**
+     * Scores one payable external order against a debit line (R10.2): amount equal to the payable
+     * remainder, seller (name or NIP, also of the linked documents), invoice number of a linked document
+     * in the title.
+     */
+    public static Optional<MatchCandidate> scoreExternalOrder(TxnFacts txn, ExternalOrderCandidate o) {
+        if (txn.direction() != TxnFacts.Direction.EXPENSE) {
+            return Optional.empty();
+        }
+        List<String> reasons = new ArrayList<>();
+        int points = 0;
+        if (o.invoiceNumbers().stream().anyMatch(n -> invoiceNumberInTitle(n, txn.title()))) {
+            points += ORDER_DOCUMENT;
+            reasons.add(R_ORDER_DOCUMENT);
+        }
+        if (o.remainder() != null && o.remainder().signum() > 0 && sameAmount(txn.amount(), o.remainder())) {
+            points += ORDER_AMOUNT;
+            reasons.add(R_ORDER_AMOUNT);
+        }
+        boolean seller = nameMatches(txn, o.sellerName()) || nipMatches(txn, o.sellerNip())
+                || o.documentNames().stream().anyMatch(n -> nameMatches(txn, n))
+                || o.documentNips().stream().anyMatch(n -> nipMatches(txn, n));
+        if (seller) {
+            points += ORDER_SELLER;
+            reasons.add(R_ORDER_SELLER);
+        }
+        if (points <= 0) {
+            return Optional.empty();
+        }
+        return Optional.of(candidate(LinkKind.EXTERNAL_ORDER_PAYMENT,
+                new TargetRef(TargetType.EXTERNAL_ORDER, o.orderId(), o.projectId()), points, reasons));
     }
 
     // ---------------------------------------------------------------- helpers

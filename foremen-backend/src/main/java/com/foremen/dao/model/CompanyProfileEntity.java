@@ -51,4 +51,8 @@ public class CompanyProfileEntity extends BaseEntity {
     /** Contact email; nullable. */
     @Column(name = "email", length = 255)
     private String email;
+
+    /** FOR-11-03 (R4.5): account the client pays proformas to (IBAN / NRB); nullable. */
+    @Column(name = "bank_account", length = 64)
+    private String bankAccount;
 }

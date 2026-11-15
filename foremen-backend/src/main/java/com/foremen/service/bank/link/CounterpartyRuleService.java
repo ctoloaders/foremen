@@ -137,6 +137,8 @@ public class CounterpartyRuleService {
             case CLIENT_PAYMENT -> link.getPaymentSchedule() != null;
             case OTHER_EXPENSE -> link.getUnplannedCategory() != null;
             case OTHER_INCOME, INTERNAL_TRANSFER -> true;
+            // FOR-11-03: proforma / external-order payments are matched per document, never by a rule.
+            case PROFORMA_PAYMENT, EXTERNAL_ORDER_PAYMENT -> false;
         };
     }
 

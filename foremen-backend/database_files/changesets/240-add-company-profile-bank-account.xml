@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-03 (task 3.3, R4.5): the company profile had no bank account, but the proforma PDF must
+        show the account the client pays to. Adds the nullable bank_account column (IBAN / NRB, up to
+        64 characters with spaces). Issue fails with error.proforma.companyProfile.incomplete until it
+        is filled. Idempotent: columnExists guard + MARK_RAN. Registered LAST in changelog.xml.
+    -->
+    <changeSet id="240-add-company-profile-bank-account" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="company_profile"/>
+            <not>
+                <columnExists tableName="company_profile" columnName="bank_account"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="company_profile">
+            <column name="bank_account" type="VARCHAR(64)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

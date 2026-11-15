@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-03 (task 1.2; design "Data model"): external orders.
+          - external_orders          : one supplier order per project/seller
+          - external_order_lines     : positions on the order (unique per order+position)
+          - external_order_documents : procurement documents (invoices) attached to the order
+        Depends on projects, users, purchase_requests (226), purchase_positions (227),
+        material_sellers, vat_rates, procurement_documents.
+        Idempotent: every object is its own changeSet guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml, after 236.
+    -->
+    <changeSet id="237-create-external-orders" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="external_orders"/></not>
+        </preConditions>
+        <createTable tableName="external_orders">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="project_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="purchase_request_id" type="BIGINT"/>
+            <column name="seller_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(20)" defaultValue="DRAFT"><constraints nullable="false"/></column>
+            <column name="reference_number" type="VARCHAR(100)"/>
+            <column name="order_link" type="VARCHAR(1000)"/>
+            <column name="delivery_cost_net" type="NUMERIC(14,2)" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="delivery_vat_rate_id" type="BIGINT"/>
+            <column name="expected_ship_date" type="DATE"/>
+            <column name="expected_delivery_date" type="DATE"/>
+            <column name="assigned_buyer_id" type="BIGINT"/>
+            <column name="note" type="VARCHAR(2000)"/>
+            <column name="return_reason" type="VARCHAR(500)"/>
+            <column name="sent_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="paid_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="cancelled_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="paid_source" type="VARCHAR(16)"/>
+            <column name="paid_by" type="BIGINT"/>
+            <column name="paid_note" type="VARCHAR(500)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="237-create-external-order-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="external_order_lines"/></not>
+        </preConditions>
+        <createTable tableName="external_order_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="external_order_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="position_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="quantity" type="NUMERIC(14,3)"><constraints nullable="false"/></column>
+            <column name="unit_purchase_net" type="NUMERIC(14,2)"><constraints nullable="false"/></column>
+            <column name="purchase_vat_rate_id" type="BIGINT"/>
+            <column name="delivery_cost_share" type="NUMERIC(14,2)" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="above_ceiling_ack" type="BOOLEAN" defaultValueBoolean="false"><constraints nullable="false"/></column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="237-create-external-order-documents" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="external_order_documents"/></not>
+        </preConditions>
+        <createTable tableName="external_order_documents">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="external_order_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="procurement_document_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="amount" type="NUMERIC(14,2)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Foreign keys -->
+    <changeSet id="237-fk-eo-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eo_project"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eo_project"
+            baseTableName="external_orders" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eo-purchase-request" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eo_purchase_request"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eo_purchase_request"
+            baseTableName="external_orders" baseColumnNames="purchase_request_id"
+            referencedTableName="purchase_requests" referencedColumnNames="id" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eo-seller" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eo_seller"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eo_seller"
+            baseTableName="external_orders" baseColumnNames="seller_id"
+            referencedTableName="material_sellers" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eo-delivery-vat-rate" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eo_delivery_vat_rate"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eo_delivery_vat_rate"
+            baseTableName="external_orders" baseColumnNames="delivery_vat_rate_id"
+            referencedTableName="vat_rates" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eo-assigned-buyer" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eo_assigned_buyer"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eo_assigned_buyer"
+            baseTableName="external_orders" baseColumnNames="assigned_buyer_id"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eo-paid-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eo_paid_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eo_paid_by"
+            baseTableName="external_orders" baseColumnNames="paid_by"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eol-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eol_order"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eol_order"
+            baseTableName="external_order_lines" baseColumnNames="external_order_id"
+            referencedTableName="external_orders" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eol-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eol_position"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eol_position"
+            baseTableName="external_order_lines" baseColumnNames="position_id"
+            referencedTableName="purchase_positions" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eol-vat-rate" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eol_vat_rate"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eol_vat_rate"
+            baseTableName="external_order_lines" baseColumnNames="purchase_vat_rate_id"
+            referencedTableName="vat_rates" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eod-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eod_order"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eod_order"
+            baseTableName="external_order_documents" baseColumnNames="external_order_id"
+            referencedTableName="external_orders" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="237-fk-eod-document" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_eod_document"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_eod_document"
+            baseTableName="external_order_documents" baseColumnNames="procurement_document_id"
+            referencedTableName="procurement_documents" referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Unique pairs -->
+    <changeSet id="237-uq-eol-order-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_order_lines" indexName="uq_eol_order_position"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="external_order_lines" columnNames="external_order_id, position_id" constraintName="uq_eol_order_position"/>
+    </changeSet>
+
+    <changeSet id="237-uq-eod-order-document" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_order_documents" indexName="uq_eod_order_document"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="external_order_documents" columnNames="external_order_id, procurement_document_id" constraintName="uq_eod_order_document"/>
+    </changeSet>
+
+    <!-- Plain indexes -->
+    <changeSet id="237-ix-eo-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_orders" indexName="ix_eo_project"/></not>
+        </preConditions>
+        <createIndex tableName="external_orders" indexName="ix_eo_project">
+            <column name="project_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eo-seller" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_orders" indexName="ix_eo_seller"/></not>
+        </preConditions>
+        <createIndex tableName="external_orders" indexName="ix_eo_seller">
+            <column name="seller_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eo-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_orders" indexName="ix_eo_status"/></not>
+        </preConditions>
+        <createIndex tableName="external_orders" indexName="ix_eo_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eo-assigned-buyer" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_orders" indexName="ix_eo_assigned_buyer"/></not>
+        </preConditions>
+        <createIndex tableName="external_orders" indexName="ix_eo_assigned_buyer">
+            <column name="assigned_buyer_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eo-purchase-request" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_orders" indexName="ix_eo_purchase_request"/></not>
+        </preConditions>
+        <createIndex tableName="external_orders" indexName="ix_eo_purchase_request">
+            <column name="purchase_request_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eol-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_order_lines" indexName="ix_eol_order"/></not>
+        </preConditions>
+        <createIndex tableName="external_order_lines" indexName="ix_eol_order">
+            <column name="external_order_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eol-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_order_lines" indexName="ix_eol_position"/></not>
+        </preConditions>
+        <createIndex tableName="external_order_lines" indexName="ix_eol_position">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eod-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_order_documents" indexName="ix_eod_order"/></not>
+        </preConditions>
+        <createIndex tableName="external_order_documents" indexName="ix_eod_order">
+            <column name="external_order_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="237-ix-eod-document" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="external_order_documents" indexName="ix_eod_document"/></not>
+        </preConditions>
+        <createIndex tableName="external_order_documents" indexName="ix_eod_document">
+            <column name="procurement_document_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- CHECK constraints -->
+    <changeSet id="237-ck-eo-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_eo_status'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE external_orders ADD CONSTRAINT ck_eo_status CHECK (status IN ('DRAFT','SENT_FOR_PAYMENT','PAID','CANCELLED'))</sql>
+    </changeSet>
+
+    <changeSet id="237-ck-eo-delivery-cost" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_eo_delivery_cost'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE external_orders ADD CONSTRAINT ck_eo_delivery_cost CHECK (delivery_cost_net &gt;= 0)</sql>
+    </changeSet>
+
+    <changeSet id="237-ck-eo-paid-source" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_eo_paid_source'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE external_orders ADD CONSTRAINT ck_eo_paid_source CHECK (paid_source IS NULL OR paid_source IN ('FINANCIER','LEDGER'))</sql>
+    </changeSet>
+
+    <changeSet id="237-ck-eol-quantity" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_eol_quantity'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE external_order_lines ADD CONSTRAINT ck_eol_quantity CHECK (quantity &gt; 0)</sql>
+    </changeSet>
+
+    <changeSet id="237-ck-eol-unit-purchase-net" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_eol_unit_purchase_net'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE external_order_lines ADD CONSTRAINT ck_eol_unit_purchase_net CHECK (unit_purchase_net &gt;= 0)</sql>
+    </changeSet>
+
+    <changeSet id="237-ck-eod-amount" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_eod_amount'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE external_order_documents ADD CONSTRAINT ck_eod_amount CHECK (amount IS NULL OR amount &gt; 0)</sql>
+    </changeSet>
+</databaseChangeLog>

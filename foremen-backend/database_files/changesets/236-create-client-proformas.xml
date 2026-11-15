@@ -1,0 +1,266 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-03 (task 1.1; design "Data model"): client proformas.
+          - client_proformas          : our advance-payment document to the client
+          - client_proforma_lines     : frozen lines (one active line per purchase position)
+          - client_proforma_number_seq: numbering source for PF/YYYY/NNNNNN
+        Depends on projects, users, purchase_positions (227), finishing_materials, vat_rates.
+        Idempotent: every object is its own changeSet guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml.
+    -->
+    <changeSet id="236-create-client-proforma-number-seq" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><sequenceExists sequenceName="client_proforma_number_seq"/></not>
+        </preConditions>
+        <createSequence sequenceName="client_proforma_number_seq" startValue="1" incrementBy="1"/>
+    </changeSet>
+
+    <changeSet id="236-create-client-proformas" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="client_proformas"/></not>
+        </preConditions>
+        <createTable tableName="client_proformas">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="number" type="VARCHAR(32)"/>
+            <column name="status" type="VARCHAR(16)" defaultValue="DRAFT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="VARCHAR(3)" defaultValue="PLN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="issue_date" type="DATE"/>
+            <column name="due_date" type="DATE"/>
+            <column name="note" type="VARCHAR(1000)"/>
+            <column name="total_net" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_vat" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="total_gross" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_gross" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="released_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="pdf_object_key" type="VARCHAR(500)"/>
+            <column name="pdf_language" type="VARCHAR(2)"/>
+            <column name="cancelled_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="cancel_reason" type="VARCHAR(500)"/>
+            <column name="issued_by" type="BIGINT"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="236-create-client-proforma-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="client_proforma_lines"/></not>
+        </preConditions>
+        <createTable tableName="client_proforma_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="proforma_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="position_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="line_no" type="INT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="material_id" type="BIGINT"/>
+            <column name="description" type="VARCHAR(500)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="sku" type="VARCHAR(100)"/>
+            <column name="quantity" type="NUMERIC(14,3)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit_sale_net" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vat_rate_id" type="BIGINT"/>
+            <column name="vat_rate_percent" type="NUMERIC(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="net" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="vat" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="gross" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <!-- Foreign keys -->
+    <changeSet id="236-fk-cp-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_cp_project"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_cp_project"
+            baseTableName="client_proformas" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="236-fk-cp-issued-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_cp_issued_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_cp_issued_by"
+            baseTableName="client_proformas" baseColumnNames="issued_by"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="236-fk-cpl-proforma" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_cpl_proforma"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_cpl_proforma"
+            baseTableName="client_proforma_lines" baseColumnNames="proforma_id"
+            referencedTableName="client_proformas" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="236-fk-cpl-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_cpl_position"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_cpl_position"
+            baseTableName="client_proforma_lines" baseColumnNames="position_id"
+            referencedTableName="purchase_positions" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="236-fk-cpl-material" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_cpl_material"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_cpl_material"
+            baseTableName="client_proforma_lines" baseColumnNames="material_id"
+            referencedTableName="finishing_materials" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="236-fk-cpl-vat-rate" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_cpl_vat_rate"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_cpl_vat_rate"
+            baseTableName="client_proforma_lines" baseColumnNames="vat_rate_id"
+            referencedTableName="vat_rates" referencedColumnNames="id"/>
+    </changeSet>
+
+    <!-- Unique constraint (proforma_id, line_no) -->
+    <changeSet id="236-uq-cpl-proforma-line-no" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proforma_lines" indexName="uq_cpl_proforma_line_no"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="client_proforma_lines"
+            columnNames="proforma_id, line_no" constraintName="uq_cpl_proforma_line_no"/>
+    </changeSet>
+
+    <!-- Partial unique indexes -->
+    <changeSet id="236-uk-client-proformas-number" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proformas" indexName="uk_client_proformas_number"/></not>
+        </preConditions>
+        <sql dbms="postgresql">CREATE UNIQUE INDEX uk_client_proformas_number ON client_proformas (number) WHERE number IS NOT NULL</sql>
+    </changeSet>
+
+    <!-- A position sits on at most one ACTIVE proforma line (race-safe claiming). -->
+    <changeSet id="236-uk-proforma-lines-position-active" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proforma_lines" indexName="uk_proforma_lines_position_active"/></not>
+        </preConditions>
+        <sql dbms="postgresql">CREATE UNIQUE INDEX uk_proforma_lines_position_active ON client_proforma_lines (position_id) WHERE active</sql>
+    </changeSet>
+
+    <!-- Plain indexes -->
+    <changeSet id="236-ix-cp-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proformas" indexName="ix_cp_project"/></not>
+        </preConditions>
+        <createIndex tableName="client_proformas" indexName="ix_cp_project">
+            <column name="project_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="236-ix-cp-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proformas" indexName="ix_cp_status"/></not>
+        </preConditions>
+        <createIndex tableName="client_proformas" indexName="ix_cp_status">
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="236-ix-cpl-proforma" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proforma_lines" indexName="ix_cpl_proforma"/></not>
+        </preConditions>
+        <createIndex tableName="client_proforma_lines" indexName="ix_cpl_proforma">
+            <column name="proforma_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="236-ix-cpl-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="client_proforma_lines" indexName="ix_cpl_position"/></not>
+        </preConditions>
+        <createIndex tableName="client_proforma_lines" indexName="ix_cpl_position">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- CHECK constraints -->
+    <changeSet id="236-ck-cp-paid-gross" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_cp_paid_gross'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE client_proformas ADD CONSTRAINT ck_cp_paid_gross CHECK ((paid_gross &gt;= 0 AND paid_gross &lt;= total_gross) OR status = 'DRAFT')</sql>
+    </changeSet>
+
+    <changeSet id="236-ck-cp-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_cp_status'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE client_proformas ADD CONSTRAINT ck_cp_status CHECK (status IN ('DRAFT','ISSUED','PARTIALLY_PAID','PAID','CANCELLED'))</sql>
+    </changeSet>
+
+    <changeSet id="236-ck-cpl-quantity" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_cpl_quantity'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE client_proforma_lines ADD CONSTRAINT ck_cpl_quantity CHECK (quantity &gt; 0)</sql>
+    </changeSet>
+</databaseChangeLog>

@@ -47,6 +47,24 @@ class PositionTransitionPolicyTest {
         assertThat(d(SourcingPath.AGREED, CLIENT_PAID, WITH_BUYER, Actor.MANUAL)).isEqualTo(Decision.NOT_ALLOWED);
     }
 
+    /** FOR-11-03 R17.4: SYSTEM-only reversal edges, no other edge changes. */
+    @Test
+    void orderReversalEdgesAreSystemOnly() {
+        for (SourcingPath p : new SourcingPath[] {SourcingPath.AGREED, SourcingPath.PACKAGE}) {
+            assertThat(d(p, ORDERED, WITH_BUYER, Actor.SYSTEM)).isEqualTo(Decision.ALLOWED);
+            assertThat(d(p, ORDERED, WITH_BUYER, Actor.MANUAL)).isEqualTo(Decision.NOT_ALLOWED);
+            assertThat(d(p, SUPPLIER_PAID, ORDERED, Actor.SYSTEM)).isEqualTo(Decision.ALLOWED);
+            assertThat(d(p, SUPPLIER_PAID, ORDERED, Actor.MANUAL)).isEqualTo(Decision.NOT_ALLOWED);
+            // reversal is one step at a time
+            assertThat(d(p, SUPPLIER_PAID, WITH_BUYER, Actor.SYSTEM)).isNotEqualTo(Decision.ALLOWED);
+        }
+        assertThat(d(SourcingPath.CLIENT_OWN, ORDERED, WITH_BUYER, Actor.SYSTEM)).isEqualTo(Decision.NOT_ALLOWED);
+        assertThat(d(SourcingPath.CLIENT_OWN, SUPPLIER_PAID, ORDERED, Actor.SYSTEM)).isEqualTo(Decision.NOT_ALLOWED);
+        // the gate still blocks everything else entering WITH_BUYER on AGREED
+        assertThat(d(SourcingPath.AGREED, SUPPLIER_PAID, WITH_BUYER, Actor.SYSTEM))
+                .isEqualTo(Decision.GATE_VIOLATION);
+    }
+
     @Test
     void packageAndClientOwnManualShortcuts() {
         assertThat(d(SourcingPath.PACKAGE, PLANNED, WITH_BUYER, Actor.MANUAL)).isEqualTo(Decision.ALLOWED);

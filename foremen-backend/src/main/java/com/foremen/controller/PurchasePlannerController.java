@@ -80,9 +80,17 @@ public class PurchasePlannerController {
             @RequestParam(name = "q", required = false) String q,
             @Parameter(description = "Hide stage RECEIVED (default false)")
             @RequestParam(name = "hideDelivered", required = false, defaultValue = "false") boolean hideDelivered,
+            @Parameter(description = "Only positions on this proforma (active line)")
+            @RequestParam(name = "proformaId", required = false) Long proformaId,
+            @Parameter(description = "Only positions with a line on this external order")
+            @RequestParam(name = "externalOrderId", required = false) Long externalOrderId,
+            @Parameter(description = "Only positions without an active proforma line")
+            @RequestParam(name = "noProforma", required = false, defaultValue = "false") boolean noProforma,
+            @Parameter(description = "Only positions without a line on a non-cancelled external order")
+            @RequestParam(name = "noExternalOrder", required = false, defaultValue = "false") boolean noExternalOrder,
             Authentication authentication) {
         PlannerFilter filter = filter(projectId, status, sourcingPath, requestId, noRequest, buyer, slice,
-                urgent, q, hideDelivered);
+                urgent, q, hideDelivered, proformaId, externalOrderId, noProforma, noExternalOrder);
         return ResponseEntity.ok(plannerQueryService.plan(filter, pageable, authentication));
     }
 
@@ -93,11 +101,12 @@ public class PurchasePlannerController {
                     + "planner filters, ordered by the earliest site delivery date (nulls last), then request id. "
                     + "Positions without a request form the synthetic group with requestId null. 'totals' is null "
                     + "for callers without the STAFF_FULL audience. Rows are loaded through /planner with "
-                    + "requestId or noRequest. Reserved groupBy values (EXTERNAL_ORDER, PROFORMA) and unknown "
-                    + "values give 400.")
+                    + "requestId or noRequest. groupBy=PROFORMA or EXTERNAL_ORDER groups by the proforma / supplier "
+                    + "order (positions without one form NO_PROFORMA / NO_EXTERNAL_ORDER; a position on several "
+                    + "orders appears in each). Unknown groupBy values give 400.")
     public ResponseEntity<Page<PlannerGroupDto>> groups(
             Pageable pageable,
-            @Parameter(description = "REQUEST (default) or NONE")
+            @Parameter(description = "REQUEST (default), NONE, PROFORMA or EXTERNAL_ORDER")
             @RequestParam(name = "groupBy", required = false) String groupBy,
             @RequestParam(name = "projectId", required = false) Long projectId,
             @RequestParam(name = "status", required = false) Set<PositionStatus> status,
@@ -110,10 +119,18 @@ public class PurchasePlannerController {
             @RequestParam(name = "urgent", required = false, defaultValue = "false") boolean urgent,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "hideDelivered", required = false, defaultValue = "false") boolean hideDelivered,
+            @Parameter(description = "Only positions on this proforma (active line)")
+            @RequestParam(name = "proformaId", required = false) Long proformaId,
+            @Parameter(description = "Only positions with a line on this external order")
+            @RequestParam(name = "externalOrderId", required = false) Long externalOrderId,
+            @Parameter(description = "Only positions without an active proforma line")
+            @RequestParam(name = "noProforma", required = false, defaultValue = "false") boolean noProforma,
+            @Parameter(description = "Only positions without a line on a non-cancelled external order")
+            @RequestParam(name = "noExternalOrder", required = false, defaultValue = "false") boolean noExternalOrder,
             Authentication authentication) {
         PlannerGroupService.GroupBy mode = PlannerGroupService.parseGroupBy(groupBy);
         PlannerFilter filter = filter(projectId, status, sourcingPath, requestId, noRequest, buyer, slice,
-                urgent, q, hideDelivered);
+                urgent, q, hideDelivered, proformaId, externalOrderId, noProforma, noExternalOrder);
         return ResponseEntity.ok(groupService.groups(filter, mode, pageable, authentication));
     }
 
@@ -132,9 +149,17 @@ public class PurchasePlannerController {
             @RequestParam(name = "urgent", required = false, defaultValue = "false") boolean urgent,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "hideDelivered", required = false, defaultValue = "false") boolean hideDelivered,
+            @Parameter(description = "Only positions on this proforma (active line)")
+            @RequestParam(name = "proformaId", required = false) Long proformaId,
+            @Parameter(description = "Only positions with a line on this external order")
+            @RequestParam(name = "externalOrderId", required = false) Long externalOrderId,
+            @Parameter(description = "Only positions without an active proforma line")
+            @RequestParam(name = "noProforma", required = false, defaultValue = "false") boolean noProforma,
+            @Parameter(description = "Only positions without a line on a non-cancelled external order")
+            @RequestParam(name = "noExternalOrder", required = false, defaultValue = "false") boolean noExternalOrder,
             Authentication authentication) {
         PlannerFilter filter = filter(projectId, status, sourcingPath, requestId, noRequest, buyer, null,
-                urgent, q, hideDelivered);
+                urgent, q, hideDelivered, proformaId, externalOrderId, noProforma, noExternalOrder);
         return ResponseEntity.ok(plannerQueryService.sliceCounts(filter, authentication));
     }
 
@@ -168,9 +193,11 @@ public class PurchasePlannerController {
 
     private static PlannerFilter filter(Long projectId, Set<PositionStatus> status, SourcingPath sourcingPath,
                                         Long requestId, boolean noRequest, BuyerMode buyer, String slice,
-                                        boolean urgent, String q, boolean hideDelivered) {
+                                        boolean urgent, String q, boolean hideDelivered, Long proformaId,
+                                        Long externalOrderId, boolean noProforma, boolean noExternalOrder) {
         return new PlannerFilter(projectId, status, sourcingPath, requestId, noRequest,
-                buyer == null ? BuyerMode.ALL : buyer, parseSlice(slice), urgent, q, hideDelivered);
+                buyer == null ? BuyerMode.ALL : buyer, parseSlice(slice), urgent, q, hideDelivered, proformaId,
+                externalOrderId, noProforma, noExternalOrder);
     }
 
     static Slice parseSlice(String slice) {

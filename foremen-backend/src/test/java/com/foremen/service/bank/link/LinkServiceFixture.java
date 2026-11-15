@@ -20,6 +20,9 @@ import com.foremen.dao.BankAccountDao;
 import com.foremen.dao.BankCounterpartyRuleDao;
 import com.foremen.dao.BankTransactionDao;
 import com.foremen.dao.BankTransactionLinkDao;
+import com.foremen.dao.ClientProformaDao;
+import com.foremen.dao.ExternalOrderDao;
+import com.foremen.dao.ExternalOrderLineDao;
 import com.foremen.dao.BankTransactionSuggestionDao;
 import com.foremen.dao.PaymentScheduleDao;
 import com.foremen.dao.PaymentTransactionDao;
@@ -102,11 +105,18 @@ final class LinkServiceFixture {
     final BankLedgerAudit audit = new BankLedgerAudit(auditLogDao);
     final CounterpartyRuleService ruleService = new CounterpartyRuleService(ruleDao, userDao, projectDao,
             scheduleDao, categoryDao, accountDao, audit);
+    final ClientProformaDao clientProformaDao = mock(ClientProformaDao.class);
+    final ExternalOrderDao externalOrderDao = mock(ExternalOrderDao.class);
+    final ExternalOrderLineDao externalOrderLineDao = mock(ExternalOrderLineDao.class);
+    final ProformaLedgerEffects proformaEffects = mock(ProformaLedgerEffects.class);
+    final ExternalOrderLedgerEffects externalOrderEffects = mock(ExternalOrderLedgerEffects.class);
+    final List<Object> publishedEvents = new ArrayList<>();
     final LinkEffects effects = new LinkEffects(workerPayoutService, paymentTransactionService,
-            paymentTransactionDao);
+            paymentTransactionDao, proformaEffects, externalOrderEffects,
+            publishedEvents::add);
     final BankLinkService service = new BankLinkService(transactionDao, linkDao, suggestionDao, workerPayoutDao,
             documentDao, scheduleDao, projectDao, categoryDao, accountDao, workerPayoutService, effects,
-            ruleService, audit, entityManager);
+            ruleService, audit, entityManager, clientProformaDao, externalOrderDao, externalOrderLineDao);
 
     LinkServiceFixture() {
         byId(transactionDao, txns);

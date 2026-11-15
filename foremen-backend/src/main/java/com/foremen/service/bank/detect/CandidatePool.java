@@ -7,10 +7,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import com.foremen.dao.model.LinkKind;
 import com.foremen.service.bank.detect.MatchCandidate.TargetRef;
 import com.foremen.service.bank.detect.MatchCandidate.TargetType;
 import com.foremen.service.bank.detect.MatchInputs.CounterpartyRule;
 import com.foremen.service.bank.detect.MatchInputs.DocumentCandidate;
+import com.foremen.service.bank.detect.MatchInputs.ExternalOrderCandidate;
+import com.foremen.service.bank.detect.MatchInputs.ProformaCandidate;
 import com.foremen.service.bank.detect.MatchInputs.OwnAccount;
 import com.foremen.service.bank.detect.MatchInputs.PayoutCandidate;
 import com.foremen.service.bank.detect.MatchInputs.ScheduleCandidate;
@@ -40,6 +43,8 @@ public record CandidatePool(
         List<ScheduleCandidate> schedules,
         List<PayoutCandidate> payouts,
         List<DocumentCandidate> documents,
+        List<ProformaCandidate> proformas,
+        List<ExternalOrderCandidate> externalOrders,
         Map<String, Label> labels) {
 
     /** Payout date window around the booking date (± days). */
@@ -54,10 +59,19 @@ public record CandidatePool(
 
     public CandidatePool {
         ownAccounts = ownAccounts == null ? List.of() : List.copyOf(ownAccounts);
+        proformas = proformas == null ? List.of() : List.copyOf(proformas);
+        externalOrders = externalOrders == null ? List.of() : List.copyOf(externalOrders);
         schedules = schedules == null ? List.of() : List.copyOf(schedules);
         payouts = payouts == null ? List.of() : List.copyOf(payouts);
         documents = documents == null ? List.of() : List.copyOf(documents);
         labels = labels == null ? Map.of() : Map.copyOf(labels);
+    }
+
+    /** The FOR-07-04 shape (no FOR-11-03 candidates). */
+    public CandidatePool(List<OwnAccount> ownAccounts, List<ScheduleCandidate> schedules,
+                         List<PayoutCandidate> payouts, List<DocumentCandidate> documents,
+                         Map<String, Label> labels) {
+        this(ownAccounts, schedules, payouts, documents, null, null, labels);
     }
 
     /** An empty pool. */
@@ -87,7 +101,10 @@ public record CandidatePool(
         Set<String> used = consumed == null ? Set.of() : consumed;
         LocalDate booking = txn.bookingDate();
         if (txn.direction() == TxnFacts.Direction.INCOME) {
-            return new MatchInputs(ownAccounts, rules, schedules, List.of(), List.of());
+            List<ProformaCandidate> pf = proformas.stream()
+                    .filter(c -> !used.contains(labelKey(TargetType.CLIENT_PROFORMA, c.proformaId())))
+                    .toList();
+            return new MatchInputs(ownAccounts, rules, schedules, List.of(), List.of(), pf, List.of());
         }
         List<PayoutCandidate> p = payouts.stream()
                 .filter(c -> c.payoutDate() != null
@@ -98,7 +115,10 @@ public record CandidatePool(
                 .filter(c -> inDocWindow(c.invoiceDate(), booking) || inDocWindow(c.uploadDate(), booking))
                 .filter(c -> !used.contains(labelKey(TargetType.PROCUREMENT_DOCUMENT, c.documentId())))
                 .toList();
-        return new MatchInputs(ownAccounts, rules, List.of(), p, d);
+        List<ExternalOrderCandidate> eo = externalOrders.stream()
+                .filter(c -> !used.contains(labelKey(TargetType.EXTERNAL_ORDER, c.orderId())))
+                .toList();
+        return new MatchInputs(ownAccounts, rules, List.of(), p, d, List.of(), eo);
     }
 
     /** The AI candidate list (R15.2) for ranked matcher candidates: opaque ref + human label. */
@@ -106,7 +126,9 @@ public record CandidatePool(
         if (ranked == null) {
             return List.of();
         }
-        return ranked.stream().map(c -> {
+        // FOR-11-03 R10.7: proforma / external-order data never reaches the AI classifier.
+        return ranked.stream().filter(c -> c.kind() != LinkKind.PROFORMA_PAYMENT
+                && c.kind() != LinkKind.EXTERNAL_ORDER_PAYMENT).map(c -> {
             TargetRef ref = c.targetRef();
             Label l = labels.get(labelKey(ref.type(), ref.id()));
             String label = l == null || l.label() == null ? c.kind() + " " + ref.asString() : l.label();

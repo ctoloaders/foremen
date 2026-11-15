@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-03 (task 1.4): CLIENT_PROFORMAS and EXTERNAL_ORDERS ABAC resources, role grants and FINANCIER
+        notification / reference grants (Requirements 1.1-1.5).
+        All changesets are idempotent (MARK_RAN preconditions / INSERT ... WHERE NOT EXISTS).
+        The APPROVE operation already exists (changeset 133); on EXTERNAL_ORDERS it means "mark paid / return".
+    -->
+    <!-- Seed CLIENT_PROFORMAS resource -->
+    <changeSet id="239-seed-client-proformas-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'CLIENT_PROFORMAS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="CLIENT_PROFORMAS"/>
+            <column name="name_ru" value="Проформы клиентов"/>
+            <column name="name_pl" value="Proformy klientów"/>
+            <column name="description_ru" value="Проформы на оплату материалов, выставляемые клиентам по проектам"/>
+            <column name="description_pl" value="Proformy za materiały wystawiane klientom w projektach"/>
+        </insert>
+    </changeSet>
+    <!-- Seed EXTERNAL_ORDERS resource -->
+    <changeSet id="239-seed-external-orders-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'EXTERNAL_ORDERS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="EXTERNAL_ORDERS"/>
+            <column name="name_ru" value="Внешние заказы"/>
+            <column name="name_pl" value="Zamówienia zewnętrzne"/>
+            <column name="description_ru" value="Заказы поставщикам, оплачиваемые финансистом"/>
+            <column name="description_pl" value="Zamówienia u dostawców opłacane przez finansistę"/>
+        </insert>
+    </changeSet>
+    <!--
+        Grant matrix (Requirement 1.2):
+          CLIENT_PROFORMAS: ADMIN CRUD, MANAGER CRUD, BUYER R, FINANCIER R, CLIENT R
+          EXTERNAL_ORDERS:  ADMIN CRUD+APPROVE, BUYER CRUD, MANAGER R, FINANCIER R+APPROVE
+    -->
+    <changeSet id="239-grant-proforma-external-order-resources" author="foremen">
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('ADMIN','CLIENT_PROFORMAS'), ('MANAGER','CLIENT_PROFORMAS'), ('BUYER','CLIENT_PROFORMAS'),
+                ('FINANCIER','CLIENT_PROFORMAS'), ('CLIENT','CLIENT_PROFORMAS'),
+                ('ADMIN','EXTERNAL_ORDERS'), ('BUYER','EXTERNAL_ORDERS'), ('MANAGER','EXTERNAL_ORDERS'),
+                ('FINANCIER','EXTERNAL_ORDERS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('ADMIN','CLIENT_PROFORMAS','CREATE'), ('ADMIN','CLIENT_PROFORMAS','READ'), ('ADMIN','CLIENT_PROFORMAS','UPDATE'), ('ADMIN','CLIENT_PROFORMAS','DELETE'),
+                ('MANAGER','CLIENT_PROFORMAS','CREATE'), ('MANAGER','CLIENT_PROFORMAS','READ'), ('MANAGER','CLIENT_PROFORMAS','UPDATE'), ('MANAGER','CLIENT_PROFORMAS','DELETE'),
+                ('BUYER','CLIENT_PROFORMAS','READ'),
+                ('FINANCIER','CLIENT_PROFORMAS','READ'),
+                ('CLIENT','CLIENT_PROFORMAS','READ'),
+                ('ADMIN','EXTERNAL_ORDERS','CREATE'), ('ADMIN','EXTERNAL_ORDERS','READ'), ('ADMIN','EXTERNAL_ORDERS','UPDATE'), ('ADMIN','EXTERNAL_ORDERS','DELETE'), ('ADMIN','EXTERNAL_ORDERS','APPROVE'),
+                ('BUYER','EXTERNAL_ORDERS','CREATE'), ('BUYER','EXTERNAL_ORDERS','READ'), ('BUYER','EXTERNAL_ORDERS','UPDATE'), ('BUYER','EXTERNAL_ORDERS','DELETE'),
+                ('MANAGER','EXTERNAL_ORDERS','READ'),
+                ('FINANCIER','EXTERNAL_ORDERS','READ'), ('FINANCIER','EXTERNAL_ORDERS','APPROVE')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+    <!--
+        FINANCIER notification and reference grants (Requirement 1.4), inserted only when missing:
+        NOTIFICATIONS (same operations as BUYER, changeset 230) and READ on MATERIAL_SELLERS, VAT_RATES,
+        MEASUREMENT_UNITS.
+    -->
+    <changeSet id="239-grant-financier-notifications-reference" author="foremen">
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('FINANCIER','NOTIFICATIONS'), ('FINANCIER','MATERIAL_SELLERS'),
+                ('FINANCIER','VAT_RATES'), ('FINANCIER','MEASUREMENT_UNITS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('FINANCIER','MATERIAL_SELLERS','READ'), ('FINANCIER','VAT_RATES','READ'),
+                ('FINANCIER','MEASUREMENT_UNITS','READ')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+        <!-- FINANCIER x NOTIFICATIONS: same operations as BUYER -->
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT frr.id, brro.operation_id
+            FROM role_resources brr
+            JOIN roles br ON br.id = brr.role_id AND br.code = 'BUYER'
+            JOIN resources res ON res.id = brr.resource_id AND res.code = 'NOTIFICATIONS'
+            JOIN role_resource_operations brro ON brro.role_resource_id = brr.id
+            JOIN roles fr ON fr.code = 'FINANCIER'
+            JOIN role_resources frr ON frr.role_id = fr.id AND frr.resource_id = res.id
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = frr.id AND x.operation_id = brro.operation_id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

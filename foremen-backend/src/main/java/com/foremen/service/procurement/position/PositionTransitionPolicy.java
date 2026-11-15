@@ -16,6 +16,18 @@ import static com.foremen.dao.model.PositionStatus.*;
  * transition. Holds the "proforma paid" gate: for {@code AGREED}, {@code WITH_BUYER} is entered only
  * from {@code CLIENT_PAID}, which only {@code SYSTEM} reaches from {@code IN_PROFORMA}.
  *
+ * <p>FOR-11-03 (R17.4) adds the SYSTEM reversal edges {@code ORDERED -> WITH_BUYER} and
+ * {@code SUPPLIER_PAID -> ORDERED}. The gate does not apply to {@code ORDERED -> WITH_BUYER}: the
+ * position already passed the gate, this is a step back.
+ *
+ * <pre>
+ * AGREED:  PLANNED <-> PROPOSED <-> ACCEPTED <-> IN_PROFORMA -> CLIENT_PAID -> WITH_BUYER
+ * tail (AGREED, PACKAGE):
+ *          WITH_BUYER <-> ORDERED <-> SUPPLIER_PAID -> IN_DELIVERY
+ *          (ORDERED -> WITH_BUYER and SUPPLIER_PAID -> ORDERED: SYSTEM reversals, FOR-11-03)
+ * all paths: IN_DELIVERY <-> PARTIALLY_RECEIVED, IN_DELIVERY / PARTIALLY_RECEIVED <-> RECEIVED
+ * </pre>
+ *
  * <p>Rule order: (1) same stage, NOT_ALLOWED; (2) the gate, GATE_VIOLATION (checked before the edge
  * lookup, otherwise a skipped edge would be reported as a plain NOT_ALLOWED); (3) the edge must exist
  * for the path; (4) {@code MANUAL} is limited to the manual edges, the rest need {@code SYSTEM}.
@@ -42,6 +54,9 @@ public class PositionTransitionPolicy {
             system(p, WITH_BUYER, ORDERED);
             system(p, ORDERED, SUPPLIER_PAID);
             system(p, SUPPLIER_PAID, IN_DELIVERY);
+            // FOR-11-03 (R17.4): reversals when order coverage or payment evidence disappears.
+            system(p, ORDERED, WITH_BUYER);
+            system(p, SUPPLIER_PAID, ORDERED);
         }
         // Receiving chain, every path.
         for (SourcingPath p : SourcingPath.values()) {
@@ -84,7 +99,8 @@ public class PositionTransitionPolicy {
         if (path == null || from == null || to == null || actor == null || from == to) {
             return Decision.NOT_ALLOWED;
         }
-        if (to == WITH_BUYER && path == SourcingPath.AGREED && from != CLIENT_PAID) {
+        if (to == WITH_BUYER && path == SourcingPath.AGREED
+                && from != CLIENT_PAID && from != ORDERED) {
             return Decision.GATE_VIOLATION;
         }
         if (has(MANUAL_EDGES, path, from, to)) {

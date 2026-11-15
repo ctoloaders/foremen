@@ -117,7 +117,9 @@ public final class LedgerDtos {
             Long paymentScheduleId,
             Long paymentTransactionId,
             Long unplannedCategoryId,
-            Long counterAccountId) {
+            Long counterAccountId,
+            Long clientProformaId,
+            Long externalOrderId) {
     }
 
     /** An {@code OPEN} suggestion of a line (drawer "Confirm" / "Reject"). */
@@ -138,7 +140,9 @@ public final class LedgerDtos {
             Long procurementDocumentId,
             Long paymentScheduleId,
             Long unplannedCategoryId,
-            Long counterAccountId) {
+            Long counterAccountId,
+            Long clientProformaId,
+            Long externalOrderId) {
     }
 
     /**
@@ -176,7 +180,11 @@ public final class LedgerDtos {
         SCHEDULE,
         CATEGORY,
         PROJECT,
-        ACCOUNT
+        ACCOUNT,
+        /** FOR-11-03 (R10.5): a client proforma (PROFORMA_PAYMENT). */
+        PROFORMA,
+        /** FOR-11-03 (R10.5): an external order (EXTERNAL_ORDER_PAYMENT). */
+        EXTERNAL_ORDER
     }
 
     /**

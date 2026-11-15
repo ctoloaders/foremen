@@ -29,7 +29,11 @@ public record MatchCandidate(LinkKind kind, TargetRef targetRef, BigDecimal scor
         /** {@code procurement_documents.id}. */
         PROCUREMENT_DOCUMENT,
         /** {@code unplanned_expense_categories.id} (OTHER_EXPENSE / OTHER_INCOME). */
-        UNPLANNED_CATEGORY
+        UNPLANNED_CATEGORY,
+        /** {@code client_proformas.id} (FOR-11-03, PROFORMA_PAYMENT). */
+        CLIENT_PROFORMA,
+        /** {@code external_orders.id} (FOR-11-03, EXTERNAL_ORDER_PAYMENT). */
+        EXTERNAL_ORDER
     }
 
     /**

@@ -970,4 +970,15 @@
     <!-- FOR-11-02 (task 1.3): position approval tables and resource seed. Registered LAST, after 233. -->
     <include file="database_files/changesets/234-create-position-approval-tables.xml"/>
     <include file="database_files/changesets/235-seed-position-approvals-resource.xml"/>
+    <!-- FOR-11-03 (task 1.1): client proformas tables and number sequence. Registered LAST, after 235. -->
+    <include file="database_files/changesets/236-create-client-proformas.xml"/>
+    <!-- FOR-11-03 (task 1.2): external orders tables. Registered LAST, after 236. -->
+    <include file="database_files/changesets/237-create-external-orders.xml"/>
+    <!-- FOR-11-03 (task 1.3): bank links/suggestions/rules extended with PROFORMA_PAYMENT and
+         EXTERNAL_ORDER_PAYMENT. Registered LAST, after 237. -->
+    <include file="database_files/changesets/238-extend-bank-links-for-proforma-external-order.xml"/>
+    <!-- FOR-11-03 (task 1.4): CLIENT_PROFORMAS / EXTERNAL_ORDERS resources and grants. Registered LAST, after 238. -->
+    <include file="database_files/changesets/239-seed-proforma-external-order-resources.xml"/>
+    <!-- FOR-11-03 (task 3.3): company_profile.bank_account for the proforma PDF. Registered LAST, after 239. -->
+    <include file="database_files/changesets/240-add-company-profile-bank-account.xml"/>
 </databaseChangeLog>

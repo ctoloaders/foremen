@@ -20,13 +20,24 @@ import java.util.Objects;
  * @param schedules   client payment schedules (INCOME)
  * @param payouts     worker payouts (EXPENSE)
  * @param documents   procurement documents (EXPENSE)
+ * @param proformas   open client proformas (INCOME; FOR-11-03)
+ * @param externalOrders payable external orders (EXPENSE; FOR-11-03)
  */
 public record MatchInputs(
         List<OwnAccount> ownAccounts,
         List<CounterpartyRule> rules,
         List<ScheduleCandidate> schedules,
         List<PayoutCandidate> payouts,
-        List<DocumentCandidate> documents) {
+        List<DocumentCandidate> documents,
+        List<ProformaCandidate> proformas,
+        List<ExternalOrderCandidate> externalOrders) {
+
+    /** The FOR-07-04 shape (no FOR-11-03 candidates). */
+    public MatchInputs(List<OwnAccount> ownAccounts, List<CounterpartyRule> rules,
+                       List<ScheduleCandidate> schedules, List<PayoutCandidate> payouts,
+                       List<DocumentCandidate> documents) {
+        this(ownAccounts, rules, schedules, payouts, documents, null, null);
+    }
 
     public MatchInputs {
         ownAccounts = ownAccounts == null ? List.of() : List.copyOf(ownAccounts);
@@ -34,11 +45,13 @@ public record MatchInputs(
         schedules = schedules == null ? List.of() : List.copyOf(schedules);
         payouts = payouts == null ? List.of() : List.copyOf(payouts);
         documents = documents == null ? List.of() : List.copyOf(documents);
+        proformas = proformas == null ? List.of() : List.copyOf(proformas);
+        externalOrders = externalOrders == null ? List.of() : List.copyOf(externalOrders);
     }
 
     /** No candidates at all. */
     public static MatchInputs empty() {
-        return new MatchInputs(null, null, null, null, null);
+        return new MatchInputs(null, null, null, null, null, null, null);
     }
 
     /** An own bank account. */
@@ -99,6 +112,46 @@ public record MatchInputs(
             PayoutStatus status,
             PaymentChannel paymentChannel,
             boolean fullyLinked) {
+    }
+
+    /**
+     * An open client proforma (FOR-11-03, R10.1). One entry per project CLIENT member (name / NIP), or one
+     * entry with null client data when the project has none.
+     *
+     * @param remainder {@code totalGross - paidGross}
+     */
+    public record ProformaCandidate(
+            long proformaId,
+            long projectId,
+            String number,
+            BigDecimal remainder,
+            String clientName,
+            String clientNip) {
+    }
+
+    /**
+     * A payable external order (FOR-11-03, R10.1): {@code SENT_FOR_PAYMENT}, or {@code PAID} by the
+     * financier.
+     *
+     * @param remainder      payable gross minus the ledger links already on the order
+     * @param invoiceNumbers invoice numbers of the linked supplier documents
+     * @param documentNips   supplier NIPs of the linked supplier documents
+     * @param documentNames  supplier names of the linked supplier documents
+     */
+    public record ExternalOrderCandidate(
+            long orderId,
+            long projectId,
+            BigDecimal remainder,
+            String sellerName,
+            String sellerNip,
+            List<String> invoiceNumbers,
+            List<String> documentNips,
+            List<String> documentNames) {
+        public ExternalOrderCandidate {
+            invoiceNumbers = invoiceNumbers == null ? List.of() : List.copyOf(invoiceNumbers);
+            documentNips = documentNips == null ? List.of() : List.copyOf(documentNips);
+            documentNames = documentNames == null ? List.of() : List.copyOf(documentNames);
+        }
     }
 
     /** A procurement document (Requirement 14.6, 28.2). */

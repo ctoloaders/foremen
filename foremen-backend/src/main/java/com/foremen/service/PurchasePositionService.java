@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.foremen.dao.ClientProformaLineDao;
 import com.foremen.dao.DeliveryCategoryDao;
 import com.foremen.dao.FinishingMaterialDao;
 import com.foremen.dao.MeasurementUnitDao;
@@ -28,6 +29,7 @@ import com.foremen.dao.PurchasePositionDao;
 import com.foremen.dao.PurchasePositionVariantDao;
 import com.foremen.dao.VatRateDao;
 import com.foremen.dao.WorkCategoryDao;
+import com.foremen.dao.model.ClientProformaLineEntity;
 import com.foremen.dao.model.EstimateLineRoomMaterialEntity;
 import com.foremen.dao.model.FinishingMaterialEntity;
 import com.foremen.dao.model.PositionKind;
@@ -47,6 +49,7 @@ import com.foremen.service.procurement.HideDeliveredFilter;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.position.PositionAudienceResolver;
 import com.foremen.service.procurement.position.PositionStage;
+import com.foremen.service.procurement.proforma.ProformaStatus;
 import com.foremen.service.query.QueryToken;
 import com.foremen.service.query.QueryTokenizer;
 
@@ -84,6 +87,8 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
     static final String DELETE_NOT_ALLOWED = "error.purchasePosition.delete.notAllowed";
     static final String WORK_CATEGORY_INVALID = "error.purchasePosition.workCategory.invalid";
     static final String ACCESS_DENIED = "error.access.denied";
+    /** FOR-11-03 (R4.6): the position sits on an issued proforma and its commercial fields are frozen. */
+    static final String PROFORMA_POSITION_LOCKED = "error.proforma.position.locked";
 
     /** Default VAT rates (R7.7): purchase side 23 %, sale side 8 %. */
     private static final BigDecimal DEFAULT_PURCHASE_VAT = new BigDecimal("23");
@@ -100,6 +105,10 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
             "actualMaterial", "actualPurchasePrice", "plannedPurchasePrice", "salePrice",
             "purchaseVatRate", "saleVatRate", "estimateReference", "workCategory");
 
+    /** Clearable properties frozen once the position is on an issued proforma (FOR-11-03 R4.6). */
+    private static final Set<String> FROZEN_BY_PROFORMA_PROPERTIES = Set.of(
+            "salePrice", "saleVatRate", "actualMaterial");
+
     private final PurchasePositionDao dao;
     private final PurchasePositionServiceMapper mapper;
     private final AuditLogDao auditLogDao;
@@ -113,6 +122,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
     private final VatRateDao vatRateDao;
     private final PurchasePositionVariantDao variantDao;
     private final WorkCategoryDao workCategoryDao;
+    private final ClientProformaLineDao proformaLineDao;
 
     public PurchasePositionService(PurchasePositionDao dao,
                                    PurchasePositionServiceMapper mapper,
@@ -126,7 +136,8 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
                                    DeliveryCategoryDao deliveryCategoryDao,
                                    VatRateDao vatRateDao,
                                    PurchasePositionVariantDao variantDao,
-                                   WorkCategoryDao workCategoryDao) {
+                                   WorkCategoryDao workCategoryDao,
+                                   ClientProformaLineDao proformaLineDao) {
         this.dao = dao;
         this.mapper = mapper;
         this.auditLogDao = auditLogDao;
@@ -140,6 +151,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         this.vatRateDao = vatRateDao;
         this.variantDao = variantDao;
         this.workCategoryDao = workCategoryDao;
+        this.proformaLineDao = proformaLineDao;
     }
 
     // --- CRUD plumbing ---
@@ -369,6 +381,7 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         boolean pathChanged = model.getSourcingPath() != null && model.getSourcingPath() != existing.getSourcingPath();
         boolean quantityChanged = model.getQuantity() != null
                 && model.getQuantity().compareTo(existing.getQuantity()) != 0;
+        rejectIfFrozenByProforma(existing, model, materialChanged, quantityChanged);
         if (!planningStage) {
             if (materialChanged) {
                 throw readOnly("plannedMaterialId", HttpStatus.CONFLICT);
@@ -421,6 +434,37 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
             }
             requireWorkCategory(model.getWorkCategoryId());
         }
+    }
+
+    /**
+     * FOR-11-03 (R4.6): from ISSUED onward (an active line on a non-draft proforma) quantity, sale price,
+     * sale VAT rate and the planned / actual material cannot change. A draft proforma locks nothing (R3.7).
+     */
+    private void rejectIfFrozenByProforma(PurchasePositionEntity existing,
+                                          PurchasePositionServiceExtendedModel model,
+                                          boolean materialChanged, boolean quantityChanged) {
+        Long existingSaleVat = existing.getSaleVatRate() == null ? null : existing.getSaleVatRate().getId();
+        Long existingActual = existing.getActualMaterial() == null ? null : existing.getActualMaterial().getId();
+        boolean touchesFrozen = quantityChanged || materialChanged
+                || changed(model.getSalePrice(), existing.getSalePrice())
+                || (model.getSaleVatRateId() != null && !Objects.equals(model.getSaleVatRateId(), existingSaleVat))
+                || (model.getActualMaterialId() != null && !Objects.equals(model.getActualMaterialId(), existingActual));
+        if (touchesFrozen && isFrozenByProforma(existing.getId())) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, PROFORMA_POSITION_LOCKED);
+        }
+    }
+
+    /** True when the position has a live line on an issued (non-draft) proforma. */
+    private boolean isFrozenByProforma(Long positionId) {
+        if (positionId == null) {
+            return false;
+        }
+        for (ClientProformaLineEntity line : proformaLineDao.findActiveByPositionId(positionId)) {
+            if (line.getProforma().getStatus() != ProformaStatus.DRAFT) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void rejectSuppliedSystemFields(PurchasePositionServiceExtendedModel model) {
@@ -503,6 +547,9 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
             if (!CLEARABLE_PROPERTIES.contains(name)) {
                 throw readOnly(name, HttpStatus.BAD_REQUEST);
             }
+        }
+        if (propertyNames.stream().anyMatch(FROZEN_BY_PROFORMA_PROPERTIES::contains) && isFrozenByProforma(id)) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, PROFORMA_POSITION_LOCKED);
         }
         if (propertyNames.contains("workCategory")) {
             // Reset to automatic follows the same stage lock as setting the override (R5.4).

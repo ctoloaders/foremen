@@ -60,6 +60,12 @@ public class BankLedgerAudit {
         m.put("unplannedCategoryId",
                 link.getUnplannedCategory() == null ? null : link.getUnplannedCategory().getId());
         m.put("counterAccountId", link.getCounterAccount() == null ? null : link.getCounterAccount().getId());
+        if (link.getClientProforma() != null) {
+            m.put("clientProformaId", link.getClientProforma().getId());
+        }
+        if (link.getExternalOrder() != null) {
+            m.put("externalOrderId", link.getExternalOrder().getId());
+        }
         m.put("source", link.getSource() == null ? null : link.getSource().name());
         m.put("confirmed", link.getConfirmedAt() != null);
         m.put("note", link.getNote());

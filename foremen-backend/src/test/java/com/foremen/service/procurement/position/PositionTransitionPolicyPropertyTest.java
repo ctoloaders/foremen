@@ -30,11 +30,13 @@ class PositionTransitionPolicyPropertyTest {
     void agreedEntersWithBuyerOnlyFromClientPaid(
             @ForAll SourcingPath path, @ForAll PositionStatus from, @ForAll PositionStatus to, @ForAll Actor actor) {
         Decision r = policy.decide(path, from, to, actor);
+        // FOR-11-03 R17.4: ORDERED -> WITH_BUYER is a SYSTEM reversal, exempt from the gate.
         if (path == SourcingPath.AGREED && to == WITH_BUYER && r == Decision.ALLOWED) {
-            assertThat(from).isEqualTo(CLIENT_PAID);
+            assertThat(from).isIn(CLIENT_PAID, ORDERED);
             assertThat(actor).isEqualTo(Actor.SYSTEM);
         }
-        if (path == SourcingPath.AGREED && to == WITH_BUYER && from != CLIENT_PAID && from != WITH_BUYER) {
+        if (path == SourcingPath.AGREED && to == WITH_BUYER
+                && from != CLIENT_PAID && from != WITH_BUYER && from != ORDERED) {
             assertThat(r).isEqualTo(Decision.GATE_VIOLATION);
         }
     }
@@ -65,7 +67,7 @@ class PositionTransitionPolicyPropertyTest {
         if (policy.decide(path, from, to, actor) == Decision.GATE_VIOLATION) {
             assertThat(path).isEqualTo(SourcingPath.AGREED);
             assertThat(to).isEqualTo(WITH_BUYER);
-            assertThat(from).isNotEqualTo(CLIENT_PAID);
+            assertThat(from).isNotIn(CLIENT_PAID, ORDERED);
         }
     }
 

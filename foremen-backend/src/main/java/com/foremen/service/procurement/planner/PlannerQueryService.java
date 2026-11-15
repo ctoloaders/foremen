@@ -27,6 +27,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.config.procurement.ProcurementProperties;
 import com.foremen.dao.PurchasePositionVariantDao;
+import com.foremen.dao.model.ClientProformaLineEntity;
+import com.foremen.dao.model.ExternalOrderLineEntity;
 import com.foremen.dao.model.FinishingMaterialEntity;
 import com.foremen.dao.model.MaterialProducerEntity;
 import com.foremen.dao.model.MaterialSellerEntity;
@@ -52,6 +54,8 @@ import com.foremen.service.procurement.planner.WorkCategoryResolver.Resolution;
 import com.foremen.service.procurement.planner.WorkCategoryResolver.Scheduled;
 import com.foremen.service.procurement.planner.WorkCategoryResolver.Source;
 import com.foremen.service.procurement.planner.WorkStartResolver.ProjectCategory;
+import com.foremen.service.procurement.externalorder.ExternalOrderStatus;
+import com.foremen.service.procurement.proforma.ProformaStatus;
 import com.foremen.service.procurement.position.PositionAudienceResolver;
 import com.foremen.service.procurement.position.PositionMoney;
 import com.foremen.service.procurement.position.PositionPriceVisibility;
@@ -73,6 +77,7 @@ import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Order;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 
 /**
  * Read model of the purchase planner (FOR-11-01 R1, R2, R4.4, R5.6-5.8, R9.2, R9.5).
@@ -248,6 +253,39 @@ public class PlannerQueryService {
             if (f.noRequest()) {
                 where.add(cb.isNull(root.get("purchaseRequest")));
             }
+            if (f.proformaId() != null) {
+                Subquery<Long> lines = query.subquery(Long.class);
+                Root<ClientProformaLineEntity> line = lines.from(ClientProformaLineEntity.class);
+                lines.select(line.<Long>get("id")).where(
+                        cb.equal(line.get("position"), root),
+                        cb.isTrue(line.<Boolean>get("active")),
+                        cb.equal(line.get("proforma").get("id"), f.proformaId()));
+                where.add(cb.exists(lines));
+            }
+            if (f.externalOrderId() != null) {
+                Subquery<Long> lines = query.subquery(Long.class);
+                Root<ExternalOrderLineEntity> line = lines.from(ExternalOrderLineEntity.class);
+                lines.select(line.<Long>get("id")).where(
+                        cb.equal(line.get("position"), root),
+                        cb.equal(line.get("externalOrder").get("id"), f.externalOrderId()));
+                where.add(cb.exists(lines));
+            }
+            if (f.noProforma()) {
+                Subquery<Long> lines = query.subquery(Long.class);
+                Root<ClientProformaLineEntity> line = lines.from(ClientProformaLineEntity.class);
+                lines.select(line.<Long>get("id")).where(
+                        cb.equal(line.get("position"), root),
+                        cb.isTrue(line.<Boolean>get("active")));
+                where.add(cb.not(cb.exists(lines)));
+            }
+            if (f.noExternalOrder()) {
+                Subquery<Long> lines = query.subquery(Long.class);
+                Root<ExternalOrderLineEntity> line = lines.from(ExternalOrderLineEntity.class);
+                lines.select(line.<Long>get("id")).where(
+                        cb.equal(line.get("position"), root),
+                        cb.notEqual(line.get("externalOrder").get("status"), ExternalOrderStatus.CANCELLED));
+                where.add(cb.not(cb.exists(lines)));
+            }
             BuyerMode buyer = f.buyer() == null ? BuyerMode.ALL : f.buyer();
             if (buyer == BuyerMode.MINE) {
                 where.add(me == null ? cb.disjunction() : cb.equal(
@@ -376,6 +414,9 @@ public class PlannerQueryService {
 
         Map<Long, Integer> variantCounts = variantCounts(entities);
         Map<Long, WorkLink> links = workLinks(entities);
+        boolean staff = audience == Audience.STAFF_FULL;
+        Map<Long, ProformaRef> proformas = staff ? proformaRefs(entities) : Map.of();
+        Map<Long, Integer> orderCounts = staff ? externalOrderCounts(entities) : Map.of();
 
         List<PlannerRowDto> rows = new ArrayList<>(entities.size());
         for (PurchasePositionEntity p : entities) {
@@ -427,7 +468,11 @@ public class PlannerQueryService {
                     variantCount > 0,
                     variantCount,
                     money(p, audience),
-                    allowedActions(p, callers)));
+                    allowedActions(p, callers),
+                    staff && proformas.containsKey(p.getId()) ? proformas.get(p.getId()).id() : null,
+                    staff && proformas.containsKey(p.getId()) ? proformas.get(p.getId()).number() : null,
+                    staff && proformas.containsKey(p.getId()) ? proformas.get(p.getId()).status() : null,
+                    staff ? orderCounts.getOrDefault(p.getId(), 0) : null));
         }
         return rows;
     }
@@ -451,6 +496,39 @@ public class PlannerQueryService {
             }
         }
         return risk;
+    }
+
+    /** The proforma an active line puts a position on (R18.4); one aggregate query per page. */
+    private record ProformaRef(Long id, String number, ProformaStatus status) {
+    }
+
+    private Map<Long, ProformaRef> proformaRefs(List<PurchasePositionEntity> entities) {
+        Map<Long, ProformaRef> result = new HashMap<>();
+        List<Object[]> rows = entityManager.createQuery(
+                "select l.position.id, l.proforma.id, l.proforma.number, l.proforma.status "
+                        + "from ClientProformaLineEntity l where l.active = true and l.position.id in :ids",
+                Object[].class).setParameter("ids", entities.stream().map(PurchasePositionEntity::getId).toList())
+                .getResultList();
+        for (Object[] row : rows) {
+            result.put((Long) row[0], new ProformaRef((Long) row[1], (String) row[2], (ProformaStatus) row[3]));
+        }
+        return result;
+    }
+
+    /** Number of non-cancelled external orders each position is on (R18.4); one aggregate query per page. */
+    private Map<Long, Integer> externalOrderCounts(List<PurchasePositionEntity> entities) {
+        Map<Long, Integer> result = new HashMap<>();
+        List<Object[]> rows = entityManager.createQuery(
+                "select l.position.id, count(l) from ExternalOrderLineEntity l "
+                        + "where l.externalOrder.status <> :cancelled and l.position.id in :ids "
+                        + "group by l.position.id", Object[].class)
+                .setParameter("cancelled", ExternalOrderStatus.CANCELLED)
+                .setParameter("ids", entities.stream().map(PurchasePositionEntity::getId).toList())
+                .getResultList();
+        for (Object[] row : rows) {
+            result.put((Long) row[0], ((Number) row[1]).intValue());
+        }
+        return result;
     }
 
     private Map<Long, Integer> variantCounts(List<PurchasePositionEntity> entities) {

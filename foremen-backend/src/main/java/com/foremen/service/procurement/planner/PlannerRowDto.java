@@ -8,10 +8,12 @@ import com.foremen.dao.model.PositionKind;
 import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.SourcingPath;
 import com.foremen.service.procurement.planner.WorkCategoryResolver.Source;
+import com.foremen.service.procurement.proforma.ProformaStatus;
 
 /**
  * One row of the purchase planner (FOR-11-01 R1.6). {@code money} is {@code null} for every audience
- * except {@code STAFF_FULL} (R4.4, R9.2). Names are resolved to the caller's locale (R1.8).
+ * except {@code STAFF_FULL} (R4.4, R9.2). The last four fields are the FOR-11-03 additions (R18.4); they are
+ * {@code null} for every audience except {@code STAFF_FULL}. Names are resolved to the caller's locale (R1.8).
  */
 public record PlannerRowDto(
         Long positionId,
@@ -49,7 +51,11 @@ public record PlannerRowDto(
         boolean hasVariants,
         int variantCount,
         Money money,
-        List<Action> allowedActions) {
+        List<Action> allowedActions,
+        Long proformaId,
+        String proformaNumber,
+        ProformaStatus proformaStatus,
+        Integer externalOrderCount) {
 
     /** Effective material label: {@code COALESCE(actualMaterial, plannedMaterial)} plus the planned id. */
     public record Material(Long plannedMaterialId, Long actualMaterialId, String model, String sku,

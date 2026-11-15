@@ -21,6 +21,9 @@ import com.foremen.dao.BankAccountDao;
 import com.foremen.dao.BankTransactionDao;
 import com.foremen.dao.BankTransactionLinkDao;
 import com.foremen.dao.BankTransactionSuggestionDao;
+import com.foremen.dao.ClientProformaDao;
+import com.foremen.dao.ExternalOrderDao;
+import com.foremen.dao.ExternalOrderLineDao;
 import com.foremen.dao.PaymentScheduleDao;
 import com.foremen.dao.ProcurementDocumentDao;
 import com.foremen.dao.ProjectDao;
@@ -31,7 +34,10 @@ import com.foremen.dao.model.BankTransactionEntity;
 import com.foremen.dao.model.BankTransactionLinkEntity;
 import com.foremen.dao.model.BankTransactionSuggestionEntity;
 import com.foremen.dao.model.BankTxnStatus;
+import com.foremen.dao.model.ClientProformaEntity;
 import com.foremen.dao.model.DetectionSource;
+import com.foremen.dao.model.ExternalOrderEntity;
+import com.foremen.dao.model.ExternalOrderLineEntity;
 import com.foremen.dao.model.LedgerOrigin;
 import com.foremen.dao.model.LinkKind;
 import com.foremen.dao.model.LinkStatus;
@@ -46,6 +52,10 @@ import com.foremen.exception.ForemenApiException;
 import com.foremen.service.bank.detect.ClassificationInput;
 import com.foremen.service.bank.detect.ClassifierAnswerValidator;
 import com.foremen.service.bank.detect.MatchCandidate;
+import com.foremen.service.procurement.externalorder.ExternalOrderMath;
+import com.foremen.service.procurement.externalorder.ExternalOrderStatus;
+import com.foremen.service.procurement.externalorder.PaidSource;
+import com.foremen.service.procurement.proforma.ProformaStatus;
 import com.foremen.service.payroll.WorkerPayoutService;
 import com.foremen.service.payroll.dto.CreatePayoutRequest;
 import com.foremen.service.payroll.dto.WorkerPayoutDto;
@@ -103,6 +113,12 @@ public class BankLinkService {
     public static final String IGNORE_HAS_LINKS = "error.bank.ignore.hasLinks";
     /** 400 — ignoring requires a reason (R17.5). */
     public static final String IGNORE_REASON_REQUIRED = "error.bank.ignore.reasonRequired";
+    /** 409 — the line currency is not PLN, proformas and external orders are PLN only (FOR-11-03 R7.4). */
+    public static final String CURRENCY_MISMATCH = "error.bank.link.currencyMismatch";
+    /** 409 — the proforma is not {@code ISSUED} / {@code PARTIALLY_PAID} (FOR-11-03 R7.4). */
+    public static final String PROFORMA_NOT_LINKABLE = "error.proforma.link.notLinkable";
+    /** 409 — the external order is neither {@code SENT_FOR_PAYMENT} nor financier-paid (FOR-11-03 R7.5). */
+    public static final String EXTERNAL_ORDER_NOT_LINKABLE = "error.externalOrder.link.notLinkable";
     /** 409 — the suggestion is no longer OPEN. */
     public static final String SUGGESTION_NOT_OPEN = "error.bank.suggestion.notOpen";
 
@@ -117,6 +133,9 @@ public class BankLinkService {
     private final ProjectDao projectDao;
     private final UnplannedExpenseCategoryDao categoryDao;
     private final BankAccountDao bankAccountDao;
+    private final ClientProformaDao clientProformaDao;
+    private final ExternalOrderDao externalOrderDao;
+    private final ExternalOrderLineDao externalOrderLineDao;
     private final WorkerPayoutService workerPayoutService;
     private final LinkEffects effects;
     private final CounterpartyRuleService ruleService;
@@ -130,7 +149,8 @@ public class BankLinkService {
                            ProjectDao projectDao, UnplannedExpenseCategoryDao categoryDao,
                            BankAccountDao bankAccountDao, WorkerPayoutService workerPayoutService,
                            LinkEffects effects, CounterpartyRuleService ruleService, BankLedgerAudit audit,
-                           EntityManager entityManager) {
+                           EntityManager entityManager, ClientProformaDao clientProformaDao,
+                           ExternalOrderDao externalOrderDao, ExternalOrderLineDao externalOrderLineDao) {
         this.transactionDao = transactionDao;
         this.linkDao = linkDao;
         this.suggestionDao = suggestionDao;
@@ -145,6 +165,9 @@ public class BankLinkService {
         this.ruleService = ruleService;
         this.audit = audit;
         this.entityManager = entityManager;
+        this.clientProformaDao = clientProformaDao;
+        this.externalOrderDao = externalOrderDao;
+        this.externalOrderLineDao = externalOrderLineDao;
     }
 
     // ============================================================================================
@@ -311,6 +334,7 @@ public class BankLinkService {
         resolve(txn, request, old);
         linkDao.delete(old);
         entityManager.flush();
+        effects.onRemoved(old);
 
         Resolved resolved = resolve(txn, request);
         BankTransactionLinkEntity link = persistWithoutAudit(txn, resolved, DetectionSource.MANUAL, null, true);
@@ -333,6 +357,7 @@ public class BankLinkService {
         Map<String, Object> before = BankLedgerAudit.linkSnapshot(link);
         linkDao.delete(link);
         entityManager.flush();
+        effects.onRemoved(link);
         audit.write(BankTransactionLinkEntity.class, linkId, "DELETE", before, null);
         return new LinkOutcome(txn.getId(), null, refresh(txn), warn);
     }
@@ -434,6 +459,7 @@ public class BankLinkService {
             audit.write(BankTransactionLinkEntity.class, link.getId(), "DELETE", before, null);
         }
         entityManager.flush();
+        links.forEach(effects::onRemoved);
         return new LinkOutcome(txn.getId(), null, refresh(txn), warn);
     }
 
@@ -451,14 +477,25 @@ public class BankLinkService {
     private record Resolved(LinkKind kind, BigDecimal amount, WorkerPayoutEntity payout,
                             ProcurementDocumentEntity document, PaymentScheduleEntity schedule,
                             ProjectEntity project, UnplannedExpenseCategoryEntity category,
-                            BankAccountEntity counterAccount, String note) {
+                            BankAccountEntity counterAccount, ClientProformaEntity proforma,
+                            ExternalOrderEntity externalOrder, String note) {
         Resolved withAmount(BigDecimal value) {
-            return new Resolved(kind, value, payout, document, schedule, project, category, counterAccount, note);
+            return new Resolved(kind, value, payout, document, schedule, project, category, counterAccount,
+                    proforma, externalOrder, note);
         }
     }
 
     /** Kind, direction and the targets of the kind (R13.2, R13.3); the amount is left unset. */
     private Resolved resolveTargets(BankTransactionEntity txn, LinkRequest req) {
+        return resolveTargets(txn, req, null);
+    }
+
+    /**
+     * As {@link #resolveTargets(BankTransactionEntity, LinkRequest)}, but when {@code replaced} is the link
+     * being overridden, an order it already pays (and which the ledger therefore marked {@code PAID}) stays
+     * linkable: the replacement validates "as if the old link were gone" (FOR-11-03 R16.3).
+     */
+    private Resolved resolveTargets(BankTransactionEntity txn, LinkRequest req, BankTransactionLinkEntity replaced) {
         if (req == null || req.kind() == null) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, TARGET_REQUIRED);
         }
@@ -471,6 +508,8 @@ public class BankLinkService {
         ProjectEntity project = null;
         UnplannedExpenseCategoryEntity category = null;
         BankAccountEntity counterAccount = null;
+        ClientProformaEntity proforma = null;
+        ExternalOrderEntity externalOrder = null;
         switch (kind) {
             case WORKER_PAYOUT -> payout = workerPayoutDao.findById(required(req.workerPayoutId()))
                     .orElseThrow(BankLinkService::notFound);
@@ -496,8 +535,37 @@ public class BankLinkService {
                             .orElseThrow(BankLinkService::notFound);
                 }
             }
+            case PROFORMA_PAYMENT -> {
+                assertPln(txn);
+                proforma = clientProformaDao.findById(required(req.clientProformaId()))
+                        .orElseThrow(BankLinkService::notFound);
+                if (proforma.getStatus() != ProformaStatus.ISSUED
+                        && proforma.getStatus() != ProformaStatus.PARTIALLY_PAID) {
+                    throw new ForemenApiException(HttpStatus.CONFLICT, PROFORMA_NOT_LINKABLE);
+                }
+                project = proforma.getProject();
+            }
+            case EXTERNAL_ORDER_PAYMENT -> {
+                assertPln(txn);
+                externalOrder = externalOrderDao.findById(required(req.externalOrderId()))
+                        .orElseThrow(BankLinkService::notFound);
+                boolean linkable = externalOrder.getStatus() == ExternalOrderStatus.SENT_FOR_PAYMENT
+                        || (externalOrder.getStatus() == ExternalOrderStatus.PAID
+                        && (externalOrder.getPaidSource() == PaidSource.FINANCIER
+                        || replacesLinkOf(replaced, externalOrder)));
+                if (!linkable) {
+                    throw new ForemenApiException(HttpStatus.CONFLICT, EXTERNAL_ORDER_NOT_LINKABLE);
+                }
+                project = externalOrder.getProject();
+            }
         }
-        return new Resolved(kind, null, payout, document, schedule, project, category, counterAccount, req.note());
+        return new Resolved(kind, null, payout, document, schedule, project, category, counterAccount,
+                proforma, externalOrder, req.note());
+    }
+
+    private static boolean replacesLinkOf(BankTransactionLinkEntity replaced, ExternalOrderEntity order) {
+        return replaced != null && replaced.getExternalOrder() != null
+                && replaced.getExternalOrder().getId().equals(order.getId());
     }
 
     /** Full link validation: targets, amount and the allocation bounds (Property 3). */
@@ -510,15 +578,16 @@ public class BankLinkService {
      * already gone: its amount is excluded from the line and target sums.
      */
     private Resolved resolve(BankTransactionEntity txn, LinkRequest req, BankTransactionLinkEntity replaced) {
-        Resolved t = resolveTargets(txn, req);
+        Resolved t = resolveTargets(txn, req, replaced);
         BigDecimal lineRemainder = lineRemainder(txn, replaced);
         WorkerPayoutEntity payout = t.payout();
         ProcurementDocumentEntity document = t.document();
         BigDecimal payoutLinked = payoutLinked(payout, replaced);
         BigDecimal documentLinked = documentLinked(document, replaced);
+        BigDecimal targetRemaining = proformaOrOrderRemaining(t, replaced);
         BigDecimal amount = req.amount() != null
                 ? scale(req.amount())
-                : defaultAmount(lineRemainder, payout, payoutLinked, document, documentLinked);
+                : defaultAmount(lineRemainder, payout, payoutLinked, document, documentLinked, targetRemaining);
         if (req.amount() == null && amount.signum() <= 0) {
             // The default is exhausted: either the line or the target has nothing left to link.
             throw lineRemainder.signum() <= 0
@@ -539,6 +608,9 @@ public class BankLinkService {
         }
         if (document != null && document.getDocumentTotal() != null
                 && documentLinked.add(amount).compareTo(document.getDocumentTotal()) > 0) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, TARGET_OVER_LINKED);
+        }
+        if (targetRemaining != null && amount.compareTo(targetRemaining) > 0) {
             throw new ForemenApiException(HttpStatus.CONFLICT, TARGET_OVER_LINKED);
         }
         return t.withAmount(amount);
@@ -566,10 +638,45 @@ public class BankLinkService {
         return same ? linked.subtract(replaced.getAmount()) : linked;
     }
 
+    /**
+     * What is still linkable on a proforma ({@code totalGross − Σ PROFORMA_PAYMENT links}) or an external
+     * order ({@code payableGross − Σ EXTERNAL_ORDER_PAYMENT links}); {@code null} for every other kind.
+     * The link being replaced is excluded when it points at the same target.
+     */
+    private BigDecimal proformaOrOrderRemaining(Resolved t, BankTransactionLinkEntity replaced) {
+        if (t.proforma() != null) {
+            BigDecimal linked = nz(linkDao.sumAmountByClientProformaId(t.proforma().getId()));
+            boolean same = replaced != null && replaced.getClientProforma() != null
+                    && replaced.getClientProforma().getId().equals(t.proforma().getId());
+            return scale(nz(t.proforma().getTotalGross()).subtract(same ? linked.subtract(replaced.getAmount()) : linked));
+        }
+        if (t.externalOrder() != null) {
+            BigDecimal linked = nz(linkDao.sumAmountByExternalOrderId(t.externalOrder().getId()));
+            boolean same = replaced != null && replaced.getExternalOrder() != null
+                    && replaced.getExternalOrder().getId().equals(t.externalOrder().getId());
+            return scale(payableGross(t.externalOrder()).subtract(same ? linked.subtract(replaced.getAmount()) : linked));
+        }
+        return null;
+    }
+
+    /** {@code payableGross} of the order: lines at purchase price plus the delivery cost (R11.5). */
+    private BigDecimal payableGross(ExternalOrderEntity order) {
+        List<ExternalOrderMath.LineInput> inputs = new ArrayList<>();
+        for (ExternalOrderLineEntity line : externalOrderLineDao.findByExternalOrderId(order.getId())) {
+            inputs.add(new ExternalOrderMath.LineInput(line.getUnitPurchaseNet(), line.getQuantity(),
+                    line.getPurchaseVatRate() == null ? null : line.getPurchaseVatRate().getRate()));
+        }
+        BigDecimal deliveryVat = order.getDeliveryVatRate() == null ? null : order.getDeliveryVatRate().getRate();
+        return ExternalOrderMath.compute(inputs, order.getDeliveryCostNet(), deliveryVat).payableGross();
+    }
+
     /** Line remainder, capped by the target remainder; a PLANNED payout defaults to its own amount. */
     private static BigDecimal defaultAmount(BigDecimal lineRemainder, WorkerPayoutEntity payout,
                                             BigDecimal payoutLinked, ProcurementDocumentEntity document,
-                                            BigDecimal documentLinked) {
+                                            BigDecimal documentLinked, BigDecimal targetRemaining) {
+        if (targetRemaining != null) {
+            return scale(lineRemainder.min(targetRemaining));
+        }
         if (payout != null) {
             if (payout.getStatus() == PayoutStatus.PLANNED) {
                 return scale(payout.getAmount());
@@ -603,6 +710,8 @@ public class BankLinkService {
         link.setProject(r.project());
         link.setUnplannedCategory(r.category());
         link.setCounterAccount(r.counterAccount());
+        link.setClientProforma(r.proforma());
+        link.setExternalOrder(r.externalOrder());
         link.setSource(source);
         link.setConfidence(source == DetectionSource.MANUAL ? null : confidence);
         link.setNote(r.note());
@@ -644,6 +753,8 @@ public class BankLinkService {
             s.setProject(r.project());
             s.setUnplannedCategory(r.category());
             s.setCounterAccount(r.counterAccount());
+            s.setClientProforma(r.proforma());
+            s.setExternalOrder(r.externalOrder());
             s.setRank((short) rank++);
             s.setRationale(truncate(draft.rationale()));
             s.setStatus(SuggestionStatus.OPEN);
@@ -665,7 +776,7 @@ public class BankLinkService {
         BigDecimal amount = req.amount() != null
                 ? scale(req.amount())
                 : defaultAmount(lineRemainder(txn), t.payout(), payoutLinked(t.payout(), null),
-                        t.document(), documentLinked(t.document(), null));
+                        t.document(), documentLinked(t.document(), null), proformaOrOrderRemaining(t, null));
         assertAmount(amount);
         return t.withAmount(amount);
     }
@@ -678,6 +789,8 @@ public class BankLinkService {
                 s.getProject() == null ? null : s.getProject().getId(),
                 s.getUnplannedCategory() == null ? null : s.getUnplannedCategory().getId(),
                 s.getCounterAccount() == null ? null : s.getCounterAccount().getId(),
+                s.getClientProforma() == null ? null : s.getClientProforma().getId(),
+                s.getExternalOrder() == null ? null : s.getExternalOrder().getId(),
                 s.getNote());
     }
 
@@ -737,7 +850,23 @@ public class BankLinkService {
         }
     }
 
+    /** FOR-11-03 (R7.4): proformas and external orders are settled in PLN only. */
+    private static void assertPln(BankTransactionEntity txn) {
+        String currency = txn.getCurrency() == null ? null : txn.getCurrency().strip();
+        if (!"PLN".equalsIgnoreCase(currency)) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, CURRENCY_MISMATCH);
+        }
+    }
+
     private static void assertKindAllowed(BankTransactionEntity txn, LinkKind kind) {
+        // FOR-11-03 (R7.1): a proforma is paid by a credit line, an external order by a debit line.
+        if (kind == LinkKind.PROFORMA_PAYMENT || kind == LinkKind.EXTERNAL_ORDER_PAYMENT) {
+            boolean credit = txn.getAmount().signum() > 0;
+            if (credit != (kind == LinkKind.PROFORMA_PAYMENT)) {
+                throw new ForemenApiException(HttpStatus.BAD_REQUEST, KIND_DIRECTION);
+            }
+            return;
+        }
         String direction = txn.getAmount().signum() < 0 ? ClassificationInput.EXPENSE : ClassificationInput.INCOME;
         if (!ClassifierAnswerValidator.allowedKinds(direction).contains(kind.name())) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, KIND_DIRECTION);

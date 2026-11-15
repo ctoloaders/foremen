@@ -62,6 +62,26 @@ class ProcurementProjectAccessTest {
         assertTrue(access.allowedProjectIds(null).isEmpty());
     }
 
+    /** FOR-11-03 R20.1. The "FINANCIER has no PURCHASE_* grant" guarantee is asserted by
+     *  ProformaExternalOrderResourcesMigrationIntegrationTest#financierGrants. */
+    @Test
+    void financierGetsAllProjectIdsLikeBuyer() {
+        when(userDao.findRoleCodeById(8L)).thenReturn(Optional.of("FINANCIER"));
+        when(projectDao.findAllIds()).thenReturn(List.of(1L, 2L));
+        assertEquals(Set.of(1L, 2L), access.allowedProjectIds(8L));
+        verify(cache, never()).get(8L);
+    }
+
+    @Test
+    void isOrderPaymentRoleOnlyForFinancier() {
+        assertTrue(access.isOrderPaymentRole(auth("FINANCIER")));
+        for (String role : List.of("ADMIN", "MANAGER", "BUYER", "FOREMAN", "CLIENT")) {
+            assertFalse(access.isOrderPaymentRole(auth(role)), role);
+        }
+        assertFalse(access.isOrderPaymentRole(null));
+        assertFalse(access.isMoneyPrivileged(auth("FINANCIER")));
+    }
+
     @Test
     void isBuyerOnlyForBuyerRole() {
         assertTrue(access.isBuyer(auth("BUYER")));

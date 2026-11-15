@@ -14,6 +14,7 @@ package com.foremen.service.document;
  * @param representativeName  the optional signing representative name
  * @param representativeRole  the optional representative role/title
  * @param email               the optional contact email
+ * @param bankAccount         the optional bank account printed on proformas (FOR-11-03)
  */
 public record CompanyProfileDto(
         Long id,
@@ -23,5 +24,6 @@ public record CompanyProfileDto(
         String regon,
         String representativeName,
         String representativeRole,
-        String email) {
+        String email,
+        String bankAccount) {
 }

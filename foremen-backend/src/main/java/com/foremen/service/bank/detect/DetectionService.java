@@ -33,6 +33,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import com.foremen.dao.BankTransactionDao;
 import com.foremen.dao.BankTransactionLinkDao;
 import com.foremen.dao.model.BankTransactionEntity;
+import com.foremen.dao.model.BankTransactionSuggestionEntity;
+import org.springframework.context.ApplicationEventPublisher;
 import com.foremen.dao.model.BankTxnStatus;
 import com.foremen.dao.model.DetectionSource;
 import com.foremen.dao.model.LedgerOrigin;
@@ -94,6 +96,7 @@ public class DetectionService {
     private final Executor executor;
     private final TransactionTemplate requiresNew;
     private final RuleMatcher matcher;
+    private ApplicationEventPublisher eventPublisher;
 
     /**
      * The result of a detection call.
@@ -316,7 +319,17 @@ public class DetectionService {
         if (drafts.isEmpty()) {
             return false;
         }
-        return !linkService.replaceSuggestions(id, drafts).isEmpty();
+        List<BankTransactionSuggestionEntity> saved = linkService.replaceSuggestions(id, drafts);
+        if (eventPublisher != null && LedgerMatchProposedEvent.concerns(saved)) {
+            eventPublisher.publishEvent(new LedgerMatchProposedEvent(id));
+        }
+        return !saved.isEmpty();
+    }
+
+    /** FOR-11-03 (R10.6): optional so the existing constructors (and tests) keep working. */
+    @Autowired(required = false)
+    void setEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     /** R14.1 / R27.7 — POSTED BANK_FEED lines that are not ignored. */

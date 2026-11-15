@@ -11,5 +11,9 @@ public enum LinkKind {
     CLIENT_PAYMENT,
     OTHER_EXPENSE,
     OTHER_INCOME,
-    INTERNAL_TRANSFER
+    INTERNAL_TRANSFER,
+    /** FOR-11-03 (R7.1): credit line paying a client proforma. */
+    PROFORMA_PAYMENT,
+    /** FOR-11-03 (R7.1): debit line paying an external order. */
+    EXTERNAL_ORDER_PAYMENT
 }

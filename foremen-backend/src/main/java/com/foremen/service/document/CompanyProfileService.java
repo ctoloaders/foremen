@@ -70,6 +70,7 @@ public class CompanyProfileService {
         profile.setRepresentativeName(in.representativeName());
         profile.setRepresentativeRole(in.representativeRole());
         profile.setEmail(in.email());
+        profile.setBankAccount(isBlank(in.bankAccount()) ? null : in.bankAccount().trim());
         CompanyProfileEntity saved = companyProfileDao.save(profile);
         // FOR-07-04 (R3.10): bank account holder match is recomputed on a profile change.
         events.publishEvent(new CompanyProfileUpdatedEvent(saved.getId()));
@@ -85,7 +86,8 @@ public class CompanyProfileService {
     }
 
     private void validate(CompanyProfileInput in) {
-        if (in == null || isBlank(in.fullName()) || isBlank(in.registeredAddress()) || isBlank(in.nip())) {
+        if (in == null || isBlank(in.fullName()) || isBlank(in.registeredAddress()) || isBlank(in.nip())
+                || (in.bankAccount() != null && in.bankAccount().trim().length() > 64)) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, PROFILE_INVALID_MESSAGE);
         }
     }
@@ -95,7 +97,7 @@ public class CompanyProfileService {
     }
 
     private static CompanyProfileDto empty() {
-        return new CompanyProfileDto(null, null, null, null, null, null, null, null);
+        return new CompanyProfileDto(null, null, null, null, null, null, null, null, null);
     }
 
     private static CompanyProfileDto toDto(CompanyProfileEntity profile) {
@@ -107,6 +109,7 @@ public class CompanyProfileService {
                 profile.getRegon(),
                 profile.getRepresentativeName(),
                 profile.getRepresentativeRole(),
-                profile.getEmail());
+                profile.getEmail(),
+                profile.getBankAccount());
     }
 }

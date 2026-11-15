@@ -43,6 +43,26 @@ public interface BankTransactionLinkDao extends AdminDao<BankTransactionLinkEnti
             + "WHERE l.procurementDocument.id = :documentId")
     BigDecimal sumAmountByProcurementDocumentId(@Param("documentId") Long documentId);
 
+    /** FOR-11-03 (R16): Σ link amount to an external order; 0 when none. */
+    @Query("SELECT COALESCE(SUM(l.amount), 0) FROM BankTransactionLinkEntity l "
+            + "WHERE l.externalOrder.id = :orderId")
+    BigDecimal sumAmountByExternalOrderId(@Param("orderId") Long orderId);
+
+    /** FOR-11-03 (R8.1): Σ link amount to a client proforma; 0 when none. */
+    @Query("SELECT COALESCE(SUM(l.amount), 0) FROM BankTransactionLinkEntity l "
+            + "WHERE l.clientProforma.id = :proformaId")
+    BigDecimal sumAmountByClientProformaId(@Param("proformaId") Long proformaId);
+
+    /** FOR-11-03 (R23.3): PROFORMA_PAYMENT links of a proforma with the ledger line fetched, by booking date. */
+    @Query("SELECT l FROM BankTransactionLinkEntity l JOIN FETCH l.transaction t "
+            + "WHERE l.clientProforma.id = :proformaId AND l.kind = "
+            + "com.foremen.dao.model.LinkKind.PROFORMA_PAYMENT ORDER BY t.bookingDate, l.id")
+    List<BankTransactionLinkEntity> findProformaPaymentsByClientProformaId(@Param("proformaId") Long proformaId);
+
+    /** FOR-11-03 (R5.3): whether any ledger link points at the proforma. */
+    @Query("SELECT COUNT(l) > 0 FROM BankTransactionLinkEntity l WHERE l.clientProforma.id = :proformaId")
+    boolean existsByClientProformaId(@Param("proformaId") Long proformaId);
+
     /** Σ link amount per payout for many payouts (payouts without links are absent). */
     @Query("SELECT new com.foremen.dao.BankLinkedAmount(l.workerPayout.id, SUM(l.amount)) "
             + "FROM BankTransactionLinkEntity l WHERE l.workerPayout.id IN :payoutIds GROUP BY l.workerPayout.id")

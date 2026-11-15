@@ -32,8 +32,10 @@ class PlannerGroupServiceTest {
     }
 
     @Test
-    void reservedAndUnknownGroupByAreRejected() {
-        for (String v : List.of("EXTERNAL_ORDER", "PROFORMA", "bogus")) {
+    void newModesAreAcceptedAndUnknownGroupByIsRejected() {
+        assertEquals(GroupBy.PROFORMA, PlannerGroupService.parseGroupBy("proforma"));
+        assertEquals(GroupBy.EXTERNAL_ORDER, PlannerGroupService.parseGroupBy("EXTERNAL_ORDER"));
+        for (String v : List.of("bogus", "REQUESTS")) {
             ForemenApiException e = assertThrows(ForemenApiException.class,
                     () -> PlannerGroupService.parseGroupBy(v));
             assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());

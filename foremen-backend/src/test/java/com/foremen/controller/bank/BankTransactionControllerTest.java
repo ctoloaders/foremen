@@ -29,6 +29,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -155,6 +156,36 @@ class BankTransactionControllerTest {
         assertThat(req.getValue().kind()).isEqualTo(LinkKind.PROCUREMENT);
         assertThat(req.getValue().procurementDocumentId()).isEqualTo(44L);
         assertThat(req.getValue().amount()).isEqualByComparingTo(new BigDecimal("120.00"));
+    }
+
+    @Test
+    @DisplayName("POST/PUT links pass clientProformaId and externalOrderId through to LinkRequest (FOR-11-03)")
+    void proformaAndExternalOrderTargetsReachService() throws Exception {
+        when(linkService.createLink(eq(3L), any(LinkRequest.class), anyBoolean()))
+                .thenReturn(new LinkOutcome(3L, 30L, LinkStatus.LINKED, false));
+        when(linkService.replaceLink(eq(30L), any(LinkRequest.class), anyBoolean()))
+                .thenReturn(new LinkOutcome(3L, 30L, LinkStatus.LINKED, false));
+
+        mockMvc.perform(post("/api/bank/transactions/3/links").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"PROFORMA_PAYMENT\",\"amount\":50.00,\"clientProformaId\":9}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/bank/transactions/3/links").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"EXTERNAL_ORDER_PAYMENT\",\"amount\":70.00,\"externalOrderId\":12}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(put("/api/bank/links/30").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"kind\":\"PROFORMA_PAYMENT\",\"amount\":50.00,\"clientProformaId\":10}"))
+                .andExpect(status().isOk());
+
+        ArgumentCaptor<LinkRequest> created = ArgumentCaptor.forClass(LinkRequest.class);
+        verify(linkService, org.mockito.Mockito.times(2)).createLink(eq(3L), created.capture(), eq(true));
+        assertThat(created.getAllValues().get(0).kind()).isEqualTo(LinkKind.PROFORMA_PAYMENT);
+        assertThat(created.getAllValues().get(0).clientProformaId()).isEqualTo(9L);
+        assertThat(created.getAllValues().get(1).kind()).isEqualTo(LinkKind.EXTERNAL_ORDER_PAYMENT);
+        assertThat(created.getAllValues().get(1).externalOrderId()).isEqualTo(12L);
+
+        ArgumentCaptor<LinkRequest> replaced = ArgumentCaptor.forClass(LinkRequest.class);
+        verify(linkService).replaceLink(eq(30L), replaced.capture(), eq(true));
+        assertThat(replaced.getValue().clientProformaId()).isEqualTo(10L);
     }
 
     @Test
