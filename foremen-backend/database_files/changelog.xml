@@ -981,4 +981,10 @@
     <include file="database_files/changesets/239-seed-proforma-external-order-resources.xml"/>
     <!-- FOR-11-03 (task 3.3): company_profile.bank_account for the proforma PDF. Registered LAST, after 239. -->
     <include file="database_files/changesets/240-add-company-profile-bank-account.xml"/>
+    <!-- FOR-11-04 (task 1.1): shipments, shipment_lines, shipment_events. Registered LAST, after 240. -->
+    <include file="database_files/changesets/241-create-shipments.xml"/>
+    <!-- FOR-11-04 (task 1.2): SHIPMENTS resource and grants. Registered LAST, after 241. -->
+    <include file="database_files/changesets/242-seed-shipments-resource.xml"/>
+    <!-- FOR-11-04 (task 1.3): purchase_positions.order_by_notified_for. Registered LAST, after 242. -->
+    <include file="database_files/changesets/243-add-position-order-by-notified-for.xml"/>
 </databaseChangeLog>

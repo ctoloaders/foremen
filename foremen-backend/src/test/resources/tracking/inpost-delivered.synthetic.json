@@ -1,0 +1,17 @@
+{
+  "_note": "SYNTHETIC fixture built from the documented ShipX shape. NOT a recorded carrier response. Replace with a real redacted recording (carrier-spike.md, decision 2).",
+  "tracking_number": "000000000000000000000000",
+  "service": "inpost_locker_standard",
+  "type": "parcel_locker",
+  "status": "delivered",
+  "custom_attributes": {"size": "A", "target_machine_id": "XXX00A", "end_of_week_collection": false},
+  "expected_flow": [],
+  "tracking_details": [
+    {"status": "created", "origin_status": "Created", "agency": null, "datetime": "2026-03-09T08:00:00.000+01:00"},
+    {"status": "taken_by_courier", "origin_status": "Taken by courier", "agency": null, "datetime": "2026-03-09T15:30:00.000+01:00"},
+    {"status": "ready_to_pickup", "origin_status": "Ready to pickup", "agency": null, "datetime": "2026-03-10T09:15:00.000+01:00"},
+    {"status": "delivered", "origin_status": "Delivered", "agency": null, "datetime": "2026-03-10T18:45:00.000+01:00"}
+  ],
+  "created_at": "2026-03-09T08:00:00.000+01:00",
+  "updated_at": "2026-03-10T18:45:00.000+01:00"
+}

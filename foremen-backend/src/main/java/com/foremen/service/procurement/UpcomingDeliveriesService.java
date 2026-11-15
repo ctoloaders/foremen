@@ -2,9 +2,13 @@ package com.foremen.service.procurement;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -17,9 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.controller.model.UpcomingDeliveryDto;
 import com.foremen.dao.model.FinishingMaterialEntity;
+import com.foremen.dao.model.DeliveryMethod;
 import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.PurchasePositionEntity;
+import com.foremen.dao.model.ShipmentEntity;
+import com.foremen.dao.model.ShipmentStatus;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.procurement.shipment.ShipmentRules;
+import com.foremen.service.procurement.shipment.TrackingBackoff;
+import com.foremen.service.procurement.shipment.tracking.CarrierTrackingRegistry;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 
 import jakarta.persistence.EntityManager;
@@ -42,17 +52,25 @@ public class UpcomingDeliveriesService {
 
     private final EntityManager entityManager;
     private final ProcurementProjectAccess projectAccess;
+    private final CarrierTrackingRegistry trackingRegistry;
     private final PurchaseRequestOverdue clockSupport;
 
     public UpcomingDeliveriesService(EntityManager entityManager, ProcurementProjectAccess projectAccess,
-                                     Clock clock) {
+                                     CarrierTrackingRegistry trackingRegistry, Clock clock) {
         this.entityManager = entityManager;
         this.projectAccess = projectAccess;
+        this.trackingRegistry = trackingRegistry;
         this.clockSupport = new PurchaseRequestOverdue(clock);
     }
 
     @Transactional(readOnly = true)
     public List<UpcomingDeliveryDto> upcoming(Integer days, Long projectId) {
+        return upcoming(days, projectId, null);
+    }
+
+    /** As above; a non-null {@code shipmentId} keeps only the positions on that shipment (R12.5). */
+    @Transactional(readOnly = true)
+    public List<UpcomingDeliveryDto> upcoming(Integer days, Long projectId, Long shipmentId) {
         int window = days == null ? DEFAULT_DAYS : days;
         if (window < 1 || window > MAX_DAYS) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, DAYS_INVALID);
@@ -72,6 +90,10 @@ public class UpcomingDeliveriesService {
                 + "LEFT JOIN FETCH p.purchaseRequest "
                 + "WHERE p.status IN :stages AND p.plannedDeliveryDate IS NOT NULL "
                 + "AND p.plannedDeliveryDate <= :limit ");
+        if (shipmentId != null) {
+            jpql.append("AND p.id IN (SELECT sl.position.id FROM ShipmentLineEntity sl "
+                    + "WHERE sl.shipment.id = :shipmentId) ");
+        }
         if (projectIds != null) {
             jpql.append("AND pr.id IN :projectIds ");
         }
@@ -82,8 +104,58 @@ public class UpcomingDeliveriesService {
         if (projectIds != null) {
             query.setParameter("projectIds", projectIds);
         }
+        if (shipmentId != null) {
+            query.setParameter("shipmentId", shipmentId);
+        }
         boolean pl = !"ru".equalsIgnoreCase(LocaleContextHolder.getLocale().getLanguage());
-        return query.getResultList().stream().map(p -> toDto(p, today, pl)).toList();
+        List<PurchasePositionEntity> positions = query.getResultList();
+        Map<Long, List<ShipmentEntity>> shipments = activeShipments(positions);
+        return positions.stream()
+                .map(p -> toDto(p, today, pl, shipments.getOrDefault(p.getId(), List.of())))
+                .toList();
+    }
+
+    /** One batch query: Active_Shipments (not DELIVERED / CANCELLED) of the result positions (R12.3). */
+    private Map<Long, List<ShipmentEntity>> activeShipments(List<PurchasePositionEntity> positions) {
+        if (positions.isEmpty()) {
+            return Map.of();
+        }
+        List<Long> ids = positions.stream().map(PurchasePositionEntity::getId).toList();
+        List<Object[]> rows = entityManager.createQuery(
+                        "SELECT sl.position.id, s FROM ShipmentLineEntity sl JOIN sl.shipment s "
+                                + "WHERE sl.position.id IN :ids AND s.status NOT IN :closed", Object[].class)
+                .setParameter("ids", ids)
+                .setParameter("closed", EnumSet.of(ShipmentStatus.DELIVERED, ShipmentStatus.CANCELLED))
+                .getResultList();
+        Map<Long, List<ShipmentEntity>> byPosition = new HashMap<>();
+        for (Object[] row : rows) {
+            byPosition.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add((ShipmentEntity) row[1]);
+        }
+        return byPosition;
+    }
+
+    /** R12.2: earliest ETA first, shipments without an ETA last, ties by id; {@code null} when none. */
+    static ShipmentEntity nearest(List<ShipmentEntity> active) {
+        return active.stream()
+                .min(Comparator.comparing(ShipmentEntity::getEtaDate,
+                                Comparator.nullsLast(Comparator.<LocalDate>naturalOrder()))
+                        .thenComparing(ShipmentEntity::getId))
+                .orElse(null);
+    }
+
+    private String trackingPageUrl(ShipmentEntity s) {
+        if (s.getDeliveryMethod() != DeliveryMethod.CARRIER || s.getCarrierCode() == null) {
+            return null;
+        }
+        if (ShipmentRules.OTHER_CARRIER.equals(s.getCarrierCode())) {
+            return s.getTrackingUrl();
+        }
+        if (s.getTrackingNumber() == null) {
+            return null;
+        }
+        return trackingRegistry.findAny(s.getCarrierCode())
+                .map(a -> a.trackingPageUrl(s.getTrackingNumber()))
+                .orElse(null);
     }
 
     /** {@code null} = unrestricted (ADMIN without a project filter); otherwise the ids the caller may see. */
@@ -100,7 +172,9 @@ public class UpcomingDeliveriesService {
         return allowed;
     }
 
-    private static UpcomingDeliveryDto toDto(PurchasePositionEntity p, LocalDate today, boolean pl) {
+    private UpcomingDeliveryDto toDto(PurchasePositionEntity p, LocalDate today, boolean pl,
+                                      List<ShipmentEntity> active) {
+        ShipmentEntity s = nearest(active);
         FinishingMaterialEntity m = p.getActualMaterial() != null ? p.getActualMaterial() : p.getPlannedMaterial();
         String producer = m.getProducer() == null ? null
                 : pl ? m.getProducer().getNamePL() : m.getProducer().getNameRU();
@@ -109,7 +183,20 @@ public class UpcomingDeliveriesService {
                 p.getId(), p.getProject().getId(), p.getProject().getName(), m.getModel(), producer,
                 p.getQuantity(), unitName, p.getPlannedDeliveryDate(), p.getStatus(),
                 p.getPlannedDeliveryDate().isBefore(today),
-                p.getPurchaseRequest() == null ? null : p.getPurchaseRequest().getId());
+                p.getPurchaseRequest() == null ? null : p.getPurchaseRequest().getId(),
+                s == null ? null : s.getId(),
+                s == null ? null : s.getStatus(),
+                s == null ? null : s.getDeliveryMethod(),
+                s == null ? null : s.getCarrierCode(),
+                s == null ? null : s.getEtaDate(),
+                s == null ? null : s.getEtaTimeFrom(),
+                s == null ? null : s.getEtaTimeTo(),
+                s == null ? null : s.getDriverName(),
+                s == null ? null : s.getDriverPhone(),
+                s == null ? null : trackingPageUrl(s),
+                s == null ? null : s.getShopOrderLink(),
+                s == null ? null : active.size(),
+                s == null ? null : TrackingBackoff.isDegraded(s.getConsecutiveFailures()));
     }
 
     private static boolean isAdmin(Authentication auth) {

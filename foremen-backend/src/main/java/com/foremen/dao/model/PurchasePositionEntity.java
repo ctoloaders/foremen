@@ -87,6 +87,10 @@ public class PurchasePositionEntity extends BaseEntity {
     @Column(name = "order_by_date")
     private LocalDate orderByDate;
 
+    /** FOR-11-04 (R14): the order-by date for which the "order-by missed" notification was already sent. */
+    @Column(name = "order_by_notified_for")
+    private LocalDate orderByNotifiedFor;
+
     @Column(name = "decision_deadline")
     private LocalDate decisionDeadline;
 

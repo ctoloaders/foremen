@@ -131,8 +131,9 @@ public class PurchasePositionController implements AdminController<
     @Operation(summary = "Upcoming deliveries")
     public ResponseEntity<List<UpcomingDeliveryDto>> upcoming(
             @RequestParam(name = "days", required = false) Integer days,
-            @RequestParam(name = "projectId", required = false) Long projectId) {
-        return ResponseEntity.ok(upcomingDeliveriesService.upcoming(days, projectId));
+            @RequestParam(name = "projectId", required = false) Long projectId,
+            @RequestParam(name = "shipmentId", required = false) Long shipmentId) {
+        return ResponseEntity.ok(upcomingDeliveriesService.upcoming(days, projectId, shipmentId));
     }
 
     /** Manual stage change (R8.7). Requires MANAGER or ADMIN on top of the UPDATE grant. */

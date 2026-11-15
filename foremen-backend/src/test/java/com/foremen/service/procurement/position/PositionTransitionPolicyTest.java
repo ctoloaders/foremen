@@ -6,6 +6,9 @@ import com.foremen.service.procurement.position.PositionTransitionPolicy.Actor;
 import com.foremen.service.procurement.position.PositionTransitionPolicy.Decision;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import static com.foremen.dao.model.PositionStatus.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -63,6 +66,68 @@ class PositionTransitionPolicyTest {
         // the gate still blocks everything else entering WITH_BUYER on AGREED
         assertThat(d(SourcingPath.AGREED, SUPPLIER_PAID, WITH_BUYER, Actor.SYSTEM))
                 .isEqualTo(Decision.GATE_VIOLATION);
+    }
+
+    /** FOR-11-04 R6.2: the new SYSTEM-only edge IN_DELIVERY -> SUPPLIER_PAID. */
+    @Test
+    void shipmentReversalEdgeIsSystemOnlyOnAgreedAndPackage() {
+        for (SourcingPath p : new SourcingPath[] {SourcingPath.AGREED, SourcingPath.PACKAGE}) {
+            assertThat(d(p, IN_DELIVERY, SUPPLIER_PAID, Actor.SYSTEM)).isEqualTo(Decision.ALLOWED);
+            assertThat(d(p, IN_DELIVERY, SUPPLIER_PAID, Actor.MANUAL)).isEqualTo(Decision.NOT_ALLOWED);
+        }
+        assertThat(d(SourcingPath.CLIENT_OWN, IN_DELIVERY, SUPPLIER_PAID, Actor.SYSTEM))
+                .isEqualTo(Decision.NOT_ALLOWED);
+    }
+
+    /** FOR-11-04 R26.2: full edge matrix, the new edge is the only change versus FOR-11-03. */
+    @Test
+    void fullEdgeMatrixNothingElseChanged() {
+        for (SourcingPath p : SourcingPath.values()) {
+            Set<String> system = new HashSet<>();
+            Set<String> manual = new HashSet<>();
+            if (p == SourcingPath.AGREED || p == SourcingPath.PACKAGE) {
+                system.addAll(Set.of("WITH_BUYER>ORDERED", "ORDERED>SUPPLIER_PAID", "SUPPLIER_PAID>IN_DELIVERY",
+                        "ORDERED>WITH_BUYER", "SUPPLIER_PAID>ORDERED", "IN_DELIVERY>SUPPLIER_PAID"));
+            }
+            system.addAll(Set.of("IN_DELIVERY>PARTIALLY_RECEIVED", "PARTIALLY_RECEIVED>IN_DELIVERY",
+                    "IN_DELIVERY>RECEIVED", "PARTIALLY_RECEIVED>RECEIVED", "RECEIVED>PARTIALLY_RECEIVED"));
+            for (PositionStatus s : PositionStatus.values()) {
+                if (s != RECEIVED && s != CANCELLED) {
+                    manual.add(s + ">CANCELLED");
+                }
+            }
+            manual.add("CANCELLED>PLANNED");
+            if (p == SourcingPath.AGREED) {
+                system.addAll(Set.of("PLANNED>PROPOSED", "PROPOSED>PLANNED", "PROPOSED>ACCEPTED",
+                        "ACCEPTED>PROPOSED", "ACCEPTED>IN_PROFORMA", "IN_PROFORMA>ACCEPTED",
+                        "IN_PROFORMA>CLIENT_PAID", "CLIENT_PAID>WITH_BUYER"));
+            }
+            if (p == SourcingPath.PACKAGE) {
+                manual.add("PLANNED>WITH_BUYER");
+            }
+            if (p == SourcingPath.CLIENT_OWN) {
+                manual.add("PLANNED>IN_DELIVERY");
+            }
+            for (PositionStatus from : PositionStatus.values()) {
+                for (PositionStatus to : PositionStatus.values()) {
+                    String edge = from + ">" + to;
+                    for (Actor a : Actor.values()) {
+                        Decision expected;
+                        if (from == to) {
+                            expected = Decision.NOT_ALLOWED;
+                        } else if (p == SourcingPath.AGREED && to == WITH_BUYER
+                                && from != CLIENT_PAID && from != ORDERED) {
+                            expected = Decision.GATE_VIOLATION;
+                        } else if (manual.contains(edge) || (system.contains(edge) && a == Actor.SYSTEM)) {
+                            expected = Decision.ALLOWED;
+                        } else {
+                            expected = Decision.NOT_ALLOWED;
+                        }
+                        assertThat(d(p, from, to, a)).as("%s %s %s", p, edge, a).isEqualTo(expected);
+                    }
+                }
+            }
+        }
     }
 
     @Test

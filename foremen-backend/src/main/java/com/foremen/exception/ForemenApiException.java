@@ -27,6 +27,13 @@ public class ForemenApiException extends RuntimeException {
      */
     private Map<String, String> headers = Collections.emptyMap();
 
+    /**
+     * FOR-11-04 (R3) - optional request field the error belongs to. When set, the exception handler also
+     * reports it as {@code fieldErrors: {<field>: <message>}} so a form can show the error at that field.
+     * The message key and HTTP status are unaffected. {@code null} by default.
+     */
+    private String field;
+
     public ForemenApiException(HttpStatusCode status, String messageCode, Object... messageParams) {
         super(messageCode);
         this.status = status;
@@ -43,6 +50,12 @@ public class ForemenApiException extends RuntimeException {
         this.params = namedParams == null || namedParams.isEmpty()
                 ? Collections.emptyMap()
                 : Collections.unmodifiableMap(new LinkedHashMap<>(namedParams));
+        return this;
+    }
+
+    /** Names the request field this error belongs to (see {@link #getField()}). Returns {@code this}. */
+    public ForemenApiException withField(String fieldName) {
+        this.field = fieldName == null || fieldName.isBlank() ? null : fieldName;
         return this;
     }
 

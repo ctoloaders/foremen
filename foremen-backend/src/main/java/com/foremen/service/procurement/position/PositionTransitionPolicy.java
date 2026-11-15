@@ -25,6 +25,7 @@ import static com.foremen.dao.model.PositionStatus.*;
  * tail (AGREED, PACKAGE):
  *          WITH_BUYER <-> ORDERED <-> SUPPLIER_PAID -> IN_DELIVERY
  *          (ORDERED -> WITH_BUYER and SUPPLIER_PAID -> ORDERED: SYSTEM reversals, FOR-11-03)
+ *          (IN_DELIVERY -> SUPPLIER_PAID: SYSTEM reversal, FOR-11-04)
  * all paths: IN_DELIVERY <-> PARTIALLY_RECEIVED, IN_DELIVERY / PARTIALLY_RECEIVED <-> RECEIVED
  * </pre>
  *
@@ -57,6 +58,8 @@ public class PositionTransitionPolicy {
             // FOR-11-03 (R17.4): reversals when order coverage or payment evidence disappears.
             system(p, ORDERED, WITH_BUYER);
             system(p, SUPPLIER_PAID, ORDERED);
+            // FOR-11-04 R6: reversal when the last open shipment is cancelled.
+            system(p, IN_DELIVERY, SUPPLIER_PAID);
         }
         // Receiving chain, every path.
         for (SourcingPath p : SourcingPath.values()) {

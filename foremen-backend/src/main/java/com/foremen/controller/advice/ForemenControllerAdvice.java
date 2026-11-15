@@ -23,9 +23,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -56,7 +58,7 @@ public class ForemenControllerAdvice {
                 HttpStatus.valueOf(status.value()).getReasonPhrase(),
                 message,
                 request.getRequestURI(),
-                null,
+                ex.getField() == null ? null : Map.of(ex.getField(), message),
                 ex.getParams().isEmpty() ? null : ex.getParams()
         );
 
@@ -241,6 +243,49 @@ public class ForemenControllerAdvice {
         ErrorResponse response = new ErrorResponse(
                 Instant.now(), 400, "Bad Request", message,
                 request.getRequestURI(), fieldErrors
+        );
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * A request body that cannot be read: malformed JSON, or a value of the wrong JSON type for a
+     * field (e.g. a string for a number). This is a client error (HTTP 400), not an internal one.
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleNotReadable(
+            HttpMessageNotReadableException ex, HttpServletRequest request, Locale locale) {
+
+        String message = messageResolver.resolve("error.request.malformed", null, locale);
+
+        logError(request, 400, "error.request.malformed", false, ex);
+
+        ErrorResponse response = new ErrorResponse(
+                Instant.now(), 400, "Bad Request", message, request.getRequestURI()
+        );
+
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * A path variable or request parameter that cannot be converted to its declared type (a
+     * non-numeric id, an invalid ISO date). The offending parameter is reported under
+     * {@code fieldErrors} with HTTP 400.
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex, HttpServletRequest request, Locale locale) {
+
+        String message = messageResolver.resolve(
+                "error.request.parameter.invalid", new Object[]{ex.getName()}, locale);
+
+        logError(request, 400, "error.request.parameter.invalid", false, ex);
+
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        fieldErrors.put(ex.getName(), message);
+
+        ErrorResponse response = new ErrorResponse(
+                Instant.now(), 400, "Bad Request", message, request.getRequestURI(), fieldErrors
         );
 
         return ResponseEntity.badRequest().body(response);

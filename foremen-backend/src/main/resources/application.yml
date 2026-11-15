@@ -205,6 +205,34 @@ foremen:
       # var yields "-". Note a literally EMPTY env value would fail @Scheduled parsing, so leave the
       # variable unset (docker-compose maps empty to "-") or give a real cron, e.g. "0 0 8 * * *".
       cron: ${FOREMEN_PROCUREMENT_OVERDUE_SWEEP_CRON:-}
+    # FOR-11-04: order-by / downtime-risk sweep. "-" disables; a literally empty value would fail
+    # @Scheduled parsing (docker-compose maps empty to "-"). Recommended: "0 0 7 * * MON-FRI".
+    deadline-sweep:
+      cron: ${FOREMEN_PROCUREMENT_DEADLINE_SWEEP_CRON:-}
+    # FOR-11-04: carrier tracking. Shipped OFF (master switch and every carrier). Booleans, durations
+    # and numbers carry real defaults: an EMPTY env value would bind as "" and break binding.
+    tracking:
+      enabled: ${FOREMEN_PROCUREMENT_TRACKING_ENABLED:false}
+      # Recommended when enabled: "0 0 8,11,14,17 * * MON-FRI".
+      cron: ${FOREMEN_PROCUREMENT_TRACKING_CRON:-}
+      zone: ${FOREMEN_PROCUREMENT_TRACKING_ZONE:Europe/Warsaw}
+      batch-size: ${FOREMEN_PROCUREMENT_TRACKING_BATCH:200}
+      min-shipment-interval: ${FOREMEN_PROCUREMENT_TRACKING_MIN_SHIPMENT_INTERVAL:30m}
+      min-call-spacing: ${FOREMEN_PROCUREMENT_TRACKING_MIN_CALL_SPACING:2s}
+      refresh-cooldown: ${FOREMEN_PROCUREMENT_TRACKING_REFRESH_COOLDOWN:60s}
+      carrier-pause: ${FOREMEN_PROCUREMENT_TRACKING_CARRIER_PAUSE:1h}
+      backoff-cap: ${FOREMEN_PROCUREMENT_TRACKING_BACKOFF_CAP:24h}
+      connect-timeout: ${FOREMEN_PROCUREMENT_TRACKING_CONNECT_TIMEOUT:5s}
+      read-timeout: ${FOREMEN_PROCUREMENT_TRACKING_READ_TIMEOUT:10s}
+      max-response-bytes: ${FOREMEN_PROCUREMENT_TRACKING_MAX_RESPONSE_BYTES:1048576}
+      # One entry per carrier with a built ADAPTER (InPost only; provisional, see carrier-spike.md).
+      # Link-out only carriers (Orlen, Poczta Polska, DPD, GLS, DHL, UPS, FedEx) have no flag.
+      carriers:
+        inpost:
+          enabled: ${FOREMEN_TRACKING_INPOST_ENABLED:false}
+      # Deterministic STUB carrier for dockerized scenarios; never in production.
+      stub:
+        enabled: ${FOREMEN_TRACKING_STUB_ENABLED:false}
   google-places:
     # When enabled, api-key must be set or application startup fails fast.
     enabled: ${GOOGLE_PLACES_ENABLED:false}

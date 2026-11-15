@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-04 (task 1.2): SHIPMENTS ABAC resource and role grants (Requirements 1.1-1.3).
+        Both changeSets are idempotent (MARK_RAN preconditions plus INSERT ... WHERE NOT EXISTS).
+        CLIENT and WORKER get no grant. FOREMAN gets READ only; upcoming deliveries stay on the
+        existing PURCHASE_POSITIONS READ grant.
+    -->
+    <changeSet id="242-seed-shipments-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'SHIPMENTS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="SHIPMENTS"/>
+            <column name="name_ru" value="Отправки"/>
+            <column name="name_pl" value="Wysyłki"/>
+            <column name="description_ru" value="Отправки материалов по позициям закупок: перевозчик, номер, статус и ожидаемая дата доставки"/>
+            <column name="description_pl" value="Wysyłki materiałów dla pozycji zakupowych: przewoźnik, numer, status i przewidywana data dostawy"/>
+        </insert>
+    </changeSet>
+    <!--
+        Grant matrix (Requirement 1.2): ADMIN CRUD, BUYER CRUD, MANAGER READ+UPDATE, FOREMAN READ,
+        FINANCIER READ.
+    -->
+    <changeSet id="242-grant-shipments-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON r.id = rr.role_id
+                JOIN resources res ON res.id = rr.resource_id
+                WHERE r.code = 'ADMIN' AND res.code = 'SHIPMENTS'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('ADMIN','SHIPMENTS'), ('BUYER','SHIPMENTS'), ('MANAGER','SHIPMENTS'),
+                ('FOREMAN','SHIPMENTS'), ('FINANCIER','SHIPMENTS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('ADMIN','SHIPMENTS','CREATE'), ('ADMIN','SHIPMENTS','READ'), ('ADMIN','SHIPMENTS','UPDATE'), ('ADMIN','SHIPMENTS','DELETE'),
+                ('BUYER','SHIPMENTS','CREATE'), ('BUYER','SHIPMENTS','READ'), ('BUYER','SHIPMENTS','UPDATE'), ('BUYER','SHIPMENTS','DELETE'),
+                ('MANAGER','SHIPMENTS','READ'), ('MANAGER','SHIPMENTS','UPDATE'),
+                ('FOREMAN','SHIPMENTS','READ'),
+                ('FINANCIER','SHIPMENTS','READ')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

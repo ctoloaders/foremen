@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-04 (task 1.1; design "Data model"): shipment tracking tables.
+          - shipments       : one shipment per project (optionally linked to an external order)
+          - shipment_lines  : positions shipped (unique per shipment+position)
+          - shipment_events : status history
+        Idempotent: every object is its own changeSet guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml, after 240.
+    -->
+    <changeSet id="241-create-shipments" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="shipments"/></not>
+        </preConditions>
+        <createTable tableName="shipments">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="project_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="external_order_id" type="BIGINT"/>
+            <column name="delivery_method" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="carrier_code" type="VARCHAR(30)"/>
+            <column name="tracking_number" type="VARCHAR(64)"/>
+            <column name="tracking_url" type="VARCHAR(1000)"/>
+            <column name="shop_order_link" type="VARCHAR(1000)"/>
+            <column name="status" type="VARCHAR(20)" defaultValue="CREATED"><constraints nullable="false"/></column>
+            <column name="status_source" type="VARCHAR(10)" defaultValue="MANUAL"><constraints nullable="false"/></column>
+            <column name="eta_date" type="DATE"/>
+            <column name="eta_time_from" type="TIME"/>
+            <column name="eta_time_to" type="TIME"/>
+            <column name="eta_source" type="VARCHAR(10)" defaultValue="TRACKING"><constraints nullable="false"/></column>
+            <column name="driver_name" type="VARCHAR(200)"/>
+            <column name="driver_phone" type="VARCHAR(40)"/>
+            <column name="note" type="VARCHAR(2000)"/>
+            <column name="shipped_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="delivered_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="last_event_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="last_checked_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="next_check_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="consecutive_failures" type="INT" defaultValueNumeric="0"><constraints nullable="false"/></column>
+            <column name="downtime_notified_for" type="DATE"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="241-create-shipment-lines" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="shipment_lines"/></not>
+        </preConditions>
+        <createTable tableName="shipment_lines">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="shipment_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="position_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="quantity" type="NUMERIC(14,3)"><constraints nullable="false"/></column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="241-create-shipment-events" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="shipment_events"/></not>
+        </preConditions>
+        <createTable tableName="shipment_events">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="shipment_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="occurred_at" type="TIMESTAMP WITH TIME ZONE"><constraints nullable="false"/></column>
+            <column name="source" type="VARCHAR(10)"><constraints nullable="false"/></column>
+            <column name="note" type="VARCHAR(255)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="241-fk-fk-shp-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_shp_project"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_shp_project" baseTableName="shipments" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="241-fk-fk-shp-external-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_shp_external_order"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_shp_external_order" baseTableName="shipments" baseColumnNames="external_order_id"
+            referencedTableName="external_orders" referencedColumnNames="id" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="241-fk-fk-shl-shipment" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_shl_shipment"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_shl_shipment" baseTableName="shipment_lines" baseColumnNames="shipment_id"
+            referencedTableName="shipments" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="241-fk-fk-shl-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_shl_position"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_shl_position" baseTableName="shipment_lines" baseColumnNames="position_id"
+            referencedTableName="purchase_positions" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="241-fk-fk-she-shipment" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_she_shipment"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_she_shipment" baseTableName="shipment_events" baseColumnNames="shipment_id"
+            referencedTableName="shipments" referencedColumnNames="id" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="241-uq-shl-shipment-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipment_lines" indexName="uq_shl_shipment_position"/></not>
+        </preConditions>
+        <addUniqueConstraint tableName="shipment_lines" columnNames="shipment_id, position_id" constraintName="uq_shl_shipment_position"/>
+    </changeSet>
+
+    <changeSet id="241-ix-ix-shp-project-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipments" indexName="ix_shp_project_status"/></not>
+        </preConditions>
+        <createIndex tableName="shipments" indexName="ix_shp_project_status">
+            <column name="project_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="241-ix-ix-shp-external-order" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipments" indexName="ix_shp_external_order"/></not>
+        </preConditions>
+        <createIndex tableName="shipments" indexName="ix_shp_external_order">
+            <column name="external_order_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="241-ix-shp-status-next-check" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipments" indexName="ix_shp_status_next_check"/></not>
+        </preConditions>
+        <sql dbms="postgresql">CREATE INDEX ix_shp_status_next_check ON shipments (status, next_check_at) WHERE delivery_method = 'CARRIER'</sql>
+    </changeSet>
+
+    <changeSet id="241-ix-ix-shl-position" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipment_lines" indexName="ix_shl_position"/></not>
+        </preConditions>
+        <createIndex tableName="shipment_lines" indexName="ix_shl_position">
+            <column name="position_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="241-ix-ix-she-shipment-occurred" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="shipment_events" indexName="ix_she_shipment_occurred"/></not>
+        </preConditions>
+        <createIndex tableName="shipment_events" indexName="ix_she_shipment_occurred">
+            <column name="shipment_id"/>
+            <column name="occurred_at"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shp-delivery-method" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shp_delivery_method'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipments ADD CONSTRAINT ck_shp_delivery_method CHECK (delivery_method IN ('CARRIER','SHOP_DELIVERY','PHONE_CONTACT'))</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shp-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shp_status'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipments ADD CONSTRAINT ck_shp_status CHECK (status IN ('CREATED','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','EXCEPTION','UNKNOWN','CANCELLED'))</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shp-status-source" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shp_status_source'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipments ADD CONSTRAINT ck_shp_status_source CHECK (status_source IN ('TRACKING','MANUAL'))</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shp-eta-source" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shp_eta_source'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipments ADD CONSTRAINT ck_shp_eta_source CHECK (eta_source IN ('TRACKING','MANUAL'))</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shp-eta-time-range" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shp_eta_time_range'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipments ADD CONSTRAINT ck_shp_eta_time_range CHECK (eta_time_from IS NULL OR eta_time_to IS NULL OR eta_time_to &gt;= eta_time_from)</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shp-consecutive-failures" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shp_consecutive_failures'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipments ADD CONSTRAINT ck_shp_consecutive_failures CHECK (consecutive_failures &gt;= 0)</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-shl-quantity" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_shl_quantity'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipment_lines ADD CONSTRAINT ck_shl_quantity CHECK (quantity &gt; 0)</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-she-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_she_status'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipment_events ADD CONSTRAINT ck_she_status CHECK (status IN ('CREATED','IN_TRANSIT','OUT_FOR_DELIVERY','DELIVERED','EXCEPTION','UNKNOWN','CANCELLED'))</sql>
+    </changeSet>
+
+    <changeSet id="241-ck-ck-she-source" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_she_source'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE shipment_events ADD CONSTRAINT ck_she_source CHECK (source IN ('TRACKING','MANUAL','SYSTEM'))</sql>
+    </changeSet>
+</databaseChangeLog>
