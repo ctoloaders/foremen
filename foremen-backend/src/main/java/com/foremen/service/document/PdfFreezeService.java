@@ -89,7 +89,7 @@ public class PdfFreezeService {
         html.append("<!DOCTYPE html>")
                 .append("<html><head><meta charset=\"utf-8\"/>")
                 .append("<style>")
-                .append("body{font-family:sans-serif;font-size:12px;margin:40px;}")
+                .append("body{font-family:'Liberation Sans',sans-serif;font-size:12px;margin:40px;}")
                 .append("h1{font-size:18px;}")
                 .append(".form-field{margin:8px 0;}")
                 .append(".form-field .blank{display:inline-block;min-width:200px;")

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-11 follow-up: BUYER reads the project list (read-only) so the project pickers of the buyer
+        screens (external order form, shipment form, project switcher) work. The BUYER already sees the
+        procurement data of every project (ProcurementProjectAccess); ProjectService widens the same way
+        for the BUYER role and hides the team (members / clients) from it. No write operation is granted.
+        Idempotent: re-runs insert nothing.
+    -->
+    <changeSet id="246-grant-buyer-projects-read" author="foremen">
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r
+            JOIN resources res ON res.code = 'PROJECTS'
+            WHERE r.code = 'BUYER'
+              AND NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+              );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM roles r
+            JOIN resources res ON res.code = 'PROJECTS'
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = 'READ'
+            WHERE r.code = 'BUYER'
+              AND NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+              );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

@@ -991,4 +991,6 @@
     <include file="database_files/changesets/244-create-goods-receipts.xml"/>
     <!-- FOR-11-05 (task 1.2): GOODS_RECEIPTS resource and grants. Registered LAST, after 244. -->
     <include file="database_files/changesets/245-seed-goods-receipts-resource.xml"/>
+    <!-- FOR-11 follow-up: BUYER read-only grant on PROJECTS (project pickers). Registered LAST, after 245. -->
+    <include file="database_files/changesets/246-grant-buyer-projects-read.xml"/>
 </databaseChangeLog>

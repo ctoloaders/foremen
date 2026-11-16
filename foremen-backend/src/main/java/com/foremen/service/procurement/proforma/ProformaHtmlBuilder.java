@@ -25,7 +25,7 @@ public class ProformaHtmlBuilder {
                 .append("<html xmlns=\"http://www.w3.org/1999/xhtml\"><head><meta charset=\"utf-8\"/>")
                 .append("<title>").append(esc(doc.number())).append("</title>")
                 .append("<style>")
-                .append("body{font-family:sans-serif;font-size:11px;margin:30px;color:#000;}")
+                .append("body{font-family:'Liberation Sans',sans-serif;font-size:11px;margin:30px;color:#000;}")
                 .append("h1{font-size:20px;margin:0 0 4px 0;}")
                 .append(".meta{margin:2px 0;}")
                 .append(".parties{width:100%;margin:16px 0;border-collapse:collapse;}")

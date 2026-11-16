@@ -84,6 +84,9 @@ public class ProjectService
     /** The server-resolved project role {@code code} always used for the client member (Requirements 2.7, 2.8). */
     static final String CLIENT_ROLE_CODE = "CLIENT";
 
+    /** The BUYER system-role code: company-wide read of projects, without the project team. */
+    static final String BUYER_ROLE_CODE = "BUYER";
+
     /** The WORKER project-role code; worker-type/NIP Internal_Attributes apply to WORKER members only (Requirement 19 criterion 8). */
     static final String WORKER_ROLE_CODE = "WORKER";
 
@@ -167,6 +170,12 @@ public class ProjectService
     /** Wires the allowed-project-ids lookup to the production cache. */
     @Override
     public Set<Long> allowedProjectIds(Long userId) {
+        // BUYER sees every project (same company-wide reach as its procurement data, FOR-11-03 R20.1).
+        // The grant on PROJECTS is READ only, and the team is hidden from it in the DTOs below.
+        if (userId != null && userDao != null && projectDao != null
+                && userDao.findRoleCodeById(userId).filter(BUYER_ROLE_CODE::equals).isPresent()) {
+            return new java.util.HashSet<>(projectDao.findAllIds());
+        }
         return projectAccessCache.get(userId);
     }
 
@@ -479,7 +488,7 @@ public class ProjectService
      * applying the FOR-05-09 Requirement 19 multi-client projection and CLIENT-caller suppression.
      */
     private ProjectListDto toListDto(ProjectServiceModel model, ProjectEntity entity) {
-        boolean clientCaller = isCallerClient();
+        boolean clientCaller = isCallerClient() || callerHasRole(BUYER_ROLE_CODE);
         List<ProjectMemberSummaryDto> members = clientCaller ? null : projectMembers(entity);
         List<ProjectMemberSummaryDto> clients = clientCaller ? null : deriveClients(entity);
         return new ProjectListDto(
@@ -504,7 +513,7 @@ public class ProjectService
      * applying the FOR-05-09 Requirement 19 multi-client projection and CLIENT-caller suppression.
      */
     private ProjectReadDto toReadDto(ProjectServiceExtendedModel model, ProjectEntity entity) {
-        boolean clientCaller = isCallerClient();
+        boolean clientCaller = isCallerClient() || callerHasRole(BUYER_ROLE_CODE);
         List<ProjectMemberSummaryDto> members = clientCaller ? null : projectMembers(entity);
         List<ProjectMemberSummaryDto> clients = clientCaller ? null : deriveClients(entity);
         return new ProjectReadDto(
