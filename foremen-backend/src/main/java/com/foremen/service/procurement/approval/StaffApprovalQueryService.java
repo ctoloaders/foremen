@@ -108,7 +108,7 @@ public class StaffApprovalQueryService {
                 + "CASE WHEN am.id IS NOT NULL THEN amt.namePL WHEN pm.id IS NOT NULL THEN pmt.namePL "
                 + "ELSE eft.namePL END, "
                 + "CASE WHEN p.estimateSourceKey IS NOT NULL THEN true ELSE false END, "
-                + "p.estimateChanged, p.estimateRemoved) "
+                + "p.estimateChanged, p.estimateRemoved, p.clientUnpaid) "
                 + "FROM PurchasePositionEntity p JOIN p.unit u LEFT JOIN p.plannedMaterial pm "
                 + "LEFT JOIN pm.producer pmp LEFT JOIN pm.seller pms LEFT JOIN pm.type pmt "
                 + "LEFT JOIN p.estimateReference er LEFT JOIN er.finishingType eft "

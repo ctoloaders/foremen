@@ -97,7 +97,7 @@ public class StaffViewAssembler {
                 open == null ? null : round(open, p, data, pl),
                 suggestions.stream().map(r -> round(r, p, data, pl)).toList(), history, actions,
                 imageStorage.toCdnUrl(p.photo()), name(p.typeNameRu(), p.typeNamePl(), pl),
-                p.fromEstimate(), p.estimateChanged(), p.estimateRemoved());
+                p.fromEstimate(), p.estimateChanged(), p.estimateRemoved(), p.clientUnpaid());
     }
 
     private StaffRoundDto round(StaffRoundSource r, StaffPositionSource p, StaffApprovalData data, boolean pl) {

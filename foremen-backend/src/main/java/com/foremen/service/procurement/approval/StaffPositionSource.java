@@ -23,5 +23,6 @@ public record StaffPositionSource(Long positionId, Integer blockNo, PositionStat
                                   String producerNameRu, String producerNamePl, String link,
                                   String sellerNameRu, String sellerNamePl,
                                   String photo, String typeNameRu, String typeNamePl,
-                                  boolean fromEstimate, boolean estimateChanged, boolean estimateRemoved) {
+                                  boolean fromEstimate, boolean estimateChanged, boolean estimateRemoved,
+                                  boolean clientUnpaid) {
 }

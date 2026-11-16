@@ -45,7 +45,7 @@ class StaffViewAssemblerTest {
                 null, new BigDecimal("10.00"), LocalDate.of(2030, 7, 1), LocalDate.of(2030, 6, 20),
                 LocalDate.of(2030, 6, 25), TODAY.minusDays(1), 7L, "REQ-7", 5L, "M1", "SKU1",
                 "Про", "Pro", "http://x", "Продавец", "Sprzedawca", "materials/a.jpg", "Плитка", "Płytki",
-                false, false, false);
+                false, false, false, false);
     }
 
     private static StaffRoundSource round(long id, int no, ApprovalRoundKind kind, ApprovalRoundStatus st) {
@@ -120,7 +120,7 @@ class StaffViewAssemblerTest {
         StaffPositionSource noCost = new StaffPositionSource(p.positionId(), p.blockNo(), p.status(),
                 p.sourcingPath(), p.quantity(), p.unitNameRu(), p.unitNamePl(), p.salePrice(), null, null, null,
                 null, null, null, null, null, null, p.materialId(), p.model(), p.sku(), null, null, null, null,
-                null, null, null, null, false, false, false);
+                null, null, null, null, false, false, false, false);
         StaffApprovalPositionDto dto = assembler.assemble(
                 new StaffApprovalData(List.of(noCost), Map.of(), Map.of()), Audience.STAFF_FULL, "ADMIN", TODAY,
                 false).get(0);
@@ -141,7 +141,7 @@ class StaffViewAssemblerTest {
         StaffPositionSource bare = new StaffPositionSource(p.positionId(), p.blockNo(), p.status(),
                 p.sourcingPath(), p.quantity(), p.unitNameRu(), p.unitNamePl(), p.salePrice(), null, null, null,
                 null, null, null, null, null, null, p.materialId(), p.model(), p.sku(), null, null, null, null,
-                null, null, "Плитка", null, true, true, false);
+                null, null, "Плитка", null, true, true, false, false);
         StaffApprovalPositionDto pending = assembler.assemble(
                 new StaffApprovalData(List.of(bare), Map.of(), Map.of()), Audience.STAFF_FULL, "ADMIN", TODAY,
                 false).get(0);
@@ -150,5 +150,22 @@ class StaffViewAssemblerTest {
         assertThat(pending.fromEstimate()).isTrue();
         assertThat(pending.estimateChanged()).isTrue();
         assertThat(pending.estimateRemoved()).isFalse();
+    }
+
+    @Test
+    @DisplayName("clientUnpaid of a buyer-added position is exposed on the staff row (R10.4)")
+    void clientUnpaidFlag() {
+        StaffPositionSource p = position();
+        StaffPositionSource unpaid = new StaffPositionSource(p.positionId(), p.blockNo(), PositionStatus.RECEIVED,
+                p.sourcingPath(), p.quantity(), p.unitNameRu(), p.unitNamePl(), p.salePrice(), null, null, null,
+                null, null, null, null, null, null, p.materialId(), p.model(), p.sku(), null, null, null, null,
+                null, null, null, null, false, false, false, true);
+        StaffApprovalPositionDto dto = assembler.assemble(
+                new StaffApprovalData(List.of(unpaid), Map.of(), Map.of()), Audience.STAFF_FULL, "ADMIN", TODAY,
+                false).get(0);
+        assertThat(dto.clientUnpaid()).isTrue();
+        assertThat(dto.statusCode()).isEqualTo("RECEIVED");
+        assertThat(assembler.assemble(data(), Audience.STAFF_FULL, "ADMIN", TODAY, false).get(0).clientUnpaid())
+                .isFalse();
     }
 }

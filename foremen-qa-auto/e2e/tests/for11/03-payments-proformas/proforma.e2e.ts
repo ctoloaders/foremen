@@ -1,7 +1,7 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import {
-  acceptedPosition, draftProforma, errMatches, getBytes, getPf, http, issueProforma, issuedProforma, link, login, ok,
+  acceptedPosition, draftProforma, pp, errMatches, getBytes, getPf, http, issueProforma, issuedProforma, link, login, ok,
   payProforma, positionStatus, psql, txn, withCtx, companyProfile, sweepForeignAccounts, type Ctx,
 } from './support.js';
 
@@ -16,7 +16,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
     const p1 = await acceptedPosition(c, 10, 100);
     const p2 = await acceptedPosition(c, 3, 250);
     const d = await draftProforma(c, [p1, p2]);
-    const r = await http('POST', `/api/client-proformas/${d.id}/issue`, c.tok.mgr, { language: 'pl' });
+    const r = await http('POST', `/api/client-payments/${pp(d.id)}/issue`, c.tok.mgr, { language: 'pl' });
     if (r.status === 502) test.skip('ENV: PDF storage (GCS ADC token expired) -> POST /issue answers 502, real issue not testable');
     expect(r.status, r.text).toBe(200);
     return { pids: [p1, p2], id: d.id, body: r.body };
@@ -27,7 +27,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const p1 = await acceptedPosition(c, 10, 100);
       const p2 = await acceptedPosition(c, 3, 250);
 
-      const r = await http('POST', '/api/client-proformas', c.tok.mgr, { projectId: c.projectId, positionIds: [p1, p2], dueDate: null, note: `qa-${c.rid}-1` });
+      const r = await http('POST', '/api/client-payments/materials', c.tok.mgr, { projectId: c.projectId, positionIds: [p1, p2], dueDate: null, note: `qa-${c.rid}-1` });
 
       expect(r.status).toBe(200);
       expect(r.body.status).toBe('DRAFT');
@@ -69,7 +69,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       psql('UPDATE purchase_positions SET sale_price = NULL WHERE id = :id;', { id: String(noPrice) });
       const p1 = await acceptedPosition(c, 10, 100);
       await draftProforma(c, [p1]);
-      const attempt = (ids: number[]) => http('POST', '/api/client-proformas', c.tok.mgr, { projectId: c.projectId, positionIds: ids });
+      const attempt = (ids: number[]) => http('POST', '/api/client-payments/materials', c.tok.mgr, { projectId: c.projectId, positionIds: ids });
 
       expect(errMatches(await attempt([other]), 409, 'error.proforma.position.projectMismatch')).toBeNull();
       expect(errMatches(await attempt([planned]), 409, 'error.proforma.position.notAccepted')).toBeNull();
@@ -86,16 +86,17 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const p3 = await acceptedPosition(c, 1, 40);
       const d = await draftProforma(c, [p1, p2]);
 
-      const add = await http('PUT', `/api/client-proformas/${d.id}`, c.tok.mgr, { positionIds: [p1, p2, p3], dueDate: '2099-01-01', note: `qa-${c.rid}-2` });
+      const add = await http('PUT', `/api/client-payments/${pp(d.id)}`, c.tok.mgr, { positionIds: [p1, p2, p3], dueDate: '2099-01-01', note: `qa-${c.rid}-2` });
       expect(add.status, add.text).toBe(200);
       expect(add.body.totalGross).toBeCloseTo(1890 + 43.2, 2);
       expect(add.body.dueDate).toBe('2099-01-01');
-      const rm = await http('PUT', `/api/client-proformas/${d.id}`, c.tok.mgr, { positionIds: [p1, p2] });
+      const rm = await http('PUT', `/api/client-payments/${pp(d.id)}`, c.tok.mgr, { positionIds: [p1, p2] });
       expect(rm.body.totalGross).toBe(1890);
       expect(await positionStatus(c, p3)).toBe('ACCEPTED');
-      const del = await http('DELETE', `/api/client-proformas/${d.id}`, c.tok.mgr);
+      const payId = pp(d.id);
+      const del = await http('DELETE', `/api/client-payments/${payId}`, c.tok.mgr);
       expect(del.status).toBe(204);
-      expect((await http('GET', `/api/client-proformas/${d.id}`, c.tok.mgr)).status).toBe(404);
+      expect((await http('GET', `/api/client-payments/${payId}`, c.tok.mgr)).status).toBe(404);
       const again = await draftProforma(c, [p1, p2]);
       expect(again.status).toBe('DRAFT');
       expect(await positionStatus(c, p1)).toBe('ACCEPTED');
@@ -111,11 +112,11 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const today = new Date().toISOString().slice(0, 10);
       expect(body.issueDate).toBe(today);
       for (const p of pids) expect(await positionStatus(c, p)).toBe('IN_PROFORMA');
-      const pdf = await getBytes(`/api/client-proformas/${id}/pdf`, c.tok.mgr);
+      const pdf = await getBytes(`/api/client-payments/${pp(id)}/pdf`, c.tok.mgr);
       expect(pdf.status).toBe(200);
       expect(pdf.type).toContain('application/pdf');
       expect(pdf.bytes.subarray(0, 4).toString()).toBe('%PDF');
-      const again = await http('POST', `/api/client-proformas/${id}/issue`, c.tok.mgr, {});
+      const again = await http('POST', `/api/client-payments/${pp(id)}/issue`, c.tok.mgr, {});
       expect(errMatches(again, 409, 'error.proforma.notDraft') && errMatches(again, 409, 'error.proforma.status.notAllowed')).toBeNull();
     });
   });
@@ -125,7 +126,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const p1 = await acceptedPosition(c, 10, 100);
       const d = await draftProforma(c, [p1]);
 
-      const r = await http('POST', `/api/client-proformas/${d.id}/issue`, c.tok.mgr, { language: 'pl' });
+      const r = await http('POST', `/api/client-payments/${pp(d.id)}/issue`, c.tok.mgr, { language: 'pl' });
 
       if (r.status === 200) test.skip('real issue works here; covered by TC-A2-01');
       expect(errMatches(r, 502, 'error.proforma.pdf.failed')).toBeNull();
@@ -152,7 +153,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const p3 = await acceptedPosition(c, 1, 40);
       const d2 = await draftProforma(c, [p3]);
 
-      const b = await ok('POST', `/api/client-proformas/${d2.id}/issue`, c.tok.mgr, { language: 'pl' });
+      const b = await ok('POST', `/api/client-payments/${pp(d2.id)}/issue`, c.tok.mgr, { language: 'pl' });
 
       expect(b.number).not.toBe(a.body.number);
       expect(b.number > a.body.number).toBe(true);
@@ -163,13 +164,13 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
     await withCtx(async (c) => {
       const { pids, id } = await issuedProforma(c, [[1, 40]]);
 
-      const r = await http('POST', `/api/client-proformas/${id}/cancel`, c.tok.mgr, { reason: `qa-${c.rid}` });
+      const r = await http('POST', `/api/client-payments/${pp(id)}/cancel`, c.tok.mgr, { reason: `qa-${c.rid}` });
 
       expect(r.status, r.text).toBe(200);
       expect(r.body.status).toBe('CANCELLED');
       expect(r.body.cancelReason).toBe(`qa-${c.rid}`);
       expect(await positionStatus(c, pids[0])).toBe('ACCEPTED');
-      const again = await http('POST', '/api/client-proformas', c.tok.mgr, { projectId: c.projectId, positionIds: pids });
+      const again = await http('POST', '/api/client-payments/materials', c.tok.mgr, { projectId: c.projectId, positionIds: pids });
       expect(again.status, again.text).toBe(200);
     });
   });
@@ -178,7 +179,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
     await withCtx(async (c) => {
       const { id } = await issuedProforma(c, [[1, 40]]);
 
-      const r = await http('POST', `/api/client-proformas/${id}/cancel`, c.tok.mgr, {});
+      const r = await http('POST', `/api/client-payments/${pp(id)}/cancel`, c.tok.mgr, {});
 
       expect(r.status, r.text).toBe(400);
       expect((await getPf(c, id)).status).toBe('ISSUED');
@@ -192,7 +193,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const d = await draftProforma(c, [p1]);
       await ok('PUT', '/api/company-profile', c.tok.admin, companyProfile(c.rid, null));
 
-      const r = await http('POST', `/api/client-proformas/${d.id}/issue`, c.tok.mgr, { language: 'pl' });
+      const r = await http('POST', `/api/client-payments/${pp(d.id)}/issue`, c.tok.mgr, { language: 'pl' });
 
       expect(errMatches(r, 409, 'error.proforma.companyProfile.incomplete')).toBeNull();
       expect(await positionStatus(c, p1)).toBe('ACCEPTED');
@@ -204,16 +205,16 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
     await withCtx(async (c) => {
       const { id } = await issuedProforma(c);
 
-      const list = await http('GET', `/api/client-proformas/client/projects/${c.projectId}`, c.tok.client);
-      const one = await http('GET', `/api/client-proformas/client/${id}`, c.tok.client);
+      const list = await http('GET', `/api/client-payments?kind=MATERIALS&projectId=${c.projectId}`, c.tok.client);
+      const one = await http('GET', `/api/client-payments/${pp(id)}`, c.tok.client);
 
       expect(list.status, list.text).toBe(200);
       expect(one.status, one.text).toBe(200);
-      for (const k of ['number', 'status', 'totalNet', 'totalGross', 'lines']) expect(one.body, k).toHaveProperty(k);
+      for (const k of ['number', 'status', 'amountGross', 'lines']) expect(one.body, k).toHaveProperty(k);
       expect(one.body.lines.length).toBeGreaterThan(0);
       const json = JSON.stringify(one.body).toLowerCase();
       for (const bad of ['purchase', 'seller', 'margin', 'delivery', 'externalorder', 'payments']) expect(json, bad).not.toContain(bad);
-      expect(JSON.stringify(list.body)).toContain(String(id));
+      expect(JSON.stringify(list.body)).toContain(`"id":${pp(id)},`);
     });
   });
 
@@ -221,7 +222,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
     await withCtx(async (c) => {
       const { id } = await needsRealIssue(c);
 
-      const pdf = await getBytes(`/api/client-proformas/client/${id}/pdf`, c.tok.client);
+      const pdf = await getBytes(`/api/client-payments/${pp(id)}/pdf`, c.tok.client);
 
       expect(pdf.status).toBe(200);
       expect(pdf.bytes.subarray(0, 4).toString()).toBe('%PDF');
@@ -233,11 +234,11 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const p1 = await acceptedPosition(c, 10, 100);
       const d = await draftProforma(c, [p1]);
 
-      const list = await http('GET', `/api/client-proformas/client/projects/${c.projectId}`, c.tok.client);
-      const one = await http('GET', `/api/client-proformas/client/${d.id}`, c.tok.client);
+      const list = await http('GET', `/api/client-payments?kind=MATERIALS&projectId=${c.projectId}`, c.tok.client);
+      const one = await http('GET', `/api/client-payments/${pp(d.id)}`, c.tok.client);
 
       expect(list.status, list.text).toBe(200);
-      expect(JSON.stringify(list.body)).not.toContain(`"id":${d.id},`);
+      expect(JSON.stringify(list.body)).not.toContain(`"id":${pp(d.id)},`);
       expect(one.status).toBe(404);
     });
   });
@@ -247,8 +248,8 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const { id } = await issuedProforma(c);
       const other = await login(c.extraUsers[0]);
 
-      const foreign = await http('GET', `/api/client-proformas/client/${id}`, other);
-      const staff = await http('GET', '/api/client-proformas', c.tok.client);
+      const foreign = await http('GET', `/api/client-payments/${pp(id)}`, other);
+      const staff = await http('POST', '/api/client-payments/materials', c.tok.client, {});
       const orders = await http('GET', '/api/external-orders', c.tok.client);
       const positions = await http('GET', '/api/purchase-positions', c.tok.client);
 
@@ -272,8 +273,8 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       });
       expect(eo.status, eo.text).toBe(200);
 
-      const list = await http('GET', `/api/client-proformas/client/projects/${c.projectId}`, c.tok.client);
-      const one = await http('GET', `/api/client-proformas/client/${id}`, c.tok.client);
+      const list = await http('GET', `/api/client-payments?kind=MATERIALS&projectId=${c.projectId}`, c.tok.client);
+      const one = await http('GET', `/api/client-payments/${pp(id)}`, c.tok.client);
 
       const all = JSON.stringify([list.body, one.body]);
       for (const s of ['777.77', '666.66', `QA03-${c.rid}-SELLER`]) expect(all, s).not.toContain(s);
@@ -396,7 +397,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       const { id } = await issuedProforma(c);
       await link(c, c.tok.fin, txn(c, 500, 'PF part'), { kind: 'PROFORMA_PAYMENT', amount: 500, clientProformaId: id });
 
-      const r = await http('POST', `/api/client-proformas/${id}/cancel`, c.tok.mgr, { reason: `qa-${c.rid}` });
+      const r = await http('POST', `/api/client-payments/${pp(id)}/cancel`, c.tok.mgr, { reason: `qa-${c.rid}` });
 
       expect(errMatches(r, 409, 'error.proforma.cancel.hasPayments')).toBeNull();
     });

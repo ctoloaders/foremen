@@ -1,6 +1,6 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
-import { acceptedPosition, draftProforma, http, issuedProforma, link, payProforma, positionStatus, txn, withCtx } from './support.js';
+import { acceptedPosition, draftProforma, pp, http, issuedProforma, link, payProforma, positionStatus, txn, withCtx } from './support.js';
 import { moneyRe, noHorizontalScroll, uiLogin } from './ui.support.js';
 
 // FOR-11-03 part B1, B2, B5-03 (manager and client proforma screens), PL UI.
@@ -33,7 +33,7 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
     await withCtx(async (c) => {
       const p1 = await acceptedPosition(c, 10, 100);
       const d = await draftProforma(c, [p1]);
-      const probe = await http('POST', `/api/client-proformas/${d.id}/issue`, c.tok.admin, { language: 'pl' });
+      const probe = await http('POST', `/api/client-payments/${pp(d.id)}/issue`, c.tok.admin, { language: 'pl' });
       if (probe.status === 200) test.skip('issue works in this stack: the failure path is not reachable');
       await uiLogin(app, screen, browser, c.users.mgr);
       await app.open(`/deliveries/proformas/${d.id}`);
@@ -112,7 +112,7 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
     await withCtx(async (c) => {
       const p1 = await acceptedPosition(c, 10, 100, { purchasePrice: 777.77 });
       const d = await draftProforma(c, [p1]);
-      await http('POST', `/api/client-proformas/${d.id}/issue`, c.tok.mgr, { language: 'pl' }); // may 502, SQL fallback below
+      await http('POST', `/api/client-payments/${pp(d.id)}/issue`, c.tok.mgr, { language: 'pl' }); // may 502, SQL fallback below
       const iss = await issuedProforma(c, [[1, 40]]);
       void iss;
       const urls: string[] = [];
@@ -126,7 +126,7 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
 
       const proformaCalls = urls.filter((u) => u.includes('proforma'));
       expect(proformaCalls.length).toBeGreaterThan(0);
-      for (const u of proformaCalls) expect(u, u).toContain('/api/client-proformas/client/');
+      for (const u of proformaCalls) expect(u, u).toContain('/api/client-payments');
       const html = await browser.evaluate(() => document.body.innerText);
       for (const bad of ['777,77', '777.77', `QA03-${c.rid}-SELLER`]) expect(html).not.toContain(bad);
     });

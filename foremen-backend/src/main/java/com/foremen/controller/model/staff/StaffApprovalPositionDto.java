@@ -11,6 +11,7 @@ import java.util.Set;
  * FOR-11-02 (R4.5): position row of the staff view with internal values. {@code internalUnitPurchasePrice}
  * is the actual purchase unit price when set, otherwise the planned one. {@code marginPercent} is a
  * percentage of the sale line (scale 2); {@code lineMargin} includes the delivery cost share.
+ * {@code clientUnpaid} (FOR-11-06 R10.4) marks a buyer-added position not yet paid by the client.
  * {@code openSuggestions} are open client suggestions; {@code history} lists closed rounds newest first.
  */
 public record StaffApprovalPositionDto(Long positionId, Integer blockNo, Long materialId, String model,
@@ -24,5 +25,6 @@ public record StaffApprovalPositionDto(Long positionId, Integer blockNo, Long ma
                                        List<StaffRoundDto> openSuggestions, List<StaffRoundDto> history,
                                        Set<StaffAction> allowedActions, String thumbnailUrl,
                                        String materialTypeName, boolean fromEstimate,
-                                       boolean estimateChanged, boolean estimateRemoved) {
+                                       boolean estimateChanged, boolean estimateRemoved,
+                                       boolean clientUnpaid) {
 }

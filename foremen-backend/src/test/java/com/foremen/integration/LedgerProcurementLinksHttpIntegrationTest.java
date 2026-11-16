@@ -189,6 +189,15 @@ class LedgerProcurementLinksHttpIntegrationTest {
         asAdmin();
     }
 
+    /** The proforma with its payment row initialised (status is delegated to the lazy payment). */
+    private ClientProformaEntity loadProforma(Long id) {
+        return tx().execute(s -> {
+            ClientProformaEntity e = proformaDao.findById(id).orElseThrow();
+            e.getStatus();
+            return e;
+        });
+    }
+
     /** Service-level setup (create / issue / send) runs as ADMIN; the link calls carry their own principal. */
     private void asAdmin() {
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
@@ -219,22 +228,23 @@ class LedgerProcurementLinksHttpIntegrationTest {
         Long txn1 = tx().execute(s -> newTransaction("PLN", gross.add(BigDecimal.ONE)).getId());
         Long link1 = createLink(txn1, "PROFORMA_PAYMENT", part, "clientProformaId", proformaId, financier,
                 "FINANCIER", 201);
-        ClientProformaEntity afterPartial = proformaDao.findById(proformaId).orElseThrow();
+        ClientProformaEntity afterPartial = loadProforma(proformaId);
         assertThat(afterPartial.getStatus()).isEqualTo(ProformaStatus.PARTIALLY_PAID);
         assertThat(afterPartial.getPaidGross()).isEqualByComparingTo(part);
         assertThat(afterPartial.getReleasedAt()).isNull();
         assertThat(statusOf(p1)).isEqualTo(PositionStatus.IN_PROFORMA);
 
-        // staff detail lists the payment (FOR-11-03 15.1: BankTransactionLinkDao.findProformaPaymentsByClientProformaId)
-        String detail = call(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
-                .get("/api/client-proformas/" + proformaId).with(as(financier, "FINANCIER")), 200);
-        assertThat(detail).contains("\"payments\":[{\"linkId\":" + link1 + ",");
-        assertThat(detail).doesNotContain("\"counterparty");
-
+        // staff detail lists the payment (FOR-11-03 15.1: BankTransactionLinkDao.findProformaPaymentsByClientProformaId);
+        // read through the service: the unified /api/client-payments view does not carry the ledger payments
+        ClientProformaServiceExtendedModel detail = proformaService.findById(proformaId);
+        assertThat(detail.getPayments()).singleElement().satisfies(pay -> {
+            assertThat(pay.linkId()).isEqualTo(link1);
+            assertThat(pay.amount()).isEqualByComparingTo(part);
+        });
         // replace the amount (ADMIN): still PARTIALLY_PAID with the new paidGross
         Long link1b = replaceLink(link1, "PROFORMA_PAYMENT", replaced, "clientProformaId", proformaId, admin,
                 "ADMIN", 200);
-        ClientProformaEntity afterReplace = proformaDao.findById(proformaId).orElseThrow();
+        ClientProformaEntity afterReplace = loadProforma(proformaId);
         assertThat(afterReplace.getStatus()).isEqualTo(ProformaStatus.PARTIALLY_PAID);
         assertThat(afterReplace.getPaidGross()).isEqualByComparingTo(replaced);
         assertThat(linkDao.findById(link1b).orElseThrow().getAmount()).isEqualByComparingTo(replaced);
@@ -244,7 +254,7 @@ class LedgerProcurementLinksHttpIntegrationTest {
         Long txn2 = tx().execute(s -> newTransaction("PLN", rest).getId());
         Long link2 = createLink(txn2, "PROFORMA_PAYMENT", rest, "clientProformaId", proformaId, financier,
                 "FINANCIER", 201);
-        ClientProformaEntity paid = proformaDao.findById(proformaId).orElseThrow();
+        ClientProformaEntity paid = loadProforma(proformaId);
         assertThat(paid.getStatus()).isEqualTo(ProformaStatus.PAID);
         assertThat(paid.getPaidGross()).isEqualByComparingTo(gross);
         assertThat(paid.getPaidAt()).isNotNull();
@@ -268,7 +278,7 @@ class LedgerProcurementLinksHttpIntegrationTest {
                 409);
         assertThat(linkDao.findById(link2)).isPresent();
         assertThat(linkDao.findById(link2).orElseThrow().getAmount()).isEqualByComparingTo(rest);
-        assertThat(proformaDao.findById(proformaId).orElseThrow().getStatus()).isEqualTo(ProformaStatus.PAID);
+        assertThat(loadProforma(proformaId).getStatus()).isEqualTo(ProformaStatus.PAID);
         assertThat(statusOf(p1)).isEqualTo(PositionStatus.WITH_BUYER);
     }
 
@@ -408,7 +418,7 @@ class LedgerProcurementLinksHttpIntegrationTest {
             assertThat(linkDao.findByTransactionIdOrderByIdAsc(id)).as("links of %s", id).isEmpty();
         }
         assertThat(linkDao.findByTransactionIdOrderByIdAsc(credit)).isEmpty();
-        ClientProformaEntity stored = proformaDao.findById(proformaId).orElseThrow();
+        ClientProformaEntity stored = loadProforma(proformaId);
         assertThat(stored.getStatus()).isEqualTo(ProformaStatus.ISSUED);
         assertThat(stored.getPaidGross()).isEqualByComparingTo("0");
         assertThat(orderDao.findById(order.getId()).orElseThrow().getStatus())

@@ -1,7 +1,7 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import {
-  acceptedPosition, draftProforma, errMatches, feedTxn, getEo, getPf, http, issuedProforma, link, ok, payProforma,
+  acceptedPosition, draftProforma, pp, errMatches, feedTxn, getEo, getPf, http, issuedProforma, link, ok, payProforma,
   positionStatus, psql, txn, withCtx, type Ctx,
 } from './support.js';
 import { createUser } from '../../support/users.js';
@@ -216,10 +216,10 @@ describe('FOR-11-03 ledger matching, planner, permissions (API)', { tags: ['for-
       const foreman = (await http('POST', '/api/auth/login', undefined, { email: foremanUser.email, password: foremanUser.password })).body.accessToken as string;
       const NO = 999999999;
       const probes: Array<[string, (t: string) => Promise<number>]> = [
-        ['PF read', (t) => http('GET', `/api/client-proformas/${NO}`, t).then((r) => r.status)],
-        ['PF create', (t) => http('POST', '/api/client-proformas', t, {}).then((r) => r.status)],
-        ['PF update', (t) => http('PUT', `/api/client-proformas/${NO}`, t, {}).then((r) => r.status)],
-        ['PF delete', (t) => http('DELETE', `/api/client-proformas/${NO}`, t).then((r) => r.status)],
+        ['PF read', (t) => http('GET', `/api/client-payments/${NO}`, t).then((r) => r.status)],
+        ['PF create', (t) => http('POST', '/api/client-payments/materials', t, {}).then((r) => r.status)],
+        ['PF update', (t) => http('PUT', `/api/client-payments/${NO}`, t, {}).then((r) => r.status)],
+        ['PF delete', (t) => http('DELETE', `/api/client-payments/${NO}`, t).then((r) => r.status)],
         ['EO read', (t) => http('GET', `/api/external-orders/${NO}`, t).then((r) => r.status)],
         ['EO create', (t) => http('POST', '/api/external-orders', t, {}).then((r) => r.status)],
         ['EO update', (t) => http('PUT', `/api/external-orders/${NO}`, t, {}).then((r) => r.status)],
@@ -231,9 +231,11 @@ describe('FOR-11-03 ledger matching, planner, permissions (API)', { tags: ['for-
         admin: probes.map((p) => p[0]),
         mgr: ['PF read', 'PF create', 'PF update', 'PF delete', 'EO read'],
         buyer: ['PF read', 'EO read', 'EO create', 'EO update', 'EO delete'],
-        fin: ['PF read', 'EO read', 'EO approve'],
-        client: [],
-        foreman: [],
+        // FOR-11-06: PF ops now resolve to CLIENT_PAYMENTS (CLIENT/FOREMAN/BUYER READ, FINANCIER full CRUD at the
+        // permission layer; the MATERIALS write restriction for FINANCIER is a service-level 403 after the lookup).
+        fin: ['PF read', 'PF create', 'PF update', 'PF delete', 'EO read', 'EO approve'],
+        client: ['PF read'],
+        foreman: ['PF read'],
       };
       const tokens: Record<string, string> = { admin: c.tok.admin, mgr: c.tok.mgr, buyer: c.tok.buyer, fin: c.tok.fin, client: c.tok.client, foreman };
 
@@ -244,7 +246,7 @@ describe('FOR-11-03 ledger matching, planner, permissions (API)', { tags: ['for-
       }
 
       expect(got).toEqual(allowed);
-      const clientList = await http('GET', `/api/client-proformas/client/projects/${c.projectId}`, c.tok.client);
+      const clientList = await http('GET', `/api/client-payments?kind=MATERIALS&projectId=${c.projectId}`, c.tok.client);
       expect(clientList.status).toBe(200);
     });
   });
@@ -252,15 +254,15 @@ describe('FOR-11-03 ledger matching, planner, permissions (API)', { tags: ['for-
   test('TC-A10-02 a manager of another project cannot reach a proforma; buyer and financier can', async () => {
     await withCtx(async (c) => {
       const pos = await acceptedPosition(c, 1, 40, { projectId: c.otherProjectId });
-      const draft = await ok('POST', '/api/client-proformas', c.tok.admin, { projectId: c.otherProjectId, positionIds: [pos] });
+      const draft = await ok('POST', '/api/client-payments/materials', c.tok.admin, { projectId: c.otherProjectId, positionIds: [pos] });
 
-      const mgr = await http('GET', `/api/client-proformas/${draft.id}`, c.tok.mgr);
-      const mgrList = await http('GET', '/api/client-proformas?size=200', c.tok.mgr);
-      const buyer = await http('GET', `/api/client-proformas/${draft.id}`, c.tok.buyer);
-      const fin = await http('GET', `/api/client-proformas/${draft.id}`, c.tok.fin);
+      const mgr = await http('GET', `/api/client-payments/${pp(draft.id)}`, c.tok.mgr);
+      const mgrList = await http('GET', '/api/client-payments?kind=MATERIALS&size=200', c.tok.mgr);
+      const buyer = await http('GET', `/api/client-payments/${pp(draft.id)}`, c.tok.buyer);
+      const fin = await http('GET', `/api/client-payments/${pp(draft.id)}`, c.tok.fin);
 
       expect(mgr.status).toBe(404);
-      expect(JSON.stringify(mgrList.body)).not.toContain(`"id":${draft.id},`);
+      expect(JSON.stringify(mgrList.body)).not.toContain(`"id":${pp(draft.id)},`);
       expect(buyer.status).toBe(200);
       expect(fin.status).toBe(200);
     }, { second: true });
@@ -307,7 +309,7 @@ describe('FOR-11-03 ledger matching, planner, permissions (API)', { tags: ['for-
       const one = await getPf(c, id);
       await link(c, c.tok.fin, txn(c, 1260, 'PF two'), { kind: 'PROFORMA_PAYMENT', amount: 1260, clientProformaId: id });
       const two = await getPf(c, id);
-      const client = await http('GET', `/api/client-proformas/client/${id}`, c.tok.client);
+      const client = await http('GET', `/api/client-payments/${pp(id)}`, c.tok.client);
 
       expect(none.payments).toEqual([]);
       expect(l1.status, l1.text).toBe(201);

@@ -54,6 +54,13 @@ export function psql(sql: string, vars: Record<string, string> = {}): string {
   return execFileSync('docker', args, { input: sql, encoding: 'utf8' }).trim();
 }
 
+/**
+ * FOR-11-06: the unified client-payment id of a proforma (the old /api/client-proformas API addressed
+ * proformas by their own id, /api/client-payments addresses the payment row).
+ */
+export function pp(proformaId: number): string {
+  return psql('SELECT client_payment_id FROM client_proformas WHERE id = :id;', { id: String(proformaId) });
+}
 export async function login(user: { email: string; password: string }): Promise<string> {
   const r = await http('POST', '/api/auth/login', undefined, { email: user.email, password: user.password });
   if (r.status !== 200) throw new Error(`login ${user.email} -> ${r.status}`);
@@ -307,7 +314,7 @@ export async function acceptedPosition(
 
 /** Creates a draft proforma (MANAGER) for the given positions. */
 export async function draftProforma(c: Ctx, positionIds: number[], extra: Record<string, unknown> = {}): Promise<any> {
-  return ok('POST', '/api/client-proformas', c.tok.mgr, { projectId: c.projectId, positionIds, dueDate: null, note: `qa03-${c.rid}`, ...extra });
+  return ok('POST', '/api/client-payments/materials', c.tok.mgr, { projectId: c.projectId, positionIds, dueDate: null, note: `qa03-${c.rid}`, ...extra });
 }
 
 /**
@@ -317,7 +324,7 @@ export async function draftProforma(c: Ctx, positionIds: number[], extra: Record
  * release and order flows can still be exercised. `mode` tells which path was used.
  */
 export async function issueProforma(c: Ctx, id: number): Promise<{ mode: 'api' | 'sql'; body: any }> {
-  const r = await http('POST', `/api/client-proformas/${id}/issue`, c.tok.mgr, { language: 'pl' });
+  const r = await http('POST', `/api/client-payments/${pp(id)}/issue`, c.tok.mgr, { language: 'pl' });
   if (r.status === 200) return { mode: 'api', body: r.body };
   if (r.status !== 502) throw new Error(`issue ${id} -> ${r.status}: ${r.text.slice(0, 300)}`);
   const n = ++c.seq;
@@ -330,7 +337,7 @@ export async function issueProforma(c: Ctx, id: number): Promise<{ mode: 'api' |
      UPDATE purchase_positions SET status='IN_PROFORMA' WHERE id IN (SELECT position_id FROM client_proforma_lines WHERE proforma_id=:id) AND status='ACCEPTED';`,
     { num, id: String(id) },
   );
-  return { mode: 'sql', body: (await http('GET', `/api/client-proformas/${id}`, c.tok.mgr)).body };
+  return { mode: 'sql', body: (await http('GET', `/api/client-payments/${pp(id)}`, c.tok.mgr)).body };
 }
 
 /** Accepted positions -> draft -> issued proforma. */
@@ -350,8 +357,14 @@ export async function payProforma(c: Ctx, id: number, gross: number): Promise<nu
   return t;
 }
 
+/**
+ * Staff read of a proforma through the unified API, flattened to the former proforma shape
+ * (status = stored status, totalGross = amountGross). The ledger `payments` list is not part of the
+ * unified view.
+ */
 export async function getPf(c: Ctx, id: number, tok = c.tok.mgr): Promise<any> {
-  return ok('GET', `/api/client-proformas/${id}`, tok);
+  const v = await ok('GET', `/api/client-payments/${pp(id)}`, tok);
+  return { ...v.proforma, ...v, id, status: v.storedStatus, totalGross: v.amountGross, lines: v.proforma?.lines };
 }
 
 export async function getEo(c: Ctx, id: number, tok = c.tok.buyer): Promise<any> {
