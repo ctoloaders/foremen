@@ -105,6 +105,32 @@ class PlannerGroupsIntegrationTest extends ProcurementIntegrationTestBase {
     }
 
     @Test
+    @DisplayName("an emptied request keeps its group (positionCount 0) unless a row filter is active (R15.2)")
+    void emptyRequestStaysVisible() throws Exception {
+        ProjectEntity project = project(ProjectStatus.ACTIVE);
+        PurchaseRequestEntity empty = request(project);
+        PurchaseRequestEntity r = request(project);
+        pos(project, r, PositionStatus.PLANNED, 3);
+        em.flush();
+        em.clear();
+
+        JsonNode content = body(GROUPS + "?projectId=" + project.getId()).get("content");
+        assertThat(content).hasSize(2);
+        JsonNode emptyGroup = null;
+        for (JsonNode g : content) {
+            if (!g.get("requestId").isNull() && g.get("requestId").asLong() == empty.getId()) {
+                emptyGroup = g;
+            }
+        }
+        assertThat(emptyGroup).isNotNull();
+        assertThat(emptyGroup.get("positionCount").asLong()).isZero();
+
+        JsonNode filtered = body(GROUPS + "?projectId=" + project.getId() + "&urgent=true").get("content");
+        assertThat(filtered).hasSize(1);
+        assertThat(filtered.get(0).get("requestId").asLong()).isEqualTo(r.getId());
+    }
+
+    @Test
     @DisplayName("groupBy=NONE returns a single synthetic group over all positions")
     void groupByNone() throws Exception {
         ProjectEntity project = project(ProjectStatus.ACTIVE);

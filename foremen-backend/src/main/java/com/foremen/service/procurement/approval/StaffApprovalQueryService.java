@@ -28,6 +28,9 @@ public class StaffApprovalQueryService {
 
     private static final String HAS_ROUND = "EXISTS (SELECT 1 FROM PositionApprovalRoundEntity x "
             + "WHERE x.position = p)";
+    /** R19.1: a position with a round, or a never-sent AGREED / PACKAGE position (state "not sent"). */
+    private static final String LISTED = "(" + HAS_ROUND + " OR p.sourcingPath IN ("
+            + "com.foremen.dao.model.SourcingPath.AGREED, com.foremen.dao.model.SourcingPath.PACKAGE))";
     private static final String HAS_OPEN = "EXISTS (SELECT 1 FROM PositionApprovalRoundEntity o "
             + "WHERE o.position = p AND o.status = " + OPEN_STATUS + " AND o.kind <> " + SUGGESTION_KIND + ")";
     private static final String HAS_OVERDUE = "EXISTS (SELECT 1 FROM PositionApprovalRoundEntity od "
@@ -47,13 +50,16 @@ public class StaffApprovalQueryService {
         return loadStaffData(projectId, filter, ApprovalDeadlinePolicy.today(clock));
     }
 
-    /** Positions with at least one round in display order (blockNo nulls last, open first, deadline, id). */
+    /**
+     * Positions with a round plus never-sent AGREED / PACKAGE positions (R19.1), in display order
+     * (blockNo nulls last, open first, deadline, id).
+     */
     @Transactional(readOnly = true)
     public StaffApprovalData loadStaffData(Long projectId, StaffApprovalFilter filter, LocalDate today) {
         return assemble(queryPositions("p.project.id = :scopeId", projectId, filter, today));
     }
 
-    /** One position with its full round history; no positions when it has no round. */
+    /** One position with its full round history; none when it has no round and is not AGREED / PACKAGE. */
     @Transactional(readOnly = true)
     public StaffApprovalData loadStaffPosition(Long positionId) {
         return assemble(queryPositions("p.id = :scopeId", positionId, StaffApprovalFilter.none(),
@@ -65,7 +71,7 @@ public class StaffApprovalQueryService {
         StaffApprovalFilter f = filter == null ? StaffApprovalFilter.none() : filter;
         List<String> where = new ArrayList<>();
         where.add(scope);
-        where.add(HAS_ROUND);
+        where.add(LISTED);
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("scopeId", scopeId);
         if (f.blockNo() != null) {

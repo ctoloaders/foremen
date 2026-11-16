@@ -50,6 +50,12 @@ Support code (`tests/support/`):
 | FOR-10 | `tests/for10/project-widget.e2e.ts` | TC-B3-03 |
 | FOR-10 | `tests/for10/additional-api.e2e.ts` | TC-DX-A01..A09 (`additional-test-cases.md`) |
 | FOR-10 | `tests/for10/additional-ui.e2e.ts` | TC-DX-B01..B12 (`additional-test-cases.md`) |
+| FOR-11-00..05 | `tests/for11/<NN-spec>/*.e2e.ts` | Parts A and B of each child spec's `test-cases.md`; per-folder `FINDINGS.md` has the coverage table (pass / partial / not automated) |
+
+FOR-11 notes: the whole `tests/for10 tests/for11` run takes about 30 minutes; run it in the background and
+use `--output .e2e-<name>` so parallel runs do not overwrite each other's traces. Environment skips in the
+local stack: expired GCS credentials (photo upload, proforma PDF), STUB tracking and crons off, a
+`finishing_materials.package_volume` column from another branch.
 
 Not covered yet in B1–B3: TC-B1-02 loading skeleton and «Нет данных» are not asserted on purpose
 (timing-dependent / data-dependent); TC-B2-03 step 2 (new browser context gets the current month) is

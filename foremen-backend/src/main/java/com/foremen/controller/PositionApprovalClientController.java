@@ -159,11 +159,13 @@ public class PositionApprovalClientController {
 
     // ------------------------------------------------------------------ requests
 
-    public record AcceptRequest(@NotNull Long optionId, @NotNull BigDecimal expectedUnitSalePrice,
+    /** {@code expectedUnitSalePrice} is validated by the service: forbidden for a package choice, required otherwise. */
+    public record AcceptRequest(@NotNull Long optionId, BigDecimal expectedUnitSalePrice,
                                 @Size(max = 2000) String comment) {
     }
 
-    public record RejectRequest(@NotBlank @Size(max = 2000) String comment) {
+    /** A blank comment is rejected by the service with {@code error.positionApproval.decision.commentRequired}. */
+    public record RejectRequest(@Size(max = 2000) String comment) {
     }
 
     public record SuggestRequest(@NotBlank @Size(max = 2000) String link, @Size(max = 2000) String comment) {

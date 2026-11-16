@@ -488,6 +488,63 @@ class ShipmentServiceTest {
     }
 
     @Test
+    void updateRejectsUnknownStatusWithDedicatedKey() {
+        ShipmentEntity s = shipment(ShipmentStatus.CREATED);
+        attach(s, position(11L, PositionStatus.IN_DELIVERY, "10"), "4");
+        ShipmentRequest r = new ShipmentRequest(null, null, null, null, null, null, null, null, null, null,
+                null, null, null, ShipmentStatus.UNKNOWN, null);
+
+        ForemenApiException e = failure(() -> service.update(50L, r));
+
+        assertThat(e.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(e.getMessage()).contains("error.shipment.status.invalid");
+    }
+
+    @Test
+    void sparseUpdateKeepsStoredShopDeliveryFieldsAndNullsKeepEmptyStringClears() {
+        ShipmentEntity s = shipment(ShipmentStatus.CREATED);
+        s.setDeliveryMethod(DeliveryMethod.SHOP_DELIVERY);
+        s.setShopOrderLink("https://shop.example.com/o/1");
+        s.setDriverName("Jan");
+        s.setDriverPhone(null);
+        attach(s, position(11L, PositionStatus.IN_DELIVERY, "10"), "4");
+        ShipmentRequest eta = new ShipmentRequest(null, null, null, null, null, null, null,
+                LocalDate.of(2030, 1, 14), null, null, null, null, null, null, null);
+
+        ShipmentDto dto = service.update(50L, eta);
+
+        assertThat(dto.etaDate()).isEqualTo(LocalDate.of(2030, 1, 14));
+        assertThat(s.getShopOrderLink()).isEqualTo("https://shop.example.com/o/1");
+        assertThat(s.getDriverName()).isEqualTo("Jan");
+        assertThat(s.getNote()).isEqualTo("internal");
+
+        ShipmentRequest clear = new ShipmentRequest(null, null, null, null, null, null, null, null, null, null,
+                "", null, "", null, null);
+        service.update(50L, clear);
+
+        assertThat(s.getDriverName()).isNull();
+        assertThat(s.getNote()).isNull();
+        assertThat(s.getShopOrderLink()).isEqualTo("https://shop.example.com/o/1");
+    }
+
+    @Test
+    void sparseUpdateOfCarrierShipmentValidatesTheMergedState() {
+        ShipmentEntity s = shipment(ShipmentStatus.CREATED);
+        s.setDeliveryMethod(DeliveryMethod.CARRIER);
+        s.setCarrierCode("OTHER");
+        s.setTrackingNumber("ABC123456");
+        s.setTrackingUrl("https://carrier.example.com/t/1");
+        attach(s, position(11L, PositionStatus.IN_DELIVERY, "10"), "4");
+        ShipmentRequest r = new ShipmentRequest(null, null, null, null, null, null, null,
+                LocalDate.of(2030, 1, 14), null, null, null, null, null, null, null);
+
+        service.update(50L, r);
+
+        assertThat(s.getCarrierCode()).isEqualTo("OTHER");
+        assertThat(s.getTrackingUrl()).isEqualTo("https://carrier.example.com/t/1");
+    }
+
+    @Test
     void updateTerminalShipmentChangesOnlyTheNote() {
         ShipmentEntity s = shipment(ShipmentStatus.DELIVERED);
         attach(s, position(11L, PositionStatus.IN_DELIVERY, "10"), "4");

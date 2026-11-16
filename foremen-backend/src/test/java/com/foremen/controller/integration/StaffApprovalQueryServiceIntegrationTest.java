@@ -70,12 +70,15 @@ class StaffApprovalQueryServiceIntegrationTest extends ProcurementIntegrationTes
         round(overdue, ApprovalRoundStatus.OPEN, TODAY.minusDays(1));
         PurchasePositionEntity accepted = pos(project, PositionStatus.ACCEPTED, 2);
         round(accepted, ApprovalRoundStatus.ACCEPTED, null);
-        pos(project, PositionStatus.PLANNED, 1); // no round
+        PurchasePositionEntity unsent = pos(project, PositionStatus.PLANNED, 1); // never sent (R19.1)
+        PurchasePositionEntity clientOwnUnsent = position(project, SourcingPath.CLIENT_OWN, PositionStatus.PLANNED);
         Long pid = project.getId();
 
         StaffApprovalData all = service.loadStaffData(pid, StaffApprovalFilter.none(), TODAY);
         assertThat(all.positions()).extracting(StaffPositionSource::positionId)
-                .containsExactly(overdue.getId(), accepted.getId());
+                .containsExactly(overdue.getId(), unsent.getId(), accepted.getId())
+                .doesNotContain(clientOwnUnsent.getId());
+        assertThat(all.roundsByPosition()).doesNotContainKey(unsent.getId());
         StaffPositionSource first = all.positions().get(0);
         assertThat(first.plannedPurchasePrice()).isEqualByComparingTo("61.37");
         Long roundId = all.roundsByPosition().get(first.positionId()).get(0).roundId();
@@ -89,6 +92,8 @@ class StaffApprovalQueryServiceIntegrationTest extends ProcurementIntegrationTes
         assertThat(ids(service.loadStaffData(pid, new StaffApprovalFilter(null, false, 2, null), TODAY)))
                 .containsExactly(accepted.getId());
         assertThat(service.loadStaffPosition(overdue.getId()).positions()).hasSize(1);
+        assertThat(service.loadStaffPosition(unsent.getId()).positions()).hasSize(1);
+        assertThat(service.loadStaffPosition(clientOwnUnsent.getId()).positions()).isEmpty();
     }
 
     private static List<Long> ids(StaffApprovalData d) {

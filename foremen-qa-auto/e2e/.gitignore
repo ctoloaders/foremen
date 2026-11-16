@@ -1,2 +1,4 @@
 node_modules/
 .e2e/
+# per-run --output directories (e.g. .e2e-for11)
+.e2e-*/

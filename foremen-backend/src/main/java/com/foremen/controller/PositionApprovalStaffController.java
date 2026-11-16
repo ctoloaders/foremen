@@ -237,10 +237,10 @@ public class PositionApprovalStaffController {
 
     public record DecideOnBehalfRequest(@NotNull Decision decision, Long optionId,
                                         BigDecimal expectedUnitSalePrice,
-                                        @NotBlank @Size(max = 1000) String comment) {
+                                        @Size(max = 1000) String comment) {
     }
 
-    public record ClientOwnOnBehalfRequest(@NotBlank @Size(max = 1000) String comment) {
+    public record ClientOwnOnBehalfRequest(@Size(max = 1000) String comment) {
     }
 
     // ------------------------------------------------------------------ helpers

@@ -180,12 +180,24 @@ class PositionApprovalClientControllerAbacTest {
     }
 
     @Test
-    @DisplayName("reject without a comment is a 400 and never reaches the service")
-    void rejectNeedsComment() throws Exception {
+    @DisplayName("accept without a price (package choice) passes DTO validation and reaches the service")
+    void acceptWithoutPrice() throws Exception {
+        mvc.perform(post("/api/position-approvals/client/rounds/11/accept")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"optionId\":4}"))
+                .andExpect(status().isNoContent());
+
+        ArgumentCaptor<AcceptCommand> cmd = ArgumentCaptor.forClass(AcceptCommand.class);
+        verify(approvalService).accept(eq(11L), cmd.capture(), any(Decider.class));
+        assertThat(cmd.getValue().expectedUnitSalePrice()).isNull();
+    }
+
+    @Test
+    @DisplayName("reject with a blank comment is left to the service (decision.commentRequired)")
+    void rejectBlankCommentDelegates() throws Exception {
         mvc.perform(post("/api/position-approvals/client/rounds/11/reject")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"comment\":\"  \"}"))
-                .andExpect(status().isBadRequest());
-        verify(approvalService, never()).reject(any(), any(), any());
+                .andExpect(status().isNoContent());
+        verify(approvalService).reject(eq(11L), eq("  "), any(Decider.class));
     }
 
     @Test

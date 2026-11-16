@@ -172,6 +172,9 @@ public class PlannerGroupService {
             return linkedGroups(spec, groupBy, pageable, auth);
         }
         List<GroupKey> all = groupKeys(spec, groupBy);
+        if (groupBy == GroupBy.REQUEST && isUnrestricted(filter)) {
+            all = withEmptyRequests(all, filter, auth);
+        }
         int size = pageable == null || pageable.isUnpaged() ? DEFAULT_PAGE_SIZE
                 : Math.min(Math.max(pageable.getPageSize(), 1), MAX_PAGE_SIZE);
         int number = pageable == null || pageable.isUnpaged() ? 0 : pageable.getPageNumber();
@@ -250,6 +253,55 @@ public class PlannerGroupService {
                 .comparing(GroupKey::earliest, Comparator.nullsLast(Comparator.<LocalDate>naturalOrder()))
                 .thenComparing(GroupKey::requestId, Comparator.nullsLast(Comparator.<Long>naturalOrder())));
         return keys;
+    }
+
+    /** True when no row-narrowing filter is active (project and hide-delivered do not narrow requests). */
+    private static boolean isUnrestricted(PlannerFilter f) {
+        return f == null || ((f.statuses() == null || f.statuses().isEmpty())
+                && f.sourcingPath() == null && f.requestId() == null && !f.noRequest()
+                && (f.buyer() == null || f.buyer() == PlannerFilter.BuyerMode.ALL)
+                && (f.slice() == null || f.slice() == PlannerSliceRules.Slice.ALL)
+                && !f.urgent() && (f.q() == null || f.q().isBlank())
+                && f.proformaId() == null && f.externalOrderId() == null
+                && !f.noProforma() && !f.noExternalOrder());
+    }
+
+    /**
+     * FOR-11-01 R15.2: a request whose positions were all removed has no rows, so the position query
+     * never yields its group; add it explicitly (visible projects only) so "Delete" stays reachable.
+     */
+    private List<GroupKey> withEmptyRequests(List<GroupKey> keys, PlannerFilter filter, Authentication auth) {
+        Set<Long> scope = queryService.visibleProjectIds(auth);
+        if (scope != null && scope.isEmpty()) {
+            return keys;
+        }
+        StringBuilder jpql = new StringBuilder("select r.id, r.expectedDeliveryDate from PurchaseRequestEntity r "
+                + "where not exists (select 1 from PurchasePositionEntity p where p.purchaseRequest = r)");
+        if (filter != null && filter.projectId() != null) {
+            jpql.append(" and r.project.id = :pid");
+        }
+        if (scope != null) {
+            jpql.append(" and r.project.id in :scope");
+        }
+        var q = entityManager.createQuery(jpql.toString(), Object[].class);
+        if (filter != null && filter.projectId() != null) {
+            q.setParameter("pid", filter.projectId());
+        }
+        if (scope != null) {
+            q.setParameter("scope", scope);
+        }
+        List<Object[]> rows = q.getResultList();
+        if (rows.isEmpty()) {
+            return keys;
+        }
+        List<GroupKey> merged = new ArrayList<>(keys);
+        for (Object[] row : rows) {
+            merged.add(new GroupKey((Long) row[0], (LocalDate) row[1], 0));
+        }
+        merged.sort(Comparator
+                .comparing(GroupKey::earliest, Comparator.nullsLast(Comparator.<LocalDate>naturalOrder()))
+                .thenComparing(GroupKey::requestId, Comparator.nullsLast(Comparator.<Long>naturalOrder())));
+        return merged;
     }
 
     /** Query 2a: request headers of the page. */

@@ -215,7 +215,7 @@ class PositionApprovalStaffControllerAbacTest {
     }
 
     @Test
-    @DisplayName("decide-on-behalf REJECT delegates to reject; a blank comment is a 400")
+    @DisplayName("decide-on-behalf REJECT delegates to reject; a blank comment is left to the service")
     void decideOnBehalfReject() throws Exception {
         mvc.perform(post("/api/position-approvals/staff/rounds/11/decide-on-behalf")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -226,7 +226,8 @@ class PositionApprovalStaffControllerAbacTest {
         mvc.perform(post("/api/position-approvals/staff/rounds/11/decide-on-behalf")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"decision\":\"REJECT\",\"comment\":\" \"}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isNoContent());
+        verify(approvalService).reject(eq(11L), eq(" "), any(Decider.class));
     }
 
     @Test

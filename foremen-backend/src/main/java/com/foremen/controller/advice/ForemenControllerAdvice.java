@@ -59,7 +59,8 @@ public class ForemenControllerAdvice {
                 message,
                 request.getRequestURI(),
                 ex.getField() == null ? null : Map.of(ex.getField(), message),
-                ex.getParams().isEmpty() ? null : ex.getParams()
+                ex.getParams().isEmpty() ? null : ex.getParams(),
+                ex.getMessageCode()
         );
 
         ResponseEntity.BodyBuilder builder = ResponseEntity.status(status);

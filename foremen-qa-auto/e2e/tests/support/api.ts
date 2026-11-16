@@ -20,11 +20,15 @@ async function call(method: string, path: string, token: string | undefined, bod
 }
 
 let cachedToken: string | undefined;
+let cachedAt = 0;
+// Access tokens are short-lived; a long suite run must not keep using an expired one.
+const TOKEN_MAX_AGE_MS = 5 * 60 * 1000;
 
 export async function adminToken(): Promise<string> {
-  if (!cachedToken) {
+  if (!cachedToken || Date.now() - cachedAt > TOKEN_MAX_AGE_MS) {
     const r = await call('POST', '/api/auth/login', undefined, { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
     cachedToken = r.accessToken as string;
+    cachedAt = Date.now();
   }
   return cachedToken;
 }

@@ -258,7 +258,40 @@ public class DashboardLayoutService {
         return new PlacementView(p.getId(), w.getId(), w.getCode(), w.getNameRu(), w.getNamePl(),
                 p.getCellIndex(), w.getColSpan(), w.getRowSpan(), vis == null ? null : vis.toString(),
                 boundProject, p.getProject() == null ? null : p.getProject().getName(), dateAware, state,
-                List.copyOf(missing), defaultStyle, defaultStyle, available);
+                List.copyOf(missing), defaultStyle, defaultStyle, available,
+                state == WidgetState.AVAILABLE ? renderHints(cfg) : null);
+    }
+
+    /** Whitelisted, render-only subset of the widget config; no dataset, filters, sort or measures. */
+    static Map<String, Object> renderHints(Map<String, Object> cfg) {
+        if (cfg == null) {
+            return null;
+        }
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        if (cfg.get("title") instanceof Map<?, ?> title) {
+            out.put("title", title);
+        }
+        if (cfg.get("columns") instanceof List<?> cols) {
+            List<Map<String, Object>> slim = new ArrayList<>();
+            for (Object c : cols) {
+                if (c instanceof Map<?, ?> m && m.get("field") != null) {
+                    Map<String, Object> col = new java.util.LinkedHashMap<>();
+                    col.put("field", m.get("field"));
+                    if (m.get("format") != null) {
+                        col.put("format", m.get("format"));
+                    }
+                    slim.add(col);
+                }
+            }
+            out.put("columns", slim);
+        }
+        if (cfg.get("links") instanceof List<?> links) {
+            out.put("links", links);
+        }
+        if (cfg.get("presentation") instanceof Map<?, ?> pres) {
+            out.put("presentation", pres);
+        }
+        return out;
     }
 
     private Set<String> required(DashboardWidgetEntity widget) {

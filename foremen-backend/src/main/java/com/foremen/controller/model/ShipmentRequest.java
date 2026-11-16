@@ -10,8 +10,9 @@ import com.foremen.dao.model.ShipmentStatus;
 
 /**
  * FOR-11-04 (R4.1, R5.1): body of create and update. {@code projectId} is required on create and ignored
- * on update. On update, {@code etaDate} / {@code status} / {@code lines} left {@code null} mean "unchanged";
- * the method, driver and note fields are replaced as given.
+ * on update. Update is a partial update: any field left {@code null} keeps the stored value; an empty string
+ * clears a text field (carrier, tracking, link, driver, phone, note). The merged state is validated.
+ * {@code etaTimeFrom} / {@code etaTimeTo} are applied only together with a changed {@code etaDate}.
  */
 public record ShipmentRequest(
         Long projectId,

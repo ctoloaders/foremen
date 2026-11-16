@@ -117,6 +117,7 @@ public class ShipmentService {
     static final String LINE_EMPTY = "error.shipment.line.empty";
     static final String PROJECT_MISMATCH = "error.shipment.project.mismatch";
     static final String FIELDS_MISSING = "error.shipment.method.fieldsMissing";
+    static final String STATUS_INVALID = "error.shipment.status.invalid";
     static final String REVERT_NOT_AVAILABLE = "error.shipment.eta.revertNotAvailable";
     static final String HAS_RECEIPTS = "error.shipment.hasReceipts";
     static final String POSITION_HAS_RECEIPTS = "error.shipment.position.hasReceipts";
@@ -251,7 +252,9 @@ public class ShipmentService {
 
         if (shipment.getStatus().isTerminal()) {
             rejectTerminalChange(shipment, request);
-            shipment.setNote(blankToNull(request.note()));
+            if (request.note() != null) {
+                shipment.setNote(blankToNull(request.note()));
+            }
             shipmentDao.save(shipment);
             saveAudit(before, snapshot(shipment, currentLines(shipment)), shipment, "UPDATE");
             return toDto(shipment);
@@ -259,7 +262,14 @@ public class ShipmentService {
 
         DeliveryMethod method = request.deliveryMethod() != null ? request.deliveryMethod()
                 : shipment.getDeliveryMethod();
-        ShipmentRules.MethodFields fields = validateMethod(request, method);
+        // Partial update: a null field keeps the stored value, "" clears a text field. Validate the merged state.
+        ShipmentRules.MethodFields fields = ShipmentRules.validateMethod(method,
+                keep(request.carrierCode(), shipment.getCarrierCode()),
+                keep(request.trackingNumber(), shipment.getTrackingNumber()),
+                keep(request.trackingUrl(), shipment.getTrackingUrl()),
+                keep(request.shopOrderLink(), shipment.getShopOrderLink()),
+                keep(request.driverPhone(), shipment.getDriverPhone()),
+                trackingRegistry.allCodes());
         validateTimeWindow(request.etaTimeFrom(), request.etaTimeTo());
 
         boolean trackingChanged = method != shipment.getDeliveryMethod()
@@ -271,8 +281,12 @@ public class ShipmentService {
             shipment.setConsecutiveFailures(0);
             shipment.setNextCheckAt(isTrackable(shipment) ? now : null);
         }
-        shipment.setDriverName(blankToNull(request.driverName()));
-        shipment.setNote(blankToNull(request.note()));
+        if (request.driverName() != null) {
+            shipment.setDriverName(blankToNull(request.driverName()));
+        }
+        if (request.note() != null) {
+            shipment.setNote(blankToNull(request.note()));
+        }
 
         if (request.etaDate() != null && (!request.etaDate().equals(shipment.getEtaDate())
                 || !Objects.equals(request.etaTimeFrom(), shipment.getEtaTimeFrom())
@@ -541,6 +555,11 @@ public class ShipmentService {
                 r.shopOrderLink(), r.driverPhone(), trackingRegistry.allCodes());
     }
 
+    /** Partial-update merge: {@code null} keeps the stored value, anything else (including "") replaces it. */
+    private static String keep(String requested, String stored) {
+        return requested != null ? requested : stored;
+    }
+
     private static void validateTimeWindow(LocalTime from, LocalTime to) {
         if (from != null && to != null && to.isBefore(from)) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, FIELDS_MISSING);
@@ -671,7 +690,7 @@ public class ShipmentService {
 
     private void applyManualStatus(ShipmentEntity s, ShipmentStatus status, OffsetDateTime now) {
         if (!MANUAL_STATUSES.contains(status)) {
-            throw new ForemenApiException(HttpStatus.BAD_REQUEST, FIELDS_MISSING);
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, STATUS_INVALID);
         }
         s.setStatus(status);
         s.setStatusSource(ShipmentSource.MANUAL);

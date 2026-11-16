@@ -126,6 +126,7 @@ class ForemenControllerAdviceTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().status()).isEqualTo(404);
+        assertThat(response.getBody().code()).isEqualTo("error.not.found");
     }
 
     @Test

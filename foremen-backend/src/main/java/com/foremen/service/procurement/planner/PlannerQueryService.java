@@ -746,6 +746,12 @@ public class PlannerQueryService {
         }
     }
 
+    /** Project ids the caller may see, or {@code null} when unrestricted (ADMIN). */
+    Set<Long> visibleProjectIds(Authentication auth) {
+        Scope scope = scope(auth);
+        return scope.all() ? null : scope.projectIds();
+    }
+
     private Scope scope(Authentication auth) {
         if (auth == null || !auth.isAuthenticated()) {
             return new Scope(false, Set.of());

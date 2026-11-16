@@ -220,8 +220,9 @@ lock the round row; two simultaneous accepts yield one 409 `round.notOpen`.
 
 ### 4. Read side
 
-`ApprovalQueryService` builds both views from one query per project (positions with at least one round,
-rounds, options, materials) to avoid N+1: positions fetched by `projectId`, rounds and options fetched
+`ApprovalQueryService` builds both views from one query per project (client view: positions with at least
+one round; staff view, `StaffApprovalQueryService`: positions with a round plus never-sent `AGREED` and
+`PACKAGE` positions, shown as "not sent" with the `SEND` / `SEND_CHOICE` action, per R19.1; rounds, options, materials) to avoid N+1: positions fetched by `projectId`, rounds and options fetched
 with `IN` on position ids and `JOIN FETCH` of material, producer and unit.
 
 **Client types** (`com.foremen.controller.model.client`), **no import of any staff type, no purchase-side
