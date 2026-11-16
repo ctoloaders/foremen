@@ -192,6 +192,18 @@ public class MaterialsListService
     }
 
     /**
+     * The finishing Placeholder rows (no chosen product) of the project's estimate, read-only, for the
+     * FOR-11-06 estimate sync. Chosen-material rows come from {@link #getMaterials(Long, boolean)}
+     * ({@link MaterialRowDto#sourceKey()}); both use the same matrix and quantity helpers.
+     */
+    @Transactional
+    public List<PlaceholderRowDto> placeholders(Long projectId) {
+        EstimateEntity estimate = estimateService.getOrCreateEntityForProject(projectId);
+        EstimateMatrixDto matrix = estimateMatrixAssembler.assemble(estimate, projectId, false);
+        return MaterialsListAssembler.placeholders(matrix);
+    }
+
+    /**
      * Persists the project's reserve map from a client-expanded request and returns the refreshed read
      * model (design §B3, {@code PUT /project/{projectId}/materials/reserve}, R4.2, R4.3, R4.4, R8.3,
      * R9.4, R10.2, R12.5).

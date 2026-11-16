@@ -133,7 +133,7 @@ public class ApprovalQueryService {
                 + "CASE WHEN am.id IS NOT NULL THEN amp.nameRU ELSE pmp.nameRU END, "
                 + "CASE WHEN am.id IS NOT NULL THEN amp.namePL ELSE pmp.namePL END, "
                 + item("link") + ", " + item("photo") + ") "
-                + "FROM PurchasePositionEntity p JOIN p.unit u JOIN p.plannedMaterial pm "
+                + "FROM PurchasePositionEntity p JOIN p.unit u LEFT JOIN p.plannedMaterial pm "
                 + "LEFT JOIN pm.producer pmp LEFT JOIN p.actualMaterial am LEFT JOIN am.producer amp "
                 + "LEFT JOIN p.saleVatRate v "
                 + "WHERE " + String.join(" AND ", where) + " "

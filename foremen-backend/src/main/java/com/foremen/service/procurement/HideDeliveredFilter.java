@@ -1,7 +1,5 @@
 package com.foremen.service.procurement;
 
-import java.util.List;
-
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -23,6 +21,9 @@ import jakarta.persistence.criteria.Subquery;
  * callers, schedulers) the filter is never applied. The returned specifications are AND-ed with the
  * user filter and the project scope by {@code buildFinalSpecification}, so totals and pagination stay
  * correct.
+ *
+ * <p>FOR-11-06 (R10.4): only {@code Delivery_Complete} ({@link PositionDelivery}) is hidden; a received
+ * but client-unpaid position stays visible.
  */
 public final class HideDeliveredFilter {
 
@@ -40,15 +41,18 @@ public final class HideDeliveredFilter {
         return Boolean.parseBoolean(servletAttrs.getRequest().getParameter(PARAM));
     }
 
-    /** Positions: excludes stage {@code RECEIVED}; {@code PARTIALLY_RECEIVED} stays visible (R22.1). */
+    /**
+     * Positions: excludes {@code Delivery_Complete}; {@code PARTIALLY_RECEIVED} and received-unpaid stay
+     * visible (R22.1, FOR-11-06 R10.4).
+     */
     public static Specification<PurchasePositionEntity> positions() {
-        return (root, query, cb) -> cb.notEqual(root.get("status"), PositionStatus.RECEIVED);
+        return (root, query, cb) -> cb.not(PositionDelivery.completePredicate(root, cb));
     }
 
     /**
-     * Requests: excludes derived status {@code COMPLETED}, i.e. at least one {@code RECEIVED} position
-     * and no position outside {RECEIVED, CANCELLED}. Mirrors {@link PurchaseRequestStatusDeriver}
-     * (R22.2); a request without positions stays visible.
+     * Requests: excludes derived status {@code COMPLETED}, i.e. at least one {@code Delivery_Complete}
+     * position and no position that is neither complete nor {@code CANCELLED}. Mirrors
+     * {@link PurchaseRequestStatusDeriver} (R22.2); a request without positions stays visible.
      */
     public static Specification<PurchaseRequestEntity> requests() {
         return (root, query, cb) -> {
@@ -56,14 +60,13 @@ public final class HideDeliveredFilter {
             Root<PurchasePositionEntity> r = received.from(PurchasePositionEntity.class);
             received.select(r.get("id"))
                     .where(cb.equal(r.get("purchaseRequest"), root),
-                            cb.equal(r.get("status"), PositionStatus.RECEIVED));
-
+                            PositionDelivery.completePredicate(r, cb));
             Subquery<Long> open = query.subquery(Long.class);
             Root<PurchasePositionEntity> o = open.from(PurchasePositionEntity.class);
             open.select(o.get("id"))
                     .where(cb.equal(o.get("purchaseRequest"), root),
-                            cb.not(o.get("status").in(List.of(PositionStatus.RECEIVED, PositionStatus.CANCELLED))));
-
+                            cb.not(PositionDelivery.completePredicate(o, cb)),
+                            cb.notEqual(o.get("status"), PositionStatus.CANCELLED));
             Predicate completed = cb.and(cb.exists(received), cb.not(cb.exists(open)));
             return cb.not(completed);
         };

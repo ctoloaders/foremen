@@ -4,6 +4,8 @@ import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.ActivateProjectRequest;
 import com.foremen.controller.model.CreateProjectRequest;
+import com.foremen.controller.model.ProjectBankAccountRequest;
+import com.foremen.controller.model.ProjectBankAccountResponse;
 import com.foremen.controller.model.ProjectCreateResponse;
 import com.foremen.controller.model.ProjectListDto;
 import com.foremen.controller.model.ProjectReadDto;
@@ -14,6 +16,7 @@ import com.foremen.dao.model.ProjectEntity;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.ProjectActivationService;
+import com.foremen.service.ProjectBankAccountService;
 import com.foremen.service.ProjectService;
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.service.model.ProjectServiceExtendedModel;
@@ -28,6 +31,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -68,6 +72,7 @@ public class ProjectController implements AdminController<
 
     private final ProjectService service;
     private final ProjectActivationService projectActivationService;
+    private final ProjectBankAccountService projectBankAccountService;
     private final ProjectControllerMapper controllerMapper;
     private final AuditServiceMapper auditServiceMapper;
     private final com.foremen.service.document.ProjectTemplateViewService projectTemplateViewService;
@@ -196,6 +201,20 @@ public class ProjectController implements AdminController<
     }
 
     /**
+     * FOR-11-06 (R4.2): sets or clears the project's payee bank account. The generic update ignores the
+     * field, so this is its only write path. {@code PROJECTS} UPDATE plus the service check (ADMIN or
+     * ACTIVE MANAGER member of the project, else 403 {@code error.project.bankAccount.forbidden}).
+     */
+    @PutMapping("/{id}/bank-account")
+    @RequiresPermission(resource = "PROJECTS", operation = "UPDATE")
+    public ResponseEntity<ProjectBankAccountResponse> setBankAccount(
+            @PathVariable Long id,
+            @RequestBody ProjectBankAccountRequest request) {
+        String stored = projectBankAccountService.set(id, request == null ? null : request.bankAccount());
+        return ResponseEntity.ok(new ProjectBankAccountResponse(id, stored));
+    }
+
+    /**
      * FOR-05-08 (template placeholder values): the per-project snapshot of every value a document
      * template's {@code {Token}} placeholders can be filled from — the nested value groups plus a
      * flat {@code tokenName → value} map. Reuses the same merge resolver engine that fills a real
@@ -228,6 +247,7 @@ public class ProjectController implements AdminController<
                 dto.status(),
                 dto.members(),
                 dto.clients(),
-                dto.client());
+                dto.client(),
+                null);
     }
 }

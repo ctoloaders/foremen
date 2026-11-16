@@ -90,6 +90,8 @@ public class ExternalOrderService implements ProjectScopedService<ExternalOrderS
     static final String DOCUMENTS_LOCKED = "error.externalOrder.documents.locked";
     static final String DOCUMENTS_OVER_ATTRIBUTED = "error.externalOrder.documents.overAttributed";
 
+    static final String PAYMENT_LINK_INVALID = "error.externalOrder.paymentLink.invalid";
+
     /** The VAT rate a purchase falls back to when neither the line nor the position names one (R12.5). */
     static final BigDecimal DEFAULT_PURCHASE_VAT_PERCENT = new BigDecimal("23");
 
@@ -223,6 +225,7 @@ public class ExternalOrderService implements ProjectScopedService<ExternalOrderS
             throw new ForemenApiException(HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND, model.getSellerId());
         }
         validateRequest(model.getPurchaseRequestId(), projectId);
+        model.setPaymentLink(normalizePaymentLink(model.getPaymentLink()));
         if (model.getAssignedBuyerId() == null) {
             model.setAssignedBuyerId(currentUserId());
         } else {
@@ -265,6 +268,7 @@ public class ExternalOrderService implements ProjectScopedService<ExternalOrderS
             throw new ForemenApiException(HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND, model.getSellerId());
         }
         validateRequest(model.getPurchaseRequestId(), projectId);
+        model.setPaymentLink(normalizePaymentLink(model.getPaymentLink()));
         if (model.getAssignedBuyerId() != null) {
             validateBuyer(model.getAssignedBuyerId());
         }
@@ -375,6 +379,9 @@ public class ExternalOrderService implements ProjectScopedService<ExternalOrderS
             }
             if (!Objects.equals(p.getProject().getId(), projectId)) {
                 throw conflict(LINE_PROJECT_MISMATCH, p.getId());
+            }
+            if (p.getPlannedMaterial() == null) {
+                throw conflict(com.foremen.service.procurement.PositionLabel.MATERIAL_REQUIRED, p.getId());
             }
             if (p.getStatus() != PositionStatus.WITH_BUYER
                     || (p.getSourcingPath() != SourcingPath.AGREED && p.getSourcingPath() != SourcingPath.PACKAGE)) {
@@ -549,6 +556,15 @@ public class ExternalOrderService implements ProjectScopedService<ExternalOrderS
         }
     }
 
+    /**
+     * FOR-11-06 R9.1: trims the link; blank becomes {@code null}; anything but an absolute http(s) URL of at
+     * most 1000 characters is a 400 {@code error.externalOrder.paymentLink.invalid}.
+     */
+    public static String normalizePaymentLink(String raw) {
+        return com.foremen.util.HttpUrls.requireHttpUrl(raw,
+                () -> new ForemenApiException(HttpStatus.BAD_REQUEST, PAYMENT_LINK_INVALID));
+    }
+
     /** R13.4: cost >= 0 (scale 2); null is zero. */
     private static BigDecimal normalizeCost(BigDecimal cost) {
         if (cost == null) {
@@ -641,6 +657,7 @@ public class ExternalOrderService implements ProjectScopedService<ExternalOrderS
         snap.put("sellerId", e.getSeller() == null ? null : e.getSeller().getId());
         snap.put("status", e.getStatus());
         snap.put("referenceNumber", e.getReferenceNumber());
+        snap.put("paymentLink", e.getPaymentLink());
         snap.put("expectedShipDate", e.getExpectedShipDate());
         snap.put("expectedDeliveryDate", e.getExpectedDeliveryDate());
         snap.put("assignedBuyerId", e.getAssignedBuyer() == null ? null : e.getAssignedBuyer().getId());

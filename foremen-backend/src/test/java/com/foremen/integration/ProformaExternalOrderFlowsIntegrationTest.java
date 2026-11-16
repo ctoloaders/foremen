@@ -246,7 +246,7 @@ class ProformaExternalOrderFlowsIntegrationTest {
         assertThat(issued.getStatus()).isEqualTo(ProformaStatus.ISSUED);
         assertThat(issued.getNumber()).matches("PF/\\d{4}/\\d{6}");
         assertThat(issued.isHasPdf()).isTrue();
-        ClientProformaEntity stored = proformaDao.findById(draft.getId()).orElseThrow();
+        ClientProformaEntity stored = loadProforma(draft.getId());
         assertThat(stored.getPdfObjectKey()).isNotBlank();
         assertThat(statusOf(p1)).isEqualTo(PositionStatus.IN_PROFORMA);
         assertThat(statusOf(p2)).isEqualTo(PositionStatus.IN_PROFORMA);
@@ -259,7 +259,7 @@ class ProformaExternalOrderFlowsIntegrationTest {
         Long txn1 = tx().execute(s -> newTransaction("PLN", gross.add(BigDecimal.ONE), LedgerOrigin.MANUAL).getId());
         linkService.createLink(txn1, LinkRequest.of(LinkKind.PROFORMA_PAYMENT, part)
                 .withClientProforma(draft.getId()), false);
-        ClientProformaEntity afterPartial = proformaDao.findById(draft.getId()).orElseThrow();
+        ClientProformaEntity afterPartial = loadProforma(draft.getId());
         assertThat(afterPartial.getStatus()).isEqualTo(ProformaStatus.PARTIALLY_PAID);
         assertThat(afterPartial.getPaidGross()).isEqualByComparingTo(part);
         assertThat(afterPartial.getReleasedAt()).isNull();
@@ -273,7 +273,7 @@ class ProformaExternalOrderFlowsIntegrationTest {
         Long txn2 = tx().execute(s -> newTransaction("PLN", rest, LedgerOrigin.MANUAL).getId());
         var outcome = linkService.createLink(txn2, LinkRequest.of(LinkKind.PROFORMA_PAYMENT, rest)
                 .withClientProforma(draft.getId()), false);
-        ClientProformaEntity paid = proformaDao.findById(draft.getId()).orElseThrow();
+        ClientProformaEntity paid = loadProforma(draft.getId());
         assertThat(paid.getStatus()).isEqualTo(ProformaStatus.PAID);
         assertThat(paid.getPaidGross()).isEqualByComparingTo(gross);
         assertThat(paid.getReleasedAt()).isNotNull();
@@ -285,7 +285,7 @@ class ProformaExternalOrderFlowsIntegrationTest {
         assertConflict(() -> linkService.removeLink(outcome.linkId()), BankLinkService.LOCKED);
 
         // idempotent: re-evaluating a released proforma changes nothing
-        assertThat(proformaDao.findById(draft.getId()).orElseThrow().getReleasedAt()).isEqualTo(paid.getReleasedAt());
+        assertThat(loadProforma(draft.getId()).getReleasedAt()).isEqualTo(paid.getReleasedAt());
 
         // notification to the project MANAGER (AFTER_COMMIT)
         assertThat(awaitNotification(manager.getId(), "notification.proforma.paid")).isTrue();
@@ -625,19 +625,22 @@ class ProformaExternalOrderFlowsIntegrationTest {
         projectAccessCache.invalidate(manager.getId());
         projectAccessCache.invalidate(client.getId());
 
-        // MANAGER: reads own project's proforma, 404 for a foreign project
-        status(get("/api/client-proformas/" + proformaId).with(as(manager, "MANAGER")), 200);
-        status(get("/api/client-proformas/" + foreignProformaId).with(as(manager, "MANAGER")), 404);
+        Long paymentId = paymentIdOf(proformaId);
+        Long foreignPaymentId = paymentIdOf(foreignProformaId);
+
+        // MANAGER: reads own project's payment, 404 for a foreign project
+        status(get("/api/client-payments/" + paymentId).with(as(manager, "MANAGER")), 200);
+        status(get("/api/client-payments/" + foreignPaymentId).with(as(manager, "MANAGER")), 404);
         // MANAGER may not act on external orders beyond READ
         status(post("/api/external-orders/" + order.getId() + "/send").with(as(manager, "MANAGER")), 403);
-        // BUYER: READ only on proformas
-        status(post("/api/client-proformas/" + proformaId + "/issue").with(as(buyer, "BUYER"))
+        // BUYER: READ only on client payments
+        status(post("/api/client-payments/" + paymentId + "/issue").with(as(buyer, "BUYER"))
                 .contentType(MediaType.APPLICATION_JSON).content("{}"), 403);
-        // FOREMAN: no grant on either resource
-        status(get("/api/client-proformas/" + proformaId).with(as(foreman, "FOREMAN")), 403);
+        // FOREMAN: READ on CLIENT_PAYMENTS but not a member of the project, so the payment is out of scope (404); no grant on orders
+        status(get("/api/client-payments/" + paymentId).with(as(foreman, "FOREMAN")), 404);
         status(get("/api/external-orders/" + order.getId()).with(as(foreman, "FOREMAN")), 403);
-        // CLIENT: no staff proforma endpoint and no external orders
-        status(get("/api/client-proformas/" + proformaId).with(as(client, "CLIENT")), 403);
+        // CLIENT: no staff action on client payments and no external orders
+        status(post("/api/client-payments/" + paymentId + "/cancel").with(as(client, "CLIENT")), 403);
         status(get("/api/external-orders/" + order.getId()).with(as(client, "CLIENT")), 403);
         // FINANCIER: APPROVE on orders (mark paid), but no create
         status(post("/api/external-orders/" + order.getId() + "/mark-paid").with(as(financier, "FINANCIER"))
@@ -649,16 +652,14 @@ class ProformaExternalOrderFlowsIntegrationTest {
         status(post("/api/external-orders/" + order.getId() + "/unmark-paid").with(as(buyer, "BUYER")), 403);
 
         // CLIENT view: member sees own proforma, no purchase data; foreign project answers 404
-        MvcResult own = mockMvc.perform(get("/api/client-proformas/client/" + proformaId).with(as(client, "CLIENT")))
+        MvcResult own = mockMvc.perform(get("/api/client-payments/" + paymentId).with(as(client, "CLIENT")))
                 .andReturn();
         assertThat(own.getResponse().getStatus()).isEqualTo(200);
         String body = own.getResponse().getContentAsString().toLowerCase(Locale.ROOT);
         assertThat(body).contains("number");
         assertThat(body).doesNotContain("purchase").doesNotContain("positionid").doesNotContain("cost");
-        status(get("/api/client-proformas/client/" + foreignProformaId).with(as(client, "CLIENT")), 404);
-        status(get("/api/client-proformas/client/" + proformaId + "/pdf").with(as(client, "CLIENT")), 200);
-        // a non-CLIENT caller of the client endpoint is indistinguishable from a non-member
-        status(get("/api/client-proformas/client/" + proformaId).with(as(manager, "MANAGER")), 404);
+        status(get("/api/client-payments/" + foreignPaymentId).with(as(client, "CLIENT")), 404);
+        status(get("/api/client-payments/" + paymentId + "/pdf").with(as(client, "CLIENT")), 200);
     }
 
     // =========================================================================================
@@ -677,8 +678,10 @@ class ProformaExternalOrderFlowsIntegrationTest {
         var link = linkService.createLink(txnId, LinkRequest.of(LinkKind.PROFORMA_PAYMENT, new BigDecimal("10.00"))
                 .withClientProforma(proformaId), false);
 
-        assertRejected("UPDATE client_proformas SET status = 'BOGUS' WHERE id = " + proformaId);
-        assertRejected("UPDATE client_proformas SET paid_gross = total_gross + 1 WHERE id = " + proformaId);
+        // the common payment columns live on client_payments since changeset 253 dropped the legacy copies
+        String paymentOfProforma = "(SELECT client_payment_id FROM client_proformas WHERE id = " + proformaId + ")";
+        assertRejected("UPDATE client_payments SET status = 'BOGUS' WHERE id = " + paymentOfProforma);
+        assertRejected("UPDATE client_payments SET paid_gross = -1 WHERE id = " + paymentOfProforma);
         assertRejected("UPDATE client_proforma_lines SET quantity = 0 WHERE proforma_id = " + proformaId);
         assertRejected("UPDATE external_orders SET status = 'BOGUS' WHERE id = " + order.getId());
         assertRejected("UPDATE external_orders SET delivery_cost_net = -1 WHERE id = " + order.getId());
@@ -887,6 +890,20 @@ class ProformaExternalOrderFlowsIntegrationTest {
             pos.setDeliveryCostShare(BigDecimal.ZERO);
             return positionDao.save(pos);
         });
+    }
+
+    /** Loads a proforma and initializes its lazy base payment row (status, amounts) inside a transaction. */
+    private ClientProformaEntity loadProforma(Long id) {
+        return tx().execute(s -> {
+            ClientProformaEntity e = proformaDao.findById(id).orElseThrow();
+            e.getTotalGross();
+            return e;
+        });
+    }
+
+    private Long paymentIdOf(Long proformaId) throws Exception {
+        return BankLedgerItSupport.queryForLong(POSTGRES,
+                "SELECT client_payment_id FROM client_proformas WHERE id = " + proformaId);
     }
 
     private PositionStatus statusOf(PurchasePositionEntity p) {

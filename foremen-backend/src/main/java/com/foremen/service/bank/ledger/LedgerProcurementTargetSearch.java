@@ -89,6 +89,7 @@ public class LedgerProcurementTargetSearch {
             BigDecimal remaining = total.subtract(nz(p.getPaidGross())).max(BigDecimal.ZERO);
             List<String> clients = clientNames.computeIfAbsent(project.getId(), this::clientNames);
             if (needle != null && !(contains(needle, p.getNumber()) || contains(needle, project.getName())
+                    || paymentIdMatches(needle, p)
                     || clients.stream().anyMatch(c -> contains(needle, c))
                     || amountMatches(needle, total, remaining))) {
                 continue;
@@ -137,6 +138,15 @@ public class LedgerProcurementTargetSearch {
                     project.getId(), project.getName(), null, null), remaining, o.getId()));
         }
         return rank(items, lineAmount);
+    }
+
+    /** FOR-11-06 (R1.8): a proforma is also found by its unified client payment id ({@code "#12"} or {@code "12"}). */
+    private static boolean paymentIdMatches(String needle, ClientProformaEntity p) {
+        if (p.getPayment() == null || p.getPayment().getId() == null) {
+            return false;
+        }
+        String id = String.valueOf(p.getPayment().getId());
+        return ("#" + id).equals(needle) || id.equals(needle);
     }
 
     private boolean invoiceMatches(String needle, Long orderId) {

@@ -22,5 +22,7 @@ public record StaffApprovalPositionDto(Long positionId, Integer blockNo, Long ma
                                        LocalDate needByDate, LocalDate orderByDate, LocalDate plannedDeliveryDate,
                                        LocalDate decisionDeadline, boolean overdue, StaffRoundDto openRound,
                                        List<StaffRoundDto> openSuggestions, List<StaffRoundDto> history,
-                                       Set<StaffAction> allowedActions) {
+                                       Set<StaffAction> allowedActions, String thumbnailUrl,
+                                       String materialTypeName, boolean fromEstimate,
+                                       boolean estimateChanged, boolean estimateRemoved) {
 }

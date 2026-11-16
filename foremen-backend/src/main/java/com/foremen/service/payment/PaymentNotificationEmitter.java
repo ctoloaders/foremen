@@ -95,6 +95,9 @@ public class PaymentNotificationEmitter {
     /** The Płatności tab key the internal deep-links target ({@code /projects/{projectId}/payments}, R9.2). */
     private static final String PAYMENTS_TAB = "payments";
 
+    /** FOR-11-06 (R13.5): the merged client-payments workspace tab the internal deep-links now target. */
+    private static final String CLIENT_PAYMENTS_TAB = "clientPayments";
+
     private final NotificationService notificationService;
     private final ProjectMemberDao projectMemberDao;
     private final PaymentScheduleDao paymentScheduleDao;
@@ -260,7 +263,7 @@ public class PaymentNotificationEmitter {
 
     /** The internal Płatności deep-link ({@code /projects/{projectId}/payments}, R9.2). */
     private static String internalDeepLink(Long projectId) {
-        return projectId == null ? null : "/projects/" + projectId + "/" + PAYMENTS_TAB;
+        return projectId == null ? null : "/projects/" + projectId + "/" + CLIENT_PAYMENTS_TAB;
     }
 
     /** The CLIENT (FOR-09) deep-link for a published schedule ({@code /portal/projects/{projectId}/payments}, R9.2 row 5). */

@@ -32,6 +32,7 @@ import com.foremen.dao.model.SourcingPath;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.approval.ApprovalDeadlinePolicy;
+import com.foremen.service.procurement.approval.PositionApprovalBulkExecutor;
 import com.foremen.service.procurement.approval.PositionApprovalService;
 import com.foremen.service.procurement.approval.PositionApprovalService.AcceptCommand;
 import com.foremen.service.procurement.approval.PositionApprovalService.AnalogCommand;
@@ -86,6 +87,7 @@ public class PositionApprovalStaffController {
     private final ProcurementProjectAccess projectAccess;
     private final EntityManager entityManager;
     private final Clock clock;
+    private final PositionApprovalBulkExecutor bulkExecutor;
 
     // ------------------------------------------------------------------ reads
 
@@ -203,6 +205,30 @@ public class PositionApprovalStaffController {
         return ResponseEntity.noContent().build();
     }
 
+    /** FOR-11-06 R8.4-8.6: accept the open round of each position on behalf of the client, one tx per item. */
+    @PostMapping("/rounds/decide-on-behalf-bulk")
+    @RequiresPermission(resource = RESOURCE, operation = APPROVE)
+    @Operation(summary = "Record the client's accept on their behalf for several positions")
+    public ResponseEntity<BulkResultDto> decideOnBehalfBulk(@Valid @RequestBody DecideBulkRequest request) {
+        PositionApprovalBulkExecutor.assertWithinCap(request.items());
+        Decider decider = onBehalfDecider();
+        List<PositionApprovalBulkExecutor.AcceptItem> items = request.items().stream()
+                .map(i -> new PositionApprovalBulkExecutor.AcceptItem(i.positionId(), i.optionId(),
+                        i.expectedUnitSalePrice(), i.comment()))
+                .toList();
+        return ResponseEntity.ok(BulkResultDto.of(bulkExecutor.acceptOnBehalf(items, decider)));
+    }
+
+    /** FOR-11-06 R8.4, 8.6: withdraw several open rounds, one tx per item. */
+    @PostMapping("/rounds/withdraw-bulk")
+    @RequiresPermission(resource = RESOURCE, operation = UPDATE)
+    @Operation(summary = "Withdraw several open rounds")
+    public ResponseEntity<BulkResultDto> withdrawBulk(@Valid @RequestBody WithdrawBulkRequest request) {
+        PositionApprovalBulkExecutor.assertWithinCap(request.items());
+        List<Long> roundIds = request.items().stream().map(WithdrawBulkItem::roundId).toList();
+        return ResponseEntity.ok(BulkResultDto.of(bulkExecutor.withdraw(roundIds)));
+    }
+
     @PostMapping("/positions/{positionId}/client-own-on-behalf")
     @RequiresPermission(resource = RESOURCE, operation = APPROVE)
     @Operation(summary = "Record 'client buys it themselves' on the client's behalf")
@@ -241,6 +267,30 @@ public class PositionApprovalStaffController {
     }
 
     public record ClientOwnOnBehalfRequest(@Size(max = 1000) String comment) {
+    }
+
+    public record DecideBulkItem(@NotNull Long positionId, Long optionId, BigDecimal expectedUnitSalePrice,
+                                 @Size(max = 1000) String comment) {
+    }
+
+    public record DecideBulkRequest(@NotEmpty List<@NotNull @Valid DecideBulkItem> items) {
+    }
+
+    public record WithdrawBulkItem(@NotNull Long roundId) {
+    }
+
+    public record WithdrawBulkRequest(@NotEmpty List<@NotNull @Valid WithdrawBulkItem> items) {
+    }
+
+    /** {@code {succeeded: [positionId], failed: [{positionId, errorKey}]}}. */
+    public record BulkResultDto(List<Long> succeeded, List<BulkFailureDto> failed) {
+        static BulkResultDto of(PositionApprovalBulkExecutor.Result r) {
+            return new BulkResultDto(r.succeeded(), r.failed().stream()
+                    .map(f -> new BulkFailureDto(f.positionId(), f.errorKey())).toList());
+        }
+    }
+
+    public record BulkFailureDto(Long positionId, String errorKey) {
     }
 
     // ------------------------------------------------------------------ helpers

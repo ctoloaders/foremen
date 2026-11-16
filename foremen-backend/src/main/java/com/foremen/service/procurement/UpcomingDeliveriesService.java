@@ -84,7 +84,7 @@ public class UpcomingDeliveriesService {
 
         StringBuilder jpql = new StringBuilder("SELECT p FROM PurchasePositionEntity p "
                 + "JOIN FETCH p.project pr "
-                + "JOIN FETCH p.plannedMaterial pm LEFT JOIN FETCH pm.producer "
+                + "LEFT JOIN FETCH p.plannedMaterial pm LEFT JOIN FETCH pm.producer "
                 + "LEFT JOIN FETCH p.actualMaterial am LEFT JOIN FETCH am.producer "
                 + "JOIN FETCH p.unit u "
                 + "LEFT JOIN FETCH p.purchaseRequest "
@@ -175,12 +175,12 @@ public class UpcomingDeliveriesService {
     private UpcomingDeliveryDto toDto(PurchasePositionEntity p, LocalDate today, boolean pl,
                                       List<ShipmentEntity> active) {
         ShipmentEntity s = nearest(active);
-        FinishingMaterialEntity m = p.getActualMaterial() != null ? p.getActualMaterial() : p.getPlannedMaterial();
-        String producer = m.getProducer() == null ? null
+        FinishingMaterialEntity m = PositionLabel.material(p);
+        String producer = m == null || m.getProducer() == null ? null
                 : pl ? m.getProducer().getNamePL() : m.getProducer().getNameRU();
         String unitName = pl ? p.getUnit().getNamePL() : p.getUnit().getNameRU();
         return new UpcomingDeliveryDto(
-                p.getId(), p.getProject().getId(), p.getProject().getName(), m.getModel(), producer,
+                p.getId(), p.getProject().getId(), p.getProject().getName(), m == null ? PositionLabel.of(p, pl) : m.getModel(), producer,
                 p.getQuantity(), unitName, p.getPlannedDeliveryDate(), p.getStatus(),
                 p.getPlannedDeliveryDate().isBefore(today),
                 p.getPurchaseRequest() == null ? null : p.getPurchaseRequest().getId(),

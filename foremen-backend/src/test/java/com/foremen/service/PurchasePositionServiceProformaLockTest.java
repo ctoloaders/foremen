@@ -51,19 +51,21 @@ class PurchasePositionServiceProformaLockTest {
     private PurchasePositionVariantDao variantDao;
     private PurchasePositionService service;
     private PurchasePositionEntity position;
+    private FinishingMaterialDao materialDao;
 
     @BeforeEach
     void setUp() {
         lineDao = mock(ClientProformaLineDao.class);
         variantDao = mock(PurchasePositionVariantDao.class);
         when(variantDao.countByPositionIds(anyCollection())).thenReturn(List.of());
+        materialDao = mock(FinishingMaterialDao.class);
         EntityManager em = mock(EntityManager.class);
         VatRateDao vatRateDao = mock(VatRateDao.class);
         when(vatRateDao.findById(org.mockito.ArgumentMatchers.anyLong()))
                 .thenReturn(java.util.Optional.of(new VatRateEntity()));
         service = new PurchasePositionService(mock(PurchasePositionDao.class), new PurchasePositionServiceMapper(em),
                 mock(AuditLogDao.class), em, mock(ProcurementProjectAccess.class),
-                mock(PositionAudienceResolver.class), mock(ProjectDao.class), mock(FinishingMaterialDao.class),
+                mock(PositionAudienceResolver.class), mock(ProjectDao.class), materialDao,
                 mock(MeasurementUnitDao.class), mock(DeliveryCategoryDao.class), vatRateDao,
                 variantDao, mock(WorkCategoryDao.class), lineDao);
 
@@ -106,6 +108,23 @@ class PurchasePositionServiceProformaLockTest {
         same.setSaleVatRateId(3L);
         same.setNotes("note");
         assertThatCode(() -> service.validateUpdate(position, same)).doesNotThrowAnyException();
+    }
+
+    @Test
+    void pendingPlannedPositionMayChooseItsFirstMaterial() {
+        // FOR-11-06 task 4.2 (R5.3, R5.7): estimate-derived position without material, still PLANNED
+        position.setStatus(PositionStatus.PLANNED);
+        position.setPlannedMaterial(null);
+        FinishingMaterialEntity chosen = new FinishingMaterialEntity();
+        chosen.setId(9L);
+        when(materialDao.findById(9L)).thenReturn(java.util.Optional.of(chosen));
+
+        PurchasePositionServiceExtendedModel m = new PurchasePositionServiceExtendedModel();
+        m.setPlannedMaterialId(9L);
+        assertThatCode(() -> service.validateUpdate(position, m)).doesNotThrowAnyException();
+
+        position.setStatus(PositionStatus.ORDERED);
+        assertThatThrownBy(() -> service.validateUpdate(position, m)).isInstanceOf(ForemenApiException.class);
     }
 
     @Test

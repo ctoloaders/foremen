@@ -97,7 +97,8 @@ public class PositionVariantService {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, MATERIAL_PROJECT_MISMATCH);
         }
 
-        boolean sameMaterial = Objects.equals(target.getId(), position.getPlannedMaterial().getId());
+        boolean sameMaterial = position.getPlannedMaterial() != null
+                && Objects.equals(target.getId(), position.getPlannedMaterial().getId());
         BigDecimal newSale = cmd.salePrice() != null ? cmd.salePrice()
                 : (sameMaterial ? position.getSalePrice() : null);
         BigDecimal newPurchase = cmd.plannedPurchasePrice() != null ? cmd.plannedPurchasePrice()
@@ -112,7 +113,9 @@ public class PositionVariantService {
         }
 
         String before = positionService.serializeEntity(position);
-        variantDao.save(snapshot(position, cmd.reason(), cmd.note()));
+        if (position.getPlannedMaterial() != null) {
+            variantDao.save(snapshot(position, cmd.reason(), cmd.note()));
+        }
         position.setPlannedMaterial(target);
         position.setSalePrice(newSale);
         position.setPlannedPurchasePrice(newPurchase);
@@ -128,7 +131,8 @@ public class PositionVariantService {
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, VARIANT_NOT_FOUND));
         PurchasePositionEntity position = loadForWrite(positionId, actor);
 
-        if (Objects.equals(variant.getMaterial().getId(), position.getPlannedMaterial().getId())
+        if (position.getPlannedMaterial() != null
+                && Objects.equals(variant.getMaterial().getId(), position.getPlannedMaterial().getId())
                 && sameAmount(variant.getUnitSalePrice(), position.getSalePrice())
                 && sameAmount(variant.getUnitPlannedPurchasePrice(), position.getPlannedPurchasePrice())) {
             throw new ForemenApiException(HttpStatus.CONFLICT, SAME_AS_CURRENT);
@@ -139,7 +143,9 @@ public class PositionVariantService {
         BigDecimal restoredSale = variant.getUnitSalePrice();
         BigDecimal restoredPurchase = variant.getUnitPlannedPurchasePrice();
 
-        variantDao.save(snapshot(position, VariantReason.MANUAL, null));
+        if (position.getPlannedMaterial() != null) {
+            variantDao.save(snapshot(position, VariantReason.MANUAL, null));
+        }
         variantDao.delete(variant);
         position.setPlannedMaterial(restoredMaterial);
         position.setSalePrice(restoredSale);
@@ -178,7 +184,7 @@ public class PositionVariantService {
         int max = limit == null ? DEFAULT_SUGGESTION_LIMIT : Math.max(1, Math.min(limit, MAX_SUGGESTION_LIMIT));
 
         FinishingMaterialEntity current = position.getPlannedMaterial();
-        if (current.getType() == null) {
+        if (current == null || current.getType() == null) {
             return List.of();
         }
         Long projectId = position.getProject().getId();

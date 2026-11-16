@@ -80,11 +80,12 @@ public class PurchaseRequestServiceMapper implements ServiceToDaoMapper<Purchase
         target.setAssignedBuyerName(buyer == null ? null : buyer.getName());
         target.setNotes(source.getNotes());
 
-        List<PositionStatus> stages = source.getId() == null
+        List<PurchaseRequestStatusDeriver.Stage> stages = source.getId() == null
                 ? List.of()
                 : positionDao.findByPurchaseRequestId(source.getId()).stream()
-                        .map(PurchasePositionEntity::getStatus).toList();
-        RequestStatus status = PurchaseRequestStatusDeriver.derive(stages);
+                        .map(p -> new PurchaseRequestStatusDeriver.Stage(p.getStatus(), p.isClientUnpaid()))
+                        .toList();
+        RequestStatus status = PurchaseRequestStatusDeriver.deriveStages(stages);
         target.setStatus(status);
         target.setOverdue(overdue.isOverdue(source.getExpectedDeliveryDate(), status));
         target.setPositionCount(stages.size());

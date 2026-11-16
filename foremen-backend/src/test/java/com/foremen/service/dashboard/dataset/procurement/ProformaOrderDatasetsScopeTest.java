@@ -48,7 +48,7 @@ class ProformaOrderDatasetsScopeTest {
     @Test
     void clientProformasDatasetIsCompanyWideForBuyerAndFinancier() {
         Dataset d = new ClientProformasDataset();
-        assertThat(d.requiredResources()).containsExactly("CLIENT_PROFORMAS");
+        assertThat(d.requiredResources()).containsExactly("CLIENT_PAYMENTS");
         check(d);
     }
 

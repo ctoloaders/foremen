@@ -422,7 +422,7 @@ public class PlannerQueryService {
         for (PurchasePositionEntity p : entities) {
             int variantCount = variantCounts.getOrDefault(p.getId(), 0);
             PositionSnapshot snapshot = new PositionSnapshot(p.getSourcingPath(), p.getStatus(), p.getNeedByDate(),
-                    p.getOrderByDate(), p.getPlannedDeliveryDate(), variantCount);
+                    p.getOrderByDate(), p.getPlannedDeliveryDate(), variantCount, p.isClientUnpaid());
             LocalDate site = PlannerSliceRules.siteDeliveryDate(snapshot);
             WorkLink link = links.get(p.getId());
             LocalDate workStart = link == null ? null : link.startDate();
@@ -505,12 +505,13 @@ public class PlannerQueryService {
     private Map<Long, ProformaRef> proformaRefs(List<PurchasePositionEntity> entities) {
         Map<Long, ProformaRef> result = new HashMap<>();
         List<Object[]> rows = entityManager.createQuery(
-                "select l.position.id, l.proforma.id, l.proforma.number, l.proforma.status "
+                "select l.position.id, l.proforma.id, l.proforma.number, l.proforma.payment.status "
                         + "from ClientProformaLineEntity l where l.active = true and l.position.id in :ids",
                 Object[].class).setParameter("ids", entities.stream().map(PurchasePositionEntity::getId).toList())
                 .getResultList();
         for (Object[] row : rows) {
-            result.put((Long) row[0], new ProformaRef((Long) row[1], (String) row[2], (ProformaStatus) row[3]));
+            result.put((Long) row[0], new ProformaRef((Long) row[1], (String) row[2],
+                    ProformaStatus.valueOf((String) row[3])));
         }
         return result;
     }
@@ -637,10 +638,15 @@ public class PlannerQueryService {
     }
 
     private static Material material(PurchasePositionEntity p, FinishingMaterialEntity m, boolean ru) {
+        if (m == null) {
+            // FOR-11-06: pending (estimate-derived) position, material not chosen yet
+            return new Material(null, null, com.foremen.service.procurement.PositionLabel.of(p, !ru),
+                    null, null, null, null, null, null);
+        }
         MaterialProducerEntity producer = m.getProducer();
         MaterialSellerEntity seller = m.getSeller();
         return new Material(
-                p.getPlannedMaterial().getId(),
+                p.getPlannedMaterial() == null ? null : p.getPlannedMaterial().getId(),
                 p.getActualMaterial() == null ? null : p.getActualMaterial().getId(),
                 m.getModel(),
                 m.getSku(),

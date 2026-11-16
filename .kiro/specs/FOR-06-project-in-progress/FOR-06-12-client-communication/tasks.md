@@ -250,7 +250,4 @@ changeset follows the `017`/`158`/`175` two-changeSet resource+grant pattern.
     `UserEntity.locale` migration regression; frontend unit tests + locale parity; confirm the tab
     appears on an ACTIVE project for permitted roles and is hidden otherwise. Commit the root repo
     (changesets/entities/converter+user-migration/services/seed/spec) and the `foremen-frontend/`
-    repo (module/tab swap/locales) separately per `.kiro/steering/git-repo-structure.md`. Commit only
-    when the user asks.
-  - _Requirements: 13.1, 13.2, 13.3_
-  - _Depends on: all above_
+A~QP=[]\'  - _Depends on: all above_

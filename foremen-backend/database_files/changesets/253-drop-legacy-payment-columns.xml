@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-06 (task 9.2; Requirements 1.2, 14.1; design 1.1 / 1.2): cleanup of the deprecated common
+        columns that changeset 247 moved to client_payments. They have been nullable and unwritten since
+        247; the JPA entities no longer map them (PaymentTrancheEntity / ClientProformaEntity delegate to
+        ClientPaymentEntity), and no native SQL, JPQL, dataset or view reads them.
+          payment_tranches : amount_gross, paid_gross, due_date, status
+          client_proformas : status, due_date, total_gross, paid_gross, currency, note
+        Table constraints and indexes that involve a dropped column (ck_cp_paid_gross, ix_cp_status, the
+        old status checks) are removed by PostgreSQL together with the column.
+        Two changeSets, each guarded by a column-exists precondition + onFail="MARK_RAN", and DROP COLUMN
+        IF EXISTS inside, so a re-run (or a partially cleaned database) changes nothing.
+        Registered LAST in changelog.xml (task 9.2).
+    -->
+    <changeSet id="253-drop-legacy-payment-tranche-columns" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <or>
+                <columnExists tableName="payment_tranches" columnName="amount_gross"/>
+                <columnExists tableName="payment_tranches" columnName="paid_gross"/>
+                <columnExists tableName="payment_tranches" columnName="due_date"/>
+                <columnExists tableName="payment_tranches" columnName="status"/>
+            </or>
+        </preConditions>
+        <sql dbms="postgresql">
+            ALTER TABLE payment_tranches DROP COLUMN IF EXISTS amount_gross;
+            ALTER TABLE payment_tranches DROP COLUMN IF EXISTS paid_gross;
+            ALTER TABLE payment_tranches DROP COLUMN IF EXISTS due_date;
+            ALTER TABLE payment_tranches DROP COLUMN IF EXISTS status;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql">
+                ALTER TABLE payment_tranches ADD COLUMN IF NOT EXISTS amount_gross NUMERIC(14,2);
+                ALTER TABLE payment_tranches ADD COLUMN IF NOT EXISTS paid_gross NUMERIC(14,2);
+                ALTER TABLE payment_tranches ADD COLUMN IF NOT EXISTS due_date DATE;
+                ALTER TABLE payment_tranches ADD COLUMN IF NOT EXISTS status VARCHAR(24);
+                UPDATE payment_tranches t
+                   SET amount_gross = cp.amount_gross, paid_gross = cp.paid_gross,
+                       due_date = cp.due_date, status = cp.status
+                  FROM client_payments cp WHERE cp.id = t.client_payment_id;
+            </sql>
+        </rollback>
+    </changeSet>
+    <changeSet id="253-drop-legacy-client-proforma-columns" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <or>
+                <columnExists tableName="client_proformas" columnName="status"/>
+                <columnExists tableName="client_proformas" columnName="due_date"/>
+                <columnExists tableName="client_proformas" columnName="total_gross"/>
+                <columnExists tableName="client_proformas" columnName="paid_gross"/>
+                <columnExists tableName="client_proformas" columnName="currency"/>
+                <columnExists tableName="client_proformas" columnName="note"/>
+            </or>
+        </preConditions>
+        <sql dbms="postgresql">
+            ALTER TABLE client_proformas DROP COLUMN IF EXISTS status;
+            ALTER TABLE client_proformas DROP COLUMN IF EXISTS due_date;
+            ALTER TABLE client_proformas DROP COLUMN IF EXISTS total_gross;
+            ALTER TABLE client_proformas DROP COLUMN IF EXISTS paid_gross;
+            ALTER TABLE client_proformas DROP COLUMN IF EXISTS currency;
+            ALTER TABLE client_proformas DROP COLUMN IF EXISTS note;
+        </sql>
+        <rollback>
+            <sql dbms="postgresql">
+                ALTER TABLE client_proformas ADD COLUMN IF NOT EXISTS status VARCHAR(24);
+                ALTER TABLE client_proformas ADD COLUMN IF NOT EXISTS due_date DATE;
+                ALTER TABLE client_proformas ADD COLUMN IF NOT EXISTS total_gross NUMERIC(14,2);
+                ALTER TABLE client_proformas ADD COLUMN IF NOT EXISTS paid_gross NUMERIC(14,2);
+                ALTER TABLE client_proformas ADD COLUMN IF NOT EXISTS currency VARCHAR(3);
+                ALTER TABLE client_proformas ADD COLUMN IF NOT EXISTS note VARCHAR(1000);
+                UPDATE client_proformas p
+                   SET status = cp.status, due_date = cp.due_date, total_gross = cp.amount_gross,
+                       paid_gross = cp.paid_gross, currency = cp.currency, note = cp.note
+                  FROM client_payments cp WHERE cp.id = p.client_payment_id;
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

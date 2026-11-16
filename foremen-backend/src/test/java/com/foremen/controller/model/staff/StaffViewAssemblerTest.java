@@ -2,10 +2,14 @@ package com.foremen.controller.model.staff;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.SourcingPath;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.image.ImageStorage;
 import com.foremen.service.procurement.approval.ApprovalRoundKind;
 import com.foremen.service.procurement.approval.ApprovalRoundStatus;
 import com.foremen.service.procurement.approval.StaffAction;
@@ -26,14 +30,22 @@ import org.springframework.http.HttpStatus;
 class StaffViewAssemblerTest {
 
     private static final LocalDate TODAY = LocalDate.of(2030, 6, 15);
-    private final StaffViewAssembler assembler = new StaffViewAssembler();
+    private final StaffViewAssembler assembler = new StaffViewAssembler(cdn());
+
+    private static ImageStorage cdn() {
+        ImageStorage storage = mock(ImageStorage.class);
+        when(storage.toCdnUrl(any())).thenAnswer(i -> i.getArgument(0) == null ? null
+                : "https://cdn.test/" + i.getArgument(0));
+        return storage;
+    }
 
     private static StaffPositionSource position() {
         return new StaffPositionSource(1L, 2, PositionStatus.PROPOSED, SourcingPath.AGREED,
                 new BigDecimal("3.000"), "шт", "szt", new BigDecimal("100.00"), new BigDecimal("60.00"),
                 null, new BigDecimal("10.00"), LocalDate.of(2030, 7, 1), LocalDate.of(2030, 6, 20),
                 LocalDate.of(2030, 6, 25), TODAY.minusDays(1), 7L, "REQ-7", 5L, "M1", "SKU1",
-                "Про", "Pro", "http://x", "Продавец", "Sprzedawca");
+                "Про", "Pro", "http://x", "Продавец", "Sprzedawca", "materials/a.jpg", "Плитка", "Płytki",
+                false, false, false);
     }
 
     private static StaffRoundSource round(long id, int no, ApprovalRoundKind kind, ApprovalRoundStatus st) {
@@ -108,7 +120,7 @@ class StaffViewAssemblerTest {
         StaffPositionSource noCost = new StaffPositionSource(p.positionId(), p.blockNo(), p.status(),
                 p.sourcingPath(), p.quantity(), p.unitNameRu(), p.unitNamePl(), p.salePrice(), null, null, null,
                 null, null, null, null, null, null, p.materialId(), p.model(), p.sku(), null, null, null, null,
-                null);
+                null, null, null, null, false, false, false);
         StaffApprovalPositionDto dto = assembler.assemble(
                 new StaffApprovalData(List.of(noCost), Map.of(), Map.of()), Audience.STAFF_FULL, "ADMIN", TODAY,
                 false).get(0);
@@ -117,5 +129,26 @@ class StaffViewAssemblerTest {
         assertThat(dto.lineMargin()).isNull();
         assertThat(dto.openRound()).isNull();
         assertThat(dto.overdue()).isFalse();
+    }
+
+    @Test
+    @DisplayName("thumbnailUrl is the CDN URL of the photo, materialTypeName is localized; no photo gives null")
+    void thumbnailAndType() {
+        StaffApprovalPositionDto dto = assembler.assemble(data(), Audience.STAFF_FULL, "ADMIN", TODAY, true).get(0);
+        assertThat(dto.thumbnailUrl()).isEqualTo("https://cdn.test/materials/a.jpg");
+        assertThat(dto.materialTypeName()).isEqualTo("Płytki");
+        StaffPositionSource p = position();
+        StaffPositionSource bare = new StaffPositionSource(p.positionId(), p.blockNo(), p.status(),
+                p.sourcingPath(), p.quantity(), p.unitNameRu(), p.unitNamePl(), p.salePrice(), null, null, null,
+                null, null, null, null, null, null, p.materialId(), p.model(), p.sku(), null, null, null, null,
+                null, null, "Плитка", null, true, true, false);
+        StaffApprovalPositionDto pending = assembler.assemble(
+                new StaffApprovalData(List.of(bare), Map.of(), Map.of()), Audience.STAFF_FULL, "ADMIN", TODAY,
+                false).get(0);
+        assertThat(pending.thumbnailUrl()).isNull();
+        assertThat(pending.materialTypeName()).isEqualTo("Плитка");
+        assertThat(pending.fromEstimate()).isTrue();
+        assertThat(pending.estimateChanged()).isTrue();
+        assertThat(pending.estimateRemoved()).isFalse();
     }
 }

@@ -18,4 +18,7 @@ public class ClientProformaServiceExtendedModel extends ClientProformaServiceMod
     private List<ClientProformaLineServiceModel> lines;
     /** Read-only ledger payments (staff detail only, no counterparty data); ignored on write. */
     private List<ClientProformaPaymentServiceModel> payments;
+
+    /** FOR-11-06 (R10.5): a line holds a received buyer-added position that is still unpaid; read only. */
+    private boolean containsDeliveredItems;
 }

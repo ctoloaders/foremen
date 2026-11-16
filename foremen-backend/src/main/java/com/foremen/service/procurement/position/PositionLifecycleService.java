@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.PurchasePositionEntity;
+import com.foremen.dao.model.SourcingPath;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.PurchasePositionService;
 import com.foremen.service.model.PurchasePositionServiceExtendedModel;
@@ -67,6 +68,30 @@ public class PositionLifecycleService {
         positionService.getEntityManager().flush();
         positionService.saveAuditWithSnapshot(before, saved, "UPDATE");
         events.publishEvent(new PositionStatusChangedEvent(saved.getId(), from, target, actor));
+        return mapper.toServiceExtendedModel(saved);
+    }
+
+    /**
+     * FOR-11-06 (R10.2): moves a buyer-added {@code AGREED} position {@code PLANNED -> WITH_BUYER} as the
+     * system, through {@link PositionTransitionPolicy#decideBuyerAdded}. Refused (409 not allowed) for a
+     * position without {@code added_by_buyer}, so the proforma-paid gate of {@link #transition} is untouched.
+     */
+    @Transactional
+    public PurchasePositionServiceExtendedModel transitionBuyerAdded(Long positionId) {
+        PurchasePositionEntity position = positionService.getDao().findById(positionId)
+                .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND));
+        PositionStatus from = position.getStatus();
+        PositionStatus target = PositionStatus.WITH_BUYER;
+        if (!position.isAddedByBuyer() || position.getSourcingPath() != SourcingPath.AGREED
+                || policy.decideBuyerAdded(from, target) != Decision.ALLOWED) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, NOT_ALLOWED);
+        }
+        String before = positionService.serializeEntity(position);
+        position.setStatus(target);
+        PurchasePositionEntity saved = positionService.getDao().save(position);
+        positionService.getEntityManager().flush();
+        positionService.saveAuditWithSnapshot(before, saved, "UPDATE");
+        events.publishEvent(new PositionStatusChangedEvent(saved.getId(), from, target, Actor.SYSTEM));
         return mapper.toServiceExtendedModel(saved);
     }
 

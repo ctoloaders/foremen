@@ -22,7 +22,7 @@ class PlannerSliceRulesTest {
 
     private static PositionSnapshot snap(SourcingPath path, PositionStatus status, LocalDate needBy,
                                          LocalDate orderBy, LocalDate planned, long variants) {
-        return new PositionSnapshot(path, status, needBy, orderBy, planned, variants);
+        return new PositionSnapshot(path, status, needBy, orderBy, planned, variants, false);
     }
 
     private static PositionSnapshot snap(PositionStatus status, LocalDate needBy, LocalDate orderBy) {
@@ -121,6 +121,16 @@ class PlannerSliceRulesTest {
         }
     }
 
+    @Test
+    void receivedUnpaidIsNotTerminalAndIsNotPaid() {
+        var unpaid = new PositionSnapshot(SourcingPath.AGREED, RECEIVED, TODAY.minusDays(1), null, null, 0, true);
+        assertThat(PlannerSliceRules.isTerminal(unpaid)).isFalse();
+        assertThat(PlannerSliceRules.isLate(unpaid, TODAY)).isTrue();
+        assertThat(PlannerSliceRules.slice(unpaid, TODAY)).contains(NOT_PAID, LATE).doesNotContain(PAID, ON_SCHEDULE);
+        var paid = new PositionSnapshot(SourcingPath.AGREED, RECEIVED, TODAY.minusDays(1), null, null, 0, false);
+        assertThat(PlannerSliceRules.isTerminal(paid)).isTrue();
+        assertThat(PlannerSliceRules.slice(paid, TODAY)).contains(PAID).doesNotContain(NOT_PAID, LATE);
+    }
     @Test
     void allSliceAlwaysMatches() {
         for (PositionStatus st : PositionStatus.values()) {

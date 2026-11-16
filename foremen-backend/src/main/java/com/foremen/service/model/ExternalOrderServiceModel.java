@@ -28,6 +28,8 @@ public class ExternalOrderServiceModel {
     private ExternalOrderStatus status;
     private String referenceNumber;
     private String orderLink;
+    /** FOR-11-06 (R9): payment page URL; the model is exposed to money-privileged roles only. */
+    private String paymentLink;
     private BigDecimal deliveryCostNet;
     private Long deliveryVatRateId;
     private LocalDate expectedShipDate;

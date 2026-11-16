@@ -326,16 +326,16 @@ public class PlannerGroupService {
         if (requestIds.isEmpty()) {
             return result;
         }
-        Map<Long, List<PositionStatus>> stages = new HashMap<>();
+        Map<Long, List<PurchaseRequestStatusDeriver.Stage>> stages = new HashMap<>();
         List<Object[]> rows = entityManager.createQuery(
-                "select p.purchaseRequest.id, p.status from PurchasePositionEntity p "
+                "select p.purchaseRequest.id, p.status, p.clientUnpaid from PurchasePositionEntity p "
                         + "where p.purchaseRequest.id in :ids", Object[].class)
                 .setParameter("ids", requestIds).getResultList();
         for (Object[] row : rows) {
-            stages.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add((PositionStatus) row[1]);
+            stages.computeIfAbsent((Long) row[0], k -> new ArrayList<>()).add(new PurchaseRequestStatusDeriver.Stage((PositionStatus) row[1], (Boolean) row[2]));
         }
         for (Long id : requestIds) {
-            result.put(id, PurchaseRequestStatusDeriver.derive(stages.getOrDefault(id, List.of())));
+            result.put(id, PurchaseRequestStatusDeriver.deriveStages(stages.getOrDefault(id, List.of())));
         }
         return result;
     }

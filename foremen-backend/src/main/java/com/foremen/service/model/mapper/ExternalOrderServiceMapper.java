@@ -180,6 +180,7 @@ public class ExternalOrderServiceMapper implements ServiceToDaoMapper<ExternalOr
         t.setStatus(s.getStatus());
         t.setReferenceNumber(s.getReferenceNumber());
         t.setOrderLink(s.getOrderLink());
+        t.setPaymentLink(s.getPaymentLink());
         t.setDeliveryCostNet(s.getDeliveryCostNet());
         t.setDeliveryVatRateId(s.getDeliveryVatRate() == null ? null : s.getDeliveryVatRate().getId());
         t.setExpectedShipDate(s.getExpectedShipDate());
@@ -298,6 +299,7 @@ public class ExternalOrderServiceMapper implements ServiceToDaoMapper<ExternalOr
         e.setStatus(ExternalOrderStatus.DRAFT);
         e.setReferenceNumber(blankToNull(s.getReferenceNumber()));
         e.setOrderLink(blankToNull(s.getOrderLink()));
+        e.setPaymentLink(blankToNull(s.getPaymentLink()));
         e.setDeliveryCostNet(s.getDeliveryCostNet() == null ? BigDecimal.ZERO.setScale(2) : s.getDeliveryCostNet());
         e.setDeliveryVatRate(s.getDeliveryVatRateId() == null ? null
                 : entityManager.getReference(VatRateEntity.class, s.getDeliveryVatRateId()));
@@ -322,6 +324,9 @@ public class ExternalOrderServiceMapper implements ServiceToDaoMapper<ExternalOr
         }
         if (s.getOrderLink() != null) {
             t.setOrderLink(blankToNull(s.getOrderLink()));
+        }
+        if (s.getPaymentLink() != null) {
+            t.setPaymentLink(blankToNull(s.getPaymentLink()));
         }
         if (s.getDeliveryCostNet() != null) {
             t.setDeliveryCostNet(s.getDeliveryCostNet());

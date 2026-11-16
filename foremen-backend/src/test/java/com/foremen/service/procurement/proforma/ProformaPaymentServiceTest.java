@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import com.foremen.dao.BankTransactionLinkDao;
 import com.foremen.dao.ClientProformaDao;
 import com.foremen.dao.ClientProformaLineDao;
+import com.foremen.dao.PurchasePositionDao;
 import com.foremen.dao.model.ClientProformaEntity;
 import com.foremen.dao.model.ClientProformaLineEntity;
 import com.foremen.dao.model.PositionStatus;
@@ -40,8 +41,10 @@ class ProformaPaymentServiceTest {
     private final ClientProformaService proformaService = mock(ClientProformaService.class);
     private final EntityManager em = mock(EntityManager.class);
     private final List<Object> events = new ArrayList<>();
+    private final PurchasePositionDao positionDao = mock(PurchasePositionDao.class);
     private final ProformaPaymentService service = new ProformaPaymentService(dao, linkDao,
-            new ProformaReleaseService(lineDao, lifecycle, events::add), proformaService, em);
+            new ProformaReleaseService(lineDao, lifecycle, events::add, new ClientUnpaidClearer(positionDao)),
+            proformaService, em);
 
     private ClientProformaEntity proforma;
 
@@ -91,6 +94,22 @@ class ProformaPaymentServiceTest {
         service.onLinkChanged(5L);
         verify(lifecycle, times(1)).transition(1L, PositionStatus.CLIENT_PAID, Actor.SYSTEM);
         assertThat(events).hasSize(1);
+    }
+
+    @Test
+    void fullPaymentClearsClientUnpaidWithoutTransitionsForBuyerAddedPosition() {
+        PurchasePositionEntity flagged = position(3L, PositionStatus.RECEIVED);
+        flagged.setClientUnpaid(true);
+        when(lineDao.findByProformaIdOrderByLineNo(5L)).thenReturn(List.of(line(flagged)));
+        when(positionDao.findAllByIdIn(List.of(3L))).thenReturn(List.of(flagged));
+        when(linkDao.sumAmountByClientProformaId(5L)).thenReturn(new BigDecimal("123.00"));
+
+        service.onLinkChanged(5L);
+
+        assertThat(flagged.isClientUnpaid()).isFalse();
+        assertThat(flagged.getStatus()).isEqualTo(PositionStatus.RECEIVED);
+        verify(lifecycle, never()).transition(any(), any(), any());
+        assertThat(events).containsExactly(new ProformaPaidEvent(5L, 9L, List.of(), null));
     }
 
     @Test

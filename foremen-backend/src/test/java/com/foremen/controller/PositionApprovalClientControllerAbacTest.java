@@ -83,7 +83,7 @@ class PositionApprovalClientControllerAbacTest {
             return q;
         });
         PositionApprovalClientController controller = new PositionApprovalClientController(queryService,
-                new ClientViewAssembler(), approvalService, projectAccess, em,
+                new ClientViewAssembler(mock(com.foremen.service.image.ImageStorage.class)), approvalService, projectAccess, em,
                 Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC));
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(

@@ -30,19 +30,17 @@ import lombok.RequiredArgsConstructor;
  * and the trigger is a harmless no-op (R8.2).
  *
  * <p><b>ABAC (entity-creation-rules step 3; R11.4).</b> The class carries the class-level
- * {@link PermissionResource @PermissionResource("PAYMENTS")} and the sole handler a method-level
+ * {@link PermissionResource @PermissionResource("CLIENT_PAYMENTS")} and the sole handler a method-level
  * {@link PermissionOperation @PermissionOperation("UPDATE")} — ingesting payments mutates schedule
- * state, so it resolves to the {@code (PAYMENTS, UPDATE)} pair the {@code PermissionInterceptor}
+ * state, so it resolves to the {@code (CLIENT_PAYMENTS, UPDATE)} pair the {@code PermissionInterceptor}
  * enforces. The pair is complete, so the startup {@code PermissionAnnotationValidator} classifies the
- * handler {@code COMPLETE} and the application starts clean (R11.4). The {@code PAYMENTS} resource row
- * and its role grants are seeded by changeset 175 (task 7.1). A distinct base path
- * ({@code /api/payments/bank-feed}) keeps this controller clear of the sibling
- * {@code PaymentScheduleController}, which shares the same {@code PAYMENTS} resource.
+ * handler {@code COMPLETE} and the application starts clean (R11.4). FOR-11-06 re-bound it from
+ * {@code PAYMENTS} to {@code CLIENT_PAYMENTS} (changeset 248 seeds the resource and its grants).
  */
 @RestController
 @RequestMapping("/api/payments/bank-feed")
 @RequiredArgsConstructor
-@PermissionResource("PAYMENTS")
+@PermissionResource("CLIENT_PAYMENTS")
 public class BankFeedIngestController {
 
     private final BankFeedProvider bankFeedProvider;
@@ -54,7 +52,7 @@ public class BankFeedIngestController {
      * {@link PaymentTransactionService#ingestBankTransaction(IncomingBankTxn)}. Each line is handled
      * idempotently by {@code externalRef} (R5.8) and an uncorrelated line is recorded unmatched
      * without aborting the pass (R8.4); under the No-Op provider the feed is empty so nothing changes
-     * (R8.2). Resolves to {@code PAYMENTS}/{@code UPDATE}.
+     * (R8.2). Resolves to {@code CLIENT_PAYMENTS}/{@code UPDATE}.
      *
      * @return {@code 200 OK} with the number of lines pulled from the feed in this pass
      */

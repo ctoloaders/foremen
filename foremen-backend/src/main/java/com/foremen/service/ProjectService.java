@@ -530,7 +530,9 @@ public class ProjectService
                 model.status(),
                 members,
                 clients,
-                firstOrNull(clients));
+                firstOrNull(clients),
+                (entity != null && (callerHasRole("ADMIN") || callerHasRole("MANAGER")))
+                        ? entity.getBankAccount() : null);
     }
 
     /**

@@ -278,6 +278,16 @@ class ShipmentServiceTest {
     }
 
     @Test
+    void createRejectsPendingPositionWithoutMaterial() {
+        // FOR-11-06 task 4.2 (R5.3)
+        position(11L, PositionStatus.ORDERED, "10").setPlannedMaterial(null);
+
+        ForemenApiException ex = failure(() -> service.create(request(null, line(11L, "1"))));
+
+        assertThat(ex.getMessage()).contains("error.estimateSync.materialRequired");
+    }
+
+    @Test
     void createRejectsStageNotShippable() {
         position(11L, PositionStatus.WITH_BUYER, "10");
 

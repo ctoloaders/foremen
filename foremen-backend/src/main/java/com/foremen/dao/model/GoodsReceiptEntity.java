@@ -61,6 +61,10 @@ public class GoodsReceiptEntity extends BaseEntity {
     @Column(name = "part_no", nullable = false, updatable = false)
     private short partNo;
 
+    /** FOR-11-06 (R12.1, R12.6): the delegation under which a WORKER recorded the event; {@code null} otherwise. */
+    @Column(name = "delegation_id", updatable = false)
+    private Long delegationId;
+
     @Column(name = "voided_at")
     private OffsetDateTime voidedAt;
 

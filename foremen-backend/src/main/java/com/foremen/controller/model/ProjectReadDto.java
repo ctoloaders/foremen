@@ -38,5 +38,7 @@ public record ProjectReadDto(
         ProjectStatus status,
         List<ProjectMemberSummaryDto> members,
         List<ProjectMemberSummaryDto> clients,
-        ProjectMemberSummaryDto client
+        ProjectMemberSummaryDto client,
+        /** FOR-11-06 (R4): payee IBAN; populated only for ADMIN and MANAGER callers, otherwise omitted. */
+        String bankAccount
 ) {}

@@ -14,6 +14,7 @@ import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.PurchasePositionEntity;
 import com.foremen.dao.model.PurchasePositionVariantEntity;
 import com.foremen.dao.model.SourcingPath;
+import com.foremen.service.procurement.PositionDelivery;
 
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -40,9 +41,6 @@ public class PlannerSliceRules {
             PositionStatus.PLANNED, PositionStatus.PROPOSED, PositionStatus.ACCEPTED,
             PositionStatus.IN_PROFORMA, PositionStatus.CLIENT_PAID, PositionStatus.WITH_BUYER));
 
-    /** Stages in which a position needs no more attention. */
-    public static final Set<PositionStatus> TERMINAL = Set.copyOf(
-            EnumSet.of(PositionStatus.RECEIVED, PositionStatus.CANCELLED));
 
     /** {@code CLIENT_PAID} and every later non-cancelled stage. */
     public static final Set<PositionStatus> PAID_FROM = Set.copyOf(EnumSet.of(
@@ -61,7 +59,7 @@ public class PlannerSliceRules {
     /** The inputs of the rules; {@code variantCount} is the number of recorded variants. */
     public record PositionSnapshot(SourcingPath path, PositionStatus status, LocalDate needByDate,
                                    LocalDate orderByDate, LocalDate plannedDeliveryDate,
-                                   long variantCount) {
+                                   long variantCount, boolean clientUnpaid) {
     }
 
     private final Clock clock;
@@ -77,13 +75,19 @@ public class PlannerSliceRules {
 
     // ---------------------------------------------------------------- pure side
 
+    /** Needs no more attention: {@code Delivery_Complete} (FOR-11-06 R10.4) or {@code CANCELLED}. */
+    public static boolean isTerminal(PositionSnapshot s) {
+        return s.status() == PositionStatus.CANCELLED
+                || PositionDelivery.isComplete(s.status(), s.clientUnpaid());
+    }
+
     /** {@code COALESCE(plannedDeliveryDate, needByDate)}. */
     public static LocalDate siteDeliveryDate(PositionSnapshot s) {
         return s.plannedDeliveryDate() != null ? s.plannedDeliveryDate() : s.needByDate();
     }
 
     public static boolean isLate(PositionSnapshot s, LocalDate today) {
-        if (TERMINAL.contains(s.status())) {
+        if (isTerminal(s)) {
             return false;
         }
         LocalDate site = siteDeliveryDate(s);
@@ -95,7 +99,7 @@ public class PlannerSliceRules {
     }
 
     public static boolean isUrgent(PositionSnapshot s, LocalDate today, int urgentDays) {
-        if (TERMINAL.contains(s.status()) || !BEFORE_ORDERED.contains(s.status())) {
+        if (isTerminal(s) || !BEFORE_ORDERED.contains(s.status())) {
             return false;
         }
         LocalDate site = siteDeliveryDate(s);
@@ -107,11 +111,13 @@ public class PlannerSliceRules {
     public static boolean inSlice(Slice slice, PositionSnapshot s, LocalDate today) {
         return switch (slice) {
             case ALL -> true;
-            case ON_SCHEDULE -> !TERMINAL.contains(s.status()) && !isLate(s, today);
+            case ON_SCHEDULE -> !isTerminal(s) && !isLate(s, today);
             case LATE -> isLate(s, today);
             case CHANGED -> s.variantCount() > 0;
-            case PAID -> s.path() == SourcingPath.AGREED && PAID_FROM.contains(s.status());
-            case NOT_PAID -> s.path() == SourcingPath.AGREED && BEFORE_PAID.contains(s.status());
+            case PAID -> s.path() == SourcingPath.AGREED && PAID_FROM.contains(s.status())
+                    && !(s.status() == PositionStatus.RECEIVED && s.clientUnpaid());
+            case NOT_PAID -> s.path() == SourcingPath.AGREED && (BEFORE_PAID.contains(s.status())
+                    || (s.status() == PositionStatus.RECEIVED && s.clientUnpaid()));
         };
     }
 
@@ -130,7 +136,7 @@ public class PlannerSliceRules {
 
     public static Predicate latePredicate(Root<PurchasePositionEntity> root, CriteriaBuilder cb,
                                           LocalDate today) {
-        Predicate nonTerminal = cb.not(root.get("status").in(TERMINAL));
+        Predicate nonTerminal = cb.not(terminal(root, cb));
         Expression<LocalDate> site = siteExpression(root, cb);
         // isNotNull guards keep the predicate two-valued so NOT(...) in ON_SCHEDULE never yields UNKNOWN
         Predicate siteLate = cb.and(cb.isNotNull(site), cb.lessThan(site, today));
@@ -154,13 +160,22 @@ public class PlannerSliceRules {
                                            CriteriaQuery<?> query, CriteriaBuilder cb, LocalDate today) {
         return switch (slice) {
             case ALL -> cb.conjunction();
-            case ON_SCHEDULE -> cb.and(cb.not(root.get("status").in(TERMINAL)),
+            case ON_SCHEDULE -> cb.and(cb.not(terminal(root, cb)),
                     cb.not(latePredicate(root, cb, today)));
             case LATE -> latePredicate(root, cb, today);
             case CHANGED -> hasVariants(root, query, cb);
-            case PAID -> cb.and(agreed(root, cb), root.get("status").in(PAID_FROM));
-            case NOT_PAID -> cb.and(agreed(root, cb), root.get("status").in(BEFORE_PAID));
+            case PAID -> cb.and(agreed(root, cb), root.get("status").in(PAID_FROM),
+                    cb.not(cb.and(cb.equal(root.get("status"), PositionStatus.RECEIVED),
+                            cb.isTrue(root.<Boolean>get("clientUnpaid")))));
+            case NOT_PAID -> cb.and(agreed(root, cb), cb.or(root.get("status").in(BEFORE_PAID),
+                    cb.and(cb.equal(root.get("status"), PositionStatus.RECEIVED),
+                            cb.isTrue(root.<Boolean>get("clientUnpaid")))));
         };
+    }
+
+    private static Predicate terminal(Root<PurchasePositionEntity> root, CriteriaBuilder cb) {
+        return cb.or(cb.equal(root.get("status"), PositionStatus.CANCELLED),
+                PositionDelivery.completePredicate(root, cb));
     }
 
     private static Predicate agreed(Root<PurchasePositionEntity> root, CriteriaBuilder cb) {

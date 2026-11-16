@@ -34,7 +34,7 @@ public class ClientProformasDataset implements Dataset {
 
     @Override
     public Set<String> requiredResources() {
-        return Set.of("CLIENT_PROFORMAS");
+        return Set.of("CLIENT_PAYMENTS");
     }
 
     @Override
@@ -58,20 +58,24 @@ public class ClientProformasDataset implements Dataset {
                 FieldDescriptor.of("id", FieldType.ID),
                 FieldDescriptor.of("project.id", FieldType.ID),
                 FieldDescriptor.of("project.name", FieldType.STRING),
-                FieldDescriptor.of("status", FieldType.ENUM)
+                FieldDescriptor.of("status", "payment.status", FieldType.ENUM)
                         .withEnumValues(Arrays.stream(ProformaStatus.values()).map(Enum::name).toList()),
                 FieldDescriptor.of("issueDate", FieldType.DATE),
-                FieldDescriptor.of("dueDate", FieldType.DATE),
-                FieldDescriptor.of("totalNet", FieldType.MONEY).withCurrencyPath("currency"),
-                FieldDescriptor.of("totalVat", FieldType.MONEY).withCurrencyPath("currency"),
-                FieldDescriptor.of("totalGross", FieldType.MONEY).withCurrencyPath("currency"),
-                FieldDescriptor.of("paidGross", FieldType.MONEY).withCurrencyPath("currency"),
+                FieldDescriptor.of("dueDate", "payment.dueDate", FieldType.DATE),
+                FieldDescriptor.of("totalNet", FieldType.MONEY).withCurrencyPath("payment.currency"),
+                FieldDescriptor.of("totalVat", FieldType.MONEY).withCurrencyPath("payment.currency"),
+                FieldDescriptor.of("totalGross", "payment.amountGross", FieldType.MONEY)
+                        .withCurrencyPath("payment.currency"),
+                FieldDescriptor.of("paidGross", "payment.paidGross", FieldType.MONEY)
+                        .withCurrencyPath("payment.currency"),
                 FieldDescriptor.computed("overdue", FieldType.BOOLEAN, (cb, q, root) ->
                                 cb.<Boolean>selectCase()
                                         .when(cb.and(
-                                                cb.lessThan(root.<java.time.LocalDate>get("dueDate"), cb.localDate()),
-                                                root.get("status").in(ProformaStatus.ISSUED,
-                                                        ProformaStatus.PARTIALLY_PAID)), true)
+                                                cb.lessThan(root.get("payment").<java.time.LocalDate>get("dueDate"),
+                                                        cb.localDate()),
+                                                root.get("payment").<String>get("status").in(
+                                                        ProformaStatus.ISSUED.name(),
+                                                        ProformaStatus.PARTIALLY_PAID.name())), true)
                                         .otherwise(false))
                         .withFlags(true, true, true, false),
                 FieldDescriptor.of("createdDate", FieldType.DATETIME));

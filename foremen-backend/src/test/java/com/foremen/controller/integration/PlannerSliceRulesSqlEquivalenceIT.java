@@ -85,6 +85,7 @@ class PlannerSliceRulesSqlEquivalenceIT extends ProcurementIntegrationTestBase {
             p.setNeedByDate(offset(today, dayOffsets[random.nextInt(dayOffsets.length)]));
             p.setOrderByDate(offset(today, dayOffsets[random.nextInt(dayOffsets.length)]));
             p.setPlannedDeliveryDate(offset(today, dayOffsets[random.nextInt(dayOffsets.length)]));
+            p.setClientUnpaid(random.nextInt(4) == 0);
             int variants = random.nextInt(5) == 0 ? 1 + random.nextInt(2) : 0;
             for (int v = 0; v < variants; v++) {
                 PurchasePositionVariantEntity variant = new PurchasePositionVariantEntity();
@@ -94,7 +95,7 @@ class PlannerSliceRulesSqlEquivalenceIT extends ProcurementIntegrationTestBase {
                 em.persist(variant);
             }
             expected.put(p.getId(), new PositionSnapshot(p.getSourcingPath(), p.getStatus(), p.getNeedByDate(),
-                    p.getOrderByDate(), p.getPlannedDeliveryDate(), variants));
+                    p.getOrderByDate(), p.getPlannedDeliveryDate(), variants, p.isClientUnpaid()));
         }
         em.flush();
         em.clear();

@@ -32,6 +32,11 @@ public interface PurchasePositionDao extends AdminDao<PurchasePositionEntity, Lo
                                             @Param("excludeMaterialId") Long excludeMaterialId,
                                             Pageable pageable);
 
+    /** FOR-11-06 (R5.2): the estimate-derived positions of a project (those with a source key), by id. */
+    @Query("SELECT p FROM PurchasePositionEntity p "
+            + "WHERE p.project.id = :projectId AND p.estimateSourceKey IS NOT NULL ORDER BY p.id")
+    List<PurchasePositionEntity> findEstimateDerivedByProjectId(@Param("projectId") Long projectId);
+
     /** Positions of a purchase request, ordered by id. */
     @Query("SELECT p FROM PurchasePositionEntity p WHERE p.purchaseRequest.id = :requestId ORDER BY p.id")
     List<PurchasePositionEntity> findByPurchaseRequestId(@Param("requestId") Long requestId);

@@ -59,7 +59,7 @@ class SelectionTotalServiceTest {
     void sumsCountedPositionsPerRateAndClassifiesSkipped() {
         PurchasePositionEntity a = position(1L, 1L, SourcingPath.AGREED, PositionStatus.ACCEPTED, "10.00", "2", 23);
         PurchasePositionEntity b = position(2L, 1L, SourcingPath.AGREED, PositionStatus.ACCEPTED, "5.00", "3", 8);
-        PurchasePositionEntity notAccepted = position(3L, 1L, SourcingPath.AGREED, PositionStatus.PROPOSED, "1", "1", 23);
+        PurchasePositionEntity notAccepted = position(3L, 1L, SourcingPath.AGREED, PositionStatus.CANCELLED, "1", "1", 23);
         PurchasePositionEntity notAgreed = position(4L, 1L, SourcingPath.PACKAGE, PositionStatus.ACCEPTED, "1", "1", 23);
         PurchasePositionEntity noPrice = position(5L, 1L, SourcingPath.AGREED, PositionStatus.ACCEPTED, null, "1", 23);
         PurchasePositionEntity foreign = position(6L, 99L, SourcingPath.AGREED, PositionStatus.ACCEPTED, "1", "1", 23);
@@ -68,7 +68,8 @@ class SelectionTotalServiceTest {
 
         SelectionTotalResponse r = service.total(List.of(1L, 2L, 3L, 4L, 5L, 6L, 7L, 1L));
 
-        assertThat(r.count()).isEqualTo(2);
+        assertThat(r.count()).isEqualTo(3);
+        assertThat(r.unpriced()).isEqualTo(1);
         assertThat(r.saleNet()).isEqualByComparingTo("35.00");
         assertThat(r.vat()).isEqualByComparingTo("5.80"); // 4.60 + 1.20 (rounded per line)
         assertThat(r.saleGross()).isEqualByComparingTo("40.80");
@@ -78,8 +79,28 @@ class SelectionTotalServiceTest {
         assertThat(r.projectId()).isEqualTo(1L);
         assertThat(r.mixedProjects()).isFalse();
         assertThat(r.skipped()).extracting(s -> s.positionId() + ":" + s.reason()).containsExactly(
-                "3:" + SkipReason.NOT_ACCEPTED, "4:" + SkipReason.NOT_AGREED, "5:" + SkipReason.NO_SALE_PRICE,
+                "3:" + SkipReason.NOT_ACCEPTED, "4:" + SkipReason.NOT_AGREED,
                 "6:" + SkipReason.NOT_FOUND, "7:" + SkipReason.NOT_FOUND);
+    }
+
+    @Test
+    void countsEveryAgreedStatusExceptCancelled() {
+        List<PositionStatus> counted = new ArrayList<>(List.of(PositionStatus.values()));
+        counted.remove(PositionStatus.CANCELLED);
+        List<PurchasePositionEntity> all = new ArrayList<>();
+        List<Long> ids = new ArrayList<>();
+        long id = 1;
+        for (PositionStatus s : PositionStatus.values()) {
+            all.add(position(id, 1L, SourcingPath.AGREED, s, "10", "1", 23));
+            ids.add(id++);
+        }
+        when(dao.findAllById(ids)).thenReturn(all);
+
+        SelectionTotalResponse r = service.total(ids);
+
+        assertThat(r.count()).isEqualTo(counted.size());
+        assertThat(r.unpriced()).isZero();
+        assertThat(r.skipped()).hasSize(1);
     }
 
     @Test

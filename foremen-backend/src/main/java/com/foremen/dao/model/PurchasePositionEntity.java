@@ -32,8 +32,9 @@ public class PurchasePositionEntity extends BaseEntity {
     @Column(nullable = false, length = 24)
     private PositionStatus status = PositionStatus.PLANNED;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "planned_material_id", nullable = false)
+    /** FOR-11-06 (R5.3): null for an estimate-derived position whose material is not chosen yet. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "planned_material_id")
     private FinishingMaterialEntity plannedMaterial;
 
     /** Null means the same item as {@link #plannedMaterial}. */
@@ -112,4 +113,20 @@ public class PurchasePositionEntity extends BaseEntity {
     private WorkCategoryEntity workCategory;
     @Column(length = 2000)
     private String notes;
+
+    /** FOR-11-06 (design 6.1): stable key of the estimate row ("M:{materialId}" / "T:{finishingTypeId}"). */
+    @Column(name = "estimate_source_key", length = 80)
+    private String estimateSourceKey;
+
+    @Column(name = "estimate_changed", nullable = false)
+    private boolean estimateChanged;
+
+    @Column(name = "estimate_removed", nullable = false)
+    private boolean estimateRemoved;
+
+    @Column(name = "added_by_buyer", nullable = false)
+    private boolean addedByBuyer;
+
+    @Column(name = "client_unpaid", nullable = false)
+    private boolean clientUnpaid;
 }

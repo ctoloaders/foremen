@@ -86,6 +86,7 @@ public class ProjectActivationService {
     private final ProjectAccessCache projectAccessCache;
     private final ForemenPermissionEvaluator permissionEvaluator;
     private final ProjectReadinessService projectReadinessService;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public ProjectActivationService(ProjectDao projectDao,
                                     ProjectServiceMapper projectServiceMapper,
@@ -139,7 +140,16 @@ public class ProjectActivationService {
         // 6 — Activate: set ACTIVE, persist, and return the mapped model.
         project.setStatus(ProjectStatus.ACTIVE);
         ProjectEntity saved = projectDao.save(project);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new ProjectActivatedEvent(saved.getId()));
+        }
         return projectServiceMapper.toServiceExtendedModel(saved);
+    }
+
+    /** FOR-11-06: optional so the existing constructor (and tests) keep working. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setEventPublisher(org.springframework.context.ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     /**

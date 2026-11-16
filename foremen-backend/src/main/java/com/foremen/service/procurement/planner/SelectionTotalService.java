@@ -38,8 +38,9 @@ import com.foremen.service.procurement.position.PositionAudienceResolver;
  *
  * <p>Order of checks: audience ({@code STAFF_FULL} only, else 403), size (1..500, else 400), then per
  * position: not loaded or outside the caller's projects {@code NOT_FOUND}, not {@code AGREED}
- * {@code NOT_AGREED}, not stage {@code ACCEPTED} {@code NOT_ACCEPTED}, no sale price {@code NO_SALE_PRICE}.
- * An inaccessible position is indistinguishable from a missing one.
+ * {@code NOT_AGREED}, stage {@code CANCELLED} {@code NOT_ACCEPTED}. Every other {@code AGREED} stage
+ * (FOR-11-06 R8.1) is counted; a position without a sale price is counted and reported in {@code unpriced}
+ * (it adds nothing to the totals). An inaccessible position is indistinguishable from a missing one.
  */
 @Service
 public class SelectionTotalService {
@@ -84,6 +85,8 @@ public class SelectionTotalService {
         List<Line> lines = new ArrayList<>();
         Map<BigDecimal, List<Line>> byRate = new TreeMap<>(Comparator.nullsFirst(Comparator.<BigDecimal>naturalOrder()));
         Set<Long> projectIds = new LinkedHashSet<>();
+        int counted = 0;
+        int unpriced = 0;
 
         for (Long id : ids) {
             PurchasePositionEntity p = loaded.get(id);
@@ -91,16 +94,19 @@ public class SelectionTotalService {
                 skipped.add(new SkippedPosition(id, SkipReason.NOT_FOUND));
             } else if (p.getSourcingPath() != SourcingPath.AGREED) {
                 skipped.add(new SkippedPosition(id, SkipReason.NOT_AGREED));
-            } else if (p.getStatus() != PositionStatus.ACCEPTED) {
+            } else if (p.getStatus() == PositionStatus.CANCELLED) {
                 skipped.add(new SkippedPosition(id, SkipReason.NOT_ACCEPTED));
             } else if (p.getSalePrice() == null) {
-                skipped.add(new SkippedPosition(id, SkipReason.NO_SALE_PRICE));
+                counted++;
+                unpriced++;
+                projectIds.add(p.getProject().getId());
             } else {
                 BigDecimal rate = p.getSaleVatRate() == null ? null : p.getSaleVatRate().getRate();
                 Line line = PositionMoneyMath.saleLine(p.getSalePrice(), p.getQuantity(), rate);
                 lines.add(line);
                 byRate.computeIfAbsent(rate, r -> new ArrayList<>()).add(line);
                 projectIds.add(p.getProject().getId());
+                counted++;
             }
         }
 
@@ -111,7 +117,7 @@ public class SelectionTotalService {
             breakdown.add(new VatBreakdownItem(rate, t.net(), t.vat(), t.gross()));
         });
         Long projectId = projectIds.size() == 1 ? projectIds.iterator().next() : null;
-        return new SelectionTotalResponse(lines.size(), totals.net(), totals.vat(), totals.gross(),
+        return new SelectionTotalResponse(counted, unpriced, totals.net(), totals.vat(), totals.gross(),
                 breakdown, projectId, projectIds.size() > 1, skipped);
     }
 

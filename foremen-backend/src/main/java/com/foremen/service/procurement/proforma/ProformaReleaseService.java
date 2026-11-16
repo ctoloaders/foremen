@@ -35,13 +35,16 @@ public class ProformaReleaseService {
     private final ClientProformaLineDao lineDao;
     private final PositionLifecycleService lifecycle;
     private final ApplicationEventPublisher events;
+    private final ClientUnpaidClearer unpaidClearer;
 
     public ProformaReleaseService(ClientProformaLineDao lineDao,
                                   PositionLifecycleService lifecycle,
-                                  ApplicationEventPublisher events) {
+                                  ApplicationEventPublisher events,
+                                  ClientUnpaidClearer unpaidClearer) {
         this.lineDao = lineDao;
         this.lifecycle = lifecycle;
         this.events = events;
+        this.unpaidClearer = unpaidClearer;
     }
 
     /**
@@ -57,11 +60,17 @@ public class ProformaReleaseService {
         }
         List<Long> released = new ArrayList<>();
         List<Long> skipped = new ArrayList<>();
+        List<Long> unpaid = new ArrayList<>();
         for (ClientProformaLineEntity line : lineDao.findByProformaIdOrderByLineNo(proforma.getId())) {
             if (!line.isActive()) {
                 continue;
             }
             Long positionId = line.getPosition().getId();
+            if (line.getPosition().isClientUnpaid()) {
+                // FOR-11-06 (R10.5): no status transitions; the payment only clears the flag.
+                unpaid.add(positionId);
+                continue;
+            }
             if (line.getPosition().getStatus() != PositionStatus.IN_PROFORMA) {
                 skipped.add(positionId);
                 continue;
@@ -73,6 +82,8 @@ public class ProformaReleaseService {
         if (!skipped.isEmpty()) {
             log.info("Proforma {} release skipped positions not in IN_PROFORMA: {}", proforma.getId(), skipped);
         }
+        // R10.6: before the event, so Delivery_Complete reads see the cleared flag in this transaction.
+        unpaidClearer.clear(unpaid);
         proforma.setReleasedAt(OffsetDateTime.now());
         events.publishEvent(new ProformaPaidEvent(proforma.getId(), proforma.getProject().getId(),
                 List.copyOf(released), currentUserId()));

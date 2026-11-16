@@ -42,6 +42,7 @@ import com.foremen.service.PurchasePositionService;
 import com.foremen.service.audit.AuditLogDao;
 import com.foremen.service.model.PositionApprovalRoundServiceModel;
 import com.foremen.service.model.mapper.PositionApprovalRoundServiceMapper;
+import com.foremen.service.procurement.PositionLabel;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.position.PositionLifecycleService;
 import com.foremen.service.procurement.position.PositionTransitionPolicy.Actor;
@@ -246,6 +247,9 @@ public class PositionApprovalService implements ProjectScopedService<PositionApp
                 for (PurchasePositionEntity p : positions) {
             if (!isEligible(p, ApprovalOperation.SEND) || hasOpenRound(p.getId())) {
                 throw notEligible(p.getId());
+            }
+            if (p.getPlannedMaterial() == null) {
+                throw new ForemenApiException(HttpStatus.CONFLICT, PositionLabel.MATERIAL_REQUIRED, p.getId());
             }
             if (p.getSalePrice() == null || p.getSalePrice().signum() <= 0 || p.getSaleVatRate() == null) {
                 throw new ForemenApiException(HttpStatus.CONFLICT, ERROR_SEND_PRICE_MISSING);

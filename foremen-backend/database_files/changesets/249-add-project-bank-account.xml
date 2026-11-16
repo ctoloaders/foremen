@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-06 (task 1.3, R4.1, R14.1): optional per-project bank account (IBAN, up to 34 characters,
+        stored normalised without spaces). When set it overrides the company-profile account on
+        MATERIALS proformas. Idempotent: columnExists guard + MARK_RAN. Registered in changelog.xml by task 1.7.
+    -->
+    <changeSet id="249-add-project-bank-account" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="projects"/>
+            <not>
+                <columnExists tableName="projects" columnName="bank_account"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="projects">
+            <column name="bank_account" type="VARCHAR(34)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

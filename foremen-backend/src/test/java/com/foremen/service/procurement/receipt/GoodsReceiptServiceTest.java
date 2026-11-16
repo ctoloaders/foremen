@@ -123,6 +123,9 @@ class GoodsReceiptServiceTest {
         final PositionLifecycleService lifecycle = mock(PositionLifecycleService.class);
         final ProcurementProjectAccess access = mock(ProcurementProjectAccess.class);
         final EntityManager em = mock(EntityManager.class);
+        final GoodsReceiptDelegationService delegationService = mock(GoodsReceiptDelegationService.class);
+        final com.foremen.dao.GoodsReceiptDelegationDao delegationDao =
+                mock(com.foremen.dao.GoodsReceiptDelegationDao.class);
         final GoodsReceiptService service;
         final GoodsReceiptLedgerService ledgerService;
 
@@ -140,7 +143,8 @@ class GoodsReceiptServiceTest {
             Clock clock = Clock.fixed(Instant.parse("2026-03-01T10:00:00Z"), ZoneOffset.UTC);
             service = new GoodsReceiptService(receiptDao, mock(GoodsReceiptMediaDao.class), ledgerService,
                     positionDao, shipmentDao, lineDao, shipmentService, lifecycle, access,
-                    mock(AuditLogDao.class), new GoodsReceiptProperties(null, null), em, publisher, clock);
+                    mock(AuditLogDao.class), new GoodsReceiptProperties(null, null), em, publisher, clock,
+                    delegationService, delegationDao);
             when(access.allowedProjectIds(USER)).thenReturn(allowedProjects);
         }
 
@@ -923,5 +927,149 @@ class GoodsReceiptServiceTest {
 
         assertSame(f.ledgerService.ledgers(List.of(1L)).get(1L), after);
         assertThat(f.positions.get(1L).getAcceptedQuantity()).isEqualByComparingTo("1");
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // FOR-11-06 R12: Delegate audience
+    // ---------------------------------------------------------------------------------------------
+
+    @Test
+    void workerWithoutDelegationIsRefusedAndStoresNothing() {
+        Fixture f = simple();
+        f.allowedProjects.add(PROJECT);
+        setCaller("WORKER");
+        when(f.delegationService.activeShipmentIdsFor(USER)).thenReturn(Set.of());
+
+        assertApi(() -> f.service.record(batch(accepted(1L, 1))), HttpStatus.FORBIDDEN,
+                "error.goodsReceipt.delegation.required");
+        assertApi(() -> f.service.record(batch(ev(1L, 100L, ReceiptKind.ACCEPTED, 1, false, null))),
+                HttpStatus.FORBIDDEN, "error.goodsReceipt.delegation.required");
+        assertThat(f.receipts).isEmpty();
+    }
+
+    @Test
+    void workerRecordsOnDelegatedShipmentWithDelegationIdAndCompletesDelegationOnClose() {
+        Fixture f = simple();
+        f.allowedProjects.add(PROJECT);
+        setCaller("WORKER");
+        when(f.delegationService.activeShipmentIdsFor(USER)).thenReturn(Set.of(100L));
+        com.foremen.dao.model.GoodsReceiptDelegationEntity d = new com.foremen.dao.model.GoodsReceiptDelegationEntity();
+        d.setId(77L);
+        d.setShipmentId(100L);
+        when(f.delegationDao.findActiveByShipmentIds(anyCollection())).thenReturn(List.of(d));
+
+        f.service.record(batch(accepted(1L, 3)));
+
+        assertThat(f.receipts).hasSize(1);
+        assertThat(f.receipts.get(0).getDelegationId()).isEqualTo(77L);
+        assertThat(f.receipts.get(0).getReceivedBy().getId()).isEqualTo(USER);
+        org.mockito.Mockito.verify(f.delegationService).completeForShipment(100L);
+    }
+
+    private static com.foremen.dao.model.GoodsReceiptDelegationEntity delegation(long id, long shipmentId) {
+        com.foremen.dao.model.GoodsReceiptDelegationEntity d = new com.foremen.dao.model.GoodsReceiptDelegationEntity();
+        d.setId(id);
+        d.setShipmentId(shipmentId);
+        d.setProjectId(PROJECT);
+        UserEntity manager = new UserEntity();
+        manager.setId(1L);
+        d.setDelegatedBy(manager);
+        return d;
+    }
+
+    @Test
+    void firstEventUnderDelegationPublishesFirstDelegateEventOnce() {
+        Fixture f = simple();
+        f.allowedProjects.add(PROJECT);
+        setCaller("WORKER");
+        when(f.delegationService.activeShipmentIdsFor(USER)).thenReturn(Set.of(100L));
+        com.foremen.dao.model.GoodsReceiptDelegationEntity d = delegation(77L, 100L);
+        when(f.delegationDao.findActiveByShipmentIds(anyCollection())).thenReturn(List.of(d));
+        when(f.delegationDao.findById(77L)).thenReturn(Optional.of(d));
+        when(f.receiptDao.existsByDelegationId(77L)).thenReturn(false, true);
+
+        f.service.record(batch(accepted(1L, 1)));
+        f.service.record(batch(accepted(1L, 1)));
+
+        assertThat(f.published).filteredOn(ReceiptFirstDelegateEvent.class::isInstance)
+                .containsExactly(new ReceiptFirstDelegateEvent(77L, 100L, PROJECT, 1L, USER));
+    }
+
+    @Test
+    void staffRecordsWithoutDelegationAndNeverConsultsDelegations() {
+        for (String role : List.of("FOREMAN", "MANAGER", "BUYER", "ADMIN")) {
+            Fixture f = simple();
+            f.allowedProjects.add(PROJECT);
+            setCaller(role);
+
+            f.service.record(batch(accepted(1L, 1)));
+
+            assertThat(f.receipts).hasSize(1);
+            assertThat(f.receipts.get(0).getDelegationId()).isNull();
+            assertThat(f.published).noneMatch(ReceiptFirstDelegateEvent.class::isInstance);
+            org.mockito.Mockito.verify(f.delegationService, org.mockito.Mockito.never())
+                    .activeShipmentIdsFor(any());
+        }
+    }
+
+    @Test
+    void workerToReceiveShowsOnlyDelegatedShipmentsStaffSeeAll() {
+        Fixture f = simple();
+        f.position(2L, PROJECT, 4, PositionStatus.IN_DELIVERY);
+        f.shipment(101L, PROJECT, LocalDate.of(2026, 3, 6), 2L, 4);
+        f.allowedProjects.add(PROJECT);
+        when(f.positionDao.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Sort.class)))
+                .thenAnswer(inv -> new ArrayList<>(f.positions.values()));
+        when(f.receiptDao.findNonCancelledLinesByPositionIds(anyCollection())).thenAnswer(inv -> f.lines);
+        com.foremen.dao.model.GoodsReceiptDelegationEntity d = delegation(77L, 100L);
+        com.foremen.dao.model.UserEntity worker = new UserEntity();
+        worker.setId(USER);
+        worker.setName("Worker W");
+        d.setAssignee(worker);
+        when(f.delegationDao.findActiveByShipmentIds(anyCollection())).thenReturn(List.of(d));
+        when(f.delegationService.activeShipmentIdsFor(USER)).thenReturn(Set.of(100L));
+
+        setCaller("WORKER");
+        var workerView = f.service.toReceive(null);
+        setCaller("MANAGER");
+        var staffView = f.service.toReceive(null);
+
+        assertThat(workerView).hasSize(1);
+        assertThat(workerView.get(0).positionId()).isEqualTo(1L);
+        assertThat(workerView.get(0).shipments()).extracting(s -> s.shipmentId()).containsExactly(100L);
+        assertThat(workerView.get(0).shipments().get(0).delegatedTo()).isEqualTo("Worker W");
+        assertThat(workerView.get(0).shipments().get(0).delegationId()).isEqualTo(77L);
+        assertThat(staffView).extracting(t -> t.positionId()).containsExactlyInAnyOrder(1L, 2L);
+    }
+
+    @Test
+    void workerWithNoDelegationsGetsEmptyToReceive() {
+        Fixture f = simple();
+        f.allowedProjects.add(PROJECT);
+        when(f.positionDao.findAll(any(org.springframework.data.jpa.domain.Specification.class),
+                any(org.springframework.data.domain.Sort.class)))
+                .thenAnswer(inv -> new ArrayList<>(f.positions.values()));
+        when(f.receiptDao.findNonCancelledLinesByPositionIds(anyCollection())).thenAnswer(inv -> f.lines);
+        when(f.delegationService.activeShipmentIdsFor(USER)).thenReturn(Set.of());
+        setCaller("WORKER");
+
+        assertThat(f.service.toReceive(null)).isEmpty();
+    }
+
+    @Test
+    void workerLedgerAndGetOfUndelegatedPositionAreNotFound() {
+        Fixture f = simple();
+        f.allowedProjects.add(PROJECT);
+        when(f.receiptDao.findNonCancelledLinesByPositionIds(anyCollection())).thenAnswer(inv -> f.lines);
+        when(f.delegationService.activeShipmentIdsFor(USER)).thenReturn(Set.of());
+        f.service.record(batch(accepted(1L, 1))); // recorded by the ADMIN caller of the fixture
+        Long receiptId = f.receipts.get(0).getId();
+        f.receipts.get(0).getReceivedBy().setId(99L); // someone else's event
+        setCaller("WORKER");
+        when(f.receiptDao.findByPositionIdOrderByOccurredAtAscIdAsc(1L)).thenReturn(f.receipts);
+
+        assertApi(() -> f.service.ledger(1L), HttpStatus.NOT_FOUND, "error.entity.not.found");
+        assertApi(() -> f.service.get(receiptId), HttpStatus.NOT_FOUND, "error.entity.not.found");
     }
 }

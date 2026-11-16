@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-06 (task 1.5, R9.1, R14.1): adds the nullable payment_link column to external_orders,
+        the URL of the supplier's online payment page that the buyer attaches to an order. Validated
+        as an http(s) URL in the service layer. Idempotent: tableExists / columnExists guard +
+        MARK_RAN. Registered LAST in changelog.xml (task 1.7).
+    -->
+    <changeSet id="251-add-external-order-payment-link" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="external_orders"/>
+            <not>
+                <columnExists tableName="external_orders" columnName="payment_link"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="external_orders">
+            <column name="payment_link" type="VARCHAR(1000)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

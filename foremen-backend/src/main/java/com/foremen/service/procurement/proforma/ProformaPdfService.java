@@ -16,6 +16,7 @@ import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.EffectiveBankAccountResolver;
 import com.foremen.service.document.CompanyProfileDto;
 import com.foremen.service.document.CompanyProfileService;
 import com.foremen.service.document.pdf.InMemoryMultipartFile;
@@ -51,17 +52,20 @@ public class ProformaPdfService {
     private final ImageStorage objectStorage;
     private final CompanyProfileService companyProfileService;
     private final ProjectMemberDao projectMemberDao;
+    private final EffectiveBankAccountResolver bankAccountResolver;
 
     public ProformaPdfService(ProformaHtmlBuilder htmlBuilder,
                               PdfRenderer pdfRenderer,
                               ImageStorage objectStorage,
                               CompanyProfileService companyProfileService,
-                              ProjectMemberDao projectMemberDao) {
+                              ProjectMemberDao projectMemberDao,
+                              EffectiveBankAccountResolver bankAccountResolver) {
         this.htmlBuilder = htmlBuilder;
         this.pdfRenderer = pdfRenderer;
         this.objectStorage = objectStorage;
         this.companyProfileService = companyProfileService;
         this.projectMemberDao = projectMemberDao;
+        this.bankAccountResolver = bankAccountResolver;
     }
 
     /**
@@ -118,12 +122,16 @@ public class ProformaPdfService {
 
     ProformaDocModel buildModel(ClientProformaEntity proforma, List<ClientProformaLineEntity> lines) {
         CompanyProfileDto company = companyProfileService.get();
+        ProjectEntity project = proforma.getProject();
+        // R4.6: an issued payment renders its snapshot; a preview uses the effective account.
+        String snapshot = proforma.getPayment() == null ? null : proforma.getPayment().getBankAccountSnapshot();
+        String bankAccount = !isBlank(snapshot) ? snapshot : bankAccountResolver.forProject(project);
+        // R4.7: company name, address and NIP are required; the account may come from the project.
         if (isBlank(company.fullName()) || isBlank(company.registeredAddress()) || isBlank(company.nip())
-                || isBlank(company.bankAccount())) {
+                || isBlank(bankAccount)) {
             throw new ForemenApiException(HttpStatus.CONFLICT, COMPANY_INCOMPLETE);
         }
 
-        ProjectEntity project = proforma.getProject();
         String buyerName = project.getName();
         String buyerNip = null;
         UserEntity client = primaryClient(project.getId());
@@ -142,7 +150,7 @@ public class ProformaPdfService {
         }
         return new ProformaDocModel(proforma.getNumber(), proforma.getIssueDate(), proforma.getDueDate(),
                 proforma.getCurrency(), company.fullName(), company.registeredAddress(), company.nip(),
-                company.bankAccount(), buyerName, buyerAddress, buyerNip, docLines,
+                bankAccount, buyerName, buyerAddress, buyerNip, docLines,
                 proforma.getTotalNet(), proforma.getTotalVat(), proforma.getTotalGross(), proforma.getNote());
     }
 

@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-06 (task 1.2): CLIENT_PAYMENTS ABAC resource, merged grants and retirement of the old
+        PAYMENTS / CLIENT_PROFORMAS role grants (Requirements 1.4, 1.7, 1.10, 14.1, 14.2).
+        All changeSets are idempotent (MARK_RAN preconditions plus INSERT ... WHERE NOT EXISTS / DELETE).
+        The old PAYMENTS and CLIENT_PROFORMAS rows stay in `resources` (history, audit); only their
+        role_resources grants are removed.
+    -->
+    <changeSet id="248-seed-client-payments-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'CLIENT_PAYMENTS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="CLIENT_PAYMENTS"/>
+            <column name="name_ru" value="Платежи клиентов"/>
+            <column name="name_pl" value="Płatności klientów"/>
+            <column name="description_ru" value="Плановые платежи клиентов по проектам: транши за работы и проформы за материалы"/>
+            <column name="description_pl" value="Planowane płatności klientów w projektach: transze za prace i proformy za materiały"/>
+        </insert>
+    </changeSet>
+    <!--
+        Grant matrix (design section 3): ADMIN CRUD, MANAGER CRUD, FINANCIER CRUD,
+        FOREMAN READ, BUYER READ, CLIENT READ. The kind restrictions are enforced in the service.
+    -->
+    <changeSet id="248-grant-client-payments-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON r.id = rr.role_id
+                JOIN resources res ON res.id = rr.resource_id
+                WHERE r.code = 'ADMIN' AND res.code = 'CLIENT_PAYMENTS'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT r.id, res.id, NOW(), 'system'
+            FROM (VALUES
+                ('ADMIN','CLIENT_PAYMENTS'), ('MANAGER','CLIENT_PAYMENTS'), ('FINANCIER','CLIENT_PAYMENTS'),
+                ('FOREMAN','CLIENT_PAYMENTS'), ('BUYER','CLIENT_PAYMENTS'), ('CLIENT','CLIENT_PAYMENTS')
+            ) g(role_code, res_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+            );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES
+                ('ADMIN','CLIENT_PAYMENTS','CREATE'), ('ADMIN','CLIENT_PAYMENTS','READ'), ('ADMIN','CLIENT_PAYMENTS','UPDATE'), ('ADMIN','CLIENT_PAYMENTS','DELETE'),
+                ('MANAGER','CLIENT_PAYMENTS','CREATE'), ('MANAGER','CLIENT_PAYMENTS','READ'), ('MANAGER','CLIENT_PAYMENTS','UPDATE'), ('MANAGER','CLIENT_PAYMENTS','DELETE'),
+                ('FINANCIER','CLIENT_PAYMENTS','CREATE'), ('FINANCIER','CLIENT_PAYMENTS','READ'), ('FINANCIER','CLIENT_PAYMENTS','UPDATE'), ('FINANCIER','CLIENT_PAYMENTS','DELETE'),
+                ('FOREMAN','CLIENT_PAYMENTS','READ'),
+                ('BUYER','CLIENT_PAYMENTS','READ'),
+                ('CLIENT','CLIENT_PAYMENTS','READ')
+            ) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+    <!-- Retire the old money resources: remove their role grants (operations first, then role_resources). -->
+    <changeSet id="248-remove-old-payments-proformas-grants" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT CASE WHEN COUNT(*) > 0 THEN 0 ELSE 1 END FROM role_resources rr
+                JOIN resources res ON res.id = rr.resource_id
+                WHERE res.code IN ('PAYMENTS', 'CLIENT_PROFORMAS')
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            DELETE FROM role_resource_operations
+            WHERE role_resource_id IN (
+                SELECT rr.id FROM role_resources rr
+                JOIN resources res ON res.id = rr.resource_id
+                WHERE res.code IN ('PAYMENTS', 'CLIENT_PROFORMAS')
+            );
+        </sql>
+        <sql>
+            DELETE FROM role_resources
+            WHERE resource_id IN (
+                SELECT id FROM resources WHERE code IN ('PAYMENTS', 'CLIENT_PROFORMAS')
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

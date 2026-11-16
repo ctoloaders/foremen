@@ -2,6 +2,7 @@ package com.foremen.service.procurement.matrix;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -10,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.dao.AdminDao;
 import com.foremen.dao.ProcurementLineDao;
+import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.dao.model.ProcurementLineEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.ProjectAccessCache;
@@ -161,8 +163,9 @@ public class MaterialsMatrixService
      */
     @Transactional
     public MaterialsMatrixDto getMatrix(Long projectId) {
-        List<MatrixPlannedRow> plannedRows = plannedRows(projectId);
-        List<MatrixFactLine> factLines = factLines(projectId);
+        Set<Long> finishingMaterialIds = new HashSet<>();
+        List<MatrixPlannedRow> plannedRows = plannedRows(projectId, finishingMaterialIds);
+        List<MatrixFactLine> factLines = factLines(projectId, finishingMaterialIds);
         return assembler.assemble(projectId, plannedRows, factLines);
     }
 
@@ -174,7 +177,7 @@ public class MaterialsMatrixService
      * reserve-adjusted effective quantity, and the planned brutto are taken as-is (R1.1). A
      * pre-estimate project yields an empty list (the get-or-create path returns an empty structure).
      */
-    private List<MatrixPlannedRow> plannedRows(Long projectId) {
+    private List<MatrixPlannedRow> plannedRows(Long projectId, Set<Long> finishingMaterialIds) {
         MaterialsListDto materials = materialsListService.getMaterials(projectId, false);
         List<MatrixPlannedRow> rows = new ArrayList<>();
         if (materials == null || materials.branches() == null) {
@@ -184,8 +187,15 @@ public class MaterialsMatrixService
             if (group == null || group.rows() == null) {
                 continue;
             }
+            boolean finishing = group.branch() == ConsumptionBranch.finishing;
             for (MaterialRowDto row : group.rows()) {
                 if (row == null || row.materialId() == null) {
+                    continue;
+                }
+                if (finishing) {
+                    // FOR-11-06 R6.1/R6.3: finishing is not part of the matrix; remember the ids so
+                    // fact lines matched to finishing materials are dropped too.
+                    finishingMaterialIds.add(row.materialId());
                     continue;
                 }
                 rows.add(new MatrixPlannedRow(
@@ -219,11 +229,15 @@ public class MaterialsMatrixService
      * The assembler drops every non-matched line up front (R1.6), so the fact set is intentionally
      * not pre-filtered here — the read path is the single source of the reconciled lines.
      */
-    private List<MatrixFactLine> factLines(Long projectId) {
+    private List<MatrixFactLine> factLines(Long projectId, Set<Long> finishingMaterialIds) {
         List<PurchaseLineServiceModel> lines =
                 reconciliationService.list(projectId, null, null, null);
         List<MatrixFactLine> factLines = new ArrayList<>(lines.size());
         for (PurchaseLineServiceModel line : lines) {
+            if (line.matchedMaterialId() != null
+                    && finishingMaterialIds.contains(line.matchedMaterialId())) {
+                continue;
+            }
             factLines.add(new MatrixFactLine(
                     line.lineId(),
                     line.matchedMaterialId(),

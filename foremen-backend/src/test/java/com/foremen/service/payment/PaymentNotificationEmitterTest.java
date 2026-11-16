@@ -64,7 +64,7 @@ class PaymentNotificationEmitterTest {
     private static final Long FOREMAN_UID = 14L;
     private static final Long INACTIVE_MANAGER_UID = 15L;
 
-    private static final String PLATNOSCI_DEEP_LINK = "/projects/42/payments";
+    private static final String PLATNOSCI_DEEP_LINK = "/projects/42/clientPayments";
     private static final String CLIENT_DEEP_LINK = "/portal/projects/42/payments";
 
     @Mock

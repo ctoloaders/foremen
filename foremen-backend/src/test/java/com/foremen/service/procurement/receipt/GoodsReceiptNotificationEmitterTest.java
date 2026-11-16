@@ -142,6 +142,57 @@ class GoodsReceiptNotificationEmitterTest {
     }
 
     @Test
+    void delegationNotifiesAssigneeWithLinkAndPreviousAssigneeWithoutLink() {
+        emitter.onDelegated(new ReceiptDelegatedEvent(1L, 70L, 10L, 21L, 22L, 1L));
+
+        verify(notifications).create(21L, "notification.receipt.delegated", null, "/deliveries/receipt?shipment=70");
+        verify(notifications).create(22L, "notification.receipt.delegationRevoked", null, null);
+        verifyNoMoreInteractions(notifications);
+    }
+
+    @Test
+    void firstDelegationHasNoRevokedNotificationAndActorIsExcluded() {
+        emitter.onDelegated(new ReceiptDelegatedEvent(1L, 70L, 10L, 21L, null, 21L));
+
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    void revocationNotifiesPreviousAssigneeWithoutLink() {
+        emitter.onRevoked(new ReceiptDelegationRevokedEvent(1L, 70L, 10L, 21L, 1L));
+
+        verify(notifications).create(21L, "notification.receipt.delegationRevoked", null, null);
+        verifyNoMoreInteractions(notifications);
+    }
+
+    @Test
+    void firstDelegateEventNotifiesDelegatingManagerAndProjectManagersOnceMinusActor() {
+        directory();
+
+        // 1 and 4 are project managers; 5 delegated (not a member); 2 is the delegated worker (actor).
+        emitter.onFirstDelegateEvent(new ReceiptFirstDelegateEvent(1L, 70L, 10L, 1L, 2L));
+
+        String type = "notification.receipt.acceptedByDelegate";
+        String link = "/deliveries/shipments/70";
+        verify(notifications, org.mockito.Mockito.times(1)).create(1L, type, null, link);
+        verify(notifications).create(4L, type, null, link);
+        verify(notifications).create(7L, type, null, link);
+        verifyNoMoreInteractions(notifications);
+    }
+
+    @Test
+    void delegationEventsNeverThrowOnNullOrFailure() {
+        emitter.onDelegated(null);
+        emitter.onRevoked(null);
+        emitter.onFirstDelegateEvent(null);
+        doThrow(new RuntimeException("boom")).when(notifications).create(eq(21L), anyString(), any(), any());
+
+        emitter.onDelegated(new ReceiptDelegatedEvent(1L, 70L, 10L, 21L, 22L, 1L));
+
+        verify(notifications).create(22L, "notification.receipt.delegationRevoked", null, null);
+    }
+
+    @Test
     void buyerLookupFailureIsSwallowedAndNothingIsEmitted() {
         when(memberDao.findByProjectIdWithUserAndRole(10L)).thenReturn(List.of());
         when(userDao.findActiveByRoleCode("BUYER")).thenThrow(new RuntimeException("db down"));

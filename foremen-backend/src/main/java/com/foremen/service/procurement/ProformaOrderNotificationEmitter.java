@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import com.foremen.dao.ClientProformaDao;
 import com.foremen.dao.ExternalOrderDao;
 import com.foremen.dao.ProjectMemberDao;
 import com.foremen.dao.PurchasePositionDao;
@@ -20,6 +21,8 @@ import com.foremen.dao.model.UserEntity;
 import com.foremen.service.bank.detect.LedgerMatchProposedEvent;
 import com.foremen.service.offer.NotificationService;
 import com.foremen.service.procurement.externalorder.ExternalOrderPaidEvent;
+import com.foremen.service.procurement.externalorder.ExternalOrderPaymentLinkChangedEvent;
+import com.foremen.service.procurement.position.PositionAddedByBuyerEvent;
 import com.foremen.service.procurement.externalorder.ExternalOrderSentEvent;
 import com.foremen.service.procurement.proforma.ProformaPaidEvent;
 
@@ -56,6 +59,10 @@ public class ProformaOrderNotificationEmitter {
     static final String TYPE_ORDER_PAID = "notification.externalOrder.paid";
     static final String TYPE_MATCH_PROPOSED = "notification.invoice.matchProposed";
 
+    static final String TYPE_PAYMENT_LINK_ADDED = "notification.externalOrder.paymentLinkAdded";
+    static final String TYPE_POSITION_ADDED_BY_BUYER = "notification.position.addedByBuyer";
+
+    static final String CLIENT_ROLE = "CLIENT";
     static final String MANAGER_ROLE = "MANAGER";
     static final String BUYER_ROLE = "BUYER";
     static final String FINANCIER_ROLE = "FINANCIER";
@@ -65,12 +72,15 @@ public class ProformaOrderNotificationEmitter {
     private final UserDao userDao;
     private final PurchasePositionDao purchasePositionDao;
     private final ExternalOrderDao externalOrderDao;
+    private final ClientProformaDao clientProformaDao;
 
     public ProformaOrderNotificationEmitter(NotificationService notificationService,
                                             ProjectMemberDao projectMemberDao,
                                             UserDao userDao,
                                             PurchasePositionDao purchasePositionDao,
-                                            ExternalOrderDao externalOrderDao) {
+                                            ExternalOrderDao externalOrderDao,
+                                            ClientProformaDao clientProformaDao) {
+        this.clientProformaDao = clientProformaDao;
         this.notificationService = notificationService;
         this.projectMemberDao = projectMemberDao;
         this.userDao = userDao;
@@ -86,8 +96,17 @@ public class ProformaOrderNotificationEmitter {
         }
         Long projectId = event.projectId();
         if (projectId != null) {
-            emit(TYPE_PROFORMA_PAID,
-                    "/projects/" + projectId + "/clientProformas?proforma=" + event.proformaId(),
+            String paidLink;
+            try {
+                // R13.4: the unified client payment id addresses the card; fall back to the proforma id.
+                Long paymentId = clientProformaDao.findClientPaymentId(event.proformaId());
+                paidLink = "/projects/" + projectId + "/clientPayments?payment="
+                        + (paymentId != null ? paymentId : event.proformaId());
+            } catch (Exception e) {
+                log.error("Failed to resolve payment id of proforma {}", event.proformaId(), e);
+                paidLink = "/projects/" + projectId + "/clientPayments?payment=" + event.proformaId();
+            }
+            emit(TYPE_PROFORMA_PAID, paidLink,
                     () -> members(projectId, MANAGER_ROLE), event.actorUserId());
         }
         emit(TYPE_RELEASED_TO_BUYER,
@@ -111,8 +130,37 @@ public class ProformaOrderNotificationEmitter {
         if (event == null || event.externalOrderId() == null) {
             return;
         }
-        emit(TYPE_ORDER_PAID, orderLink(event.externalOrderId()),
+        emit(TYPE_ORDER_PAID, "/deliveries/shipments?new=1&order=" + event.externalOrderId(),
                 () -> orderOwners(event.externalOrderId()), event.actorUserId());
+    }
+
+    /** FOR-11-06 R9.4: the payment link of a SENT_FOR_PAYMENT order changed => active FINANCIER users minus actor. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onPaymentLinkChanged(ExternalOrderPaymentLinkChangedEvent event) {
+        if (event == null || event.externalOrderId() == null) {
+            return;
+        }
+        emit(TYPE_PAYMENT_LINK_ADDED, orderLink(event.externalOrderId()),
+                () -> activeUsers(FINANCIER_ROLE), event.actorUserId());
+    }
+
+    /**
+     * FOR-11-06 R10.6: a buyer added a position outside the client-payment flow => project CLIENT members
+     * (link to the position approvals tab, no price) and MANAGER members (deliveries link), minus actor.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onPositionAddedByBuyer(PositionAddedByBuyerEvent event) {
+        if (event == null || event.positionId() == null || event.projectId() == null) {
+            return;
+        }
+        Long projectId = event.projectId();
+        Long positionId = event.positionId();
+        emit(TYPE_POSITION_ADDED_BY_BUYER,
+                "/projects/" + projectId + "/positionApprovals?position=" + positionId,
+                () -> members(projectId, CLIENT_ROLE), event.actorUserId());
+        emit(TYPE_POSITION_ADDED_BY_BUYER,
+                "/deliveries?project=" + projectId + "&position=" + positionId,
+                () -> members(projectId, MANAGER_ROLE), event.actorUserId());
     }
 
     /** R19.5: a ledger suggestion of the new kinds was stored ⇒ active FINANCIER users (no actor). */

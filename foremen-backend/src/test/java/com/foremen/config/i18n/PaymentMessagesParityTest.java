@@ -31,9 +31,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *       {@code PaymentWebhookController}.</li>
  * </ul>
  *
+ * <p>FOR-11-06 task 2.8 adds the unified-payment keys {@code error.clientPayment.notFound},
+ * {@code error.clientPayment.kind.forbidden} and {@code error.access.denied} (R1.4, R1.7, R3.4).
+ *
  * <p>Mirrors the bundle-loading approach of {@code ProcurementMessagesParityTest}.
  *
- * <p>Validates: Requirements 13.1, 13.2, 13.4
+ * <p>Validates: Requirements 13.1, 13.2, 13.4 (FOR-06-07); 1.7, 3.4 (FOR-11-06)
  */
 class PaymentMessagesParityTest {
 
@@ -52,7 +55,11 @@ class PaymentMessagesParityTest {
             "error.payment.schedule.sumMismatch",
             "error.payment.schedule.cannotUnpublish",
             "error.payment.tranche.invalid",
-            "error.payment.webhook.unverified"
+            "error.payment.webhook.unverified",
+            // FOR-11-06 (R1.4, R1.7, R3.4): unified client payment API
+            "error.clientPayment.notFound",
+            "error.clientPayment.kind.forbidden",
+            "error.access.denied"
     };
 
     @ParameterizedTest
@@ -66,7 +73,10 @@ class PaymentMessagesParityTest {
             "error.payment.schedule.sumMismatch",
             "error.payment.schedule.cannotUnpublish",
             "error.payment.tranche.invalid",
-            "error.payment.webhook.unverified"
+            "error.payment.webhook.unverified",
+            "error.clientPayment.notFound",
+            "error.clientPayment.kind.forbidden",
+            "error.access.denied"
     })
     @DisplayName("every FOR-06-07 message key has a non-blank PL entry that is not the raw key")
     void keyHasNonBlankPlEntry(String code) throws IOException {
@@ -90,7 +100,10 @@ class PaymentMessagesParityTest {
             "error.payment.schedule.sumMismatch",
             "error.payment.schedule.cannotUnpublish",
             "error.payment.tranche.invalid",
-            "error.payment.webhook.unverified"
+            "error.payment.webhook.unverified",
+            "error.clientPayment.notFound",
+            "error.clientPayment.kind.forbidden",
+            "error.access.denied"
     })
     @DisplayName("every FOR-06-07 message key has a non-blank RU entry that is not the raw key")
     void keyHasNonBlankRuEntry(String code) throws IOException {

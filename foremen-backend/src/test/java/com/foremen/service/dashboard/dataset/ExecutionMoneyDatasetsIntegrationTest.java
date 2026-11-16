@@ -105,7 +105,7 @@ class ExecutionMoneyDatasetsIntegrationTest {
         assertThat(by("BANK_LEDGER").requiredResources()).containsExactly("BANK_LEDGER");
         assertThat(by("PURCHASE_LINES").requiredResources()).containsExactly("PURCHASES");
         assertThat(by("COMPANY_PURCHASE_LINES").requiredResources()).containsExactly("COMPANY_PURCHASES");
-        assertThat(by("PAYMENT_TRANCHES").requiredResources()).containsExactly("PAYMENTS");
+        assertThat(by("PAYMENT_TRANCHES").requiredResources()).containsExactly("CLIENT_PAYMENTS");
         assertThat(by("WORKER_PAYOUTS").requiredResources()).containsExactly("PAYROLL");
         assertThat(by("WORK_REPORTS").projectPath()).contains("project.id");
         assertThat(by("PAYMENTS").projectPath()).contains("schedule.project.id");

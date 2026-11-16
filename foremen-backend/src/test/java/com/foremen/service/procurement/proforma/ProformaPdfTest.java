@@ -83,6 +83,22 @@ class ProformaPdfTest {
         assertThat(html).contains("ABC");
     }
 
+    /** FOR-11-06 task 3.4 (R4.7): the payee account line keeps Polish letters of the seller block. */
+    @Test
+    void payeeAccountBlockKeepsPolishLetters() throws Exception {
+        ProformaDocModel base = model("Płytka", null);
+        ProformaDocModel pl = new ProformaDocModel(base.number(), base.issueDate(), base.dueDate(), "PLN",
+                "Żółć Łódź sp. z o.o.", "ul. Gęślą Jaźń 1, Łódź", "5250000000",
+                "PL61109010140000071219812874", "Zażółć Gęślą", "ul. Klienta 2", null,
+                base.lines(), base.totalNet(), base.totalVat(), base.totalGross(), null);
+
+        String html = builder.build(pl, ProformaPdfLabels.forLanguage("pl"));
+
+        assertWellFormed(html);
+        assertThat(html).contains("Żółć Łódź sp. z o.o.").contains("ul. Gęślą Jaźń 1, Łódź")
+                .contains("PL61109010140000071219812874");
+    }
+
     @Test
     void fileNameReplacesSlashes() {
         assertThat(ProformaPdfService.fileName("PF/2026/000123")).isEqualTo("PF-2026-000123.pdf");

@@ -114,7 +114,7 @@ class MaterialsMatrixAssemblerPropertyTest {
             @ForAll("matchedLineTotals") List<BigDecimal> lineTotals,
             @ForAll("plannedBruttos") BigDecimal plannedBrutto) {
         long materialId = 202L;
-        MatrixPlannedRow planned = plannedRow(materialId, ConsumptionBranch.finishing, "Cat", "szt",
+        MatrixPlannedRow planned = plannedRow(materialId, ConsumptionBranch.construction, "Cat", "szt",
                 bd("5"), plannedBrutto);
 
         List<MatrixFactLine> lines = new ArrayList<>();
@@ -425,10 +425,10 @@ class MaterialsMatrixAssemblerPropertyTest {
     record PlannedScenario(ConsumptionBranch branch, BigDecimal plannedBrutto, List<BigDecimal> lineTotals) {
     }
 
-    /** A set of planned rows across both branches, some with a null planned brutto. */
+    /** A set of construction planned rows (finishing never reaches the assembler), some with a null planned brutto. */
     @Provide
     Arbitrary<List<PlannedScenario>> plannedScenarioRows() {
-        Arbitrary<ConsumptionBranch> branch = Arbitraries.of(ConsumptionBranch.values());
+        Arbitrary<ConsumptionBranch> branch = Arbitraries.just(ConsumptionBranch.construction); // FOR-11-06: finishing is filtered upstream
         Arbitrary<BigDecimal> plannedBrutto = Arbitraries.oneOf(
                 Arbitraries.just((BigDecimal) null),
                 Arbitraries.bigDecimals().between(bd("1"), bd("5000")).ofScale(2));

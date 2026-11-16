@@ -139,6 +139,13 @@ class ClientProformaServiceTest {
     }
 
     @Test
+    void rejectsPendingPositionWithoutMaterial() {
+        // FOR-11-06 task 4.2 (R5.3)
+        position(1L, "10.00", "1", "8").setPlannedMaterial(null);
+        assertCode(() -> service.create(model(1L)), HttpStatus.CONFLICT, "error.estimateSync.materialRequired");
+    }
+
+    @Test
     void rejectsProjectNotInExecution() {
         position(1L, "10.00", "1", "8");
         project.setStatus(ProjectStatus.APPROVED);
@@ -235,6 +242,26 @@ class ClientProformaServiceTest {
         assertThat(ClientProformaService.isPositionClaimViolation(new RuntimeException("x",
                 new RuntimeException("violates \"uk_proforma_lines_position_active\"")))).isTrue();
         assertThat(ClientProformaService.isPositionClaimViolation(new RuntimeException("uk_other"))).isFalse();
+    }
+
+    @Test
+    void acceptsClientUnpaidPositionFromWithBuyerToReceivedAndRejectsUnflaggedOrOutOfRange() {
+        PurchasePositionEntity received = position(1L, "10.00", "1", "8");
+        received.setStatus(PositionStatus.RECEIVED);
+        received.setClientUnpaid(true);
+        PurchasePositionEntity withBuyer = position(2L, "10.00", "1", "8");
+        withBuyer.setStatus(PositionStatus.WITH_BUYER);
+        withBuyer.setClientUnpaid(true);
+        service.create(model(1L, 2L));
+
+        PurchasePositionEntity unflagged = position(3L, "10.00", "1", "8");
+        unflagged.setStatus(PositionStatus.RECEIVED);
+        assertCode(() -> service.create(model(3L)), HttpStatus.CONFLICT, ClientProformaService.POSITION_NOT_ACCEPTED);
+
+        PurchasePositionEntity early = position(4L, "10.00", "1", "8");
+        early.setStatus(PositionStatus.IN_PROFORMA);
+        early.setClientUnpaid(true);
+        assertCode(() -> service.create(model(4L)), HttpStatus.CONFLICT, ClientProformaService.POSITION_NOT_ACCEPTED);
     }
 
     // --- helpers ---

@@ -16,6 +16,9 @@ import java.util.List;
 @Repository
 public interface GoodsReceiptDao extends AdminDao<GoodsReceiptEntity, Long> {
 
+    /** FOR-11-06 (R12.8): whether any event was stored under the delegation. */
+    boolean existsByDelegationId(Long delegationId);
+
     /**
      * Ledger sums per position: rows of {@code [positionId, kind (ReceiptKind), fromAccepted (Boolean),
      * sumQuantity]}; positions without events are absent.

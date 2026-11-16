@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-06 (task 1.4; design 6.1; R5.2, R5.3, R10.2, R14.1): estimate-driven and buyer-added positions.
+          - planned_material_id becomes nullable (material is chosen later for estimate-derived positions)
+          - estimate_source_key, estimate_changed, estimate_removed, added_by_buyer, client_unpaid
+          - partial unique index uq_purchase_positions_estimate_key (project_id, estimate_source_key)
+          - CHECK ck_position_material_pending, CHECK ck_position_unpaid_requires_buyer_added
+        Idempotent: each object is its own changeSet guarded by a precondition + onFail="MARK_RAN".
+        Registered LAST in changelog.xml (task 1.7).
+    -->
+    <changeSet id="250-planned-material-nullable" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="purchase_positions"/>
+        </preConditions>
+        <dropNotNullConstraint tableName="purchase_positions" columnName="planned_material_id" columnDataType="BIGINT"/>
+    </changeSet>
+
+    <changeSet id="250-add-estimate-source-key" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="purchase_positions"/>
+            <not><columnExists tableName="purchase_positions" columnName="estimate_source_key"/></not>
+        </preConditions>
+        <addColumn tableName="purchase_positions">
+            <column name="estimate_source_key" type="VARCHAR(80)"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="250-add-estimate-changed" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="purchase_positions"/>
+            <not><columnExists tableName="purchase_positions" columnName="estimate_changed"/></not>
+        </preConditions>
+        <addColumn tableName="purchase_positions">
+            <column name="estimate_changed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="250-add-estimate-removed" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="purchase_positions"/>
+            <not><columnExists tableName="purchase_positions" columnName="estimate_removed"/></not>
+        </preConditions>
+        <addColumn tableName="purchase_positions">
+            <column name="estimate_removed" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="250-add-added-by-buyer" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="purchase_positions"/>
+            <not><columnExists tableName="purchase_positions" columnName="added_by_buyer"/></not>
+        </preConditions>
+        <addColumn tableName="purchase_positions">
+            <column name="added_by_buyer" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="250-add-client-unpaid" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="purchase_positions"/>
+            <not><columnExists tableName="purchase_positions" columnName="client_unpaid"/></not>
+        </preConditions>
+        <addColumn tableName="purchase_positions">
+            <column name="client_unpaid" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="250-uq-purchase-positions-estimate-key" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_indexes WHERE indexname = 'uq_purchase_positions_estimate_key'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">CREATE UNIQUE INDEX uq_purchase_positions_estimate_key ON purchase_positions (project_id, estimate_source_key) WHERE estimate_source_key IS NOT NULL</sql>
+    </changeSet>
+
+    <changeSet id="250-ck-position-material-pending" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_position_material_pending'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE purchase_positions ADD CONSTRAINT ck_position_material_pending CHECK (planned_material_id IS NOT NULL OR (status = 'PLANNED' AND estimate_source_key IS NOT NULL))</sql>
+    </changeSet>
+
+    <changeSet id="250-ck-position-unpaid-requires-buyer-added" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_position_unpaid_requires_buyer_added'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE purchase_positions ADD CONSTRAINT ck_position_unpaid_requires_buyer_added CHECK (NOT client_unpaid OR added_by_buyer)</sql>
+    </changeSet>
+</databaseChangeLog>

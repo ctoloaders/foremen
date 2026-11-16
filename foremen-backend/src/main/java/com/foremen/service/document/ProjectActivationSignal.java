@@ -51,6 +51,7 @@ public class ProjectActivationSignal {
 
     private final ProjectDao projectDao;
     private final OfferDao offerDao;
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     public ProjectActivationSignal(ProjectDao projectDao, OfferDao offerDao) {
         this.projectDao = projectDao;
@@ -96,6 +97,15 @@ public class ProjectActivationSignal {
 
         project.setStatus(ProjectStatus.ACTIVE);
         projectDao.save(project);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.foremen.service.ProjectActivatedEvent(project.getId()));
+        }
+    }
+
+    /** FOR-11-06: optional so the existing constructor (and tests) keep working. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setEventPublisher(org.springframework.context.ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
     }
 
     /** A document is a signed contract iff its type code starts with {@code CONTRACT_} and it is {@code SIGNED}. */

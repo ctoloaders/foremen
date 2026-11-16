@@ -34,6 +34,10 @@ import com.foremen.service.bank.detect.MatchCandidate;
  * @param counterAccountId      the other side of an internal transfer (bank or cash account)
  * @param clientProformaId      client proforma target (FOR-11-03)
  * @param externalOrderId       external order target (FOR-11-03)
+ * @param clientPaymentId       unified client payment target (FOR-11-06 R1.8); mutually exclusive with
+ *                              {@code paymentScheduleId} and {@code clientProformaId}: a {@code WORKS}
+ *                              payment resolves to {@code CLIENT_PAYMENT} with its schedule, a
+ *                              {@code MATERIALS} payment to {@code PROFORMA_PAYMENT} with its proforma
  * @param note                  free text, may be {@code null}
  */
 public record LinkRequest(
@@ -47,61 +51,80 @@ public record LinkRequest(
         Long counterAccountId,
         Long clientProformaId,
         Long externalOrderId,
+        Long clientPaymentId,
         String note) {
+
+    /** The pre-FOR-11-06 shape (no {@code clientPaymentId}); the old target fields stay accepted. */
+    public LinkRequest(LinkKind kind, BigDecimal amount, Long workerPayoutId, Long procurementDocumentId,
+                       Long paymentScheduleId, Long projectId, Long unplannedCategoryId, Long counterAccountId,
+                       Long clientProformaId, Long externalOrderId, String note) {
+        this(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, null, note);
+    }
 
     /** A request with only the kind and the amount set (targets added through the {@code with*} helpers). */
     public static LinkRequest of(LinkKind kind, BigDecimal amount) {
-        return new LinkRequest(kind, amount, null, null, null, null, null, null, null, null, null);
+        return new LinkRequest(kind, amount, null, null, null, null, null, null, null, null, null, null);
     }
 
     public LinkRequest withWorkerPayout(Long id) {
         return new LinkRequest(kind, amount, id, procurementDocumentId, paymentScheduleId, projectId,
-                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note);
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withProcurementDocument(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, id, paymentScheduleId, projectId,
-                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note);
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withPaymentSchedule(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, id, projectId,
-                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note);
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withProject(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, id,
-                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note);
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withUnplannedCategory(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId,
-                projectId, id, counterAccountId, clientProformaId, externalOrderId, note);
+                projectId, id, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withCounterAccount(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId,
-                projectId, unplannedCategoryId, id, clientProformaId, externalOrderId, note);
+                projectId, unplannedCategoryId, id, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withClientProforma(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
-                unplannedCategoryId, counterAccountId, id, externalOrderId, note);
+                unplannedCategoryId, counterAccountId, id, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withExternalOrder(Long id) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
-                unplannedCategoryId, counterAccountId, clientProformaId, id, note);
+                unplannedCategoryId, counterAccountId, clientProformaId, id, clientPaymentId, note);
+    }
+
+    public LinkRequest withClientPayment(Long id) {
+        return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, id, note);
+    }
+
+    public LinkRequest withKind(LinkKind value) {
+        return new LinkRequest(value, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
+                unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     public LinkRequest withNote(String text) {
         return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId,
-                projectId, unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, text);
+                projectId, unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, text);
     }
 
     public LinkRequest withAmount(BigDecimal value) {
         return new LinkRequest(kind, value, workerPayoutId, procurementDocumentId, paymentScheduleId,
-                projectId, unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note);
+                projectId, unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
     }
 
     /**

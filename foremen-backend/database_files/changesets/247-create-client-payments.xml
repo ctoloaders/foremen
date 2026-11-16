@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-11-06 (task 1.1; Requirements 1.1, 1.2, 14.1, 14.4, 14.5; design 1.1 / 1.2): the shared
+        base table of every client payment with per-kind detail tables.
+
+          client_payments : common fields of a WORKS payment (a payment_tranches row) and a
+                            MATERIALS payment (a client_proformas row).
+          payment_tranches / client_proformas keep their own ids and every existing foreign key and
+          get client_payment_id (unique FK to client_payments). Their old common columns
+          (tranche: amount_gross, paid_gross, due_date, status; proforma: status, due_date,
+          total_gross, paid_gross, currency, note) stay as DEPRECATED, nullable, unwritten columns
+          until the cleanup changeset 253.
+
+        Three changeSets, each guarded by a precondition + onFail="MARK_RAN":
+          1. 247-create-client-payments        : base table, indexes, nullable client_payment_id columns.
+          2. 247-backfill-client-payments      : one base row per existing tranche and proforma, using
+                                                 temporary legacy_tranche_id / legacy_proforma_id
+                                                 columns that are dropped at the end. Stored statuses
+                                                 are copied as they are (the read path re-derives).
+          3. 247-constrain-client-payments     : client_payment_id NOT NULL, unique FKs, CHECKs, and
+                                                 the deprecated detail columns made nullable.
+        Registered LAST in changelog.xml (task 1.7).
+    -->
+
+    <!-- 1. Base table and nullable detail columns. -->
+    <changeSet id="247-create-client-payments" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="client_payments"/></not>
+        </preConditions>
+
+        <createTable tableName="client_payments">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="project_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="kind" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="VARCHAR(24)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="due_date" type="DATE"/>
+            <column name="amount_gross" type="NUMERIC(14,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="paid_gross" type="NUMERIC(14,2)" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="currency" type="VARCHAR(3)" defaultValue="PLN">
+                <constraints nullable="false"/>
+            </column>
+            <column name="note" type="VARCHAR(1000)"/>
+            <column name="bank_account_snapshot" type="VARCHAR(34)"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+
+        <!-- Project scope path project.id; deleting a project removes its payments (as it did its tranches). -->
+        <addForeignKeyConstraint constraintName="fk_client_payments_project"
+            baseTableName="client_payments" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id" onDelete="CASCADE"/>
+
+        <!-- Default list order. -->
+        <createIndex tableName="client_payments" indexName="ix_client_payments_project_due">
+            <column name="project_id"/>
+            <column name="due_date"/>
+            <column name="id"/>
+        </createIndex>
+        <createIndex tableName="client_payments" indexName="ix_client_payments_project_kind_status">
+            <column name="project_id"/>
+            <column name="kind"/>
+            <column name="status"/>
+        </createIndex>
+
+        <addColumn tableName="payment_tranches">
+            <column name="client_payment_id" type="BIGINT"/>
+        </addColumn>
+        <addColumn tableName="client_proformas">
+            <column name="client_payment_id" type="BIGINT"/>
+        </addColumn>
+
+        <rollback>
+            <sql>
+                ALTER TABLE payment_tranches DROP COLUMN IF EXISTS client_payment_id;
+                ALTER TABLE client_proformas DROP COLUMN IF EXISTS client_payment_id;
+                DROP TABLE IF EXISTS client_payments;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!-- 2. Backfill both kinds; re-runs find no row without client_payment_id and are skipped. -->
+    <changeSet id="247-backfill-client-payments" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <or>
+                <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM payment_tranches WHERE client_payment_id IS NULL) THEN 1 ELSE 0 END</sqlCheck>
+                <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM client_proformas WHERE client_payment_id IS NULL) THEN 1 ELSE 0 END</sqlCheck>
+            </or>
+        </preConditions>
+
+        <sql dbms="postgresql">
+            ALTER TABLE client_payments ADD COLUMN IF NOT EXISTS legacy_tranche_id BIGINT;
+            ALTER TABLE client_payments ADD COLUMN IF NOT EXISTS legacy_proforma_id BIGINT;
+
+            INSERT INTO client_payments
+                (project_id, kind, status, due_date, amount_gross, paid_gross, currency, note,
+                 created_date, created_by, updated_date, updated_by, legacy_tranche_id)
+            SELECT s.project_id, 'WORKS', t.status, t.due_date, t.amount_gross, t.paid_gross,
+                   COALESCE(s.currency, 'PLN'), NULL,
+                   t.created_date, t.created_by, t.updated_date, t.updated_by, t.id
+            FROM payment_tranches t
+            JOIN payment_schedules s ON s.id = t.schedule_id
+            WHERE t.client_payment_id IS NULL
+            ORDER BY t.id;
+
+            INSERT INTO client_payments
+                (project_id, kind, status, due_date, amount_gross, paid_gross, currency, note,
+                 created_date, created_by, updated_date, updated_by, legacy_proforma_id)
+            SELECT p.project_id, 'MATERIALS', p.status, p.due_date, p.total_gross, p.paid_gross,
+                   p.currency, p.note,
+                   p.created_date, p.created_by, p.updated_date, p.updated_by, p.id
+            FROM client_proformas p
+            WHERE p.client_payment_id IS NULL
+            ORDER BY p.id;
+
+            UPDATE payment_tranches t
+               SET client_payment_id = cp.id
+              FROM client_payments cp
+             WHERE cp.legacy_tranche_id = t.id
+               AND t.client_payment_id IS NULL;
+
+            UPDATE client_proformas p
+               SET client_payment_id = cp.id
+              FROM client_payments cp
+             WHERE cp.legacy_proforma_id = p.id
+               AND p.client_payment_id IS NULL;
+
+            ALTER TABLE client_payments DROP COLUMN legacy_tranche_id;
+            ALTER TABLE client_payments DROP COLUMN legacy_proforma_id;
+        </sql>
+
+        <rollback>
+            <sql>
+                UPDATE payment_tranches SET client_payment_id = NULL;
+                UPDATE client_proformas SET client_payment_id = NULL;
+                DELETE FROM client_payments;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!-- 3. Constraints. -->
+    <changeSet id="247-constrain-client-payments" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_client_payments_kind'</sqlCheck>
+        </preConditions>
+
+        <sql dbms="postgresql">
+            ALTER TABLE payment_tranches ALTER COLUMN client_payment_id SET NOT NULL;
+            ALTER TABLE client_proformas ALTER COLUMN client_payment_id SET NOT NULL;
+
+            ALTER TABLE payment_tranches
+                ADD CONSTRAINT uq_payment_tranches_client_payment UNIQUE (client_payment_id);
+            ALTER TABLE payment_tranches
+                ADD CONSTRAINT fk_payment_tranches_client_payment
+                FOREIGN KEY (client_payment_id) REFERENCES client_payments (id) ON DELETE CASCADE;
+
+            ALTER TABLE client_proformas
+                ADD CONSTRAINT uq_client_proformas_client_payment UNIQUE (client_payment_id);
+            ALTER TABLE client_proformas
+                ADD CONSTRAINT fk_client_proformas_client_payment
+                FOREIGN KEY (client_payment_id) REFERENCES client_payments (id) ON DELETE CASCADE;
+
+            ALTER TABLE client_payments
+                ADD CONSTRAINT ck_client_payments_kind CHECK (kind IN ('WORKS', 'MATERIALS'));
+            ALTER TABLE client_payments
+                ADD CONSTRAINT ck_client_payments_status CHECK (
+                    (kind = 'WORKS' AND status IN ('PENDING', 'DUE', 'PARTIALLY_PAID', 'PAID', 'OVERDUE'))
+                    OR (kind = 'MATERIALS' AND status IN ('DRAFT', 'ISSUED', 'PARTIALLY_PAID', 'PAID', 'CANCELLED')));
+            ALTER TABLE client_payments
+                ADD CONSTRAINT ck_client_payments_amounts CHECK (
+                    amount_gross &gt;= 0 AND paid_gross &gt;= 0 AND (kind &lt;&gt; 'WORKS' OR amount_gross &gt; 0));
+
+            -- Deprecated common columns: no longer written, so they must not require a value.
+            ALTER TABLE payment_tranches ALTER COLUMN due_date DROP NOT NULL;
+            ALTER TABLE payment_tranches ALTER COLUMN amount_gross DROP NOT NULL;
+            ALTER TABLE payment_tranches ALTER COLUMN paid_gross DROP NOT NULL;
+            ALTER TABLE payment_tranches ALTER COLUMN status DROP NOT NULL;
+            ALTER TABLE client_proformas ALTER COLUMN status DROP NOT NULL;
+            ALTER TABLE client_proformas ALTER COLUMN currency DROP NOT NULL;
+            ALTER TABLE client_proformas ALTER COLUMN total_gross DROP NOT NULL;
+            ALTER TABLE client_proformas ALTER COLUMN paid_gross DROP NOT NULL;
+        </sql>
+
+        <rollback>
+            <sql>
+                ALTER TABLE client_payments DROP CONSTRAINT IF EXISTS ck_client_payments_amounts;
+                ALTER TABLE client_payments DROP CONSTRAINT IF EXISTS ck_client_payments_status;
+                ALTER TABLE client_payments DROP CONSTRAINT IF EXISTS ck_client_payments_kind;
+                ALTER TABLE client_proformas DROP CONSTRAINT IF EXISTS fk_client_proformas_client_payment;
+                ALTER TABLE client_proformas DROP CONSTRAINT IF EXISTS uq_client_proformas_client_payment;
+                ALTER TABLE payment_tranches DROP CONSTRAINT IF EXISTS fk_payment_tranches_client_payment;
+                ALTER TABLE payment_tranches DROP CONSTRAINT IF EXISTS uq_payment_tranches_client_payment;
+                ALTER TABLE client_proformas ALTER COLUMN client_payment_id DROP NOT NULL;
+                ALTER TABLE payment_tranches ALTER COLUMN client_payment_id DROP NOT NULL;
+            </sql>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

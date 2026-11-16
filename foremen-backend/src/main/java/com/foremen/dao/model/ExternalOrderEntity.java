@@ -42,6 +42,10 @@ public class ExternalOrderEntity extends BaseEntity {
     @Column(name = "order_link", length = 1000)
     private String orderLink;
 
+    /** FOR-11-06 (R9.1): the supplier's online payment page; never exposed to non-money roles. */
+    @Column(name = "payment_link", length = 1000)
+    private String paymentLink;
+
     @Column(name = "delivery_cost_net", nullable = false, precision = 14, scale = 2)
     private BigDecimal deliveryCostNet = BigDecimal.ZERO;
 

@@ -993,4 +993,18 @@
     <include file="database_files/changesets/245-seed-goods-receipts-resource.xml"/>
     <!-- FOR-11 follow-up: BUYER read-only grant on PROJECTS (project pickers). Registered LAST, after 245. -->
     <include file="database_files/changesets/246-grant-buyer-projects-read.xml"/>
+    <!-- FOR-11-06 (task 1.1): client_payments table. Registered LAST, after 246. -->
+    <include file="database_files/changesets/247-create-client-payments.xml"/>
+    <!-- FOR-11-06 (task 1.2): CLIENT_PAYMENTS resource and grants. Registered LAST, after 247. -->
+    <include file="database_files/changesets/248-seed-client-payments-resource.xml"/>
+    <!-- FOR-11-06: project bank account. Registered LAST, after 248. -->
+    <include file="database_files/changesets/249-add-project-bank-account.xml"/>
+    <!-- FOR-11-06: purchase position estimate and buyer flags. Registered LAST, after 249. -->
+    <include file="database_files/changesets/250-purchase-position-estimate-and-buyer-flags.xml"/>
+    <!-- FOR-11-06: external order payment link. Registered LAST, after 250. -->
+    <include file="database_files/changesets/251-add-external-order-payment-link.xml"/>
+    <!-- FOR-11-06: goods receipt delegations. Registered LAST, after 251. -->
+    <include file="database_files/changesets/252-goods-receipt-delegations.xml"/>
+    <!-- FOR-11-06: drops the deprecated common payment columns of the detail tables. Registered LAST, after 252. -->
+    <include file="database_files/changesets/253-drop-legacy-payment-columns.xml"/>
 </databaseChangeLog>

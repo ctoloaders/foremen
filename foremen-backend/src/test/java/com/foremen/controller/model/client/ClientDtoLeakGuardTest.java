@@ -18,7 +18,15 @@ import org.junit.jupiter.api.Test;
 class ClientDtoLeakGuardTest {
 
     private static final LocalDate TODAY = LocalDate.of(2025, 6, 10);
-    private final ClientViewAssembler assembler = new ClientViewAssembler();
+    private final ClientViewAssembler assembler = new ClientViewAssembler(cdn());
+
+    private static com.foremen.service.image.ImageStorage cdn() {
+        com.foremen.service.image.ImageStorage storage =
+                org.mockito.Mockito.mock(com.foremen.service.image.ImageStorage.class);
+        org.mockito.Mockito.when(storage.toCdnUrl(org.mockito.ArgumentMatchers.any())).thenAnswer(
+                i -> i.getArgument(0) == null ? null : "https://cdn.test/" + i.getArgument(0));
+        return storage;
+    }
 
     private record Inner(String sellerName) { }
 
@@ -64,6 +72,7 @@ class ClientDtoLeakGuardTest {
         assertThat(dto.clientStatus()).isEqualTo(ClientStatus.AWAITING_DECISION);
         assertThat(dto.unitName()).isEqualTo("szt");
         assertThat(dto.item().producerName()).isEqualTo("Prod");
+        assertThat(dto.item().photo()).isEqualTo("https://cdn.test/ph");
         assertThat(dto.money().lineGross()).isEqualByComparingTo("36.90");
         assertThat(dto.allowedActions()).contains(ClientAction.ACCEPT, ClientAction.REJECT);
 

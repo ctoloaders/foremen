@@ -25,6 +25,7 @@ import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.PurchasePositionEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.EffectiveBankAccountResolver;
 import com.foremen.service.image.ImageStorage;
 import com.foremen.service.model.ClientProformaServiceExtendedModel;
 import com.foremen.service.model.mapper.ClientProformaServiceMapper;
@@ -65,6 +66,7 @@ public class ProformaIssueService {
     private final ImageStorage objectStorage;
     private final ApplicationEventPublisher events;
     private final EntityManager entityManager;
+    private final EffectiveBankAccountResolver bankAccountResolver;
     private final Clock clock;
     private final int defaultDueDays;
 
@@ -80,9 +82,10 @@ public class ProformaIssueService {
                                 ImageStorage objectStorage,
                                 ApplicationEventPublisher events,
                                 EntityManager entityManager,
+                                EffectiveBankAccountResolver bankAccountResolver,
                                 @Value("${foremen.proforma.default-due-days:7}") int defaultDueDays) {
         this(dao, lineDao, proformaService, mapper, snapshotBuilder, numberService, pdfService, lifecycle,
-                objectStorage, events, entityManager, defaultDueDays, Clock.system(PurchaseRequestOverdue.ZONE));
+                objectStorage, events, entityManager, bankAccountResolver, defaultDueDays, Clock.system(PurchaseRequestOverdue.ZONE));
     }
 
     ProformaIssueService(ClientProformaDao dao,
@@ -96,6 +99,7 @@ public class ProformaIssueService {
                          ImageStorage objectStorage,
                          ApplicationEventPublisher events,
                          EntityManager entityManager,
+                         EffectiveBankAccountResolver bankAccountResolver,
                          int defaultDueDays,
                          Clock clock) {
         this.dao = dao;
@@ -109,6 +113,7 @@ public class ProformaIssueService {
         this.objectStorage = objectStorage;
         this.events = events;
         this.entityManager = entityManager;
+        this.bankAccountResolver = bankAccountResolver;
         this.defaultDueDays = defaultDueDays;
         this.clock = clock;
     }
@@ -166,6 +171,10 @@ public class ProformaIssueService {
         proforma.setPdfLanguage(lang);
         proforma.setIssuedBy(currentUserReference());
 
+        // R4.6: freeze the effective payee account on the base row before rendering.
+        proforma.getPayment().setBankAccountSnapshot(
+                snapshotOf(bankAccountResolver.forProject(proforma.getProject())));
+
         // R4.4: a render or storage failure (502) or an incomplete company profile (409) aborts here,
         // before anything was stored.
         String objectKey = pdfService.render(proforma, snapshot.lines(), lang);
@@ -176,6 +185,9 @@ public class ProformaIssueService {
             entityManager.flush();
 
             for (PurchasePositionEntity p : positions) {
+                if (p.isClientUnpaid()) {
+                    continue; // FOR-11-06 (R10.5): a buyer-added position is already past ACCEPTED
+                }
                 lifecycle.transition(p.getId(), PositionStatus.IN_PROFORMA, Actor.SYSTEM);
             }
             proformaService.saveAuditWithSnapshot(beforeSnapshot, proforma, "UPDATE");
@@ -185,6 +197,15 @@ public class ProformaIssueService {
             throw e;
         }
         return mapper.toServiceExtendedModel(proforma);
+    }
+
+    /** Spaces stripped; the 34-character snapshot column cannot hold longer free text, so it is skipped. */
+    static String snapshotOf(String account) {
+        if (account == null) {
+            return null;
+        }
+        String compact = account.replaceAll("\\s+", "");
+        return compact.isEmpty() || compact.length() > 34 ? null : compact;
     }
 
     /** Old lines out, fresh frozen lines in; flushed so the unique indexes never see both generations. */

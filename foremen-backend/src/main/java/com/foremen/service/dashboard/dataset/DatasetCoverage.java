@@ -34,6 +34,7 @@ public final class DatasetCoverage {
             Map.entry("PACKAGE_ASSORTMENT", REFERENCE),
             Map.entry("PROJECT_MATERIALS", "project-scoped extension of the finishing-materials catalog, no own business data (FOR-11-00 R14.8)"),
             Map.entry("POSITION_APPROVALS", "workflow history and action-only permission; positions are already covered by the FOR-11-00 datasets (FOR-11-02 R21.3)"),
+            Map.entry("CLIENT_PROFORMAS", "retired by FOR-11-06: grants moved to CLIENT_PAYMENTS, whose datasets (PAYMENT_TRANCHES, CLIENT_PROFORMAS) cover the data"),
             Map.entry("RESOURCES", PERMISSION_CATALOG),
             Map.entry("OPERATIONS", PERMISSION_CATALOG),
             Map.entry("EXPENSE_UPLOAD", "action-only permission (upload), no own data"),

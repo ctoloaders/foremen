@@ -42,6 +42,7 @@ import com.foremen.controller.model.staff.StaffViewAssembler;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.approval.DecidedSide;
+import com.foremen.service.procurement.approval.PositionApprovalBulkExecutor;
 import com.foremen.service.procurement.approval.PositionApprovalService;
 import com.foremen.service.procurement.approval.PositionApprovalService.AcceptCommand;
 import com.foremen.service.procurement.approval.PositionApprovalService.Decider;
@@ -70,6 +71,7 @@ class PositionApprovalStaffControllerAbacTest {
     private PositionApprovalService approvalService;
     private PositionAudienceResolver audienceResolver;
     private ProcurementProjectAccess projectAccess;
+    private PositionApprovalBulkExecutor bulkExecutor;
     private MockMvc mvc;
 
     @BeforeEach
@@ -78,9 +80,11 @@ class PositionApprovalStaffControllerAbacTest {
         approvalService = mock(PositionApprovalService.class);
         audienceResolver = mock(PositionAudienceResolver.class);
         projectAccess = mock(ProcurementProjectAccess.class);
+        bulkExecutor = mock(PositionApprovalBulkExecutor.class);
         PositionApprovalStaffController controller = new PositionApprovalStaffController(queryService,
-                new StaffViewAssembler(), audienceResolver, approvalService, projectAccess,
-                mock(EntityManager.class), Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC));
+                new StaffViewAssembler(mock(com.foremen.service.image.ImageStorage.class)), audienceResolver, approvalService, projectAccess,
+                mock(EntityManager.class), Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC),
+                bulkExecutor);
         mvc = MockMvcBuilders.standaloneSetup(controller).build();
         login("MANAGER", Audience.STAFF_FULL);
     }
@@ -105,7 +109,8 @@ class PositionApprovalStaffControllerAbacTest {
                 Map.entry("proposeAnalog", "CREATE"),
                 Map.entry("withdraw", "UPDATE"), Map.entry("changeDeadline", "UPDATE"),
                 Map.entry("declineSuggestion", "UPDATE"),
-                Map.entry("decideOnBehalf", "APPROVE"), Map.entry("clientOwnOnBehalf", "APPROVE"));
+                Map.entry("decideOnBehalf", "APPROVE"), Map.entry("decideOnBehalfBulk", "APPROVE"),
+                Map.entry("withdrawBulk", "UPDATE"), Map.entry("clientOwnOnBehalf", "APPROVE"));
         int handlers = 0;
         for (Method m : PositionApprovalStaffController.class.getDeclaredMethods()) {
             RequiresPermission rp = m.getAnnotation(RequiresPermission.class);
@@ -114,7 +119,7 @@ class PositionApprovalStaffControllerAbacTest {
             }
             handlers++;
             HandlerMethod hm = new HandlerMethod(new PositionApprovalStaffController(null, null, null, null,
-                    null, null, null), m);
+                    null, null, null, null), m);
             assertThat(resolver.classifyCompleteness(hm)).as(m.getName()).isEqualTo(Completeness.COMPLETE);
             assertThat(rp.resource()).isEqualTo("POSITION_APPROVALS");
             assertThat(rp.operation()).as(m.getName()).isEqualTo(expected.get(m.getName()));
@@ -274,5 +279,44 @@ class PositionApprovalStaffControllerAbacTest {
                         .content("{\"materialId\":5,\"unitSalePrice\":20.00}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").value(99));
+    }
+
+    @Test
+    @DisplayName("bulk endpoints delegate to the executor, reject >200 items and non-staff roles")
+    void bulkEndpoints() throws Exception {
+        when(bulkExecutor.acceptOnBehalf(any(), any(Decider.class))).thenReturn(
+                new PositionApprovalBulkExecutor.Result(List.of(1L), List.of(
+                        new PositionApprovalBulkExecutor.Failure(2L, "error.positionApproval.round.notFound"))));
+        mvc.perform(post("/api/position-approvals/staff/rounds/decide-on-behalf-bulk")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"positionId\":1,\"expectedUnitSalePrice\":10.00},{\"positionId\":2}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.succeeded[0]").value(1))
+                .andExpect(jsonPath("$.failed[0].positionId").value(2))
+                .andExpect(jsonPath("$.failed[0].errorKey").value("error.positionApproval.round.notFound"));
+
+        when(bulkExecutor.withdraw(any())).thenReturn(
+                new PositionApprovalBulkExecutor.Result(List.of(5L), List.of()));
+        mvc.perform(post("/api/position-approvals/staff/rounds/withdraw-bulk")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"roundId\":9}]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.succeeded[0]").value(5));
+        verify(bulkExecutor).withdraw(List.of(9L));
+
+        StringBuilder many = new StringBuilder("{\"items\":[");
+        for (int i = 0; i < 201; i++) {
+            many.append(i == 0 ? "" : ",").append("{\"roundId\":").append(i + 1).append('}');
+        }
+        many.append("]}");
+        assertThatThrownBy(() -> mvc.perform(post("/api/position-approvals/staff/rounds/withdraw-bulk")
+                        .contentType(MediaType.APPLICATION_JSON).content(many.toString())))
+                .hasRootCauseInstanceOf(ForemenApiException.class)
+                .rootCause().hasMessage(PositionApprovalBulkExecutor.ERROR_TOO_MANY);
+
+        login("CLIENT", Audience.CLIENT);
+        assertThatThrownBy(() -> mvc.perform(post("/api/position-approvals/staff/rounds/decide-on-behalf-bulk")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"items\":[{\"positionId\":1}]}")))
+                .hasRootCauseInstanceOf(ForemenApiException.class)
+                .rootCause().hasMessage(PositionApprovalStaffController.ERROR_ON_BEHALF_FORBIDDEN);
     }
 }

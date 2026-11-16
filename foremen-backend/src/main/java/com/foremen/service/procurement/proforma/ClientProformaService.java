@@ -290,10 +290,13 @@ public class ClientProformaService implements ProjectScopedService<ClientProform
             if (!Objects.equals(p.getProject().getId(), projectId)) {
                 throw conflict(POSITION_PROJECT_MISMATCH, positionId);
             }
+            if (p.getPlannedMaterial() == null) {
+                throw conflict(com.foremen.service.procurement.PositionLabel.MATERIAL_REQUIRED, positionId);
+            }
             if (p.getSourcingPath() != SourcingPath.AGREED) {
                 throw conflict(POSITION_NOT_AGREED, positionId);
             }
-            if (p.getStatus() != PositionStatus.ACCEPTED) {
+            if (!isProformaEligible(p)) {
                 throw conflict(POSITION_NOT_ACCEPTED, positionId);
             }
             if (p.getSalePrice() == null || p.getSaleVatRate() == null) {
@@ -305,6 +308,19 @@ public class ClientProformaService implements ProjectScopedService<ClientProform
             result.add(p);
         }
         return result;
+    }
+
+    /**
+     * FOR-11-06 (R10.5): an {@code ACCEPTED} position, or a buyer-added position still flagged
+     * {@code client_unpaid} that already sits anywhere in {@code WITH_BUYER..RECEIVED}.
+     */
+    static boolean isProformaEligible(PurchasePositionEntity p) {
+        if (p.getStatus() == PositionStatus.ACCEPTED) {
+            return true;
+        }
+        return p.isClientUnpaid() && p.getStatus() != null
+                && p.getStatus().ordinal() >= PositionStatus.WITH_BUYER.ordinal()
+                && p.getStatus().ordinal() <= PositionStatus.RECEIVED.ordinal();
     }
 
     private static ForemenApiException conflict(String key, Long positionId) {

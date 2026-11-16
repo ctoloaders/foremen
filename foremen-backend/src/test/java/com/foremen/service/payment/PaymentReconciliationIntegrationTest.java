@@ -143,6 +143,11 @@ class PaymentReconciliationIntegrationTest {
                             "delete from PaymentTrancheEntity tr where tr.schedule.project.id in "
                                     + "(select p.id from ProjectEntity p where p.name like :p)")
                     .setParameter("p", "%" + runId + "%").executeUpdate();
+            // FOR-11-06: the common fields live in client_payments (FK to projects); remove them after the tranches.
+            entityManager.createQuery(
+                            "delete from ClientPaymentEntity c where c.project.id in "
+                                    + "(select p.id from ProjectEntity p where p.name like :p)")
+                    .setParameter("p", "%" + runId + "%").executeUpdate();
             entityManager.createQuery(
                             "delete from PaymentScheduleEntity s where s.project.id in "
                                     + "(select p.id from ProjectEntity p where p.name like :p)")

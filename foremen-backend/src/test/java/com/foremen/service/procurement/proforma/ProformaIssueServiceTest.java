@@ -55,11 +55,13 @@ class ProformaIssueServiceTest {
     private final ImageStorage storage = mock(ImageStorage.class);
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final EntityManager em = mock(EntityManager.class);
+    private final com.foremen.service.EffectiveBankAccountResolver bankAccountResolver =
+            mock(com.foremen.service.EffectiveBankAccountResolver.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-03-01T10:00:00Z"),
             com.foremen.service.procurement.PurchaseRequestOverdue.ZONE);
 
     private final ProformaIssueService service = new ProformaIssueService(dao, lineDao, proformaService,
-            mapper, snapshotBuilder, numberService, pdfService, lifecycle, storage, events, em, 7, clock);
+            mapper, snapshotBuilder, numberService, pdfService, lifecycle, storage, events, em, bankAccountResolver, 7, clock);
 
     private ClientProformaEntity proforma;
     private PurchasePositionEntity position;
@@ -106,6 +108,47 @@ class ProformaIssueServiceTest {
         verify(lifecycle).transition(11L, PositionStatus.IN_PROFORMA, Actor.SYSTEM);
         verify(events).publishEvent(new ProformaIssuedEvent(1L));
         verify(storage, never()).deleteIfOrphan(any());
+    }
+
+    @Test
+    void effectiveAccountIsFrozenOnThePaymentBeforeRendering() {
+        proforma.getProject().setBankAccount("PL61109010140000071219812874");
+        when(bankAccountResolver.forProject(proforma.getProject())).thenReturn("PL61 1090 1014 0000 0712 1981 2874");
+        String[] seenAtRender = new String[1];
+        when(pdfService.render(any(), anyList(), any())).thenAnswer(inv -> {
+            seenAtRender[0] = proforma.getPayment().getBankAccountSnapshot();
+            return KEY;
+        });
+
+        service.issue(1L, "pl");
+
+        assertThat(seenAtRender[0]).isEqualTo("PL61109010140000071219812874");
+        // a later project edit does not touch the stored snapshot
+        proforma.getProject().setBankAccount("DE89370400440532013000");
+        assertThat(proforma.getPayment().getBankAccountSnapshot()).isEqualTo("PL61109010140000071219812874");
+    }
+
+    @Test
+    void noEffectiveAccountLeavesSnapshotNull() {
+        when(bankAccountResolver.forProject(proforma.getProject())).thenReturn(null);
+        when(pdfService.render(any(), anyList(), any())).thenReturn(KEY);
+
+        service.issue(1L, "pl");
+
+        assertThat(proforma.getPayment().getBankAccountSnapshot()).isNull();
+    }
+
+    @Test
+    void clientUnpaidPositionKeepsItsStatusOnIssue() {
+        position.setStatus(PositionStatus.RECEIVED);
+        position.setClientUnpaid(true);
+        when(pdfService.render(any(), anyList(), any())).thenReturn(KEY);
+
+        service.issue(1L, "pl");
+
+        assertThat(proforma.getStatus()).isEqualTo(ProformaStatus.ISSUED);
+        verify(lifecycle, never()).transition(anyLong(), any(), any());
+        verify(events).publishEvent(new ProformaIssuedEvent(1L));
     }
 
     @Test

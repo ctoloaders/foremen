@@ -55,12 +55,12 @@ class SelectionTotalIntegrationTest extends ProcurementIntegrationTestBase {
     }
 
     @Test
-    @DisplayName("counts only AGREED + ACCEPTED + priced positions; totals and VAT breakdown per rate")
+    @DisplayName("counts AGREED non-cancelled positions, unpriced ones in 'unpriced'; totals and VAT breakdown per rate")
     void countsAndSkips() throws Exception {
         ProjectEntity project = project(ProjectStatus.ACTIVE);
         PurchasePositionEntity a = counted(project, "100.00", "5.000", false);   // 500.00 + 40.00 = 540.00
         PurchasePositionEntity b = counted(project, "10.01", "2.000", true);     // 20.02 + 4.60 = 24.62
-        PurchasePositionEntity planned = position(project, SourcingPath.AGREED, PositionStatus.PLANNED);
+        PurchasePositionEntity planned = position(project, SourcingPath.AGREED, PositionStatus.CANCELLED);
         PurchasePositionEntity pkg = position(project, SourcingPath.PACKAGE, PositionStatus.ACCEPTED);
         PurchasePositionEntity noPrice = position(project, SourcingPath.AGREED, PositionStatus.ACCEPTED);
         noPrice.setSalePrice(null);
@@ -70,7 +70,8 @@ class SelectionTotalIntegrationTest extends ProcurementIntegrationTestBase {
         total(null, "[" + a.getId() + "," + b.getId() + "," + planned.getId() + "," + pkg.getId() + ","
                 + noPrice.getId() + ",999999999]")
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.count").value(2))
+                .andExpect(jsonPath("$.count").value(3))
+                .andExpect(jsonPath("$.unpriced").value(1))
                 .andExpect(jsonPath("$.saleNet").value(520.02))
                 .andExpect(jsonPath("$.vat").value(44.60))
                 .andExpect(jsonPath("$.saleGross").value(564.62))
@@ -85,12 +86,10 @@ class SelectionTotalIntegrationTest extends ProcurementIntegrationTestBase {
                 .andExpect(jsonPath("$.vatBreakdown[1].gross").value(24.62))
                 .andExpect(jsonPath("$.projectId").value(project.getId()))
                 .andExpect(jsonPath("$.mixedProjects").value(false))
-                .andExpect(jsonPath("$.skipped.length()").value(4))
+                .andExpect(jsonPath("$.skipped.length()").value(3))
                 .andExpect(jsonPath("$.skipped[?(@.positionId==" + planned.getId() + ")].reason")
                         .value("NOT_ACCEPTED"))
                 .andExpect(jsonPath("$.skipped[?(@.positionId==" + pkg.getId() + ")].reason").value("NOT_AGREED"))
-                .andExpect(jsonPath("$.skipped[?(@.positionId==" + noPrice.getId() + ")].reason")
-                        .value("NO_SALE_PRICE"))
                 .andExpect(jsonPath("$.skipped[?(@.positionId==999999999)].reason").value("NOT_FOUND"));
     }
 
@@ -127,7 +126,7 @@ class SelectionTotalIntegrationTest extends ProcurementIntegrationTestBase {
     @DisplayName("only skipped positions -> count 0, zero totals, no project")
     void nothingCounted() throws Exception {
         ProjectEntity project = project(ProjectStatus.ACTIVE);
-        PurchasePositionEntity planned = position(project, SourcingPath.AGREED, PositionStatus.PLANNED);
+        PurchasePositionEntity planned = position(project, SourcingPath.AGREED, PositionStatus.CANCELLED);
         em.clear();
 
         total(null, ids(planned))

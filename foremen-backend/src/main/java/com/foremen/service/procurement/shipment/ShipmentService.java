@@ -622,6 +622,11 @@ public class ShipmentService {
                                ExternalOrderEntity order, Long excludeShipmentId) {
         for (ShipmentRequest.Line line : lines) {
             PurchasePositionEntity p = positions.get(line.positionId());
+            if (p.getPlannedMaterial() == null) {
+                throw new ForemenApiException(HttpStatus.CONFLICT,
+                        com.foremen.service.procurement.PositionLabel.MATERIAL_REQUIRED, p.getId())
+                        .withParams(Map.of("positionId", p.getId()));
+            }
             if (!ShipmentRules.canShip(p.getSourcingPath(), p.getStatus())) {
                 throw new ForemenApiException(HttpStatus.CONFLICT, NOT_SHIPPABLE, p.getId())
                         .withParams(Map.of("positionId", p.getId()));
@@ -948,10 +953,7 @@ public class ShipmentService {
 
     private static ShipmentDto.Line toLine(ShipmentLineEntity l, boolean pl) {
         PurchasePositionEntity p = l.getPosition();
-        FinishingMaterialEntity m = p.getActualMaterial() != null ? p.getActualMaterial() : p.getPlannedMaterial();
-        String producer = m.getProducer() == null ? null
-                : pl ? m.getProducer().getNamePL() : m.getProducer().getNameRU();
-        String label = producer == null || producer.isBlank() ? m.getModel() : m.getModel() + " (" + producer + ")";
+        String label = com.foremen.service.procurement.PositionLabel.of(p, pl);
         String unit = pl ? p.getUnit().getNamePL() : p.getUnit().getNameRU();
         return new ShipmentDto.Line(p.getId(), label, unit, l.getQuantity(), p.getStatus());
     }

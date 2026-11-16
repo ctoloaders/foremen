@@ -15,7 +15,7 @@ import java.util.Optional;
 public class PaymentSchedulesDataset extends MoneyDataset {
 
     public PaymentSchedulesDataset() {
-        super("PAYMENT_SCHEDULES", "PAYMENTS", PaymentScheduleEntity.class, "createdDate", List.of(
+        super("PAYMENT_SCHEDULES", "CLIENT_PAYMENTS", PaymentScheduleEntity.class, "createdDate", List.of(
                 FieldDescriptor.of("id", FieldType.ID),
                 FieldDescriptor.of("project.id", FieldType.ID),
                 FieldDescriptor.of("project.name", FieldType.STRING),

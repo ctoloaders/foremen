@@ -60,9 +60,10 @@ public class PurchaseRequestOverdueSweepService {
 
         List<PurchaseRequestOverdueEvent> events = new ArrayList<>();
         for (PurchaseRequestEntity request : purchaseRequestDao.findOverdueCandidates(today)) {
-            List<PositionStatus> stages = request.getPositions().stream()
-                    .map(p -> p.getStatus()).toList();
-            RequestStatus status = PurchaseRequestStatusDeriver.derive(stages);
+            List<PurchaseRequestStatusDeriver.Stage> stages = request.getPositions().stream()
+                    .map(p -> new PurchaseRequestStatusDeriver.Stage(p.getStatus(), p.isClientUnpaid()))
+                    .toList();
+            RequestStatus status = PurchaseRequestStatusDeriver.deriveStages(stages);
             if (!overdue.isOverdue(request.getExpectedDeliveryDate(), status)
                     || request.getOverdueNotifiedAt() != null) {
                 continue;

@@ -69,6 +69,7 @@ import jakarta.servlet.http.HttpServletRequest;
 class PaymentsControllersAbacTest {
 
     private static final String PAYMENTS = "PAYMENTS";
+    private static final String CLIENT_PAYMENTS = "CLIENT_PAYMENTS";
     private static final String CREATE = "CREATE";
     private static final String READ = "READ";
     private static final String UPDATE = "UPDATE";
@@ -97,19 +98,23 @@ class PaymentsControllersAbacTest {
         }
 
         @Test
-        @DisplayName("BankFeedIngestController carries @PermissionResource(\"PAYMENTS\")")
-        void bankFeedControllerDeclaresPaymentsResource() {
-            assertResource(BankFeedIngestController.class);
+        @DisplayName("BankFeedIngestController carries @PermissionResource(\"CLIENT_PAYMENTS\") (FOR-11-06)")
+        void bankFeedControllerDeclaresClientPaymentsResource() {
+            assertResource(BankFeedIngestController.class, CLIENT_PAYMENTS);
         }
 
         private void assertResource(Class<?> controller) {
+            assertResource(controller, PAYMENTS);
+        }
+
+        private void assertResource(Class<?> controller, String expected) {
             PermissionResource annotation = controller.getAnnotation(PermissionResource.class);
             assertThat(annotation)
                     .as("%s must carry class-level @PermissionResource", controller.getSimpleName())
                     .isNotNull();
             assertThat(annotation.value())
-                    .as("class-level resource code must be PAYMENTS (changeset 175)")
-                    .isEqualTo(PAYMENTS);
+                    .as("class-level resource code")
+                    .isEqualTo(expected);
         }
     }
 
@@ -219,9 +224,9 @@ class PaymentsControllersAbacTest {
     // --- BankFeedIngestController mapping: ingest -> (PAYMENTS, UPDATE) (R8.3, R11.4) ---
 
     @Test
-    @DisplayName("BankFeedIngestController POST /ingest -> (PAYMENTS, UPDATE)")
-    void bankFeedIngestIsPaymentsUpdate() {
-        assertResolvesTo(bankFeedHandler("ingest"), PAYMENTS, UPDATE);
+    @DisplayName("BankFeedIngestController POST /ingest -> (CLIENT_PAYMENTS, UPDATE) (FOR-11-06)")
+    void bankFeedIngestIsClientPaymentsUpdate() {
+        assertResolvesTo(bankFeedHandler("ingest"), CLIENT_PAYMENTS, UPDATE);
     }
 
     // --- startup completeness — every guarded handler COMPLETE (PermissionAnnotationValidator, R11.4) ---

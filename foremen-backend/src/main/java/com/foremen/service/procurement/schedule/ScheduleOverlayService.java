@@ -108,7 +108,7 @@ public class ScheduleOverlayService {
 
         List<PurchasePositionEntity> positions = entityManager.createQuery(
                         "SELECT p FROM PurchasePositionEntity p "
-                                + "JOIN FETCH p.plannedMaterial pm LEFT JOIN FETCH pm.producer LEFT JOIN FETCH pm.type "
+                                + "LEFT JOIN FETCH p.plannedMaterial pm LEFT JOIN FETCH pm.producer LEFT JOIN FETCH pm.type "
                                 + "LEFT JOIN FETCH p.actualMaterial am LEFT JOIN FETCH am.producer "
                                 + "LEFT JOIN FETCH am.type LEFT JOIN FETCH p.workCategory "
                                 + "WHERE p.project.id = :projectId AND p.status <> :cancelled ORDER BY p.id",

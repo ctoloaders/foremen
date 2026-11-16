@@ -19,6 +19,7 @@ public record ToReceiveDto(
 
     /** A non-cancelled shipment line of the position; {@code unresolvedQuantity} is not yet received. */
     public record Shipment(Long shipmentId, ShipmentStatus status, LocalDate etaDate, String carrierCode,
-                           BigDecimal quantity, BigDecimal unresolvedQuantity) {
+                           BigDecimal quantity, BigDecimal unresolvedQuantity, String delegatedTo,
+                           Long delegationId) {
     }
 }

@@ -28,6 +28,7 @@ import com.foremen.service.model.ExternalOrderServiceModel;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.externalorder.ExternalOrderLifecycleService;
 import com.foremen.service.procurement.externalorder.ExternalOrderService;
+import com.foremen.service.procurement.externalorder.QuickPurchaseService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -61,6 +62,7 @@ public class ExternalOrderController {
 
     private final ExternalOrderService service;
     private final ExternalOrderLifecycleService lifecycleService;
+    private final QuickPurchaseService quickPurchaseService;
     private final ProcurementProjectAccess access;
 
     // ------------------------------------------------------------------ reads
@@ -132,6 +134,31 @@ public class ExternalOrderController {
         return ResponseEntity.ok(service.replaceDocuments(id, request.documents()));
     }
 
+    @PutMapping("/{id}/payment-link")
+    @RequiresPermission(resource = RESOURCE, operation = UPDATE)
+    @Operation(summary = "Set or clear the payment link (DRAFT or SENT_FOR_PAYMENT)")
+    public ResponseEntity<ExternalOrderServiceExtendedModel> setPaymentLink(
+            @PathVariable Long id, @Valid @RequestBody PaymentLinkRequest request) {
+        requireMoneyAudience();
+        return ResponseEntity.ok(lifecycleService.setPaymentLink(id, request.paymentLink()));
+    }
+
+    @PostMapping("/from-positions")
+    @RequiresPermission(resource = RESOURCE, operation = CREATE)
+    @Operation(summary = "Quick purchase: one DRAFT order per seller from WITH_BUYER positions of one project")
+    public ResponseEntity<QuickPurchaseService.Result> createFromPositions(
+            @Valid @RequestBody FromPositionsRequest request) {
+        requireMoneyAudience();
+        QuickPurchaseService.Header header = request.header() == null ? null
+                : new QuickPurchaseService.Header(request.header().referenceNumber(),
+                        request.header().expectedShipDate(), request.header().expectedDeliveryDate(),
+                        request.header().deliveryCostNet(), request.header().deliveryVatRateId(),
+                        request.header().note());
+        return ResponseEntity.ok(quickPurchaseService.createOrders(new QuickPurchaseService.Request(
+                request.positionIds(), request.sellerByPosition(), request.sellerId(),
+                request.acknowledgedPositionIds(), header)));
+    }
+
     @DeleteMapping("/{id}")
     @RequiresPermission(resource = RESOURCE, operation = DELETE)
     @Operation(summary = "Delete a draft external order")
@@ -195,7 +222,17 @@ public class ExternalOrderController {
     public record Header(@Size(max = 100) String referenceNumber, @Size(max = 1000) String orderLink,
                          java.math.BigDecimal deliveryCostNet, Long deliveryVatRateId,
                          LocalDate expectedShipDate, LocalDate expectedDeliveryDate,
-                         @Size(max = 1000) String note) {
+                         @Size(max = 1000) String note, @Size(max = 1000) String paymentLink) {
+    }
+
+    /** Body of {@code PUT /{id}/payment-link}; {@code null} or blank clears the link. */
+    public record PaymentLinkRequest(@Size(max = 1000) String paymentLink) {
+    }
+
+    /** Body of {@code POST /from-positions} (FOR-11-06 R11.2); there is no {@code createShipment} flag. */
+    public record FromPositionsRequest(@NotNull @Size(min = 1, max = 200) List<Long> positionIds,
+                                       java.util.Map<Long, Long> sellerByPosition, Long sellerId,
+                                       java.util.Set<Long> acknowledgedPositionIds, @Valid Header header) {
     }
 
     public record CreateRequest(@NotNull Long projectId, @NotNull Long sellerId, Long purchaseRequestId,
@@ -235,6 +272,7 @@ public class ExternalOrderController {
         model.setExpectedShipDate(h.expectedShipDate());
         model.setExpectedDeliveryDate(h.expectedDeliveryDate());
         model.setNote(h.note());
+        model.setPaymentLink(h.paymentLink());
     }
 
     /**

@@ -27,6 +27,7 @@ import com.foremen.exception.ForemenApiException;
 import com.foremen.service.procurement.access.ProcurementProjectAccess;
 import com.foremen.service.procurement.externalorder.ExternalOrderLifecycleService;
 import com.foremen.service.procurement.externalorder.ExternalOrderService;
+import com.foremen.service.procurement.externalorder.QuickPurchaseService;
 
 /**
  * FOR-11-03 task 4.5 (R1.6, R15.7, R21.2): every handler of {@link ExternalOrderController} carries an
@@ -41,7 +42,8 @@ class ExternalOrderControllerAbacTest {
     private final ExternalOrderService service = mock(ExternalOrderService.class);
     private final ExternalOrderLifecycleService lifecycle = mock(ExternalOrderLifecycleService.class);
     private final ProcurementProjectAccess access = mock(ProcurementProjectAccess.class, CALLS_REAL_METHODS);
-    private final ExternalOrderController controller = new ExternalOrderController(service, lifecycle, access);
+    private final ExternalOrderController controller = new ExternalOrderController(service, lifecycle,
+            mock(QuickPurchaseService.class), access);
 
     @AfterEach
     void tearDown() {
@@ -57,6 +59,7 @@ class ExternalOrderControllerAbacTest {
     void handlersAreExplicitCompleteAndMapToExpectedOperations() {
         Map<String, String> expected = Map.ofEntries(
                 Map.entry("find", "READ"), Map.entry("findById", "READ"), Map.entry("create", "CREATE"),
+                Map.entry("createFromPositions", "CREATE"), Map.entry("setPaymentLink", "UPDATE"),
                 Map.entry("update", "UPDATE"), Map.entry("replaceLines", "UPDATE"),
                 Map.entry("replaceDocuments", "UPDATE"), Map.entry("delete", "DELETE"),
                 Map.entry("send", "UPDATE"), Map.entry("cancel", "UPDATE"),

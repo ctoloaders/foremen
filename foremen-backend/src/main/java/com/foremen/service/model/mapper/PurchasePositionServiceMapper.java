@@ -105,7 +105,7 @@ public class PurchasePositionServiceMapper implements ServiceToDaoMapper<Purchas
         e.setKind(s.getKind());
         e.setSourcingPath(s.getSourcingPath());
         e.setStatus(PositionStatus.PLANNED);
-        e.setPlannedMaterial(entityManager.getReference(FinishingMaterialEntity.class, s.getPlannedMaterialId()));
+        e.setPlannedMaterial(ref(FinishingMaterialEntity.class, s.getPlannedMaterialId()));
         e.setDeliveryCategory(ref(DeliveryCategoryEntity.class, s.getDeliveryCategoryId()));
         e.setBlockNo(s.getBlockNo());
         e.setQuantity(s.getQuantity());

@@ -53,6 +53,7 @@ public class ExternalOrderLifecycleService {
     static final String UNMARK_POSITIONS_IN_DELIVERY = "error.externalOrder.unmark.positionsInDelivery";
     static final String CANCEL_HAS_PAYMENTS = "error.externalOrder.cancel.hasPayments";
     static final String CANCEL_POSITIONS_IN_DELIVERY = "error.externalOrder.cancel.positionsInDelivery";
+    static final String PAYMENT_LINK_LOCKED = "error.externalOrder.paymentLink.locked";
     static final int MAX_TEXT_LENGTH = 500;
 
     private final EntityManager entityManager;
@@ -216,6 +217,34 @@ public class ExternalOrderLifecycleService {
         entityManager.flush();
         syncService.syncAll(ExternalOrderPaymentService.positionIds(lines));
         orderService.saveAuditWithSnapshot(before, order, "UPDATE");
+        return mapper.toServiceExtendedModel(order);
+    }
+
+    /**
+     * FOR-11-06 R9.2: sets or clears (blank / {@code null}) the payment link while the order is {@code DRAFT}
+     * or {@code SENT_FOR_PAYMENT}; {@code PAID} and {@code CANCELLED} are locked (409). The event is published
+     * only for a sent order, a non-empty link and a changed value.
+     */
+    @Transactional
+    public ExternalOrderServiceExtendedModel setPaymentLink(Long id, String rawLink) {
+        ExternalOrderEntity order = lock(id);
+        if (order.getStatus() != ExternalOrderStatus.DRAFT
+                && order.getStatus() != ExternalOrderStatus.SENT_FOR_PAYMENT) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, PAYMENT_LINK_LOCKED);
+        }
+        String link = ExternalOrderService.normalizePaymentLink(rawLink);
+        String previous = order.getPaymentLink();
+        if (java.util.Objects.equals(previous, link)) {
+            return mapper.toServiceExtendedModel(order);
+        }
+        String before = orderService.serializeEntity(order);
+        order.setPaymentLink(link);
+        entityManager.flush();
+        orderService.saveAuditWithSnapshot(before, order, "UPDATE");
+        if (link != null && order.getStatus() == ExternalOrderStatus.SENT_FOR_PAYMENT) {
+            events.publishEvent(new ExternalOrderPaymentLinkChangedEvent(
+                    id, order.getProject().getId(), currentUserId()));
+        }
         return mapper.toServiceExtendedModel(order);
     }
 

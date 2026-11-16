@@ -104,6 +104,80 @@ public class MaterialsListAssembler {
         return project(matrix, vatRatePct, reserveMap, editable);
     }
 
+    /**
+     * The finishing Placeholder rows (no chosen concrete product), one per finishing type, for the
+     * FOR-11-06 estimate sync. Quantities are the matrix's resolved physical quantities folded through
+     * {@link #effectiveQuantity} (no reserve) and {@link #roundUpForPieceUnit}, so no second quantity
+     * formula exists. The price range is the min / max of the copied per-unit type ranges.
+     */
+    static List<PlaceholderRowDto> placeholders(EstimateMatrixDto matrix) {
+        Map<Long, PlaceholderAcc> byType = new LinkedHashMap<>();
+        if (matrix == null || matrix.groups() == null) {
+            return List.of();
+        }
+        for (WorkTypeGroupDto group : matrix.groups()) {
+            if (group == null || group.rows() == null) {
+                continue;
+            }
+            for (WorkRowDto row : group.rows()) {
+                if (row == null || row.cells() == null) {
+                    continue;
+                }
+                for (CellDto cell : row.cells()) {
+                    if (cell == null || cell.materials() == null) {
+                        continue;
+                    }
+                    for (MaterialLineDto line : cell.materials()) {
+                        if (line != null && line.concreteMaterialId() == null
+                                && line.branch() == ConsumptionBranch.finishing && line.typeId() != null) {
+                            byType.computeIfAbsent(line.typeId(), k -> new PlaceholderAcc(line)).add(line);
+                        }
+                    }
+                }
+            }
+        }
+        List<PlaceholderRowDto> rows = new ArrayList<>();
+        for (PlaceholderAcc acc : byType.values()) {
+            rows.add(acc.toRow());
+        }
+        return rows;
+    }
+
+    private static final class PlaceholderAcc {
+        private final Long typeId;
+        private final String typeName;
+        private final String unit;
+        private boolean anyPerUnit;
+        private BigDecimal asIs = BigDecimal.ZERO;
+        private BigDecimal min;
+        private BigDecimal max;
+
+        private PlaceholderAcc(MaterialLineDto first) {
+            this.typeId = first.typeId();
+            this.typeName = first.typeName();
+            this.unit = first.normUnit();
+        }
+
+        private void add(MaterialLineDto line) {
+            if (line.consumptionBasis() != ConsumptionBasis.PER_ROOM) {
+                anyPerUnit = true;
+            }
+            asIs = asIs.add(line.quantity() == null ? BigDecimal.ZERO : line.quantity());
+            if (line.rangeMin() != null) {
+                min = min == null ? line.rangeMin() : min.min(line.rangeMin());
+            }
+            if (line.rangeMax() != null) {
+                max = max == null ? line.rangeMax() : max.max(line.rangeMax());
+            }
+        }
+
+        private PlaceholderRowDto toRow() {
+            ConsumptionBasis basis = anyPerUnit ? ConsumptionBasis.PER_UNIT : ConsumptionBasis.PER_ROOM;
+            BigDecimal qty = roundUpForPieceUnit(effectiveQuantity(asIs, basis, null), unit);
+            return new PlaceholderRowDto(typeId, typeName, unit, qty, min, max);
+        }
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Canonical Effective_Quantity helper (R7.4) — the single source of the reserve/ceiling/basis rule
     // ---------------------------------------------------------------------------------------------

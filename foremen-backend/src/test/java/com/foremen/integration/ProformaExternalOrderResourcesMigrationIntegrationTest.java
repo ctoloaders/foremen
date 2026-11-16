@@ -30,7 +30,10 @@ import liquibase.resource.ClassLoaderResourceAccessor;
  *
  * <p>Repeatability: a fresh container per JVM run.
  *
- * <p>Validates Requirements 1.1, 1.2, 1.3, 1.4, 1.5.
+ * <p>FOR-11-06 task 2.8: the CLIENT_PROFORMAS grants seeded by 239 are retired by changeset 248 and merged into
+ * {@code CLIENT_PAYMENTS}, so the matrix assertions describe the end state of the full changelog.
+ *
+ * <p>Validates Requirements 1.1, 1.2, 1.3, 1.4, 1.5 (FOR-11-03); 1.4, 1.7, 1.10, 14.2 (FOR-11-06).
  */
 @Testcontainers
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -99,7 +102,7 @@ class ProformaExternalOrderResourcesMigrationIntegrationTest {
     @Test
     @DisplayName("239 seeds both resources once with RU/PL texts")
     void resourcesSeeded() throws Exception {
-        for (String code : List.of("CLIENT_PROFORMAS", "EXTERNAL_ORDERS")) {
+        for (String code : List.of("CLIENT_PROFORMAS", "EXTERNAL_ORDERS", "CLIENT_PAYMENTS")) {
             assertThat(queryForLong("SELECT COUNT(*) FROM resources WHERE code = '" + code
                     + "' AND name_ru IS NOT NULL AND name_pl IS NOT NULL AND description_ru IS NOT NULL "
                     + "AND description_pl IS NOT NULL")).as(code).isEqualTo(1L);
@@ -110,18 +113,25 @@ class ProformaExternalOrderResourcesMigrationIntegrationTest {
     @DisplayName("239 grants follow Requirement 1.2")
     void matrix() throws Exception {
         List<String> crud = List.of("CREATE", "READ", "UPDATE", "DELETE");
-        assertThat(operationsFor("ADMIN", "CLIENT_PROFORMAS")).containsExactlyInAnyOrderElementsOf(crud);
-        assertThat(operationsFor("MANAGER", "CLIENT_PROFORMAS")).containsExactlyInAnyOrderElementsOf(crud);
-        assertThat(operationsFor("BUYER", "CLIENT_PROFORMAS")).containsExactly("READ");
-        assertThat(operationsFor("FINANCIER", "CLIENT_PROFORMAS")).containsExactly("READ");
-        assertThat(operationsFor("CLIENT", "CLIENT_PROFORMAS")).containsExactly("READ");
+        // FOR-11-06 (R1.4, R1.10, R14.2): 248 retires every CLIENT_PROFORMAS role grant (the resource row stays
+        // for history) and merges them into CLIENT_PAYMENTS.
+        assertThat(queryForLong("SELECT COUNT(*) FROM role_resources rr JOIN resources res "
+                + "ON rr.resource_id = res.id WHERE res.code = 'CLIENT_PROFORMAS'")).isZero();
+        assertThat(operationsFor("ADMIN", "CLIENT_PAYMENTS")).containsExactlyInAnyOrderElementsOf(crud);
+        assertThat(operationsFor("MANAGER", "CLIENT_PAYMENTS")).containsExactlyInAnyOrderElementsOf(crud);
+        assertThat(operationsFor("FINANCIER", "CLIENT_PAYMENTS")).containsExactlyInAnyOrderElementsOf(crud);
+        assertThat(operationsFor("BUYER", "CLIENT_PAYMENTS")).containsExactly("READ");
+        assertThat(operationsFor("FOREMAN", "CLIENT_PAYMENTS")).containsExactly("READ");
+        assertThat(operationsFor("CLIENT", "CLIENT_PAYMENTS")).containsExactly("READ");
+        for (String role : List.of("WORKER", "ESTIMATOR")) {
+            assertThat(operationsFor(role, "CLIENT_PAYMENTS")).as(role).isEmpty();
+        }
         assertThat(operationsFor("ADMIN", "EXTERNAL_ORDERS"))
                 .containsExactlyInAnyOrder("CREATE", "READ", "UPDATE", "DELETE", "APPROVE");
         assertThat(operationsFor("BUYER", "EXTERNAL_ORDERS")).containsExactlyInAnyOrderElementsOf(crud);
         assertThat(operationsFor("MANAGER", "EXTERNAL_ORDERS")).containsExactly("READ");
         assertThat(operationsFor("FINANCIER", "EXTERNAL_ORDERS")).containsExactlyInAnyOrder("READ", "APPROVE");
         for (String role : List.of("FOREMAN", "WORKER", "ESTIMATOR")) {
-            assertThat(operationsFor(role, "CLIENT_PROFORMAS")).as(role).isEmpty();
             assertThat(operationsFor(role, "EXTERNAL_ORDERS")).as(role).isEmpty();
         }
         assertThat(operationsFor("CLIENT", "EXTERNAL_ORDERS")).isEmpty();

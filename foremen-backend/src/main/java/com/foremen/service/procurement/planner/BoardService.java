@@ -23,6 +23,7 @@ import com.foremen.dao.model.PurchasePositionEntity;
 import com.foremen.dao.model.PurchaseRequestEntity;
 import com.foremen.dao.model.SourcingPath;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.procurement.PositionDelivery;
 import com.foremen.service.procurement.planner.PlannerFilter.BuyerMode;
 import com.foremen.service.procurement.planner.PlannerSliceRules.PositionSnapshot;
 import com.foremen.service.procurement.planner.PlannerSliceRules.Slice;
@@ -120,13 +121,18 @@ public class BoardService {
         List<Column> columns = new ArrayList<>(COLUMNS.size());
         for (PositionStatus status : COLUMNS) {
             long count = counts.getOrDefault(status, 0L);
-            boolean hidden = hideDelivered && status == PositionStatus.RECEIVED;
+            // FOR-11-06 R10.4: the RECEIVED column hides only Delivery_Complete cards;
+            // received-unpaid cards stay visible.
+            boolean hideComplete = hideDelivered && status == PositionStatus.RECEIVED;
+            Specification<PurchasePositionEntity> columnSpec = hideComplete
+                    ? spec.and((root, unusedQuery, cb) -> cb.not(PositionDelivery.completePredicate(root, cb)))
+                    : spec;
             List<Card> cards = List.of();
-            if (!hidden && count > 0) {
-                cards = cards(spec, status, size, audience, today, ru);
+            if (count > 0) {
+                cards = cards(columnSpec, status, size, audience, today, ru);
             }
-            columns.add(new Column(status, PositionStage.statusCode(status), count, cards,
-                    !hidden && count > cards.size()));
+            boolean hasMore = hideComplete ? cards.size() == size && count > size : count > cards.size();
+            columns.add(new Column(status, PositionStage.statusCode(status), count, cards, hasMore));
         }
         return new Board(List.copyOf(columns));
     }
@@ -177,7 +183,7 @@ public class BoardService {
     private static Card card(PurchasePositionEntity p, Audience audience, LocalDate today, boolean ru,
                              boolean deliveryRisk) {
         PositionSnapshot snapshot = new PositionSnapshot(p.getSourcingPath(), p.getStatus(), p.getNeedByDate(),
-                p.getOrderByDate(), p.getPlannedDeliveryDate(), 0);
+                p.getOrderByDate(), p.getPlannedDeliveryDate(), 0, p.isClientUnpaid());
         FinishingMaterialEntity effective = p.getActualMaterial() != null ? p.getActualMaterial()
                 : p.getPlannedMaterial();
         MaterialProducerEntity producer = effective == null ? null : effective.getProducer();
@@ -188,7 +194,8 @@ public class BoardService {
                 p.getId(),
                 p.getProject().getId(),
                 p.getProject().getName(),
-                new Material(effective == null ? null : effective.getModel(),
+                new Material(effective == null
+                        ? com.foremen.service.procurement.PositionLabel.of(p, !ru) : effective.getModel(),
                         producer == null ? null : ru ? producer.getNameRU() : producer.getNamePL(),
                         effective == null ? null : effective.getPhoto()),
                 seller == null ? null : ru ? seller.getNameRU() : seller.getNamePL(),

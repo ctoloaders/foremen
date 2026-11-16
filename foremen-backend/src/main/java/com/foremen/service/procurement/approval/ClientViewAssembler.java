@@ -5,6 +5,7 @@ import com.foremen.controller.model.client.ClientItemDto;
 import com.foremen.controller.model.client.ClientMoneyDto;
 import com.foremen.controller.model.client.ClientOptionDto;
 import com.foremen.controller.model.client.ClientRoundDto;
+import com.foremen.service.image.ImageStorage;
 import com.foremen.service.procurement.position.PositionMoney;
 import com.foremen.service.procurement.position.PositionPriceVisibility;
 import com.foremen.service.procurement.position.PositionPriceVisibility.Audience;
@@ -23,6 +24,12 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class ClientViewAssembler {
+
+    private final ImageStorage imageStorage;
+
+    public ClientViewAssembler(ImageStorage imageStorage) {
+        this.imageStorage = imageStorage;
+    }
 
     public List<ClientApprovalPositionDto> assemble(ClientApprovalData data, Locale locale, LocalDate today) {
         List<ClientApprovalPositionDto> result = new ArrayList<>();
@@ -86,9 +93,10 @@ public class ClientViewAssembler {
                 r.onBehalf(), options, r.chosenOptionId());
     }
 
-    private static ClientItemDto item(Long materialId, String model, String sku, String producerRu,
-                                      String producerPl, String link, String photo, boolean pl) {
-        return new ClientItemDto(materialId, model, sku, pl ? producerPl : producerRu, link, photo);
+    private ClientItemDto item(Long materialId, String model, String sku, String producerRu,
+                               String producerPl, String link, String photo, boolean pl) {
+        return new ClientItemDto(materialId, model, sku, pl ? producerPl : producerRu, link,
+                imageStorage.toCdnUrl(photo));
     }
 
     private static ClientMoneyDto money(BigDecimal unitNet, BigDecimal vat, BigDecimal quantity) {

@@ -55,4 +55,9 @@ public record MaterialRowDto(
         BigDecimal reservePercent,
         BigDecimal effectiveTotalQty,
         MoneyBrutto rowTotalPrice) {
+
+    /** Stable row key used by the estimate sync (FOR-11-06), {@code "M:" + materialId}. */
+    public String sourceKey() {
+        return "M:" + materialId;
+    }
 }

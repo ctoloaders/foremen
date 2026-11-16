@@ -136,6 +136,43 @@ class ExternalOrderLifecycleServiceTest {
     }
 
     @Test
+    void setPaymentLinkOnSentOrderStoresTrimmedLinkAndPublishesEventOnlyWhenChanged() {
+        order.setStatus(ExternalOrderStatus.SENT_FOR_PAYMENT);
+
+        service.setPaymentLink(ID, "  https://pay.example.com/o/1 ");
+        assertThat(order.getPaymentLink()).isEqualTo("https://pay.example.com/o/1");
+        verify(events).publishEvent(any(ExternalOrderPaymentLinkChangedEvent.class));
+
+        service.setPaymentLink(ID, "https://pay.example.com/o/1");
+        verify(events, org.mockito.Mockito.times(1)).publishEvent(any(ExternalOrderPaymentLinkChangedEvent.class));
+    }
+
+    @Test
+    void setPaymentLinkOnDraftPublishesNothingAndBlankClears() {
+        order.setStatus(ExternalOrderStatus.DRAFT);
+        service.setPaymentLink(ID, "http://pay.example.com/x");
+        assertThat(order.getPaymentLink()).isEqualTo("http://pay.example.com/x");
+        service.setPaymentLink(ID, "  ");
+        assertThat(order.getPaymentLink()).isNull();
+        verify(events, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void setPaymentLinkRejectsInvalidUrlsAndLockedStatuses() {
+        order.setStatus(ExternalOrderStatus.DRAFT);
+        for (String bad : List.of("javascript:alert(1)", "ftp://x.example.com/a", "/relative/path",
+                "https://" + "a".repeat(1000))) {
+            assertCode(() -> service.setPaymentLink(ID, bad),
+                    HttpStatus.BAD_REQUEST, ExternalOrderService.PAYMENT_LINK_INVALID);
+        }
+        for (ExternalOrderStatus locked : List.of(ExternalOrderStatus.PAID, ExternalOrderStatus.CANCELLED)) {
+            order.setStatus(locked);
+            assertCode(() -> service.setPaymentLink(ID, "https://pay.example.com/1"),
+                    HttpStatus.CONFLICT, ExternalOrderLifecycleService.PAYMENT_LINK_LOCKED);
+        }
+    }
+
+    @Test
     void returnToBuyerStoresReasonAndClearsSentAt() {
         order.setStatus(ExternalOrderStatus.SENT_FOR_PAYMENT);
         order.setSentAt(OffsetDateTime.now());

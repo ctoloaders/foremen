@@ -29,5 +29,7 @@ public record GoodsReceiptDto(
         String voidReason,
         List<GoodsReceiptMediaDto> media,
         boolean canVoid,
-        boolean canEditMedia) {
+        boolean canEditMedia,
+        Long delegationId,
+        String delegatedByName) {
 }

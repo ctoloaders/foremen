@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-11-06 (task 1.6; R12.1, R12.4, R14.1): receipt delegation to a project worker.
+          - goods_receipt_delegations : one row per delegation of a shipment's receipt (ACTIVE / REVOKED / COMPLETED)
+          - uq_delegation_active      : at most one ACTIVE delegation per shipment (partial unique index)
+          - goods_receipts.delegation_id : nullable FK (ON DELETE SET NULL)
+          - WORKER grant on GOODS_RECEIPTS: CREATE, READ
+        Idempotent: every object is its own changeSet guarded by a precondition + onFail="MARK_RAN";
+        the grant uses INSERT ... WHERE NOT EXISTS. Registered LAST in changelog.xml (task 1.7).
+    -->
+    <changeSet id="252-create-goods-receipt-delegations" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="goods_receipt_delegations"/></not>
+        </preConditions>
+        <createTable tableName="goods_receipt_delegations">
+            <column name="id" type="BIGSERIAL" autoIncrement="true"><constraints primaryKey="true" nullable="false"/></column>
+            <column name="shipment_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="project_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="assignee_id" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="delegated_by" type="BIGINT"><constraints nullable="false"/></column>
+            <column name="delegated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="status" type="VARCHAR(12)" defaultValue="ACTIVE"><constraints nullable="false"/></column>
+            <column name="revoked_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="revoked_by" type="BIGINT"/>
+            <column name="completed_at" type="TIMESTAMP WITH TIME ZONE"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()"><constraints nullable="false"/></column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="252-fk-grd-shipment" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_grd_shipment"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_grd_shipment" baseTableName="goods_receipt_delegations" baseColumnNames="shipment_id"
+            referencedTableName="shipments" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="252-fk-grd-project" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_grd_project"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_grd_project" baseTableName="goods_receipt_delegations" baseColumnNames="project_id"
+            referencedTableName="projects" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="252-fk-grd-assignee" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_grd_assignee"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_grd_assignee" baseTableName="goods_receipt_delegations" baseColumnNames="assignee_id"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="252-fk-grd-delegated-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_grd_delegated_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_grd_delegated_by" baseTableName="goods_receipt_delegations" baseColumnNames="delegated_by"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="252-fk-grd-revoked-by" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_grd_revoked_by"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_grd_revoked_by" baseTableName="goods_receipt_delegations" baseColumnNames="revoked_by"
+            referencedTableName="users" referencedColumnNames="id"/>
+    </changeSet>
+
+    <changeSet id="252-ck-grd-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM pg_constraint WHERE conname = 'ck_grd_status'</sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">ALTER TABLE goods_receipt_delegations ADD CONSTRAINT ck_grd_status CHECK (status IN ('ACTIVE','REVOKED','COMPLETED'))</sql>
+    </changeSet>
+
+    <changeSet id="252-uq-delegation-active" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipt_delegations" indexName="uq_delegation_active"/></not>
+        </preConditions>
+        <sql dbms="postgresql">CREATE UNIQUE INDEX uq_delegation_active ON goods_receipt_delegations (shipment_id) WHERE status = 'ACTIVE'</sql>
+    </changeSet>
+
+    <changeSet id="252-ix-grd-assignee" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipt_delegations" indexName="ix_grd_assignee"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipt_delegations" indexName="ix_grd_assignee">
+            <column name="assignee_id"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="252-ix-grd-project-status" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipt_delegations" indexName="ix_grd_project_status"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipt_delegations" indexName="ix_grd_project_status">
+            <column name="project_id"/>
+            <column name="status"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- goods_receipts.delegation_id: the delegation under which a receipt event was recorded. -->
+    <changeSet id="252-goods-receipts-delegation-id" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="goods_receipts" columnName="delegation_id"/></not>
+        </preConditions>
+        <addColumn tableName="goods_receipts">
+            <column name="delegation_id" type="BIGINT"/>
+        </addColumn>
+    </changeSet>
+
+    <changeSet id="252-fk-gr-delegation" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><foreignKeyConstraintExists foreignKeyName="fk_gr_delegation"/></not>
+        </preConditions>
+        <addForeignKeyConstraint constraintName="fk_gr_delegation" baseTableName="goods_receipts" baseColumnNames="delegation_id"
+            referencedTableName="goods_receipt_delegations" referencedColumnNames="id" onDelete="SET NULL"/>
+    </changeSet>
+
+    <changeSet id="252-ix-gr-delegation" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><indexExists tableName="goods_receipts" indexName="ix_gr_delegation"/></not>
+        </preConditions>
+        <createIndex tableName="goods_receipts" indexName="ix_gr_delegation">
+            <column name="delegation_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!--
+        R12.4: WORKER grant on GOODS_RECEIPTS (CREATE, READ). Idempotent: the precondition skips the
+        changeSet when the grant already exists, and each INSERT is guarded by WHERE NOT EXISTS.
+    -->
+    <changeSet id="252-grant-worker-goods-receipts" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resource_operations rro
+                JOIN role_resources rr ON rr.id = rro.role_resource_id
+                JOIN roles r ON r.id = rr.role_id
+                JOIN resources res ON res.id = rr.resource_id
+                JOIN operations o ON o.id = rro.operation_id
+                WHERE r.code = 'WORKER' AND res.code = 'GOODS_RECEIPTS' AND o.code IN ('CREATE','READ')
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r
+            JOIN resources res ON res.code = 'GOODS_RECEIPTS'
+            WHERE r.code = 'WORKER'
+              AND NOT EXISTS (
+                SELECT 1 FROM role_resources x WHERE x.role_id = r.id AND x.resource_id = res.id
+              );
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM (VALUES ('WORKER','GOODS_RECEIPTS','CREATE'), ('WORKER','GOODS_RECEIPTS','READ')) g(role_code, res_code, op_code)
+            JOIN roles r ON r.code = g.role_code
+            JOIN resources res ON res.code = g.res_code
+            JOIN role_resources rr ON rr.role_id = r.id AND rr.resource_id = res.id
+            JOIN operations o ON o.code = g.op_code
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = rr.id AND x.operation_id = o.id
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

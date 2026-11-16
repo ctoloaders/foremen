@@ -117,6 +117,20 @@ class PositionApprovalServiceSendTest {
     }
 
     @Test
+    void sendRejectsPendingPositionWithoutMaterial() {
+        // FOR-11-06 task 4.2 (R5.3)
+        PurchasePositionEntity p = position(1L, SourcingPath.AGREED, PositionStatus.PLANNED);
+        p.setPlannedMaterial(null);
+        when(positionDao.findAllById(List.of(1L))).thenReturn(List.of(p));
+
+        assertThatThrownBy(() -> service.send(new SendCommand(List.of(1L), null, null)))
+                .isInstanceOfSatisfying(ForemenApiException.class, e -> {
+                    assertThat(e.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getMessageCode()).isEqualTo("error.estimateSync.materialRequired");
+                });
+    }
+
+    @Test
     void sendIsAllOrNothingAndNamesTheOffendingPosition() {
         PurchasePositionEntity ok = position(1L, SourcingPath.AGREED, PositionStatus.PLANNED);
         PurchasePositionEntity bad = position(2L, SourcingPath.AGREED, PositionStatus.ACCEPTED);

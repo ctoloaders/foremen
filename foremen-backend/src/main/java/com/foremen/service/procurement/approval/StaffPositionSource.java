@@ -21,5 +21,7 @@ public record StaffPositionSource(Long positionId, Integer blockNo, PositionStat
                                   Long requestId, String requestReference,
                                   Long materialId, String model, String sku,
                                   String producerNameRu, String producerNamePl, String link,
-                                  String sellerNameRu, String sellerNamePl) {
+                                  String sellerNameRu, String sellerNamePl,
+                                  String photo, String typeNameRu, String typeNamePl,
+                                  boolean fromEstimate, boolean estimateChanged, boolean estimateRemoved) {
 }

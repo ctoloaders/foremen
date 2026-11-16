@@ -45,6 +45,14 @@ public class ProjectEntity extends BaseEntity {
     @Column(name = "end_date")
     private LocalDate endDate;
 
+    /**
+     * FOR-11-06 (R4.1): optional payee IBAN, normalised (upper case, no spaces). Written only by
+     * {@code ProjectBankAccountService}; deliberately absent from the service models, so the generic
+     * project update neither reads nor overwrites it.
+     */
+    @Column(name = "bank_account", length = 34)
+    private String bankAccount;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProjectStatus status = ProjectStatus.DRAFT;

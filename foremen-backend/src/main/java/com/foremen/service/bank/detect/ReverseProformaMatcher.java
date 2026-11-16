@@ -83,6 +83,19 @@ public class ReverseProformaMatcher extends ReverseLedgerMatcherSupport {
                 ReverseDocumentMatcher.Result.SKIPPED);
     }
 
+    /**
+     * FOR-11-06 (R1.8): the same matching addressed by the unified client payment id; a payment that is
+     * not a MATERIALS payment (no proforma detail) is skipped.
+     */
+    public ReverseDocumentMatcher.Result matchClientPayment(Long clientPaymentId) {
+        if (clientPaymentId == null) {
+            return ReverseDocumentMatcher.Result.SKIPPED;
+        }
+        return proformaDao.findByClientPaymentId(clientPaymentId)
+                .map(p -> matchProforma(p.getId()))
+                .orElse(ReverseDocumentMatcher.Result.SKIPPED);
+    }
+
     private ReverseDocumentMatcher.Result doMatch(Long proformaId) {
         ClientProformaEntity proforma = proformaDao.findById(proformaId).orElse(null);
         if (proforma == null || proforma.getIssueDate() == null) {

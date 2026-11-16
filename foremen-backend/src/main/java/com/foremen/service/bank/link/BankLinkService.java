@@ -34,7 +34,9 @@ import com.foremen.dao.model.BankTransactionEntity;
 import com.foremen.dao.model.BankTransactionLinkEntity;
 import com.foremen.dao.model.BankTransactionSuggestionEntity;
 import com.foremen.dao.model.BankTxnStatus;
+import com.foremen.dao.model.ClientPaymentEntity;
 import com.foremen.dao.model.ClientProformaEntity;
+import com.foremen.service.clientpayment.ClientPaymentKind;
 import com.foremen.dao.model.DetectionSource;
 import com.foremen.dao.model.ExternalOrderEntity;
 import com.foremen.dao.model.ExternalOrderLineEntity;
@@ -496,6 +498,9 @@ public class BankLinkService {
      * linkable: the replacement validates "as if the old link were gone" (FOR-11-03 R16.3).
      */
     private Resolved resolveTargets(BankTransactionEntity txn, LinkRequest req, BankTransactionLinkEntity replaced) {
+        if (req != null && req.clientPaymentId() != null) {
+            req = addressByClientPayment(req);
+        }
         if (req == null || req.kind() == null) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, TARGET_REQUIRED);
         }
@@ -561,6 +566,39 @@ public class BankLinkService {
         }
         return new Resolved(kind, null, payout, document, schedule, project, category, counterAccount,
                 proforma, externalOrder, req.note());
+    }
+
+    /**
+     * FOR-11-06 (R1.8) - maps a {@code clientPaymentId} onto the stored targets: a {@code WORKS} payment is a
+     * {@code CLIENT_PAYMENT} on the schedule of its tranche, a {@code MATERIALS} payment a
+     * {@code PROFORMA_PAYMENT} on its proforma. The request kind may be omitted; a different one, or an old
+     * target field next to the payment id, is a 400 ({@link #TARGET_REQUIRED}).
+     */
+    private LinkRequest addressByClientPayment(LinkRequest req) {
+        if (req.paymentScheduleId() != null || req.clientProformaId() != null) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, TARGET_REQUIRED);
+        }
+        ClientPaymentEntity payment = entityManager.find(ClientPaymentEntity.class, req.clientPaymentId());
+        if (payment == null) {
+            throw notFound();
+        }
+        if (payment.getKind() == ClientPaymentKind.WORKS) {
+            if (payment.getTranche() == null || payment.getTranche().getSchedule() == null) {
+                throw notFound();
+            }
+            if (req.kind() != null && req.kind() != LinkKind.CLIENT_PAYMENT) {
+                throw new ForemenApiException(HttpStatus.BAD_REQUEST, TARGET_REQUIRED);
+            }
+            return req.withKind(LinkKind.CLIENT_PAYMENT)
+                    .withPaymentSchedule(payment.getTranche().getSchedule().getId());
+        }
+        if (payment.getProforma() == null) {
+            throw notFound();
+        }
+        if (req.kind() != null && req.kind() != LinkKind.PROFORMA_PAYMENT) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, TARGET_REQUIRED);
+        }
+        return req.withKind(LinkKind.PROFORMA_PAYMENT).withClientProforma(payment.getProforma().getId());
     }
 
     private static boolean replacesLinkOf(BankTransactionLinkEntity replaced, ExternalOrderEntity order) {

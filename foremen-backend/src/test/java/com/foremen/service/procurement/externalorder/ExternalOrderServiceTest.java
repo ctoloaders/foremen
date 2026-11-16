@@ -112,6 +112,7 @@ class ExternalOrderServiceTest {
         p.setSalePrice(new BigDecimal(salePrice));
         p.setStatus(status);
         p.setSourcingPath(SourcingPath.AGREED);
+        p.setPlannedMaterial(new com.foremen.dao.model.FinishingMaterialEntity());
         when(positionDao.findAllByIdIn(anyCollection())).thenAnswer(i -> {
             List<PurchasePositionEntity> all = new ArrayList<>();
             all.add(p);
@@ -141,6 +142,15 @@ class ExternalOrderServiceTest {
     void replaceLinesRejectsNonDraft() {
         order.setStatus(ExternalOrderStatus.SENT_FOR_PAYMENT);
         assertConflict(() -> service.replaceLines(ORDER_ID, List.of()), ExternalOrderService.NOT_DRAFT);
+    }
+
+    @Test
+    void replaceLinesRejectsPendingPositionWithoutMaterial() {
+        // FOR-11-06 task 4.2 (R5.3): an estimate-derived position without a chosen material cannot be ordered
+        PurchasePositionEntity p = position(1L, "10", "50.00", PositionStatus.WITH_BUYER);
+        p.setPlannedMaterial(null);
+        assertConflict(() -> service.replaceLines(ORDER_ID, List.of(input(1L, "1", "40.00", false))),
+                com.foremen.service.procurement.PositionLabel.MATERIAL_REQUIRED);
     }
 
     @Test

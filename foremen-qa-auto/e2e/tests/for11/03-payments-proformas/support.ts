@@ -323,8 +323,10 @@ export async function issueProforma(c: Ctx, id: number): Promise<{ mode: 'api' |
   const n = ++c.seq;
   const num = `PF/${new Date().getFullYear()}/9${String(parseInt(c.rid.slice(0, 5), 36) % 10000).padStart(4, '0')}${String(n).padStart(1, '0')}`;
   psql(
-    `UPDATE client_proformas SET status='ISSUED', number=:'num', issue_date=CURRENT_DATE,
-       due_date=COALESCE(due_date, CURRENT_DATE + 7), pdf_language='pl' WHERE id=:id AND status='DRAFT';
+    `UPDATE client_payments SET status='ISSUED', due_date=COALESCE(due_date, CURRENT_DATE + 7)
+       WHERE status='DRAFT' AND id=(SELECT client_payment_id FROM client_proformas WHERE id=:id);
+     UPDATE client_proformas SET number=:'num', issue_date=CURRENT_DATE, pdf_language='pl'
+       WHERE id=:id AND number IS NULL;
      UPDATE purchase_positions SET status='IN_PROFORMA' WHERE id IN (SELECT position_id FROM client_proforma_lines WHERE proforma_id=:id) AND status='ACCEPTED';`,
     { num, id: String(id) },
   );

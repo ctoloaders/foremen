@@ -115,6 +115,16 @@ public class PositionTransitionPolicy {
         return Decision.NOT_ALLOWED;
     }
 
+    /**
+     * FOR-11-06 (R10.2): the single flag-guarded edge of a buyer-added {@code AGREED} position,
+     * {@code PLANNED -> WITH_BUYER}, driven by the system. The caller must have checked that the position
+     * carries {@code added_by_buyer}; {@link #decide} is unchanged and still rejects this edge for every
+     * position, so an unflagged position keeps hitting the proforma-paid gate.
+     */
+    public Decision decideBuyerAdded(PositionStatus from, PositionStatus to) {
+        return from == PLANNED && to == WITH_BUYER ? Decision.ALLOWED : Decision.NOT_ALLOWED;
+    }
+
     private static boolean has(Map<SourcingPath, Map<PositionStatus, Set<PositionStatus>>> edges,
                                SourcingPath path, PositionStatus from, PositionStatus to) {
         return edges.get(path).getOrDefault(from, Set.of()).contains(to);

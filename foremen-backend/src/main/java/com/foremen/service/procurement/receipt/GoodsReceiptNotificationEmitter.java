@@ -31,6 +31,9 @@ import lombok.extern.slf4j.Slf4j;
 public class GoodsReceiptNotificationEmitter {
 
     static final String TYPE_DISCREPANCY = "notification.receipt.discrepancy";
+    static final String TYPE_DELEGATED = "notification.receipt.delegated";
+    static final String TYPE_DELEGATION_REVOKED = "notification.receipt.delegationRevoked";
+    static final String TYPE_ACCEPTED_BY_DELEGATE = "notification.receipt.acceptedByDelegate";
     static final String MANAGER_ROLE = "MANAGER";
     static final String BUYER_ROLE = "BUYER";
 
@@ -68,6 +71,66 @@ public class GoodsReceiptNotificationEmitter {
             } catch (Exception e) {
                 log.error("Failed to emit notification {} to user {}", TYPE_DISCREPANCY, userId, e);
             }
+        }
+    }
+
+    /** FOR-11-06 R12.8: a delegation was created or reassigned => the new assignee (and the previous one, revoked). */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onDelegated(ReceiptDelegatedEvent event) {
+        if (event == null || event.shipmentId() == null) {
+            return;
+        }
+        emitToUser(event.assigneeId(), event.actorUserId(), TYPE_DELEGATED,
+                "/deliveries/receipt?shipment=" + event.shipmentId());
+        if (!Objects.equals(event.previousAssigneeId(), event.assigneeId())) {
+            emitToUser(event.previousAssigneeId(), event.actorUserId(), TYPE_DELEGATION_REVOKED, null);
+        }
+    }
+
+    /** FOR-11-06 R12.8: an ACTIVE delegation was revoked => the previously delegated worker, no link. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onRevoked(ReceiptDelegationRevokedEvent event) {
+        if (event == null) {
+            return;
+        }
+        emitToUser(event.previousAssigneeId(), event.actorUserId(), TYPE_DELEGATION_REVOKED, null);
+    }
+
+    /** FOR-11-06 R12.8: first receipt event under a delegation => delegating MANAGER and project MANAGERs. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onFirstDelegateEvent(ReceiptFirstDelegateEvent event) {
+        if (event == null || event.shipmentId() == null) {
+            return;
+        }
+        Set<Long> recipients = new LinkedHashSet<>();
+        try {
+            if (event.delegatedByUserId() != null) {
+                recipients.add(event.delegatedByUserId());
+            }
+            if (event.projectId() != null) {
+                recipients.addAll(managers(event.projectId()));
+            }
+        } catch (Exception e) {
+            log.error("Failed to resolve recipients for {}", TYPE_ACCEPTED_BY_DELEGATE, e);
+            return;
+        }
+        if (event.actorUserId() != null) {
+            recipients.remove(event.actorUserId());
+        }
+        String link = "/deliveries/shipments/" + event.shipmentId();
+        for (Long userId : recipients) {
+            emitToUser(userId, null, TYPE_ACCEPTED_BY_DELEGATE, link);
+        }
+    }
+
+    private void emitToUser(Long userId, Long actorUserId, String type, String link) {
+        if (userId == null || Objects.equals(userId, actorUserId)) {
+            return;
+        }
+        try {
+            notificationService.create(userId, type, null, link);
+        } catch (Exception e) {
+            log.error("Failed to emit notification {} to user {}", type, userId, e);
         }
     }
 

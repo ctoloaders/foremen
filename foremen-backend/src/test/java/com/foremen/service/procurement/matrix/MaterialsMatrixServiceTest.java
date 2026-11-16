@@ -134,9 +134,11 @@ class MaterialsMatrixServiceTest {
                                 bd("10"), bd("1000")),
                         plan(BRICK_ID, "Кирпич", ConsumptionBranch.construction, "Кирпич", "szt",
                                 bd("200"), bd("500")),
-                        // finishing — null planned brutto (no chosen-product price)
+                        // finishing — must be skipped entirely (FOR-11-06 R6.1, R6.3)
                         planNullPrice(PAINT_ID, "Краска", ConsumptionBranch.finishing, "Краска", "l",
-                                bd("20")))));
+                                bd("20")),
+                        plan(PAINT_ID + 1, "Плитка", ConsumptionBranch.finishing, "Плитка", "m2",
+                                bd("5"), bd("700")))));
 
         when(reconciliationService.list(PROJECT_ID, null, null, null)).thenReturn(List.of(
                 // Cement — THREE distinct analog products, different manufacturers, different tiers,
@@ -148,8 +150,9 @@ class MaterialsMatrixServiceTest {
                 // excluded from the quantity sum but kept in the money.
                 matched(4L, BRICK_ID, MatchTier.EXACT, bd("150"), "szt", bd("300")),
                 matched(5L, BRICK_ID, MatchTier.CATEGORY, bd("40"), "kg", bd("100")),
-                // Paint — one matched line against the null-brutto row (shown, excluded from totals).
+                // Finishing lines — matched to finishing materials, must not reach the matrix.
                 matched(6L, PAINT_ID, MatchTier.EXACT, bd("18"), "l", bd("360")),
+                matched(8L, PAINT_ID + 1, MatchTier.EXACT, bd("5"), "m2", bd("700")),
                 // A deliberately non-contributing line: unmatched ⇒ belongs to no row (R1.6).
                 unmatched(7L)));
 
@@ -183,14 +186,20 @@ class MaterialsMatrixServiceTest {
         // The foreign-unit line is marked in the detail.
         assertThat(brick.linkedLines()).filteredOn(MatrixLinkedLineDto::unitMismatch).hasSize(1);
 
-        // --- Paint: null planned brutto ⇒ pct null (—), excluded from totals ---
-        MatrixRowDto paint = rowOf(dto, ConsumptionBranch.finishing, PAINT_ID);
-        assertThat(paint.plannedBrutto()).isNull();
-        assertThat(paint.fulfilmentPercent()).isNull(); // rendered "—"
-        assertThat(paint.fillIndicator()).isNull();
-        assertThat(paint.overPurchased()).isFalse();
-        assertThat(paint.factBrutto()).isEqualByComparingTo(bd("360")); // still aggregated/visible
-        assertThat(paint.linkedLineCount()).isEqualTo(1);
+        // --- Finishing: no planned rows, no fact lines, no branch group (R6.1, R6.3) ---
+        assertThat(dto.branches()).extracting(MatrixBranchGroupDto::branch)
+                .containsExactly(ConsumptionBranch.construction);
+        assertThat(dto.branches().stream()
+                .flatMap(b -> b.categories().stream())
+                .flatMap(c -> c.rows().stream())
+                .map(MatrixRowDto::materialId))
+                .containsExactlyInAnyOrder(CEMENT_ID, BRICK_ID);
+        assertThat(dto.branches().stream()
+                .flatMap(b -> b.categories().stream())
+                .flatMap(c -> c.rows().stream())
+                .flatMap(r -> r.linkedLines().stream())
+                .map(MatrixLinkedLineDto::lineId))
+                .doesNotContain(6L, 8L);
 
         // --- Dashboard totals (R3.2, R3.3) ---
         // Construction branch: planned 1000 + 500 = 1500; fact 1200 + 400 = 1600 ⇒ 106.6667 %.
@@ -199,14 +208,7 @@ class MaterialsMatrixServiceTest {
         assertThat(construction.factBrutto()).isEqualByComparingTo(bd("1600"));
         assertThat(construction.aggregatePercent()).isEqualByComparingTo(bd("106.6667"));
 
-        // Finishing branch: the only row has a null planned brutto ⇒ excluded from money totals, so
-        // the branch planned/fact totals stay null and the aggregate pct is null (R3.3).
-        MatrixBranchGroupDto finishing = branchOf(dto, ConsumptionBranch.finishing);
-        assertThat(finishing.plannedBrutto()).isNull();
-        assertThat(finishing.factBrutto()).isNull();
-        assertThat(finishing.aggregatePercent()).isNull();
-
-        // Grand total = sum of the per-branch totals (only construction contributes).
+        // Grand total = construction only.
         assertThat(dto.grandPlannedBrutto()).isEqualByComparingTo(bd("1500"));
         assertThat(dto.grandFactBrutto()).isEqualByComparingTo(bd("1600"));
         assertThat(dto.grandAggregatePercent()).isEqualByComparingTo(bd("106.6667"));

@@ -377,7 +377,8 @@ public class PurchasePositionService implements ProjectScopedService<PurchasePos
         boolean planningStage = status == PositionStatus.PLANNED || status == PositionStatus.PROPOSED;
 
         boolean materialChanged = model.getPlannedMaterialId() != null
-                && !Objects.equals(model.getPlannedMaterialId(), existing.getPlannedMaterial().getId());
+                && (existing.getPlannedMaterial() == null
+                || !Objects.equals(model.getPlannedMaterialId(), existing.getPlannedMaterial().getId()));
         boolean pathChanged = model.getSourcingPath() != null && model.getSourcingPath() != existing.getSourcingPath();
         boolean quantityChanged = model.getQuantity() != null
                 && model.getQuantity().compareTo(existing.getQuantity()) != 0;

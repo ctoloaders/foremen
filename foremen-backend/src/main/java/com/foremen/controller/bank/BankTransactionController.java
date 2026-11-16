@@ -111,10 +111,19 @@ public class BankTransactionController {
     /** {@code {kind, amount, targets…, note, remember}} — {@code remember} defaults to {@code true} (R17.3). */
     public record LinkBody(LinkKind kind, BigDecimal amount, Long workerPayoutId, Long procurementDocumentId,
                            Long paymentScheduleId, Long projectId, Long unplannedCategoryId, Long counterAccountId,
-                           Long clientProformaId, Long externalOrderId, String note, Boolean remember) {
+                           Long clientProformaId, Long externalOrderId, String note, Boolean remember,
+                           Long clientPaymentId) {
+        /** The pre-FOR-11-06 shape (no {@code clientPaymentId}). */
+        public LinkBody(LinkKind kind, BigDecimal amount, Long workerPayoutId, Long procurementDocumentId,
+                        Long paymentScheduleId, Long projectId, Long unplannedCategoryId, Long counterAccountId,
+                        Long clientProformaId, Long externalOrderId, String note, Boolean remember) {
+            this(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
+                    unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note, remember, null);
+        }
+
         LinkRequest toRequest() {
             return new LinkRequest(kind, amount, workerPayoutId, procurementDocumentId, paymentScheduleId, projectId,
-                    unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, note);
+                    unplannedCategoryId, counterAccountId, clientProformaId, externalOrderId, clientPaymentId, note);
         }
     }
 

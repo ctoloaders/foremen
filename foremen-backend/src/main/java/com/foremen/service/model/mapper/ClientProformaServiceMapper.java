@@ -13,6 +13,7 @@ import com.foremen.dao.model.BankTransactionLinkEntity;
 import com.foremen.service.model.ClientProformaPaymentServiceModel;
 import com.foremen.dao.model.ClientProformaEntity;
 import com.foremen.dao.model.ClientProformaLineEntity;
+import com.foremen.dao.model.PositionStatus;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.model.ClientProformaLineServiceModel;
@@ -71,6 +72,10 @@ public class ClientProformaServiceMapper implements ServiceToDaoMapper<ClientPro
                 ? List.of() : lineDao.findByProformaIdOrderByLineNo(source.getId());
         target.setLines(lines.stream().map(ClientProformaServiceMapper::toLine).toList());
         target.setPositionIds(lines.stream().map(l -> l.getPosition().getId()).toList());
+        target.setContainsDeliveredItems(lines.stream().filter(ClientProformaLineEntity::isActive)
+                .map(ClientProformaLineEntity::getPosition)
+                .anyMatch(p -> p.isClientUnpaid() && (p.getStatus() == PositionStatus.RECEIVED
+                        || p.getStatus() == PositionStatus.PARTIALLY_RECEIVED)));
         List<BankTransactionLinkEntity> links = source.getId() == null
                 ? List.of() : linkDao.findProformaPaymentsByClientProformaId(source.getId());
         target.setPayments(links.stream().map(l -> new ClientProformaPaymentServiceModel(

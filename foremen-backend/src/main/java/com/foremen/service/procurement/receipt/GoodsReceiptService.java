@@ -12,11 +12,13 @@ import com.foremen.controller.model.LedgerDto;
 import com.foremen.controller.model.PositionLedgerDto;
 import com.foremen.controller.model.ToReceiveDto;
 import com.foremen.dao.GoodsReceiptDao;
+import com.foremen.dao.GoodsReceiptDelegationDao;
 import com.foremen.dao.GoodsReceiptMediaDao;
 import com.foremen.dao.PurchasePositionDao;
 import com.foremen.dao.ShipmentDao;
 import com.foremen.dao.ShipmentLineDao;
 import com.foremen.dao.model.FinishingMaterialEntity;
+import com.foremen.dao.model.GoodsReceiptDelegationEntity;
 import com.foremen.dao.model.GoodsReceiptEntity;
 import com.foremen.dao.model.GoodsReceiptMediaEntity;
 import com.foremen.dao.model.PositionStatus;
@@ -89,6 +91,7 @@ public class GoodsReceiptService {
     private static final String MISMATCH = "error.goodsReceipt.shipment.mismatch";
     private static final Set<PositionStatus> RECEIVING = Set.of(
             PositionStatus.IN_DELIVERY, PositionStatus.PARTIALLY_RECEIVED);
+    private static final String DELEGATION_REQUIRED = "error.goodsReceipt.delegation.required";
     private static final int MAX_VOID_REASON = 500;
 
     private final GoodsReceiptDao receiptDao;
@@ -105,13 +108,17 @@ public class GoodsReceiptService {
     private final EntityManager entityManager;
     private final ApplicationEventPublisher events;
     private final Clock clock;
+    private final GoodsReceiptDelegationService delegationService;
+    private final GoodsReceiptDelegationDao delegationDao;
 
     public GoodsReceiptService(GoodsReceiptDao receiptDao, GoodsReceiptMediaDao mediaDao,
                                GoodsReceiptLedgerService ledgerService, PurchasePositionDao positionDao,
                                ShipmentDao shipmentDao, ShipmentLineDao lineDao, ShipmentService shipmentService,
                                PositionLifecycleService lifecycle, ProcurementProjectAccess projectAccess,
                                AuditLogDao auditLogDao, GoodsReceiptProperties properties,
-                               EntityManager entityManager, ApplicationEventPublisher events, Clock clock) {
+                               EntityManager entityManager, ApplicationEventPublisher events, Clock clock,
+                               GoodsReceiptDelegationService delegationService,
+                               GoodsReceiptDelegationDao delegationDao) {
         this.receiptDao = receiptDao;
         this.mediaDao = mediaDao;
         this.ledgerService = ledgerService;
@@ -126,6 +133,8 @@ public class GoodsReceiptService {
         this.entityManager = entityManager;
         this.events = events;
         this.clock = clock;
+        this.delegationService = delegationService;
+        this.delegationDao = delegationDao;
     }
 
     // --- Record (R4) ---
@@ -140,6 +149,9 @@ public class GoodsReceiptService {
         }
         Long userId = requireUserId();
         Set<Long> allowed = allowedProjectIdsOrNull();
+        boolean delegate = isDelegate();
+        Set<Long> delegated = delegate ? delegationService.activeShipmentIdsFor(userId) : Set.of();
+        Map<Long, Long> delegationByShipment = delegate ? delegationIdsByShipment(delegated) : Map.of();
 
         // Step 1: idempotency. Events whose clientRequestId is already stored are answered from the rows.
         List<GoodsReceiptEntity> resultRows = new ArrayList<>();
@@ -200,6 +212,15 @@ public class GoodsReceiptService {
             Ledger before = ledgerService.ledgers(List.of(position.getId())).get(position.getId());
 
             Allocation alloc = allocation(position.getId());
+            if (delegate) {
+                // R12.4: a Delegate only works on shipments delegated to him.
+                if (e.shipmentId() != null ? !delegated.contains(e.shipmentId())
+                        : fromAccepted || alloc.shipments.keySet().stream().noneMatch(delegated::contains)) {
+                    throw new ForemenApiException(HttpStatus.FORBIDDEN, DELEGATION_REQUIRED);
+                }
+                alloc.shipments.keySet().retainAll(delegated);
+                alloc.unresolved.keySet().retainAll(delegated);
+            }
             ShipmentEntity explicit = null;
             BigDecimal lineUnresolved = null;
             if (e.shipmentId() != null) {
@@ -216,6 +237,11 @@ public class GoodsReceiptService {
             String comment = e.comment() == null || e.comment().isBlank() ? null : e.comment().trim();
             short partNo = 0;
             GoodsReceiptEntity first = null;
+            Long fallbackDelegation = null;
+            if (delegate) {
+                Long anchor = explicit != null ? explicit.getId() : alloc.shipments.keySet().iterator().next();
+                fallbackDelegation = delegationByShipment.get(anchor);
+            }
             for (Part part : parts) {
                 GoodsReceiptEntity row = new GoodsReceiptEntity();
                 row.setProject(position.getProject());
@@ -228,8 +254,22 @@ public class GoodsReceiptService {
                 row.setOccurredAt(now);
                 row.setReceivedBy(entityManager.getReference(UserEntity.class, userId));
                 row.setClientRequestId(e.clientRequestId());
+                if (delegate) {
+                    row.setDelegationId(part.shipment == null ? fallbackDelegation
+                            : delegationByShipment.getOrDefault(part.shipment.getId(), fallbackDelegation));
+                }
                 row.setPartNo(partNo++);
+                Long newDelegationId = row.getDelegationId();
+                boolean firstUnderDelegation = newDelegationId != null
+                        && !receiptDao.existsByDelegationId(newDelegationId);
                 GoodsReceiptEntity saved = receiptDao.save(row);
+                if (firstUnderDelegation) {
+                    GoodsReceiptDelegationEntity d = delegationDao.findById(newDelegationId).orElse(null);
+                    if (d != null) {
+                        events.publishEvent(new ReceiptFirstDelegateEvent(newDelegationId, d.getShipmentId(),
+                                d.getProjectId(), d.getDelegatedBy().getId(), userId));
+                    }
+                }
                 if (first == null) {
                     first = saved;
                 }
@@ -354,13 +394,21 @@ public class GoodsReceiptService {
         if (allowed != null && allowed.isEmpty()) {
             return new PageImpl<>(List.of(), sorted, 0);
         }
-        Page<GoodsReceiptEntity> page = receiptDao.findAll(specification(filter, allowed), sorted);
+        Specification<GoodsReceiptEntity> spec = specification(filter, allowed);
+        if (isDelegate()) {
+            spec = spec.and(delegateVisible(requireUserId(), delegatedIds()));
+        }
+        Page<GoodsReceiptEntity> page = receiptDao.findAll(spec, sorted);
         return new PageImpl<>(toDtos(page.getContent()), sorted, page.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     public GoodsReceiptDto get(Long id) {
-        return toDtos(List.of(load(id))).get(0);
+        GoodsReceiptEntity receipt = load(id);
+        if (isDelegate() && !delegateMayRead(receipt, requireUserId(), delegatedIds())) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND, id);
+        }
+        return toDtos(List.of(receipt)).get(0);
     }
 
     /** Ledger of one position (planner and kanban drawers). */
@@ -371,6 +419,17 @@ public class GoodsReceiptService {
             throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND, positionId);
         }
         requireScope(allowedProjectIdsOrNull(), p.getProject().getId(), positionId);
+        if (isDelegate()) {
+            Long userId = requireUserId();
+            Set<Long> delegated = delegatedIds();
+            boolean visible = receiptDao.findNonCancelledLinesByPositionIds(List.of(positionId)).stream()
+                    .anyMatch(l -> delegated.contains(l.getShipment().getId()))
+                    || receiptDao.findByPositionIdOrderByOccurredAtAscIdAsc(positionId).stream()
+                    .anyMatch(r -> r.getReceivedBy() != null && userId.equals(r.getReceivedBy().getId()));
+            if (!visible) {
+                throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND, positionId);
+            }
+        }
         return positionResult(positionId);
     }
 
@@ -401,7 +460,12 @@ public class GoodsReceiptService {
         }
         List<Long> ids = positions.stream().map(PurchasePositionEntity::getId).toList();
         Map<Long, Ledger> ledgers = ledgerService.ledgers(ids);
-        List<ShipmentLineEntity> lines = receiptDao.findNonCancelledLinesByPositionIds(ids);
+        boolean delegate = isDelegate();
+        Set<Long> delegated = delegate ? delegatedIds() : Set.of();
+        List<ShipmentLineEntity> lines = receiptDao.findNonCancelledLinesByPositionIds(ids).stream()
+                .filter(l -> !delegate || delegated.contains(l.getShipment().getId())).toList();
+        Map<Long, GoodsReceiptDelegationEntity> delegations = activeDelegationsByShipment(
+                lines.stream().map(l -> l.getShipment().getId()).collect(java.util.stream.Collectors.toSet()));
         Map<String, BigDecimal> resolved = resolvedByShipmentAndPosition(
                 lines.stream().map(l -> l.getShipment().getId()).collect(java.util.stream.Collectors.toSet()));
         Map<Long, Map<Long, ToReceiveDto.Shipment>> byPosition = new HashMap<>();
@@ -414,8 +478,11 @@ public class GoodsReceiptService {
             BigDecimal unresolved = quantity
                     .subtract(resolved.getOrDefault(key(s.getId(), positionId), BigDecimal.ZERO))
                     .max(BigDecimal.ZERO);
+            GoodsReceiptDelegationEntity d = delegations.get(s.getId());
             byPosition.get(positionId).put(s.getId(), new ToReceiveDto.Shipment(
-                    s.getId(), s.getStatus(), s.getEtaDate(), s.getCarrierCode(), quantity, unresolved));
+                    s.getId(), s.getStatus(), s.getEtaDate(), s.getCarrierCode(), quantity, unresolved,
+                    d == null || d.getAssignee() == null ? null : d.getAssignee().getName(),
+                    d == null ? null : d.getId()));
         }
         Comparator<ToReceiveDto.Shipment> shipmentOrder = Comparator
                 .comparing((ToReceiveDto.Shipment s) -> s.status() == ShipmentStatus.DELIVERED ? 0 : 1)
@@ -424,6 +491,9 @@ public class GoodsReceiptService {
         boolean pl = isPl();
         List<ToReceiveDto> result = new ArrayList<>();
         for (PurchasePositionEntity p : positions) {
+            if (delegate && !byPosition.containsKey(p.getId())) {
+                continue;
+            }
             List<ToReceiveDto.Shipment> shipments = new ArrayList<>(
                     byPosition.getOrDefault(p.getId(), Map.of()).values());
             shipments.sort(shipmentOrder);
@@ -558,6 +628,7 @@ public class GoodsReceiptService {
             }
             if (allResolved) {
                 shipmentService.closeByReceipt(shipmentId);
+                delegationService.completeForShipment(shipmentId);
             }
         }
     }
@@ -633,6 +704,51 @@ public class GoodsReceiptService {
         return roles;
     }
 
+    /** R12.4: a caller whose only procurement role is WORKER is a Delegate (ADMIN and staff roles never are). */
+    private static boolean isDelegate() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            return false;
+        }
+        Set<String> roles = roles(auth);
+        return roles.contains("WORKER") && !roles.contains("ADMIN") && !roles.contains("MANAGER")
+                && !roles.contains("FOREMAN") && !roles.contains("BUYER");
+    }
+
+    private Set<Long> delegatedIds() {
+        return delegationService.activeShipmentIdsFor(requireUserId());
+    }
+
+    private Map<Long, Long> delegationIdsByShipment(Collection<Long> shipmentIds) {
+        Map<Long, Long> result = new HashMap<>();
+        activeDelegationsByShipment(shipmentIds).forEach((shipmentId, d) -> result.put(shipmentId, d.getId()));
+        return result;
+    }
+
+    private Map<Long, GoodsReceiptDelegationEntity> activeDelegationsByShipment(Collection<Long> shipmentIds) {
+        Map<Long, GoodsReceiptDelegationEntity> result = new HashMap<>();
+        if (shipmentIds == null || shipmentIds.isEmpty()) {
+            return result;
+        }
+        for (GoodsReceiptDelegationEntity d : delegationDao.findActiveByShipmentIds(shipmentIds)) {
+            result.put(d.getShipmentId(), d);
+        }
+        return result;
+    }
+
+    /** R12.4: events of delegated shipments, plus the Delegate's own events. */
+    private static boolean delegateMayRead(GoodsReceiptEntity r, Long userId, Set<Long> delegated) {
+        return (r.getReceivedBy() != null && userId.equals(r.getReceivedBy().getId()))
+                || (r.getShipment() != null && delegated.contains(r.getShipment().getId()));
+    }
+
+    private static Specification<GoodsReceiptEntity> delegateVisible(Long userId, Set<Long> delegated) {
+        return (root, query, cb) -> {
+            Predicate own = cb.equal(root.get("receivedBy").get("id"), userId);
+            return delegated.isEmpty() ? own : cb.or(own, root.get("shipment").get("id").in(delegated));
+        };
+    }
+
     private boolean canVoid(GoodsReceiptEntity r) {
         if (r.getVoidedAt() != null) {
             return false;
@@ -692,8 +808,20 @@ public class GoodsReceiptService {
                     .add(new GoodsReceiptMediaDto(m.getId(), m.getFileName(), m.getSizeBytes(), m.getContentType()));
         }
         boolean pl = isPl();
+        Set<Long> delegationIds = new HashSet<>();
+        for (GoodsReceiptEntity r : rows) {
+            if (r.getDelegationId() != null) {
+                delegationIds.add(r.getDelegationId());
+            }
+        }
+        Map<Long, GoodsReceiptDelegationEntity> delegationsById = new HashMap<>();
+        if (!delegationIds.isEmpty()) {
+            delegationDao.findAllById(delegationIds).forEach(d -> delegationsById.put(d.getId(), d));
+        }
         List<GoodsReceiptDto> result = new ArrayList<>();
         for (GoodsReceiptEntity r : rows) {
+            GoodsReceiptDelegationEntity d = r.getDelegationId() == null ? null
+                    : delegationsById.get(r.getDelegationId());
             PurchasePositionEntity p = r.getPosition();
             boolean allowedToChange = canVoid(r);
             result.add(new GoodsReceiptDto(r.getId(), r.getProject().getId(), p.getId(), materialLabel(p, pl),
@@ -702,7 +830,9 @@ public class GoodsReceiptService {
                     r.getReceivedBy() == null ? null : r.getReceivedBy().getId(),
                     r.getReceivedBy() == null ? null : r.getReceivedBy().getName(),
                     r.getVoidedAt(), r.getVoidedBy() == null ? null : r.getVoidedBy().getName(), r.getVoidReason(),
-                    media.getOrDefault(r.getId(), List.of()), allowedToChange, allowedToChange));
+                    media.getOrDefault(r.getId(), List.of()), allowedToChange, allowedToChange,
+                    r.getDelegationId(),
+                    d == null || d.getDelegatedBy() == null ? null : d.getDelegatedBy().getName()));
         }
         return result;
     }
@@ -738,13 +868,7 @@ public class GoodsReceiptService {
     }
 
     private static String materialLabel(PurchasePositionEntity p, boolean pl) {
-        FinishingMaterialEntity m = p.getActualMaterial() != null ? p.getActualMaterial() : p.getPlannedMaterial();
-        if (m == null) {
-            return null;
-        }
-        String producer = m.getProducer() == null ? null
-                : pl ? m.getProducer().getNamePL() : m.getProducer().getNameRU();
-        return producer == null || producer.isBlank() ? m.getModel() : m.getModel() + " (" + producer + ")";
+        return com.foremen.service.procurement.PositionLabel.of(p, pl);
     }
 
     private static String unitName(PurchasePositionEntity p, boolean pl) {
