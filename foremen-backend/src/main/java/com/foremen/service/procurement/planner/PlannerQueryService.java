@@ -472,7 +472,8 @@ public class PlannerQueryService {
                     staff && proformas.containsKey(p.getId()) ? proformas.get(p.getId()).id() : null,
                     staff && proformas.containsKey(p.getId()) ? proformas.get(p.getId()).number() : null,
                     staff && proformas.containsKey(p.getId()) ? proformas.get(p.getId()).status() : null,
-                    staff ? orderCounts.getOrDefault(p.getId(), 0) : null));
+                    staff ? orderCounts.getOrDefault(p.getId(), 0) : null,
+                    staff && p.isClientUnpaid()));
         }
         return rows;
     }

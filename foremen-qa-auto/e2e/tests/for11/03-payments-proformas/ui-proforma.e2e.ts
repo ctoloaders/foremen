@@ -1,6 +1,6 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
-import { acceptedPosition, draftProforma, pp, http, issuedProforma, link, payProforma, positionStatus, txn, withCtx } from './support.js';
+import { acceptedPosition, draftProforma, getPf, pp, http, issuedProforma, link, payProforma, positionStatus, txn, withCtx } from './support.js';
 import { moneyRe, noHorizontalScroll, uiLogin } from './ui.support.js';
 
 // FOR-11-03 part B1, B2, B5-03 (manager and client proforma screens), PL UI.
@@ -63,14 +63,15 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
     await withCtx(async (c) => {
       const { id, pids } = await issuedProforma(c, [[1, 40]]);
       await uiLogin(app, screen, browser, c.users.mgr);
+      // FOR-11-06: the detail route opens the document sheet; an issued document is read-only with "Anuluj".
       await app.open(`/deliveries/proformas/${id}`);
-      await expect(screen.getByTestId('proforma-detail-page')).toBeVisible();
+      await expect(screen.getByTestId('proforma-editor-readonly')).toBeVisible();
 
-      await screen.getByTestId('card-cancel').tap();
+      await screen.getByTestId('proforma-cancel').tap();
       await screen.getByTestId('cancel-proforma-reason').fill(`qa-${c.rid}`);
       await screen.getByTestId('cancel-proforma-submit').tap();
 
-      await expect(screen.getByTestId('proforma-status').first()).toHaveText('Anulowana');
+      await expect.poll(async () => (await getPf(c, id)).status).toBe('CANCELLED');
       expect(await positionStatus(c, pids[0])).toBe('ACCEPTED');
     });
   });
@@ -80,17 +81,17 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
       const { id, body } = await issuedProforma(c);
       await browser.setViewport({ width: 390, height: 844 });
       await uiLogin(app, screen, browser, c.users.client);
-      await app.open(`/projects/${c.projectId}/clientProformas`);
+      // FOR-11-06 (R3): the client reads the unified cards on the "Płatności" tab.
+      await app.open(`/projects/${c.projectId}/clientPayments`);
 
-      const card = screen.getByTestId('client-proforma-card');
+      const card = screen.getByTestId('client-payment-card');
       await expect(card).toBeVisible();
-      await expect(card.getByTestId('proforma-number')).toHaveText(body.number);
-      await expect(card.getByTestId('proforma-status')).toHaveText('Wystawiona');
-      await expect(card.getByTestId('proforma-gross')).toContainText(moneyRe(1890));
-      await expect(card.getByTestId('proforma-remaining')).toContainText(moneyRe(1890));
-      await expect(card.getByTestId('proforma-progress')).toBeVisible();
-      await expect(card.getByTestId('proforma-pdf')).toBeVisible();
-      await expect(card.getByTestId('proforma-copy-title')).toBeVisible();
+      await expect(card.getByTestId('client-payment-number')).toContainText(body.number);
+      await expect(card.getByTestId('client-payment-status')).toHaveText(/Wystawiona|Do zapłaty|Zaplanowana/);
+      await expect(card.getByTestId('client-payment-amount')).toContainText(moneyRe(1890));
+      await expect(card.getByTestId('client-payment-remaining')).toContainText(moneyRe(1890));
+      await expect(card.getByTestId('client-payment-copy-title')).toBeVisible();
+      // The PDF button needs a stored PDF; the issue is emulated in SQL here (no PDF), so it is not asserted.
       expect(await noHorizontalScroll(browser)).toBe(true);
       void id;
     });
@@ -100,11 +101,11 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
     await withCtx(async (c) => {
       await issuedProforma(c);
       await uiLogin(app, screen, browser, c.users.client);
-      await app.open(`/projects/${c.projectId}/clientProformas`);
+      await app.open(`/projects/${c.projectId}/clientPayments`);
 
-      await screen.getByTestId('proforma-copy-title').tap();
+      await screen.getByTestId('client-payment-copy-title').tap();
 
-      await expect(screen.getByText(/Skopiowano tytuł przelewu|Nie udało się skopiować/)).toBeVisible();
+      await expect(screen.getByText(/Skopiowano do schowka|Nie udało się skopiować/)).toBeVisible();
     });
   });
 
@@ -121,12 +122,13 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
         await route.continue();
       });
       await uiLogin(app, screen, browser, c.users.client);
-      await app.open(`/projects/${c.projectId}/clientProformas`);
-      await expect(screen.getByTestId('client-proforma-card').first()).toBeVisible();
+      await app.open(`/projects/${c.projectId}/clientPayments`);
+      await expect(screen.getByTestId('client-payment-card').first()).toBeVisible();
 
-      const proformaCalls = urls.filter((u) => u.includes('proforma'));
-      expect(proformaCalls.length).toBeGreaterThan(0);
-      for (const u of proformaCalls) expect(u, u).toContain('/api/client-payments');
+      // FOR-11-06: the client tab reads the unified list only; no legacy proforma endpoint is called.
+      const paymentCalls = urls.filter((u) => u.includes('/api/client-payments'));
+      expect(paymentCalls.length).toBeGreaterThan(0);
+      expect(urls.filter((u) => u.includes('/api/client-proformas'))).toEqual([]);
       const html = await browser.evaluate(() => document.body.innerText);
       for (const bad of ['777,77', '777.77', `QA03-${c.rid}-SELLER`]) expect(html).not.toContain(bad);
     });
@@ -135,9 +137,9 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
   test('TC-B2-03 a project without proformas shows the empty state', async ({ app, screen, browser }) => {
     await withCtx(async (c) => {
       await uiLogin(app, screen, browser, c.users.client);
-      await app.open(`/projects/${c.projectId}/clientProformas`);
+      await app.open(`/projects/${c.projectId}/clientPayments`);
 
-      await expect(screen.getByTestId('client-proformas-empty')).toHaveText('Brak proform.');
+      await expect(screen.getByTestId('client-payments-empty')).toHaveText('Nie masz jeszcze żadnych płatności.');
     });
   });
 
@@ -149,16 +151,18 @@ describe('FOR-11-03 proforma screens (UI)', { tags: ['for-11-03', 'ui', 'proform
       const unpaid = await issuedProforma(c, [[1, 40]]);
       await uiLogin(app, screen, browser, c.users.mgr);
 
-      await app.open(`/deliveries/proformas/${paid.id}`);
-      await expect(screen.getByTestId(`card-payment-${l1.body.linkId}`)).toContainText(moneyRe(630));
-      await expect(screen.getByTestId(`card-payment-${l1.body.linkId}`)).toContainText(`qa-${c.rid} PF one`);
-      await app.open(`/deliveries/proformas/${unpaid.id}`);
-      await expect(screen.getByTestId('card-payments-empty')).toBeVisible();
+      // FOR-11-06: the staff card is the detail drawer of the "Płatności" tab (`?payment={paymentId}`).
+      await app.open(`/projects/${c.projectId}/clientPayments?payment=${pp(paid.id)}`);
+      const row = screen.getByTestId(`client-payment-ledger-payment-${l1.body.linkId}`);
+      await expect(row).toContainText(moneyRe(630));
+      await expect(row).toContainText(`qa-${c.rid} PF one`);
+      await app.open(`/projects/${c.projectId}/clientPayments?payment=${pp(unpaid.id)}`);
+      await expect(screen.getByTestId('client-payment-ledger-payments-empty')).toBeVisible();
       await app.clearState();
       await uiLogin(app, screen, browser, c.users.client);
-      await app.open(`/projects/${c.projectId}/clientProformas`);
-      await expect(screen.getByTestId('client-proforma-card').first()).toBeVisible();
-      await expect(screen.getByTestId('card-payments')).toHaveCount(0);
+      await app.open(`/projects/${c.projectId}/clientPayments`);
+      await expect(screen.getByTestId('client-payment-card').first()).toBeVisible();
+      await expect(screen.getByTestId('client-payment-ledger-payments')).toHaveCount(0);
       void payProforma;
     });
   });

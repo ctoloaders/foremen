@@ -35,7 +35,7 @@ describe('FOR-11-06 UI: receipt delegation', { tags: ['for-11-06', 'ui', 'delega
       await expect(dialog.getByTestId(`delegate-worker-${w.users.WORKERX!.id}`)).toBeHidden();
       await dialog.getByTestId(`delegate-worker-${w.users.WORKER!.id}`).check();
       await dialog.getByTestId('delegate-submit').tap();
-      await expect(screen.getByTestId('delegated-chip').first()).toContainText('Przekazano:');
+      await expect(screen.getByTestId(`delegated-chip-${shipmentId}`).first()).toContainText('Przekazano:');
       await expect.poll(() => psql(`SELECT status FROM goods_receipt_delegations WHERE shipment_id = ${shipmentId};`)).toBe('ACTIVE');
     } finally {
       await w.cleanup();

@@ -90,7 +90,8 @@ public class BoardService {
     public record Card(Long positionId, Long projectId, String projectName, Material material,
                        String sellerName, BigDecimal quantity, String unitName, Long requestId,
                        String requestReferenceNumber, LocalDate siteDeliveryDate, boolean late,
-                       boolean deliveryRisk, LocalDate orderByDate, SourcingPath sourcingPath, Money money) {
+                       boolean deliveryRisk, LocalDate orderByDate, SourcingPath sourcingPath, Money money,
+                       boolean clientUnpaid) {
     }
 
     /** Material label of a card: model, producer and photo. */
@@ -208,7 +209,8 @@ public class BoardService {
                 deliveryRisk,
                 p.getOrderByDate(),
                 p.getSourcingPath(),
-                money(p, audience));
+                money(p, audience),
+                audience == Audience.STAFF_FULL && p.isClientUnpaid());
     }
 
     private static Money money(PurchasePositionEntity p, Audience audience) {

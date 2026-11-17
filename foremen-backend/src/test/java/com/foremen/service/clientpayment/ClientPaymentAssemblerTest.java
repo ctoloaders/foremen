@@ -133,15 +133,46 @@ class ClientPaymentAssemblerTest {
     }
 
     @Test
+    void foremanAndBuyerDoNotGetTheBankAccount() {
+        ClientPaymentDto fm = (ClientPaymentDto) ClientPaymentAssembler.build(
+                works(ScheduleStatus.PUBLISHED, TrancheStatus.PENDING),
+                ClientPaymentVisibility.WORKS_ONLY, TODAY, List.of(), COMPANY_IBAN);
+        assertThat(fm.effectiveBankAccount()).isNull();
+        ClientPaymentDto buyer = (ClientPaymentDto) ClientPaymentAssembler.build(
+                materials(ProformaStatus.ISSUED),
+                ClientPaymentVisibility.MATERIALS_ONLY, TODAY, List.of(line()), COMPANY_IBAN);
+        assertThat(buyer.effectiveBankAccount()).isNull();
+        assertThat(buyer.proforma().bankAccountSnapshot()).isNull();
+    }
+    @Test
     void staffMaterialsDtoExposesSnapshotLinesAndOverdueDisplay() {
         ClientPaymentDto dto = (ClientPaymentDto) ClientPaymentAssembler.build(materials(ProformaStatus.ISSUED),
-                ClientPaymentVisibility.MATERIALS_ONLY, TODAY, List.of(line()), COMPANY_IBAN);
+                ClientPaymentVisibility.ALL, TODAY, List.of(line()), COMPANY_IBAN);
         assertThat(dto.status()).isEqualTo(DisplayStatus.OVERDUE);
         assertThat(dto.overdue()).isTrue();
         assertThat(dto.works()).isNull();
         assertThat(dto.proforma().bankAccountSnapshot()).isEqualTo(SNAPSHOT_IBAN);
         assertThat(dto.proforma().lines()).hasSize(1);
         assertThat(dto.proforma().number()).isEqualTo("PF/1");
+    }
+
+    @Test
+    void staffProformaBlockCarriesLedgerPaymentsAndClientDtoDoesNot() {
+        List<ClientPaymentDto.PaymentSummary> payments = List.of(new ClientPaymentDto.PaymentSummary(
+                42L, java.time.LocalDate.of(2026, 2, 3), new java.math.BigDecimal("40.00"), "Proforma PF/1"));
+        ClientPaymentDto dto = (ClientPaymentDto) ClientPaymentAssembler.build(materials(ProformaStatus.ISSUED),
+                ClientPaymentVisibility.ALL, TODAY, List.of(line()), COMPANY_IBAN, payments);
+        assertThat(dto.proforma().payments()).containsExactlyElementsOf(payments);
+        assertThat(ClientPaymentDto.PaymentSummary.class.getRecordComponents())
+                .extracting(c -> c.getName().toLowerCase(Locale.ROOT))
+                .noneMatch(n -> n.contains("iban") || n.contains("account") || n.contains("counterparty"));
+        ClientPaymentView client = ClientPaymentAssembler.build(materials(ProformaStatus.ISSUED),
+                ClientPaymentVisibility.CLIENT, TODAY, List.of(line()), COMPANY_IBAN, payments);
+        assertThat(client).isInstanceOf(ClientPaymentClientDto.class);
+        assertThat(client.toString()).doesNotContain("Proforma PF/1\"").doesNotContain("42");
+        ClientPaymentDto none = (ClientPaymentDto) ClientPaymentAssembler.build(materials(ProformaStatus.ISSUED),
+                ClientPaymentVisibility.ALL, TODAY, List.of(line()), COMPANY_IBAN);
+        assertThat(none.proforma().payments()).isEmpty();
     }
 
     @Test

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.foremen.controller.model.ClientPaymentView;
+import com.foremen.controller.model.ClientPaymentDto;
+import com.foremen.dao.BankTransactionLinkDao;
 import com.foremen.dao.ClientPaymentDao;
 import com.foremen.dao.ClientProformaLineDao;
 import com.foremen.dao.model.ClientPaymentEntity;
@@ -48,6 +50,7 @@ public class ClientPaymentService {
 
     private final ClientPaymentDao dao;
     private final ClientProformaLineDao lineDao;
+    private final BankTransactionLinkDao linkDao;
     private final ClientPaymentQueryService queryService;
     private final ClientPaymentAssembler assembler;
     private final ClientPaymentAudienceResolver audienceResolver;
@@ -55,13 +58,14 @@ public class ClientPaymentService {
     private final ProformaPdfService pdfService;
     private final Clock clock;
 
-    public ClientPaymentService(ClientPaymentDao dao, ClientProformaLineDao lineDao,
+    public ClientPaymentService(ClientPaymentDao dao, ClientProformaLineDao lineDao, BankTransactionLinkDao linkDao,
                                 ClientPaymentQueryService queryService, ClientPaymentAssembler assembler,
                                 ClientPaymentAudienceResolver audienceResolver,
                                 ProcurementProjectAccess projectAccess, ProformaPdfService pdfService,
                                 Clock clock) {
         this.dao = dao;
         this.lineDao = lineDao;
+        this.linkDao = linkDao;
         this.queryService = queryService;
         this.assembler = assembler;
         this.audienceResolver = audienceResolver;
@@ -96,8 +100,8 @@ public class ClientPaymentService {
     @Transactional(readOnly = true)
     public ClientPaymentView get(Long id) {
         ClientPaymentEntity p = loadVisible(id);
-        return assembler.assemble(p, audienceResolver.visibility(), LocalDate.now(clock), linesOf(p))
-                .orElseThrow(() -> notFound(id));
+        return assembler.assemble(p, audienceResolver.visibility(), LocalDate.now(clock), linesOf(p),
+                paymentsOf(p)).orElseThrow(() -> notFound(id));
     }
 
     /** The stored PDF of an issued MATERIALS payment; a WORKS payment has none (404). */
@@ -143,6 +147,22 @@ public class ClientPaymentService {
     public ClientPaymentKind kindOf(Long id) {
         requireStaff();
         return loadVisible(id).getKind();
+    }
+
+    /**
+     * Re-keys a proforma model returned by a materials write to the unified payment id, so the {@code id} the
+     * client gets is the one every {@code /api/client-payments/{id}} path takes (the proforma id is a different
+     * sequence).
+     */
+    @Transactional(readOnly = true)
+    public <T extends com.foremen.service.model.ClientProformaServiceModel> T withPaymentId(T model) {
+        if (model != null && model.getId() != null) {
+            Long paymentId = dao.findPaymentIdByProformaId(model.getId());
+            if (paymentId != null) {
+                model.setId(paymentId);
+            }
+        }
+        return model;
     }
 
     /** Tranche and schedule ids of a WORKS payment. */
@@ -192,6 +212,18 @@ public class ClientPaymentService {
             throw notFound(id);
         }
         return p;
+    }
+
+    /** Ledger payments applied to a MATERIALS proforma (staff detail only; none for a CLIENT). */
+    private List<ClientPaymentDto.PaymentSummary> paymentsOf(ClientPaymentEntity p) {
+        if (p.getKind() != ClientPaymentKind.MATERIALS || p.getProforma() == null
+                || audienceResolver.visibility() == ClientPaymentVisibility.CLIENT) {
+            return List.of();
+        }
+        return linkDao.findProformaPaymentsByClientProformaId(p.getProforma().getId()).stream()
+                .map(l -> new ClientPaymentDto.PaymentSummary(l.getId(), l.getTransaction().getBookingDate(),
+                        l.getAmount(), l.getTransaction().getTitle()))
+                .toList();
     }
 
     private List<ClientProformaLineEntity> linesOf(ClientPaymentEntity p) {

@@ -46,3 +46,8 @@ export async function apiRows(w: World, tag: Tag | 'ADMIN', query = ''): Promise
 
 /** The body text of the page (for "no raw key / no secret" checks). */
 export const pageText = (browser: any): Promise<string> => browser.evaluate(() => document.body.innerText);
+/** A buyer-added position has no purchase request, so the BUYER default board filter "Moje" hides it: switch to "Wszyscy". */
+export async function boardAllBuyers(screen: any): Promise<void> {
+  await screen.getByRole('combobox', 'Zakupowiec').tap();
+  await screen.getByRole('option', 'Wszyscy').tap();
+}

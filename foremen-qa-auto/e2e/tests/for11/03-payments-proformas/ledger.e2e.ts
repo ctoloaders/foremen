@@ -256,13 +256,13 @@ describe('FOR-11-03 ledger matching, planner, permissions (API)', { tags: ['for-
       const pos = await acceptedPosition(c, 1, 40, { projectId: c.otherProjectId });
       const draft = await ok('POST', '/api/client-payments/materials', c.tok.admin, { projectId: c.otherProjectId, positionIds: [pos] });
 
-      const mgr = await http('GET', `/api/client-payments/${pp(draft.id)}`, c.tok.mgr);
+      const mgr = await http('GET', `/api/client-payments/${draft.id}`, c.tok.mgr);
       const mgrList = await http('GET', '/api/client-payments?kind=MATERIALS&size=200', c.tok.mgr);
-      const buyer = await http('GET', `/api/client-payments/${pp(draft.id)}`, c.tok.buyer);
-      const fin = await http('GET', `/api/client-payments/${pp(draft.id)}`, c.tok.fin);
+      const buyer = await http('GET', `/api/client-payments/${draft.id}`, c.tok.buyer);
+      const fin = await http('GET', `/api/client-payments/${draft.id}`, c.tok.fin);
 
       expect(mgr.status).toBe(404);
-      expect(JSON.stringify(mgrList.body)).not.toContain(`"id":${pp(draft.id)},`);
+      expect(JSON.stringify(mgrList.body)).not.toContain(`"id":${draft.id},`);
       expect(buyer.status).toBe(200);
       expect(fin.status).toBe(200);
     }, { second: true });

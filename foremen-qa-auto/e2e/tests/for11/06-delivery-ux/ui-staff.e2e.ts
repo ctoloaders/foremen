@@ -26,6 +26,8 @@ describe('FOR-11-06 UI: project bank account', { tags: ['for-11-06', 'ui', 'bank
       const input = bankInput(screen);
       await expect(input).toBeVisible();
       await expect(input).toBeEnabled();
+      // The edit form also validates the area (required, > 0); API-made projects have none.
+      await screen.getByLabel('Powierzchnia (m²)').fill('50');
       await input.fill('PL00 1234');
       await screen.getByRole('button', 'Zapisz zmiany').tap();
       await expect(screen.getByTestId('project-bank-account-error')).toBeVisible();
@@ -98,8 +100,9 @@ describe('FOR-11-06 UI: position approvals selection bar', { tags: ['for-11-06',
       await expect(screen.getByTestId('bulk-action-SEND')).toBeVisible();
       await expect(screen.getByTestId('bulk-action-CREATE_PROFORMA')).toBeHidden();
       await screen.getByTestId('bulk-action-SEND').tap();
-      await expect(screen.getByTestId('bulk-confirm-dialog').or(screen.getByText('Zrealizowano dla pozycji: 1'))).toBeVisible();
-      if (await screen.getByTestId('bulk-confirm-dialog').isVisible()) await screen.getByTestId('bulk-confirm-submit').tap();
+      // SEND opens the send-to-client dialog (deadline, note); the confirm button sends the block.
+      await expect(screen.getByTestId('send-block-dialog')).toBeVisible();
+      await screen.getByTestId('send-confirm').tap();
       await expect.poll(() => psql(`SELECT status FROM purchase_positions WHERE id = ${planned};`)).toBe('PROPOSED');
     } finally {
       await w.cleanup();
@@ -118,6 +121,7 @@ describe('FOR-11-06 UI: position approvals selection bar', { tags: ['for-11-06',
       await loginAndOpenTab(app, screen, browser, w, 'MANAGER', 'positionApprovals');
       for (const id of [a, b, c]) await screen.getByTestId(`select-position-${id}`).check();
       await screen.getByTestId('bulk-action-MARK_ACCEPTED').tap();
+      await screen.getByLabel('Komentarz (opcjonalnie)').fill(w.tag('qa06'));
       await screen.getByTestId('bulk-confirm-submit').tap();
       await expect(screen.getByTestId('bulk-failures')).toBeVisible();
       await expect(screen.getByTestId(`select-position-${c}`)).toBeChecked();

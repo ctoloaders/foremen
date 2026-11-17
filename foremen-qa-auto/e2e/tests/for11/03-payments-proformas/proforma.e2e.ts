@@ -1,7 +1,7 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import {
-  acceptedPosition, draftProforma, pp, errMatches, getBytes, getPf, http, issueProforma, issuedProforma, link, login, ok,
+  acceptedPosition, draftProforma, pp, pfOf, errMatches, getBytes, getPf, http, issueProforma, issuedProforma, link, login, ok,
   payProforma, positionStatus, psql, txn, withCtx, companyProfile, sweepForeignAccounts, type Ctx,
 } from './support.js';
 
@@ -36,7 +36,7 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       expect(r.body.totalNet).toBe(1750);
       expect(r.body.totalVat).toBe(140);
       expect(r.body.totalGross).toBe(1890);
-      const g = await getPf(c, r.body.id);
+      const g = await getPf(c, pfOf(r.body.id));
       expect(g.totalGross).toBe(1890);
       expect(await positionStatus(c, p1)).toBe('ACCEPTED');
       expect(await positionStatus(c, p2)).toBe('ACCEPTED');
@@ -310,7 +310,8 @@ describe('FOR-11-03 proformas (API)', { tags: ['for-11-03', 'api', 'proforma'] }
       expect(r.status, r.text).toBe(201);
       const pf = await getPf(c, id);
       expect(pf.status).toBe('PAID');
-      expect(pf.paidAt).toBeTruthy();
+      // FOR-11-06: the unified view has no paidAt (R1.6); fully paid = nothing remaining.
+      expect(pf.remainingGross).toBe(0);
       expect(pf.releasedAt).toBeTruthy();
       for (const p of pids) expect(await positionStatus(c, p)).toBe('WITH_BUYER');
       const board = await http('GET', `/api/purchase-positions/planner?projectId=${c.projectId}&status=WITH_BUYER&size=50`, c.tok.buyer);

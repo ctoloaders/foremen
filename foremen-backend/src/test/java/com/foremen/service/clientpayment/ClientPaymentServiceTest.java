@@ -38,6 +38,7 @@ class ClientPaymentServiceTest {
     private final ClientPaymentDao dao = mock(ClientPaymentDao.class);
     private final ProcurementProjectAccess access = mock(ProcurementProjectAccess.class);
     private final ClientPaymentService service = new ClientPaymentService(dao, mock(ClientProformaLineDao.class),
+            mock(com.foremen.dao.BankTransactionLinkDao.class),
             mock(ClientPaymentQueryService.class), mock(ClientPaymentAssembler.class),
             new ClientPaymentAudienceResolver(), access, mock(ProformaPdfService.class),
             Clock.fixed(Instant.parse("2026-05-01T00:00:00Z"), ZoneOffset.UTC));
@@ -67,6 +68,14 @@ class ClientPaymentServiceTest {
     private static void assertStatus(Runnable r, HttpStatus expected) {
         assertThatThrownBy(r::run).isInstanceOfSatisfying(ForemenApiException.class,
                 e -> assertThat(e.getStatus()).isEqualTo(expected));
+    }
+
+    @Test
+    void withPaymentIdRekeysTheProformaModelToTheUnifiedPaymentId() {
+        com.foremen.service.model.ClientProformaServiceModel model = new com.foremen.service.model.ClientProformaServiceModel();
+        model.setId(651L);
+        when(dao.findPaymentIdByProformaId(651L)).thenReturn(3L);
+        assertThat(service.withPaymentId(model).getId()).isEqualTo(3L);
     }
 
     @Test

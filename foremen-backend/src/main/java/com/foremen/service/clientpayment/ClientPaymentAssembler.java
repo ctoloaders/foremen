@@ -36,10 +36,18 @@ public class ClientPaymentAssembler {
     /** Looks the effective account up through the resolver. {@code lines} is used for MATERIALS only. */
     public Optional<ClientPaymentView> assemble(ClientPaymentEntity p, ClientPaymentVisibility visibility,
                                                 LocalDate today, List<ClientProformaLineEntity> lines) {
+        return assemble(p, visibility, today, lines, List.of());
+    }
+
+    /** As above; {@code payments} (ledger payments of the proforma) is shown to staff only. */
+    public Optional<ClientPaymentView> assemble(ClientPaymentEntity p, ClientPaymentVisibility visibility,
+                                                LocalDate today, List<ClientProformaLineEntity> lines,
+                                                List<ClientPaymentDto.PaymentSummary> payments) {
         if (!isVisible(p, visibility)) {
             return Optional.empty();
         }
-        return Optional.of(build(p, visibility, today, lines, bankAccountResolver.forProject(p.getProject())));
+        return Optional.of(build(p, visibility, today, lines, bankAccountResolver.forProject(p.getProject()),
+                payments));
     }
 
     /** True when the role may see the row at all (kind rule, plus the client row rule). */
@@ -60,6 +68,12 @@ public class ClientPaymentAssembler {
     /** Pure core: the caller has already checked {@link #isVisible}. */
     static ClientPaymentView build(ClientPaymentEntity p, ClientPaymentVisibility visibility, LocalDate today,
                                    List<ClientProformaLineEntity> lines, String effectiveAccount) {
+        return build(p, visibility, today, lines, effectiveAccount, List.of());
+    }
+
+    static ClientPaymentView build(ClientPaymentEntity p, ClientPaymentVisibility visibility, LocalDate today,
+                                   List<ClientProformaLineEntity> lines, String effectiveAccount,
+                                   List<ClientPaymentDto.PaymentSummary> payments) {
         ClientPaymentKind kind = p.getKind();
         DisplayStatus display = ClientPaymentStatusMapper.toDisplay(kind, p.getStatus(), p.getDueDate(), today);
         boolean overdue = ClientPaymentStatusMapper.overdue(kind, p.getStatus(), p.getDueDate(), today);
@@ -81,6 +95,10 @@ public class ClientPaymentAssembler {
                     remaining, payee, number == null ? null : "Proforma " + number, lineDtos);
         }
 
+        // R4.4: the payee account is not exposed to FOREMAN and BUYER.
+        boolean accountHidden = visibility == ClientPaymentVisibility.WORKS_ONLY
+                || visibility == ClientPaymentVisibility.MATERIALS_ONLY;
+        String staffAccount = accountHidden ? null : effectiveAccount;
         ClientPaymentDto.WorksBlock works = null;
         ClientPaymentDto.ProformaBlock proforma = null;
         if (kind == ClientPaymentKind.WORKS) {
@@ -95,11 +113,11 @@ public class ClientPaymentAssembler {
                     pf.getTotalNet(), pf.getTotalVat(), pf.getReleasedAt(), pf.getCancelledAt(),
                     pf.getCancelReason(), pf.getPdfLanguage(),
                     pf.getPdfObjectKey() != null && !pf.getPdfObjectKey().isBlank(),
-                    p.getBankAccountSnapshot(), lineDtos);
+                    accountHidden ? null : p.getBankAccountSnapshot(), lineDtos, payments == null ? List.of() : payments);
         }
         return new ClientPaymentDto(p.getId(), p.getProject() == null ? null : p.getProject().getId(), kind,
                 display, p.getStatus(), overdue, p.getDueDate(), p.getCurrency(), amount, paid, remaining,
-                p.getNote(), effectiveAccount, works, proforma);
+                p.getNote(), staffAccount, works, proforma);
     }
 
     private static ClientPaymentLineSummaryDto line(ClientProformaLineEntity l) {

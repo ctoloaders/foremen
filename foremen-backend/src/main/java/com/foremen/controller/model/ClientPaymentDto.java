@@ -55,6 +55,14 @@ public record ClientPaymentDto(
             String pdfLanguage,
             boolean hasPdf,
             String bankAccountSnapshot,
-            List<ClientPaymentLineSummaryDto> lines) {
+            List<ClientPaymentLineSummaryDto> lines,
+            List<PaymentSummary> payments) {
+    }
+
+    /**
+     * FOR-11-03 (R23.3, R24.5): one bank-ledger payment applied to the proforma, STAFF detail only. Carries no
+     * counterparty name, account or IBAN. Filled on the by-id read; empty on list reads.
+     */
+    public record PaymentSummary(Long linkId, LocalDate bookingDate, BigDecimal amount, String title) {
     }
 }

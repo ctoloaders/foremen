@@ -233,7 +233,12 @@ export async function makeWorld(opts: WorldOpts = {}): Promise<World> {
          DELETE FROM purchase_position_variants WHERE position_id IN (SELECT id FROM purchase_positions WHERE project_id IN (${pl}));
          DELETE FROM audit_log WHERE entity_class = 'PurchasePositionEntity' AND entity_id IN (SELECT id FROM purchase_positions WHERE project_id IN (${pl}));
          DELETE FROM purchase_positions WHERE project_id IN (${pl});
-         DELETE FROM purchase_requests WHERE project_id IN (${pl});`);
+         DELETE FROM purchase_requests WHERE project_id IN (${pl});
+         DELETE FROM finishing_materials WHERE project_id IN (${pl});`);
+    // Rows that block the project delete: tranche allocations (manual mark-paid) and the SQL-seeded rooms
+    // (rooms do not cascade from projects; their estimate cells and BoM rows cascade from the room).
+    run(`DELETE FROM tranche_allocations WHERE tranche_id IN (SELECT t.id FROM payment_tranches t JOIN payment_schedules s ON s.id = t.schedule_id WHERE s.project_id IN (${pl}));
+         DELETE FROM rooms WHERE project_id IN (${pl});`);
     for (const pid of projectIds) {
       try {
         await http('DELETE', `/api/projects/${pid}`, w.admin);
@@ -275,14 +280,22 @@ export async function makeWorld(opts: WorldOpts = {}): Promise<World> {
       users[tag]!.token = r.body.accessToken as string;
     }
     const member = async (tag: Tag) => ({ userId: users[tag]!.id, projectRoleId: await roleIdByCode(PROJECT_ROLE_OF[tag]!) });
+    // The API refuses the WORKER role while a project is created: workers are assigned afterwards.
     const mainMembers = [];
-    for (const tag of MAIN_MEMBERS) if (users[tag]) mainMembers.push(await member(tag));
+    const mainWorkers: Tag[] = [];
+    for (const tag of MAIN_MEMBERS) if (users[tag]) (ROLE_OF[tag] === 'WORKER' ? mainWorkers.push(tag) : mainMembers.push(await member(tag)));
     const otherMembers = [];
-    for (const tag of OTHER_MEMBERS) if (users[tag]) otherMembers.push(await member(tag));
+    const otherWorkers: Tag[] = [];
+    for (const tag of OTHER_MEMBERS) if (users[tag]) (ROLE_OF[tag] === 'WORKER' ? otherWorkers.push(tag) : otherMembers.push(await member(tag)));
     w.projectId = (await ok('POST', '/api/projects', w.admin, { name: `FOR1106-${id}`, status: 'ACTIVE', members: mainMembers })).id;
     projectIds.push(w.projectId);
     w.otherProjectId = (await ok('POST', '/api/projects', w.admin, { name: `FOR1106-OTHER-${id}`, status: 'ACTIVE', members: otherMembers })).id;
     projectIds.push(w.otherProjectId);
+    for (const [workers, pid] of [[mainWorkers, w.projectId], [otherWorkers, w.otherProjectId]] as Array<[Tag[], number]>) {
+      for (const tag of workers) {
+        await ok('POST', '/api/project-members', w.admin, { userId: users[tag]!.id, projectId: pid, projectRoleId: await roleIdByCode('WORKER') });
+      }
+    }
     psql(`UPDATE projects SET start_date = :'d'::date WHERE id IN (${projectIds.join(',')});`, { d: day(0) });
     if (users.WORKERI) {
       psql(`UPDATE project_members SET assignment_status = 'INACTIVE' WHERE user_id = :uid AND project_id = :pid;`, {
@@ -422,16 +435,162 @@ export const listPayments = (w: World, tag: Tag | 'ADMIN', query = '') =>
 /** Position DTO as the admin sees it. */
 export const positionOf = async (w: World, id: number) => (await ok('GET', `/api/purchase-positions/${id}`, w.admin)) as any;
 /**
+ * SQL-seeds the estimate basis REST cannot build: an estimate (PLN) and an APPROVED offer of `totalGross`.
+ * Both rows belong to the project and vanish with it (ON DELETE CASCADE), so cleanup needs nothing extra.
+ */
+export function seedApprovedOffer(w: World, totalGross = 12300, projectId = w.projectId): void {
+  const net = Math.round((totalGross / 1.23) * 100) / 100;
+  psql(
+    `INSERT INTO estimates (project_id, currency_id, status, total_net, total_vat, total_gross, created_by)
+     SELECT :'pid'::bigint, c.id, 'DRAFT', :'net'::numeric, :'vat'::numeric, :'gross'::numeric, 'qa' FROM currencies c WHERE c.code = 'PLN'
+     ON CONFLICT (project_id) DO NOTHING;
+     INSERT INTO offers (project_id, estimate_id, revision, status, approved_revision, total_net, total_vat, total_gross, created_by)
+     SELECT :'pid'::bigint, e.id, 1, 'APPROVED', 1, :'net'::numeric, :'vat'::numeric, :'gross'::numeric, 'qa' FROM estimates e WHERE e.project_id = :'pid'::bigint;`,
+    { pid: String(projectId), gross: String(totalGross), net: String(net), vat: String(Math.round((totalGross - net) * 100) / 100) },
+  );
+}
+export interface BomRow {
+  /** `materialRow` has a chosen concrete material; `placeholder` has only a finishing type and a price range. */
+  kind: 'materialRow' | 'placeholder';
+  /** Material of the chosen row (finishing_materials.id). Its type is the row's finishing type. */
+  materialId?: number;
+  /** Finishing type of a placeholder row (material_types.id). */
+  typeId?: number;
+  /** Area / quantity of the room cell the norm is applied to. */
+  roomQty?: number;
+  /** Norm per unit. */
+  norm?: number;
+}
+/**
+ * SQL-seeds finishing BoM rows (estimate line, room cell, `estimate_line_room_materials`) of the run's project and
+ * returns their ids, so a test can change or delete them. The estimate cascades from the project; the rooms do
+ * not, so `cleanup()` deletes them explicitly (their cells and BoM rows cascade from the room).
+ */
+export function seedFinishingBom(w: World, rows: BomRow[], opts: { workItemId?: number } = {}): { roomId: number; lineId: number; bomIds: number[]; cellIds: number[] } {
+  seedEstimateOnly(w);
+  // One room per BoM row: the matrix keeps a single cell per (line, room).
+  let roomSeq = 0;
+  const newRoom = (): number =>
+    Number(
+      psql(
+        `INSERT INTO rooms (project_id, room_type_id, label, created_by)
+         SELECT :'pid'::bigint, (SELECT id FROM room_types ORDER BY id LIMIT 1), :'label', 'qa' RETURNING id;`,
+        { pid: String(w.projectId), label: `QA06-${w.id}-room${++roomSeq}` },
+      ).split('\n')[0],
+    );
+  const roomId = newRoom();
+  const lineId = Number(
+    psql(
+      `INSERT INTO estimate_lines (estimate_id, work_item_id, unit_id, unit_price, quantity, value_net, created_by)
+       SELECT e.id, COALESCE(NULLIF(:'wi'::bigint, 0), (SELECT id FROM work_items ORDER BY id LIMIT 1)), 1, 10, 10, 100, 'qa' FROM estimates e WHERE e.project_id = :'pid'::bigint RETURNING id;`,
+      { pid: String(w.projectId), wi: String(opts.workItemId ?? 0) },
+    ).split('\n')[0],
+  );
+  const bomIds: number[] = [];
+  const cellIds: number[] = [];
+  for (const [i, row] of rows.entries()) {
+    const cell = Number(
+      psql(
+        `INSERT INTO estimate_line_room_qty (line_id, room_id, quantity, created_by) VALUES (:'line'::bigint, :'room'::bigint, :'qty'::numeric, 'qa') RETURNING id;`,
+        { line: String(lineId), room: String(i === 0 ? roomId : newRoom()), qty: String(row.roomQty ?? 10) },
+      ).split('\n')[0],
+    );
+    cellIds.push(cell);
+    const chosen = row.kind === 'materialRow';
+    const id = Number(
+      psql(
+        chosen
+          ? `INSERT INTO estimate_line_room_materials (room_qty_id, branch, finishing_type_id, norm_qty, concrete_finishing_material_id, concrete_net, created_by)
+             SELECT :'cell'::bigint, 'finishing', m.type_id, :'norm'::numeric, m.id, 50, 'qa' FROM finishing_materials m WHERE m.id = :'mat'::bigint RETURNING id;`
+          : `INSERT INTO estimate_line_room_materials (room_qty_id, branch, finishing_type_id, norm_qty, range_min, range_max, created_by)
+             VALUES (:'cell'::bigint, 'finishing', :'type'::bigint, :'norm'::numeric, 20, 80, 'qa') RETURNING id;`,
+        { cell: String(cell), norm: String(row.norm ?? 1), mat: String(row.materialId ?? 0), type: String(row.typeId ?? 0) },
+      ).split('\n')[0],
+    );
+    bomIds.push(id);
+  }
+  return { roomId, lineId, bomIds, cellIds };
+}
+/** Creates the project's estimate (PLN) when it does not exist yet. */
+export function seedEstimateOnly(w: World, projectId = w.projectId): void {
+  psql(
+    `INSERT INTO estimates (project_id, currency_id, status, total_net, total_vat, total_gross, created_by)
+     SELECT :'pid'::bigint, c.id, 'DRAFT', 0, 0, 0, 'qa' FROM currencies c WHERE c.code = 'PLN'
+     ON CONFLICT (project_id) DO NOTHING;`,
+    { pid: String(projectId) },
+  );
+}
+/** Distinct finishing materials of two different types, plus a third type id for a placeholder row. */
+export function finishingMaterialsOfDistinctTypes(): Array<{ id: number; typeId: number }> {
+  const out = psql(
+    `SELECT DISTINCT ON (type_id) id, type_id FROM finishing_materials WHERE project_id IS NULL AND active ORDER BY type_id, id LIMIT 3;`,
+  );
+  return out.split('\n').filter(Boolean).map((l) => {
+    const [id, typeId] = l.split('|').map(Number);
+    return { id: id!, typeId: typeId! };
+  });
+}
+/**
  * Creates the works side of the run's project through the API: a MANUAL schedule with three tranches
  * (past, next, far). Publishing needs an estimate basis in some stacks, so it is attempted and its status
  * returned; the tranches are listed either way.
  */
 export async function worksSchedule(w: World): Promise<{ scheduleId: number; published: boolean }> {
+  seedApprovedOffer(w, 6000);
   const created = await ok('POST', '/api/client-payments/schedules', w.admin, { projectId: w.projectId, source: 'MANUAL' });
   const scheduleId = created.id as number;
   for (const [amount, due] of [[1000, day(-5)], [2000, day(10)], [3000, day(40)]] as Array<[number, string]>) {
     await ok('POST', `/api/client-payments/schedules/${scheduleId}/tranches`, w.admin, { amountGross: amount, dueDate: due });
   }
   const pub = await http('POST', `/api/client-payments/schedules/${scheduleId}/publish`, w.admin);
+  if (pub.status !== 200) console.warn(`publish -> ${pub.status}: ${pub.text.slice(0, 300)}`);
   return { scheduleId, published: pub.status === 200 };
+}
+
+/** A work item that consumes a finishing type (tier-1 link type -> work category), with two catalog materials of that type. */
+export function consumptionPick(): { workItemId: number; categoryId: number; typeId: number; placeholderTypeId: number; materialIds: number[] } {
+  // A work item that consumes two finishing types: the first has two catalog materials, the second is the placeholder
+  // (the norm unit of a placeholder comes from the consumption row of its type).
+  const row = psql(
+    `SELECT c.work_item_id, wi.work_category_id, c.finishing_material_type_id,
+            (SELECT MIN(c2.finishing_material_type_id) FROM work_material_consumptions c2
+              WHERE c2.work_item_id = c.work_item_id AND c2.branch = 'finishing' AND c2.finishing_material_type_id <> c.finishing_material_type_id)
+     FROM work_material_consumptions c JOIN work_items wi ON wi.id = c.work_item_id
+     WHERE c.branch = 'finishing'
+       AND (SELECT COUNT(*) FROM finishing_materials m WHERE m.type_id = c.finishing_material_type_id AND m.project_id IS NULL AND m.active) >= 2
+       AND EXISTS (SELECT 1 FROM work_material_consumptions c3 WHERE c3.work_item_id = c.work_item_id AND c3.branch = 'finishing' AND c3.finishing_material_type_id <> c.finishing_material_type_id)
+     ORDER BY c.work_item_id, c.finishing_material_type_id LIMIT 1;`,
+  ).split('\n')[0]!;
+  const [workItemId, categoryId, typeId, placeholderTypeId] = row.split('|').map(Number);
+  const mats = psql(`SELECT id FROM finishing_materials WHERE type_id = ${typeId} AND project_id IS NULL AND active ORDER BY id LIMIT 2;`)
+    .split('\n').filter(Boolean).map(Number);
+  return { workItemId: workItemId!, categoryId: categoryId!, typeId: typeId!, placeholderTypeId: placeholderTypeId!, materialIds: mats };
+}
+/** Gives the project a start date and a schedule bar of `categoryId` starting on calendar day `dayNo` (day 1 = start date). Returns the bar's date. */
+export function seedWorkStart(w: World, categoryId: number, dayNo = 6): string {
+  const start = day(3);
+  psql(`UPDATE projects SET start_date = :'d'::date WHERE id = ${w.projectId};`, { d: start });
+  psql(
+    `INSERT INTO project_schedules (project_id, version, created_by) VALUES (:'pid'::bigint, 0, 'qa') ON CONFLICT DO NOTHING;
+     INSERT INTO project_schedule_bars (schedule_id, work_category_id, start_half_days, duration_half_days, created_by)
+     SELECT s.id, :'cat'::bigint, :'half'::int, 4, 'qa' FROM project_schedules s WHERE s.project_id = :'pid'::bigint;`,
+    { pid: String(w.projectId), cat: String(categoryId), half: String(dayNo * 2 - 1) },
+  );
+  return day(3 + dayNo - 1);
+}
+/**
+ * Copies a catalog finishing material into a project-owned one with a photo key (no catalog material has a photo).
+ * The copy belongs to the run's project and is removed by `cleanup()` (`finishing_materials WHERE project_id`).
+ */
+export function seedPhotoMaterial(w: World, fromMaterialId: number): { id: number; model: string } {
+  const model = `QA06-${w.id}-photo`;
+  const id = Number(
+    psql(
+      `INSERT INTO finishing_materials (category_id, material_id, type_id, producer_id, unit_id, model, sku, purchase_price, photo, active, package_volume, cost_net, project_id, created_by)
+       SELECT category_id, material_id, type_id, producer_id, unit_id, :'model', NULL, purchase_price, :'photo', true, package_volume, cost_net, :'pid'::bigint, 'qa'
+       FROM finishing_materials WHERE id = :'src'::bigint RETURNING id;`,
+      { model, photo: `qa06/${w.id}.png`, pid: String(w.projectId), src: String(fromMaterialId) },
+    ).split('\n')[0],
+  );
+  return { id, model };
 }

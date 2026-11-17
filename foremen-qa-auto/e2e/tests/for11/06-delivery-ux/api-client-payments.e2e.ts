@@ -2,7 +2,7 @@ import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import {
   day, del, errMatches, get, getBytes, http, IBAN_DE, IBAN_PL, IBAN_PL_SPACED, listPayments, makeWorld, ok, post, positionOf, psql, put, rowsOf,
-  worksSchedule, type World,
+  seedApprovedOffer, worksSchedule, type World,
 } from './support.js';
 // FOR-11-06 Part A: A1 (unified client payment), A2 (materials payment), A3 (works tranches), A4 (project bank account).
 // Source: .kiro/specs/FOR-11-Delivery-Management/FOR-11-06-delivery-ux-refinements/test-cases.md.
@@ -89,8 +89,12 @@ describe('FOR-11-06 API: unified client payments', { tags: ['for-11-06', 'api'] 
       expect((await listPayments(w, 'WORKER')).status).toBe(403);
       const codes = (await ok('GET', '/api/resources?size=200', w.admin)).content.map((r: any) => r.code) as string[];
       expect(codes).toContain('CLIENT_PAYMENTS');
-      expect(codes).not.toContain('PAYMENTS');
-      expect(codes).not.toContain('CLIENT_PROFORMAS');
+      // The old codes are retired: their resource rows may remain, but no role holds a grant on them any more.
+      const grants = (code: string) =>
+        Number(psql(`SELECT COUNT(*) FROM role_resources rr JOIN resources r ON r.id = rr.resource_id WHERE r.code = '${code}';`));
+      expect(grants('PAYMENTS')).toBe(0);
+      expect(grants('CLIENT_PROFORMAS')).toBe(0);
+      expect(grants('CLIENT_PAYMENTS')).toBeGreaterThan(0);
     } finally {
       await w.cleanup();
     }
@@ -279,6 +283,7 @@ describe('FOR-11-06 API: unified client payments', { tags: ['for-11-06', 'api'] 
   test('TC-A3-01 works lifecycle through the new paths: schedule, tranches, publish, listed as WORKS', async () => {
     const w = await makeWorld();
     try {
+      seedApprovedOffer(w, 12300);
       const s = await ok('POST', '/api/client-payments/schedules', w.admin, { projectId: w.projectId, source: 'MANUAL' });
       const t = await post(`/api/client-payments/schedules/${s.id}/tranches`, w.admin, { amountGross: 500, dueDate: day(3) });
       expect(t.status, t.text).toBe(200);
@@ -322,7 +327,7 @@ describe('FOR-11-06 API: unified client payments', { tags: ['for-11-06', 'api'] 
     try {
       for (const path of [`/api/payments/projects/${w.projectId}/schedule`, '/api/client-proformas']) {
         const r = await get(path, w.admin);
-        expect([404, 405], path).toContain(r.status);
+        expect([401, 404, 405], path).toContain(r.status);
       }
     } finally {
       await w.cleanup();

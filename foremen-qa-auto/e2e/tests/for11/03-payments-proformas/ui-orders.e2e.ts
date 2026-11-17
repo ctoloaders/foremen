@@ -1,7 +1,7 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import {
-  acceptedPosition, errMatches, feedTxn, getEo, getPf, http, issuedProforma, link, ok, payProforma, positionStatus, txn, withCtx, type Ctx,
+  acceptedPosition, errMatches, feedTxn, getEo, getPf, http, issuedProforma, link, ok, payProforma, positionStatus, pp, txn, withCtx, type Ctx,
 } from './support.js';
 import { moneyRe, uiLogin } from './ui.support.js';
 import { createUser } from '../../support/users.js';
@@ -129,12 +129,14 @@ describe('FOR-11-03 external order screens (UI)', { tags: ['for-11-03', 'ui', 'o
       await expect(list).toContainText('Zamówienie opłacone, uzupełnij dostawę');
       await list.getByText('Zamówienie opłacone, uzupełnij dostawę').tap();
 
-      await expect(browser).toHaveURL(new RegExp(`/deliveries/external-orders\\?order=${e.id}`));
-      await expect(screen.getByTestId(`external-order-row-${e.id}`)).toHaveAttribute('data-highlighted', 'true');
+      // FOR-11-06 (R11.6): the paid-order notification opens the shipment form with the order preselected.
+      await expect(browser).toHaveURL(/\/deliveries\/shipments/);
+      await expect(screen.getByTestId('shipment-form-dialog')).toBeVisible();
+      await expect(screen.getByTestId('shipment-order')).toHaveValue(String(e.id));
     });
   });
 
-  // BUG-3 (FINDINGS.md): the manager's proforma-paid deep link opens the project tab with only a list link, no proforma shown/highlighted
+  // BUG-3 (FINDINGS.md) was fixed by FOR-11-06: the link now opens the unified payment on the "Płatności" tab.
   test('TC-B4-02 (b) the proforma-paid notification of a manager leads to the proforma', async ({ app, screen, browser }) => {
     await withCtx(async (c) => {
       const r = await issuedProforma(c);
@@ -143,9 +145,11 @@ describe('FOR-11-03 external order screens (UI)', { tags: ['for-11-03', 'ui', 'o
       const list = await bell(screen);
       await list.getByText('Proforma opłacona').tap();
 
-      await expect(browser).toHaveURL(new RegExp(`proforma=${r.id}`));
-      // the target must show that proforma (row or card), not only a generic link
-      await expect(screen.getByTestId(`proforma-row-${r.id}`).or(screen.getByTestId('proforma-card')).first()).toBeVisible();
+      // FOR-11-06 (R2.5): the link addresses the client payment (`?payment=`), highlights its row and opens the card.
+      const paymentId = pp(r.id);
+      await expect(browser).toHaveURL(new RegExp(`/clientPayments\\?payment=${paymentId}`));
+      await expect(screen.getByTestId(`client-payment-row-${paymentId}`)).toHaveAttribute('data-highlighted', 'true');
+      await expect(screen.getByTestId('client-payment-drawer')).toBeVisible();
     });
   });
 
@@ -308,8 +312,9 @@ describe('FOR-11-03 external order screens (UI)', { tags: ['for-11-03', 'ui', 'o
       for (const u of [c.users.mgr, c.users.buyer]) {
         await app.clearState();
         await uiLogin(app, screen, browser, u);
+        // FOR-11-06: the section is the unified MATERIALS list.
         await app.open('/deliveries/proformas');
-        await expect(screen.getByTestId('proforma-list')).toBeVisible();
+        await expect(screen.getByTestId('proforma-list-page')).toBeVisible();
         await app.open('/deliveries/external-orders');
         await expect(screen.getByTestId('external-order-list')).toBeVisible();
         await app.open('/deliveries');

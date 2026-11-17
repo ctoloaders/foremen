@@ -169,6 +169,16 @@
         "executionId": "3eddc4ab-915e-479a-a992-82c141f3f72d",
         "chatSessionId": "sess_e1d05418-37a3-4b66-9b1e-7d8a567e6aed",
         "timestamp": 1794854107912
+      },
+      {
+        "executionId": "b0a0c17d-77bd-4ba8-9985-bb59433cdc1e",
+        "chatSessionId": "sess_04d8e4b8-47d4-4f6d-8380-1def1e612afe",
+        "timestamp": 1794868843783
+      },
+      {
+        "executionId": "b0a0c17d-77bd-4ba8-9985-bb59433cdc1e",
+        "chatSessionId": "sess_04d8e4b8-47d4-4f6d-8380-1def1e612afe",
+        "timestamp": 1794869899942
       }
     ],
     "2.4 `ClientPaymentQueryService` (list, summary)": [
@@ -1192,6 +1202,16 @@
         "executionId": "7362f8e0-ccf1-4c2e-8f72-d5eaef3ec47b",
         "chatSessionId": "sess_04d8e4b8-47d4-4f6d-8380-1def1e612afe",
         "timestamp": 1794859341505
+      },
+      {
+        "executionId": "b0a0c17d-77bd-4ba8-9985-bb59433cdc1e",
+        "chatSessionId": "sess_04d8e4b8-47d4-4f6d-8380-1def1e612afe",
+        "timestamp": 1794869900529
+      },
+      {
+        "executionId": "b0a0c17d-77bd-4ba8-9985-bb59433cdc1e",
+        "chatSessionId": "sess_04d8e4b8-47d4-4f6d-8380-1def1e612afe",
+        "timestamp": 1794924000235
       }
     ],
     "16.2 UI e2e scenarios": [

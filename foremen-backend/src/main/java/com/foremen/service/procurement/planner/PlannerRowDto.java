@@ -13,7 +13,8 @@ import com.foremen.service.procurement.proforma.ProformaStatus;
 /**
  * One row of the purchase planner (FOR-11-01 R1.6). {@code money} is {@code null} for every audience
  * except {@code STAFF_FULL} (R4.4, R9.2). The last four fields are the FOR-11-03 additions (R18.4); they are
- * {@code null} for every audience except {@code STAFF_FULL}. Names are resolved to the caller's locale (R1.8).
+ * {@code null} for every audience except {@code STAFF_FULL}. {@code clientUnpaid} (FOR-11-06 R10.4, the
+ * buyer-added position not yet paid by the client) is {@code false} for every other audience. Names are resolved to the caller's locale (R1.8).
  */
 public record PlannerRowDto(
         Long positionId,
@@ -55,7 +56,8 @@ public record PlannerRowDto(
         Long proformaId,
         String proformaNumber,
         ProformaStatus proformaStatus,
-        Integer externalOrderCount) {
+        Integer externalOrderCount,
+        boolean clientUnpaid) {
 
     /** Effective material label: {@code COALESCE(actualMaterial, plannedMaterial)} plus the planned id. */
     public record Material(Long plannedMaterialId, Long actualMaterialId, String model, String sku,

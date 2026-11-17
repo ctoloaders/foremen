@@ -1,7 +1,7 @@
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import { eventually, get, makeWorld, notesOfType, ok, post, psql, put, type World } from './support.js';
-import { openPath, pageText, uiLogin } from './ui-support.js';
+import { boardAllBuyers, openPath, pageText, uiLogin } from './ui-support.js';
 
 // FOR-11-06 Part B (UI): B5 buyer flows (payment link, buyer-added position, unpaid badge, quick purchase).
 // Requirements 9, 10, 11. Source: .kiro/specs/FOR-11-Delivery-Management/FOR-11-06-delivery-ux-refinements/test-cases.md.
@@ -15,7 +15,7 @@ async function orderWithLine(w: World) {
   expect(pos.status, pos.text).toBe(201);
   const positionId = pos.body.id as number;
   const order = await w.draftOrder([[positionId, 5, 60]]);
-  expect(order.status, order.text).toBe(201);
+  expect(order.status, order.text).toBe(200);
   return { positionId, orderId: order.body.id as number };
 }
 
@@ -71,13 +71,17 @@ describe('FOR-11-06 UI: buyer flows', { tags: ['for-11-06', 'ui', 'buyer'] }, ()
       await uiLogin(app, screen, w.users.BUYER!);
       await openPath(app, screen, browser, w.projectId, '/deliveries');
       await screen.getByRole('tab', 'Tablica zakupowca').tap();
+      await boardAllBuyers(screen);
       await screen.getByTestId('board-add-position').tap();
       const dialog = screen.getByTestId('buyer-added-dialog');
       await expect(dialog).toBeVisible();
       // Fields are filled by their accessible labels; the material is the first catalog entry.
       await dialog.getByLabel('Ilość').fill('4');
-      await dialog.getByLabel('Cena zakupu').fill('55');
-      await dialog.getByRole('combobox').first().tap();
+      await dialog.getByLabel('Planowana cena zakupu').fill('55');
+      // The dialog does not default to the working project: choose the run's project, then the first material.
+      await dialog.getByRole('combobox', 'Projekt').tap();
+      await screen.getByRole('option', `FOR1106-${w.id}`).tap();
+      await dialog.getByRole('combobox', 'Materiał').tap();
       await screen.getByRole('option').first().tap();
       await screen.getByTestId('buyer-added-submit').tap();
       await expect(screen.getByTestId('buyer-added-error')).toBeHidden();
@@ -112,6 +116,7 @@ describe('FOR-11-06 UI: buyer flows', { tags: ['for-11-06', 'ui', 'buyer'] }, ()
       await uiLogin(app, screen, w.users.BUYER!);
       await openPath(app, screen, browser, w.projectId, '/deliveries');
       await screen.getByRole('tab', 'Tablica zakupowca').tap();
+      await boardAllBuyers(screen);
       await screen.getByTestId('hide-delivered-switch').check();
       const card = screen.getByTestId(`board-card-${positionId}`);
       await expect(card).toBeVisible();
@@ -131,14 +136,22 @@ describe('FOR-11-06 UI: buyer flows', { tags: ['for-11-06', 'ui', 'buyer'] }, ()
       await uiLogin(app, screen, w.users.BUYER!);
       await openPath(app, screen, browser, w.projectId, '/deliveries');
       await screen.getByRole('tab', 'Tablica zakupowca').tap();
+      await boardAllBuyers(screen);
       for (const id of ids) await screen.getByTestId(`select-card-${id}`).check();
       // A card of another project cannot join the selection.
       const foreign = screen.getByTestId(`select-card-${other}`);
       if (await foreign.isVisible()) await expect(foreign).toBeDisabled();
-      await screen.getByRole('button', 'Utwórz zakup').tap();
+      await screen.getByTestId('bulk-action-create-purchase').tap();
       const dialog = screen.getByTestId('quick-purchase-dialog');
       await expect(dialog).toBeVisible();
       await expect(screen.getByTestId('quick-purchase-items')).toBeVisible();
+      // Catalog materials have no seller: the dialog asks for one for the whole selection.
+      const sellerBox = screen.getByTestId('quick-purchase-seller');
+      if (await sellerBox.isVisible()) {
+        await sellerBox.getByRole('combobox').tap();
+        await screen.getByRole('textbox', 'Szukaj po nazwie lub NIP').fill(`QA06-${w.id}-SELLER`);
+        await screen.getByRole('option').first().tap();
+      }
       await screen.getByTestId('quick-purchase-submit').tap();
       await expect.poll(() => Number(psql(`SELECT COUNT(*) FROM external_orders WHERE project_id = ${w.projectId};`))).toBeGreaterThan(before);
       const r = await get(`/api/external-orders?projectId=${w.projectId}&size=50`, w.t('BUYER'));
@@ -160,6 +173,10 @@ describe('FOR-11-06 UI: buyer flows', { tags: ['for-11-06', 'ui', 'buyer'] }, ()
       await uiLogin(app, screen, w.users.BUYER!);
       await openPath(app, screen, browser, w.projectId, `/deliveries/shipments?new=1&order=${orderId}`);
       await expect(screen.getByRole('button', 'Utwórz przesyłkę')).toBeVisible();
+      // The project is filled from the order once it loads; carrier and tracking number are still required.
+      await expect(screen.getByTestId('shipment-positions').getByRole('checkbox').first()).toBeVisible();
+      await screen.getByTestId('shipment-carrier').selectOption({ value: 'DPD' });
+      await screen.getByTestId('shipment-tracking-number').fill(`QA06${w.id}`);
       await screen.getByRole('button', 'Utwórz przesyłkę').tap();
       await expect.poll(() => Number(psql(`SELECT COUNT(*) FROM shipments WHERE project_id = ${w.projectId};`))).toBe(1);
     } finally {

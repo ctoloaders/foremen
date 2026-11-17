@@ -17,6 +17,15 @@ function placeholderPosition(w: World, key: string): number {
     ).split('\n')[0],
   );
 }
+/** True when the SQL statement is rejected (DB guard). */
+const fails = (fn: () => unknown): boolean => {
+  try {
+    fn();
+    return false;
+  } catch {
+    return true;
+  }
+};
 const sync = (w: World, tag: 'MANAGER' | 'ADMIN' | 'BUYER' | 'FOREMAN' | 'CLIENT', projectId = w.projectId) =>
   post(`/api/purchase-positions/sync-from-estimate?projectId=${projectId}`, w.t(tag), undefined);
 const staff = async (w: World) => (await ok('GET', `/api/position-approvals/staff/projects/${w.projectId}`, w.t('MANAGER'))) as any[];
@@ -65,7 +74,7 @@ describe('FOR-11-06 API: estimate sync, matrix, approval table', { tags: ['for-1
     const w = await makeWorld();
     try {
       psql(`UPDATE projects SET status = 'DRAFT' WHERE id = ${w.projectId};`);
-      expect(errMatches(await sync(w, 'MANAGER'), 409, 'error.estimateSync.project.notActive')).toBeNull();
+      expect(errMatches(await sync(w, 'MANAGER'), 409, 'error.purchasePosition.project.notActive')).toBeNull();
     } finally {
       await w.cleanup();
     }
@@ -79,9 +88,9 @@ describe('FOR-11-06 API: estimate sync, matrix, approval table', { tags: ['for-1
            VALUES (:'pid'::bigint, 'FINISHING', 'AGREED', :'st', ${mat}, 1, 1, :'key', 'qa');`,
           { pid: String(w.projectId), st: status, key },
         );
-      expect(() => insert('PROPOSED', `qa06-${w.id}-c`, 'NULL')).toThrow();
+      expect(fails(() => insert('PROPOSED', `qa06-${w.id}-c`, 'NULL'))).toBe(true);
       placeholderPosition(w, `qa06-${w.id}-d`);
-      expect(() => insert('PLANNED', `qa06-${w.id}-d`, 'NULL')).toThrow();
+      expect(fails(() => insert('PLANNED', `qa06-${w.id}-d`, 'NULL'))).toBe(true);
     } finally {
       await w.cleanup();
     }
@@ -157,9 +166,13 @@ describe('FOR-11-06 API: estimate sync, matrix, approval table', { tags: ['for-1
       expect(Number(r.body.saleNet)).toBeCloseTo(250, 2);
       expect(Number(r.body.saleGross)).toBeCloseTo(270, 2);
       const planned = await w.plannedPosition({ sale: null });
-      const mixed = await post('/api/purchase-positions/selection-total', w.t('MANAGER'), { positionIds: [a, planned] });
+      const missing = 999999999;
+      const mixed = await post('/api/purchase-positions/selection-total', w.t('MANAGER'), { positionIds: [a, planned, missing] });
       expect(mixed.status, mixed.text).toBe(200);
-      expect(mixed.body.skipped.map((s: any) => s.positionId)).toContain(planned);
+      // A position without a sale price is counted as unpriced; only unknown ids are skipped (NOT_FOUND).
+      expect(mixed.body.count).toBe(2);
+      expect(mixed.body.unpriced).toBe(1);
+      expect(mixed.body.skipped).toEqual([{ positionId: missing, reason: 'NOT_FOUND' }]);
     } finally {
       await w.cleanup();
     }
@@ -173,12 +186,12 @@ describe('FOR-11-06 API: estimate sync, matrix, approval table', { tags: ['for-1
       const items = [];
       for (const id of ids) {
         const round = (await ok('GET', `/api/position-approvals/staff/positions/${id}/rounds`, w.admin))[0];
-        items.push({ positionId: id, optionId: round.options[0].optionId, expectedUnitSalePrice: round.options[0].unitSalePrice });
+        items.push({ positionId: id, optionId: round.options[0].optionId, expectedUnitSalePrice: round.options[0].unitSalePrice, comment: w.tag("rcpt") });
       }
       items[2]!.expectedUnitSalePrice = Number(items[2]!.expectedUnitSalePrice) + 1; // stale price
       const r = await post('/api/position-approvals/staff/rounds/decide-on-behalf-bulk', w.t('MANAGER'), { items });
       expect(r.status, r.text).toBe(200);
-      expect(r.body.succeeded).toEqual([ids[0], ids[1]]);
+      expect(r.body.succeeded, r.text).toEqual([ids[0], ids[1]]);
       expect(r.body.failed).toHaveLength(1);
       expect(r.body.failed[0].positionId).toBe(ids[2]);
       expect(r.body.failed[0].errorKey).toBeTruthy();

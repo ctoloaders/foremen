@@ -179,6 +179,24 @@ describe('FOR-11-06 API: buyer flows', { tags: ['for-11-06', 'api'] }, () => {
       await w.cleanup();
     }
   });
+  test('TC-A9-10 the planner and the board rows of a buyer-added position carry clientUnpaid (feeds the "unpaid" badge)', async () => {
+    const w = await makeWorld();
+    try {
+      const { positionId } = await orderWithLine(w);
+      const normal = w.paidPosition(2);
+      const rows = await get(`/api/purchase-positions/planner?projectId=${w.projectId}&size=100`, w.t('BUYER'));
+      expect(rows.status, rows.text).toBe(200);
+      const list = (rows.body.content ?? rows.body) as any[];
+      expect(list.find((r) => r.positionId === positionId)?.clientUnpaid).toBe(true);
+      expect(list.find((r) => r.positionId === normal)?.clientUnpaid).toBe(false);
+      const board = await get(`/api/purchase-positions/board?projectId=${w.projectId}&buyer=ALL`, w.t('BUYER'));
+      expect(board.status, board.text).toBe(200);
+      const cards = (board.body.columns as any[]).flatMap((c) => c.cards as any[]);
+      expect(cards.find((c) => c.positionId === positionId)?.clientUnpaid).toBe(true);
+    } finally {
+      await w.cleanup();
+    }
+  });
   test('TC-A9-07 a proforma may include a WITH_BUYER..RECEIVED unpaid position; paying it clears the flag, cancelling does not', async () => {
     const w = await makeWorld();
     try {

@@ -163,7 +163,7 @@ public class ClientPaymentController {
         model.setPositionIds(request.positionIds());
         model.setDueDate(request.dueDate());
         model.setNote(request.note());
-        return ResponseEntity.ok(proformaService.create(model));
+        return ResponseEntity.ok(service.withPaymentId(proformaService.create(model)));
     }
 
     /** MATERIALS: edits a draft proforma; WORKS: edits the tranche amount and due date of a DRAFT schedule. */
@@ -181,7 +181,7 @@ public class ClientPaymentController {
         model.setPositionIds(request.positionIds());
         model.setDueDate(request.dueDate());
         model.setNote(request.note());
-        return ResponseEntity.ok(proformaService.update(proformaId, model));
+        return ResponseEntity.ok(service.withPaymentId(proformaService.update(proformaId, model)));
     }
 
     /** MATERIALS: deletes a draft proforma; WORKS: removes the tranche from a DRAFT schedule. */
@@ -204,7 +204,8 @@ public class ClientPaymentController {
     public ResponseEntity<ClientProformaServiceExtendedModel> issue(
             @PathVariable Long id, @Valid @RequestBody(required = false) IssueRequest request) {
         Long proformaId = service.materialsProformaIdForWrite(id);
-        return ResponseEntity.ok(issueService.issue(proformaId, request == null ? null : request.language()));
+        return ResponseEntity.ok(service.withPaymentId(
+                issueService.issue(proformaId, request == null ? null : request.language())));
     }
 
     @PostMapping("/{id}/cancel")
@@ -213,7 +214,8 @@ public class ClientPaymentController {
     public ResponseEntity<ClientProformaServiceExtendedModel> cancel(
             @PathVariable Long id, @Valid @RequestBody(required = false) CancelRequest request) {
         Long proformaId = service.materialsProformaIdForWrite(id);
-        return ResponseEntity.ok(cancelService.cancel(proformaId, request == null ? null : request.reason()));
+        return ResponseEntity.ok(service.withPaymentId(
+                cancelService.cancel(proformaId, request == null ? null : request.reason())));
     }
 
     // ------------------------------------------------------------------ works: schedule lifecycle

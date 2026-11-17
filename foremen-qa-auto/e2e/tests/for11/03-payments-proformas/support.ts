@@ -58,6 +58,10 @@ export function psql(sql: string, vars: Record<string, string> = {}): string {
  * FOR-11-06: the unified client-payment id of a proforma (the old /api/client-proformas API addressed
  * proformas by their own id, /api/client-payments addresses the payment row).
  */
+/** The proforma id of a materials client payment (inverse of pp()). */
+export function pfOf(paymentId: number): number {
+  return Number(psql('SELECT id FROM client_proformas WHERE client_payment_id = :id;', { id: String(paymentId) }));
+}
 export function pp(proformaId: number): string {
   return psql('SELECT client_payment_id FROM client_proformas WHERE id = :id;', { id: String(proformaId) });
 }
@@ -314,7 +318,11 @@ export async function acceptedPosition(
 
 /** Creates a draft proforma (MANAGER) for the given positions. */
 export async function draftProforma(c: Ctx, positionIds: number[], extra: Record<string, unknown> = {}): Promise<any> {
-  return ok('POST', '/api/client-payments/materials', c.tok.mgr, { projectId: c.projectId, positionIds, dueDate: null, note: `qa03-${c.rid}`, ...extra });
+  // The unified endpoint answers the proforma-shaped DTO whose `id` is the client-payment id. This slice
+  // addresses proformas by the proforma id (see pp()), so `id` is swapped for the proforma id; `paymentId` keeps the other.
+  const v = await ok('POST', '/api/client-payments/materials', c.tok.mgr, { projectId: c.projectId, positionIds, dueDate: null, note: `qa03-${c.rid}`, ...extra });
+  const proformaId = Number(psql('SELECT id FROM client_proformas WHERE client_payment_id = :id;', { id: String(v.id) }));
+  return { ...v, id: proformaId, paymentId: v.id };
 }
 
 /**
@@ -325,7 +333,7 @@ export async function draftProforma(c: Ctx, positionIds: number[], extra: Record
  */
 export async function issueProforma(c: Ctx, id: number): Promise<{ mode: 'api' | 'sql'; body: any }> {
   const r = await http('POST', `/api/client-payments/${pp(id)}/issue`, c.tok.mgr, { language: 'pl' });
-  if (r.status === 200) return { mode: 'api', body: r.body };
+  if (r.status === 200) return { mode: 'api', body: await getPf(c, id) };
   if (r.status !== 502) throw new Error(`issue ${id} -> ${r.status}: ${r.text.slice(0, 300)}`);
   const n = ++c.seq;
   const num = `PF/${new Date().getFullYear()}/9${String(parseInt(c.rid.slice(0, 5), 36) % 10000).padStart(4, '0')}${String(n).padStart(1, '0')}`;
@@ -337,7 +345,7 @@ export async function issueProforma(c: Ctx, id: number): Promise<{ mode: 'api' |
      UPDATE purchase_positions SET status='IN_PROFORMA' WHERE id IN (SELECT position_id FROM client_proforma_lines WHERE proforma_id=:id) AND status='ACCEPTED';`,
     { num, id: String(id) },
   );
-  return { mode: 'sql', body: (await http('GET', `/api/client-payments/${pp(id)}`, c.tok.mgr)).body };
+  return { mode: 'sql', body: await getPf(c, id) };
 }
 
 /** Accepted positions -> draft -> issued proforma. */
@@ -359,8 +367,8 @@ export async function payProforma(c: Ctx, id: number, gross: number): Promise<nu
 
 /**
  * Staff read of a proforma through the unified API, flattened to the former proforma shape
- * (status = stored status, totalGross = amountGross). The ledger `payments` list is not part of the
- * unified view.
+ * (status = stored status, totalGross = amountGross). `payments` (ledger payments, R23.3) comes from
+ * `proforma.payments` of the unified staff view.
  */
 export async function getPf(c: Ctx, id: number, tok = c.tok.mgr): Promise<any> {
   const v = await ok('GET', `/api/client-payments/${pp(id)}`, tok);
