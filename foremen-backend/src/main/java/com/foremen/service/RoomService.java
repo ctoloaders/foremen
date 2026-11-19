@@ -412,8 +412,10 @@ public class RoomService
      * value is kept and the source stays {@code MANUAL} (a per-field override); otherwise the
      * geometry-calculated value is set and the source stamped {@code CALCULATED}. A supplied manual
      * override is range-checked ({@code [0, 9999999999.99]}) like any manual metric. The
-     * non-overridable geometry-derived fields (door/window counts, wall/finish gaps) always take the
-     * computed value.
+     * door/window counts always take the computed value. FOR-05-02c: the gaps and the four opening
+     * sizes follow the same rule (manual root value wins, stamped {@code MANUAL}; otherwise the
+     * per-wall gap sum / the single opening's size or {@code null}, stamped {@code CALCULATED}),
+     * and {@code wallArea} is computed from the effective gaps.
      */
     private void applyCalculatedMetrics(RoomServiceExtendedModel model, RoomGeometry geometry) {
         RoomMetrics metrics = roomCalculationService.calculate(geometry, model.getCeilingHeight());
@@ -423,13 +425,6 @@ public class RoomService
         } else {
             model.setFloorArea(metrics.floorArea());
             model.setFloorAreaSource(MeasureSource.CALCULATED);
-        }
-
-        if (isManualOverride("wallArea", model.getWallArea(), model.getWallAreaSource())) {
-            model.setWallAreaSource(MeasureSource.MANUAL);
-        } else {
-            model.setWallArea(metrics.wallArea());
-            model.setWallAreaSource(MeasureSource.CALCULATED);
         }
 
         if (isManualOverride("perimeter", model.getPerimeter(), model.getPerimeterSource())) {
@@ -455,8 +450,62 @@ public class RoomService
 
         model.setDoorCount(metrics.doorCount());
         model.setWindowCount(metrics.windowCount());
-        model.setWallGap(metrics.wallGap());
-        model.setFinishGap(metrics.finishGap());
+
+        // FOR-05-02c: a MANUAL root gap wins over the per-wall sum; otherwise the sum, stamped CALCULATED.
+        if (isManualOverride("wallGap", model.getWallGap(), model.getWallGapSource())) {
+            model.setWallGapSource(MeasureSource.MANUAL);
+        } else {
+            model.setWallGap(metrics.wallGap());
+            model.setWallGapSource(MeasureSource.CALCULATED);
+        }
+        if (isManualOverride("finishGap", model.getFinishGap(), model.getFinishGapSource())) {
+            model.setFinishGapSource(MeasureSource.MANUAL);
+        } else {
+            model.setFinishGap(metrics.finishGap());
+            model.setFinishGapSource(MeasureSource.CALCULATED);
+        }
+
+        // wallArea is resolved after perimeter, areas and gaps so it uses the effective values.
+        if (isManualOverride("wallArea", model.getWallArea(), model.getWallAreaSource())) {
+            model.setWallAreaSource(MeasureSource.MANUAL);
+        } else {
+            model.setWallArea(roomCalculationService.wallArea(
+                    model.getPerimeter(),
+                    model.getCeilingHeight(),
+                    model.getDoorArea(),
+                    model.getWindowArea(),
+                    model.getFinishGap(),
+                    model.getWallGap()));
+            model.setWallAreaSource(MeasureSource.CALCULATED);
+        }
+
+        // Opening sizes: manual wins; otherwise the single opening's size, else null (dash).
+        var door = roomCalculationService.openingSize(geometry, OpeningType.DOOR);
+        var window = roomCalculationService.openingSize(geometry, OpeningType.WINDOW);
+        if (isManualOverride("doorHeight", model.getDoorHeight(), model.getDoorHeightSource())) {
+            model.setDoorHeightSource(MeasureSource.MANUAL);
+        } else {
+            model.setDoorHeight(door.map(RoomCalculationService.OpeningSize::height).orElse(null));
+            model.setDoorHeightSource(MeasureSource.CALCULATED);
+        }
+        if (isManualOverride("doorWidth", model.getDoorWidth(), model.getDoorWidthSource())) {
+            model.setDoorWidthSource(MeasureSource.MANUAL);
+        } else {
+            model.setDoorWidth(door.map(RoomCalculationService.OpeningSize::width).orElse(null));
+            model.setDoorWidthSource(MeasureSource.CALCULATED);
+        }
+        if (isManualOverride("windowHeight", model.getWindowHeight(), model.getWindowHeightSource())) {
+            model.setWindowHeightSource(MeasureSource.MANUAL);
+        } else {
+            model.setWindowHeight(window.map(RoomCalculationService.OpeningSize::height).orElse(null));
+            model.setWindowHeightSource(MeasureSource.CALCULATED);
+        }
+        if (isManualOverride("windowWidth", model.getWindowWidth(), model.getWindowWidthSource())) {
+            model.setWindowWidthSource(MeasureSource.MANUAL);
+        } else {
+            model.setWindowWidth(window.map(RoomCalculationService.OpeningSize::width).orElse(null));
+            model.setWindowWidthSource(MeasureSource.CALCULATED);
+        }
     }
 
     /**
@@ -487,6 +536,12 @@ public class RoomService
         model.setDoorAreaSource(stampManual("doorArea", model.getDoorArea(), model.getDoorAreaSource()));
         model.setWindowAreaSource(stampManual("windowArea", model.getWindowArea(), model.getWindowAreaSource()));
         // FOR-05-02 Round 11 #2: the missing wall / missing finish lengths are kept (finishGap feeds wallArea).
+        validateSource("wallGap", model.getWallGapSource());
+        validateSource("finishGap", model.getFinishGapSource());
+        validateSource("doorHeight", model.getDoorHeightSource());
+        validateSource("doorWidth", model.getDoorWidthSource());
+        validateSource("windowHeight", model.getWindowHeightSource());
+        validateSource("windowWidth", model.getWindowWidthSource());
         if (model.getWallGap() != null) {
             validateMetricRange("wallGap", model.getWallGap());
         }

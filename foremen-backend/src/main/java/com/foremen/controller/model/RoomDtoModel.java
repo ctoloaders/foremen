@@ -1,5 +1,6 @@
 package com.foremen.controller.model;
 
+import com.foremen.dao.model.MeasureSource;
 import com.foremen.dao.model.RoomGeometry;
 
 import java.math.BigDecimal;
@@ -44,5 +45,12 @@ public record RoomDtoModel(
         // FOR-05-02 (R10.4): number of attached media files (badge); no binary data.
         Integer mediaCount,
         // FOR-05-02 Round 11 #3: formula + resolved variable values of each CALCULATED metric, by field.
-        java.util.Map<String, MetricExplanationDto> metricExplanations
+        java.util.Map<String, MetricExplanationDto> metricExplanations,
+        // FOR-05-02c: per-field MANUAL/CALCULATED flags of the gaps and opening sizes (nullable).
+        MeasureSource wallGapSource,
+        MeasureSource finishGapSource,
+        MeasureSource doorHeightSource,
+        MeasureSource doorWidthSource,
+        MeasureSource windowHeightSource,
+        MeasureSource windowWidthSource
 ) {}

@@ -71,7 +71,7 @@ class RoomGeometryAuthoritativePropertyTest {
 
         RoomGeometry geometry = new RoomGeometry();
         geometry.setVertices(vertices);
-        geometry.setWalls(walls);
+        geometry.setWalls(fitWalls(walls, vertices.size()));
 
         RoomServiceExtendedModel model = new RoomServiceExtendedModel();
         model.setProjectId(1L);
@@ -79,17 +79,19 @@ class RoomGeometryAuthoritativePropertyTest {
         model.setGeometry(geometry);
         model.setCeilingHeight(ceilingHeight);
 
-        // Supply arbitrary conflicting manual values and MANUAL source flags for all five metrics.
+        // Supply arbitrary conflicting stale values for all five metrics. Since FOR-05-02 Req 5.2 a
+        // value sent with a MANUAL source is a per-field override (covered by
+        // RoomPerFieldOverridePropertyTest), so the stale values carry a CALCULATED source here.
         model.setFloorArea(suppliedManual[0]);
-        model.setFloorAreaSource(MeasureSource.MANUAL);
+        model.setFloorAreaSource(MeasureSource.CALCULATED);
         model.setPerimeter(suppliedManual[1]);
-        model.setPerimeterSource(MeasureSource.MANUAL);
+        model.setPerimeterSource(MeasureSource.CALCULATED);
         model.setWallArea(suppliedManual[2]);
-        model.setWallAreaSource(MeasureSource.MANUAL);
+        model.setWallAreaSource(MeasureSource.CALCULATED);
         model.setDoorArea(suppliedManual[3]);
-        model.setDoorAreaSource(MeasureSource.MANUAL);
+        model.setDoorAreaSource(MeasureSource.CALCULATED);
         model.setWindowArea(suppliedManual[4]);
-        model.setWindowAreaSource(MeasureSource.MANUAL);
+        model.setWindowAreaSource(MeasureSource.CALCULATED);
 
         // Independent reference: the same engine the service delegates to.
         RoomMetrics expected = calculationService.calculate(geometry, ceilingHeight);
@@ -107,6 +109,18 @@ class RoomGeometryAuthoritativePropertyTest {
         assertThat(model.getDoorAreaSource()).isEqualTo(MeasureSource.CALCULATED);
         assertThat(model.getWindowArea()).isEqualByComparingTo(expected.windowArea());
         assertThat(model.getWindowAreaSource()).isEqualTo(MeasureSource.CALCULATED);
+    }
+
+    /**
+     * RoomService.validateGeometry requires wall count == vertex count (or no walls). The generator
+     * yields 0..5 walls, so trim or pad with empty walls to the vertex count.
+     */
+    private static List<RoomGeometry.Wall> fitWalls(List<RoomGeometry.Wall> walls, int vertexCount) {
+        List<RoomGeometry.Wall> fitted = new ArrayList<>(walls.subList(0, Math.min(walls.size(), vertexCount)));
+        while (fitted.size() < vertexCount) {
+            fitted.add(new RoomGeometry.Wall());
+        }
+        return fitted;
     }
 
     // --- Fixture ---
@@ -145,7 +159,8 @@ class RoomGeometryAuthoritativePropertyTest {
         Arbitrary<Point> points = Combinators.combine(coordinate, coordinate).as(Point::new);
         return points.list().uniqueElements(p -> p.x + "," + p.y).ofMinSize(3).ofMaxSize(10)
                 .map(this::toSimplePolygon)
-                .filter(polygon -> polygon.size() >= 3);
+                // Only polygons RoomService.validateGeometry accepts (no collinear/degenerate ones).
+                .filter(com.foremen.service.geometry.PolygonChecks::isValidSimplePolygon);
     }
 
     /** Orders points by polar angle around the centroid to form a simple polygon. */

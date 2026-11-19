@@ -105,7 +105,8 @@ public abstract class RoomServiceMapper
                 target.getDoorCount(), target.getDoorHeight(), target.getDoorWidth(),
                 target.getWindowCount(), target.getWindowHeight(), target.getWindowWidth(),
                 target.getFinishGap(), target.getWallGap(), target.getPerimeter(), target.getDoorArea(), target.getWindowArea(),
-                target.getWallAreaSource(), target.getDoorAreaSource(), target.getWindowAreaSource())));
+                target.getWallAreaSource(), target.getDoorAreaSource(), target.getWindowAreaSource(),
+                target.getPerimeterSource(), target.getDimensionFormulas())));
     }
 
     /** Same as {@link #explainMetrics(RoomServiceModel)} for the extended (single-room) read model. */
@@ -116,7 +117,8 @@ public abstract class RoomServiceMapper
                 target.getDoorCount(), target.getDoorHeight(), target.getDoorWidth(),
                 target.getWindowCount(), target.getWindowHeight(), target.getWindowWidth(),
                 target.getFinishGap(), target.getWallGap(), target.getPerimeter(), target.getDoorArea(), target.getWindowArea(),
-                target.getWallAreaSource(), target.getDoorAreaSource(), target.getWindowAreaSource())));
+                target.getWallAreaSource(), target.getDoorAreaSource(), target.getWindowAreaSource(),
+                target.getPerimeterSource(), target.getDimensionFormulas())));
     }
 
     private static boolean isRussianLocale() {

@@ -1,5 +1,6 @@
 package com.foremen.controller.model;
 
+import com.foremen.dao.model.MeasureSource;
 import com.foremen.dao.model.RoomGeometry;
 import jakarta.validation.constraints.NotNull;
 
@@ -49,5 +50,27 @@ public record RoomCreateRequest(
         // created room, and the import job that produced the room (derives the read-only aiImported
         // marker after verification). Both are create-only and soft-failing.
         java.util.List<com.foremen.service.roomsimport.model.ImportMediaRef> importMedia,
-        Long importJobId
-) {}
+        Long importJobId,
+        // FOR-05-02c: per-field MANUAL/CALCULATED flags of the gaps and opening sizes (nullable).
+        MeasureSource wallGapSource,
+        MeasureSource finishGapSource,
+        MeasureSource doorHeightSource,
+        MeasureSource doorWidthSource,
+        MeasureSource windowHeightSource,
+        MeasureSource windowWidthSource
+) {
+    /** Pre-FOR-05-02c constructor: no gap/size sources (clients that send none behave as before). */
+    public RoomCreateRequest(
+            Long projectId, Long roomTypeId, String label, BigDecimal ceilingHeight, Integer internalCorners,
+            RoomGeometry geometry, BigDecimal floorArea, BigDecimal wallArea, BigDecimal perimeter,
+            BigDecimal doorArea, BigDecimal windowArea, Integer doorCount, Integer windowCount,
+            BigDecimal doorHeight, BigDecimal doorWidth, BigDecimal windowHeight, BigDecimal windowWidth,
+            BigDecimal narrowPlace, BigDecimal wallGap, BigDecimal finishGap,
+            java.util.Map<String, String> dimensionFormulas,
+            java.util.List<com.foremen.service.roomsimport.model.ImportMediaRef> importMedia, Long importJobId) {
+        this(projectId, roomTypeId, label, ceilingHeight, internalCorners, geometry, floorArea, wallArea,
+                perimeter, doorArea, windowArea, doorCount, windowCount, doorHeight, doorWidth, windowHeight,
+                windowWidth, narrowPlace, wallGap, finishGap, dimensionFormulas, importMedia, importJobId,
+                null, null, null, null, null, null);
+    }
+}

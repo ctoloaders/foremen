@@ -39,7 +39,8 @@ public final class RoomMetricExplainer {
             BigDecimal finishGap,
             BigDecimal wallGap,
             BigDecimal perimeter, BigDecimal doorArea, BigDecimal windowArea,
-            MeasureSource wallAreaSource, MeasureSource doorAreaSource, MeasureSource windowAreaSource) {
+            MeasureSource wallAreaSource, MeasureSource doorAreaSource, MeasureSource windowAreaSource,
+            MeasureSource perimeterSource, Map<String, String> dimensionFormulas) {
     }
 
     /**
@@ -56,6 +57,12 @@ public final class RoomMetricExplainer {
             out.put("windowArea", openingArea(in, OpeningType.WINDOW, "windowCount", "windowHeight", "windowWidth",
                     in.windowCount(), in.windowHeight(), in.windowWidth()));
         }
+        if (in.perimeterSource() == MeasureSource.CALCULATED) {
+            MetricExplanation perimeter = perimeter(in);
+            if (perimeter != null) {
+                out.put("perimeter", perimeter);
+            }
+        }
         if (in.wallAreaSource() == MeasureSource.CALCULATED) {
             Map<String, BigDecimal> vars = new LinkedHashMap<>();
             vars.put("perimeter", orZero(in.perimeter()));
@@ -67,6 +74,38 @@ public final class RoomMetricExplainer {
             out.put("wallArea", new MetricExplanation(WALL_AREA_FORMULA, vars));
         }
         return out.isEmpty() ? null : out;
+    }
+
+    /**
+     * FOR-05-02c: perimeter as {@code wall1 + ... + wallN}; wall {@code i} runs from vertex {@code i} to
+     * vertex {@code (i+1) mod n} and its variable is the length rounded to 2 decimals. A wall length
+     * formula ({@code dimensionFormulas["geometry.walls[i].length"]}, without the leading {@code =})
+     * replaces {@code wall<i>} as term and variable key. {@code null} for fewer than 2 vertices.
+     */
+    private static MetricExplanation perimeter(Input in) {
+        List<RoomGeometry.Vertex> vertices = in.geometry() == null ? null : in.geometry().getVertices();
+        int n = vertices == null ? 0 : vertices.size();
+        if (n < 2) {
+            return null;
+        }
+        StringJoiner terms = new StringJoiner(" + ");
+        Map<String, BigDecimal> vars = new LinkedHashMap<>();
+        for (int i = 0; i < n; i++) {
+            RoomGeometry.Vertex a = vertices.get(i);
+            RoomGeometry.Vertex b = vertices.get((i + 1) % n);
+            if (a == null || b == null) {
+                continue;
+            }
+            BigDecimal length = BigDecimal.valueOf(Math.hypot(b.getX() - a.getX(), b.getY() - a.getY()))
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+            String raw = in.dimensionFormulas() == null ? null
+                    : in.dimensionFormulas().get("geometry.walls[" + i + "].length");
+            String text = raw == null ? "" : raw.trim().replaceFirst("^=\\s*", "");
+            String name = text.isEmpty() ? "wall" + (i + 1) : text;
+            terms.add(name);
+            vars.put(name, length);
+        }
+        return new MetricExplanation(terms.toString(), vars);
     }
 
     private static MetricExplanation openingArea(Input in, OpeningType type, String countVar, String heightVar,

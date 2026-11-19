@@ -83,7 +83,7 @@ class RoomPerFieldOverridePropertyTest {
 
         RoomGeometry geometry = new RoomGeometry();
         geometry.setVertices(vertices);
-        geometry.setWalls(walls);
+        geometry.setWalls(fitWalls(walls, vertices.size()));
 
         RoomServiceExtendedModel model = new RoomServiceExtendedModel();
         model.setProjectId(1L);
@@ -106,7 +106,16 @@ class RoomPerFieldOverridePropertyTest {
 
         assertMetric(override[FLOOR], overrideValue[FLOOR], expected.floorArea(),
                 model.getFloorArea(), model.getFloorAreaSource());
-        assertMetric(override[WALL], overrideValue[WALL], expected.wallArea(),
+        // A calculated wallArea uses the effective (manual or calculated) perimeter, doorArea and
+        // windowArea (FOR-05-02 Round 10 rule; FOR-05-02c design, fix step 2).
+        BigDecimal expectedWallArea = calculationService.wallArea(
+                override[PERIMETER] ? overrideValue[PERIMETER] : expected.perimeter(),
+                ceilingHeight,
+                override[DOOR] ? overrideValue[DOOR] : expected.doorArea(),
+                override[WINDOW] ? overrideValue[WINDOW] : expected.windowArea(),
+                expected.finishGap(),
+                expected.wallGap());
+        assertMetric(override[WALL], overrideValue[WALL], expectedWallArea,
                 model.getWallArea(), model.getWallAreaSource());
         assertMetric(override[PERIMETER], overrideValue[PERIMETER], expected.perimeter(),
                 model.getPerimeter(), model.getPerimeterSource());
@@ -149,6 +158,18 @@ class RoomPerFieldOverridePropertyTest {
         }
     }
 
+    /**
+     * RoomService.validateGeometry requires wall count == vertex count (or no walls). The generator
+     * yields 0..5 walls, so trim or pad with empty walls to the vertex count.
+     */
+    private static List<RoomGeometry.Wall> fitWalls(List<RoomGeometry.Wall> walls, int vertexCount) {
+        List<RoomGeometry.Wall> fitted = new ArrayList<>(walls.subList(0, Math.min(walls.size(), vertexCount)));
+        while (fitted.size() < vertexCount) {
+            fitted.add(new RoomGeometry.Wall());
+        }
+        return fitted;
+    }
+
     // --- Fixture ---
 
     /**
@@ -185,7 +206,8 @@ class RoomPerFieldOverridePropertyTest {
         Arbitrary<Point> points = Combinators.combine(coordinate, coordinate).as(Point::new);
         return points.list().uniqueElements(p -> p.x + "," + p.y).ofMinSize(3).ofMaxSize(10)
                 .map(this::toSimplePolygon)
-                .filter(polygon -> polygon.size() >= 3);
+                // Only polygons RoomService.validateGeometry accepts (no collinear/degenerate ones).
+                .filter(com.foremen.service.geometry.PolygonChecks::isValidSimplePolygon);
     }
 
     /** Orders points by polar angle around the centroid to form a simple polygon. */

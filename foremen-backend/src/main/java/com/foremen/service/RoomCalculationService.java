@@ -66,7 +66,7 @@ public class RoomCalculationService {
         BigDecimal finishGap = round(BigDecimal.valueOf(totals.finishGapRaw));
 
         BigDecimal height = ceilingHeight == null ? BigDecimal.ZERO : ceilingHeight;
-        BigDecimal wallArea = round(wallArea(perimeter, height, doorArea, windowArea, finishGap, wallGap));
+        BigDecimal wallArea = round(wallAreaRaw(perimeter, height, doorArea, windowArea, finishGap, wallGap));
 
         return new RoomMetrics(
                 floorArea,
@@ -176,11 +176,65 @@ public class RoomCalculationService {
      * FOR-05-02 Round 11 #2: the missing finish and missing wall lengths are taken off the perimeter), computed on the
      * rounded components before the final rounding.
      */
-    private BigDecimal wallArea(BigDecimal perimeter, BigDecimal height, BigDecimal doorArea,
+    private BigDecimal wallAreaRaw(BigDecimal perimeter, BigDecimal height, BigDecimal doorArea,
                                 BigDecimal windowArea, BigDecimal finishGap, BigDecimal wallGap) {
         BigDecimal gross = perimeter.subtract(finishGap).subtract(wallGap).multiply(height);
         BigDecimal net = gross.subtract(doorArea).subtract(windowArea);
         return net.max(BigDecimal.ZERO);
+    }
+
+    /**
+     * Reusable wall-area formula (FOR-05-02c): {@code max(0, (perimeter − finishGap − wallGap) ×
+     * ceilingHeight − doorArea − windowArea)}, rounded to 2 decimals like {@link #calculate}. A
+     * {@code null} ceiling height is treated as zero; {@code null} gaps/areas as zero.
+     */
+    public BigDecimal wallArea(BigDecimal perimeter, BigDecimal ceilingHeight, BigDecimal doorArea,
+                               BigDecimal windowArea, BigDecimal finishGap, BigDecimal wallGap) {
+        return round(wallAreaRaw(
+                nz(perimeter),
+                nz(ceilingHeight),
+                nz(doorArea),
+                nz(windowArea),
+                nz(finishGap),
+                nz(wallGap)));
+    }
+
+    /** Height and width of a single opening (mb). */
+    public record OpeningSize(BigDecimal height, BigDecimal width) {
+    }
+
+    /**
+     * Size of the only opening of {@code type}: present only when the sum of {@code count} over
+     * the openings of that type is exactly 1 (FOR-05-02c, Req 2.5/2.6); otherwise empty.
+     */
+    public java.util.Optional<OpeningSize> openingSize(RoomGeometry geometry, OpeningType type) {
+        if (geometry == null || geometry.getWalls() == null) {
+            return java.util.Optional.empty();
+        }
+        int total = 0;
+        RoomGeometry.Opening single = null;
+        for (RoomGeometry.Wall wall : geometry.getWalls()) {
+            if (wall == null || wall.getOpenings() == null) {
+                continue;
+            }
+            for (RoomGeometry.Opening opening : wall.getOpenings()) {
+                if (opening == null || opening.getType() != type) {
+                    continue;
+                }
+                total += opening.getCount();
+                single = opening;
+            }
+        }
+        if (total != 1 || single == null) {
+            return java.util.Optional.empty();
+        }
+        return java.util.Optional.of(new OpeningSize(
+                round(BigDecimal.valueOf(single.getHeight())),
+                round(BigDecimal.valueOf(single.getWidth()))));
+    }
+
+    private static BigDecimal nz(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private BigDecimal round(BigDecimal value) {

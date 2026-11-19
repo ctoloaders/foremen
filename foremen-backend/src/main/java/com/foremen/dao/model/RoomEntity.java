@@ -1,13 +1,21 @@
 package com.foremen.dao.model;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import java.math.BigDecimal;
+
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.math.BigDecimal;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "rooms")
@@ -127,4 +135,28 @@ public class RoomEntity extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "window_area_source", length = 20)
     private MeasureSource windowAreaSource;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "wall_gap_source", length = 20)
+    private MeasureSource wallGapSource;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "finish_gap_source", length = 20)
+    private MeasureSource finishGapSource;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "door_height_source", length = 20)
+    private MeasureSource doorHeightSource;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "door_width_source", length = 20)
+    private MeasureSource doorWidthSource;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "window_height_source", length = 20)
+    private MeasureSource windowHeightSource;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "window_width_source", length = 20)
+    private MeasureSource windowWidthSource;
 }

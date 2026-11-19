@@ -3,8 +3,10 @@ package com.foremen.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.foremen.dao.model.MeasureSource;
+import com.foremen.dao.model.RoomGeometry;
 import com.foremen.service.model.MetricExplanation;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -16,7 +18,44 @@ class RoomMetricExplainerTest {
                 2, new BigDecimal("2.1"), new BigDecimal("0.9"),
                 null, null, null,
                 new BigDecimal("1.5"), new BigDecimal("0.5"), new BigDecimal("14.00"), new BigDecimal("3.78"), null,
-                wall, door, window);
+                wall, door, window, null, null);
+    }
+
+    private static RoomGeometry.Vertex vertex(double x, double y) {
+        RoomGeometry.Vertex v = new RoomGeometry.Vertex();
+        v.setX(x);
+        v.setY(y);
+        return v;
+    }
+
+    private static RoomMetricExplainer.Input rect(MeasureSource perimeterSource, Map<String, String> formulas) {
+        RoomGeometry g = new RoomGeometry();
+        g.setVertices(List.of(vertex(0, 0), vertex(4, 0), vertex(4, 3), vertex(0, 3)));
+        return new RoomMetricExplainer.Input(g, new BigDecimal("2.5"), null, null, null, null, null, null,
+                null, null, new BigDecimal("14.00"), null, null, null, null, null, perimeterSource, formulas);
+    }
+
+    @Test
+    void explainsPerimeterAsSumOfWalls() {
+        MetricExplanation p = RoomMetricExplainer.explain(rect(MeasureSource.CALCULATED, null)).get("perimeter");
+        assertThat(p.formula()).isEqualTo("wall1 + wall2 + wall3 + wall4");
+        assertThat(p.variables()).containsEntry("wall1", new BigDecimal("4.00"))
+                .containsEntry("wall2", new BigDecimal("3.00"))
+                .containsEntry("wall3", new BigDecimal("4.00"))
+                .containsEntry("wall4", new BigDecimal("3.00"));
+    }
+
+    @Test
+    void wallLengthFormulaReplacesWallName() {
+        MetricExplanation p = RoomMetricExplainer.explain(
+                rect(MeasureSource.CALCULATED, Map.of("geometry.walls[1].length", "=2*1.5"))).get("perimeter");
+        assertThat(p.formula()).isEqualTo("wall1 + 2*1.5 + wall3 + wall4");
+        assertThat(p.variables()).containsEntry("2*1.5", new BigDecimal("3.00")).doesNotContainKey("wall2");
+    }
+
+    @Test
+    void manualPerimeterIsNotExplained() {
+        assertThat(RoomMetricExplainer.explain(rect(MeasureSource.MANUAL, null))).isNull();
     }
 
     @Test

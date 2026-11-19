@@ -35,6 +35,13 @@ public class RoomServiceExtendedModel {
     private BigDecimal windowWidth;
     private BigDecimal wallGap;
     private BigDecimal finishGap;
+    /** FOR-05-02c: MANUAL/CALCULATED flags of the gaps and opening sizes (nullable). */
+    private MeasureSource wallGapSource;
+    private MeasureSource finishGapSource;
+    private MeasureSource doorHeightSource;
+    private MeasureSource doorWidthSource;
+    private MeasureSource windowHeightSource;
+    private MeasureSource windowWidthSource;
     /** FOR-05-02 Round 5 #2 — narrow place up to 40 cm (mb). */
     private BigDecimal narrowPlace;
     /** FOR-05-02 Round 5 #1 — per-dimension value formulas keyed by dimension field. */

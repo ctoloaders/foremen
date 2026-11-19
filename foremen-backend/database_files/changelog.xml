@@ -1022,4 +1022,6 @@
     <!-- FOR-05-07 Batch 2: offer name + immutable snapshot (258) and name backfill (259). -->
     <include file="database_files/changesets/258-offer-name-and-snapshot.xml"/>
     <include file="database_files/changesets/259-backfill-offer-names.xml"/>
+    <!-- FOR-05-02c: manual/calculated source flags for room gaps and door/window sizes. -->
+    <include file="database_files/changesets/266-room-manual-dimension-sources.xml"/>
 </databaseChangeLog>

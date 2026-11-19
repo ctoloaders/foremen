@@ -1,5 +1,6 @@
 package com.foremen.controller.model;
 
+import com.foremen.dao.model.MeasureSource;
 import com.foremen.dao.model.RoomGeometry;
 
 import java.math.BigDecimal;
@@ -30,5 +31,12 @@ public record RoomUpdateResponse(
         BigDecimal doorArea,
         BigDecimal windowArea,
         BigDecimal narrowPlace,
-        java.util.Map<String, String> dimensionFormulas
+        java.util.Map<String, String> dimensionFormulas,
+        // FOR-05-02c: per-field MANUAL/CALCULATED flags of the gaps and opening sizes (nullable).
+        MeasureSource wallGapSource,
+        MeasureSource finishGapSource,
+        MeasureSource doorHeightSource,
+        MeasureSource doorWidthSource,
+        MeasureSource windowHeightSource,
+        MeasureSource windowWidthSource
 ) {}

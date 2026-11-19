@@ -1,0 +1,292 @@
+{
+  "pbtResults": {
+    "1. Write bug condition exploration test": {
+      "status": "passed",
+      "failingExample": "Room 1701: rectangle 3.0x2.11, ceiling 2.7, one DOOR 0.58x2.0, wallGap=2, finishGap=3 (MANUAL): saved wallGap=0.00 (expected 2), wallArea=26.43 (expected 12.93), doorHeight=null (expected 2.0), doorHeightSource=null (expected CALCULATED/MANUAL)",
+      "lastRunTimestamp": 1795125600981
+    },
+    "2. Write preservation property tests (BEFORE implementing fix)": {
+      "status": "passed",
+      "lastRunTimestamp": 1795125746973
+    },
+    "3.7 Verify bug condition exploration test now passes": {
+      "status": "passed",
+      "lastRunTimestamp": 1795128053059
+    },
+    "3.8 Verify preservation tests still pass": {
+      "status": "passed",
+      "lastRunTimestamp": 1795128256341
+    }
+  },
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125507906
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125520950
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125615606
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125507933
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125616334
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125765528
+      }
+    ],
+    "3.1 Add the Liquibase changeset and entity columns": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125507961
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125765969
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125903751
+      }
+    ],
+    "3.2 Expose the six sources on service models, DTOs, requests and mappers": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125507993
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125911538
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795126651507
+      }
+    ],
+    "3.3 Fix `RoomService.applyCalculatedMetrics` and the wall-area helper": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508027
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795126658481
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795127025196
+      }
+    ],
+    "3.4 Add the perimeter explanation to the backend": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508053
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795127031514
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128023468
+      }
+    ],
+    "3.5 Frontend types and perimeter explanation builder (repo `foremen-frontend`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508077
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125771962
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125904810
+      }
+    ],
+    "3.6 Matrix UI: send and show manual flags, perimeter popover, size dash (repo `foremen-frontend`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508100
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125912553
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795126652107
+      }
+    ],
+    "3.7 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508131
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128032100
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128066224
+      }
+    ],
+    "3.8 Verify preservation tests still pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508235
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128066834
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128277007
+      }
+    ],
+    "4.1 Write the fix-check property test": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508254
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128283381
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128403651
+      }
+    ],
+    "4.2 Write the Testcontainers integration test (one class only)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508278
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128404157
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128695241
+      }
+    ],
+    "4.3 Write the frontend tests (repo `foremen-frontend`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508299
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795126659323
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795127025740
+      }
+    ],
+    "5. Author test-cases.md": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508325
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128413497
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128695885
+      }
+    ],
+    "6. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795125508344
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128704845
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128904207
+      }
+    ],
+    "3. Fix for lost manual gaps and missing opening sizes on the geometry path": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128277049
+      }
+    ],
+    "4. Add fix-check, integration and frontend tests": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795128695330
+      }
+    ]
+  }
+}

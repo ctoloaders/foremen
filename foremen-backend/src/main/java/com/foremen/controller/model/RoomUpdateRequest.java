@@ -53,5 +53,12 @@ public record RoomUpdateRequest(
         // the no-geometry path; overwritten by the geometry sums when real geometry is supplied.
         BigDecimal wallGap,
         BigDecimal finishGap,
-        java.util.Map<String, String> dimensionFormulas
+        java.util.Map<String, String> dimensionFormulas,
+        // FOR-05-02c: per-field MANUAL/CALCULATED flags of the gaps and opening sizes (nullable).
+        MeasureSource wallGapSource,
+        MeasureSource finishGapSource,
+        MeasureSource doorHeightSource,
+        MeasureSource doorWidthSource,
+        MeasureSource windowHeightSource,
+        MeasureSource windowWidthSource
 ) {}

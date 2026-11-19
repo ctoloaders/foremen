@@ -1,5 +1,6 @@
 package com.foremen.controller.model;
 
+import com.foremen.dao.model.MeasureSource;
 import com.foremen.dao.model.RoomGeometry;
 
 import java.math.BigDecimal;
@@ -35,5 +36,12 @@ public record RoomDtoExtendedModel(
         // FOR-05-02 (R22): read-only marker, true for rooms created from an AI import.
         boolean aiImported,
         // FOR-05-02 Round 11 #3: formula + resolved variable values of each CALCULATED metric, by field.
-        java.util.Map<String, MetricExplanationDto> metricExplanations
+        java.util.Map<String, MetricExplanationDto> metricExplanations,
+        // FOR-05-02c: per-field MANUAL/CALCULATED flags of the gaps and opening sizes (nullable).
+        MeasureSource wallGapSource,
+        MeasureSource finishGapSource,
+        MeasureSource doorHeightSource,
+        MeasureSource doorWidthSource,
+        MeasureSource windowHeightSource,
+        MeasureSource windowWidthSource
 ) {}

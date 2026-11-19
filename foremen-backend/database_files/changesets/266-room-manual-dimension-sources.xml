@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02c: MANUAL/CALCULATED source flags for the room gaps (wall_gap, finish_gap) and the
+        door/window sizes, so a manually entered value wins over the geometry-derived one.
+    -->
+    <changeSet id="266-room-manual-dimension-sources-columns" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="rooms" columnName="wall_gap_source"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="rooms">
+            <column name="wall_gap_source" type="VARCHAR(20)"/>
+            <column name="finish_gap_source" type="VARCHAR(20)"/>
+            <column name="door_height_source" type="VARCHAR(20)"/>
+            <column name="door_width_source" type="VARCHAR(20)"/>
+            <column name="window_height_source" type="VARCHAR(20)"/>
+            <column name="window_width_source" type="VARCHAR(20)"/>
+        </addColumn>
+    </changeSet>
+
+    <!-- Backfill: existing non-null values were never flagged manual, so they become CALCULATED. -->
+    <changeSet id="266-room-manual-dimension-sources-backfill" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM rooms WHERE wall_gap_source IS NOT NULL</sqlCheck>
+        </preConditions>
+        <sql>UPDATE rooms SET wall_gap_source = 'CALCULATED' WHERE wall_gap IS NOT NULL AND wall_gap_source IS NULL</sql>
+        <sql>UPDATE rooms SET finish_gap_source = 'CALCULATED' WHERE finish_gap IS NOT NULL AND finish_gap_source IS NULL</sql>
+        <sql>UPDATE rooms SET door_height_source = 'CALCULATED' WHERE door_height IS NOT NULL AND door_height_source IS NULL</sql>
+        <sql>UPDATE rooms SET door_width_source = 'CALCULATED' WHERE door_width IS NOT NULL AND door_width_source IS NULL</sql>
+        <sql>UPDATE rooms SET window_height_source = 'CALCULATED' WHERE window_height IS NOT NULL AND window_height_source IS NULL</sql>
+        <sql>UPDATE rooms SET window_width_source = 'CALCULATED' WHERE window_width IS NOT NULL AND window_width_source IS NULL</sql>
+    </changeSet>
+</databaseChangeLog>
