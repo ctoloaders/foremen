@@ -49,5 +49,9 @@ public record RoomUpdateRequest(
         // FOR-05-02 Round 5: narrow place (mb) + per-dimension value formulas, e.g.
         // {"ceilingHeight": "=2,5+0,2"}. A formula wins over the submitted number (evaluated here).
         BigDecimal narrowPlace,
+        // FOR-05-02 Round 11: missing wall / missing finish lengths (mb) of the flat matrix. Honored on
+        // the no-geometry path; overwritten by the geometry sums when real geometry is supplied.
+        BigDecimal wallGap,
+        BigDecimal finishGap,
         java.util.Map<String, String> dimensionFormulas
 ) {}

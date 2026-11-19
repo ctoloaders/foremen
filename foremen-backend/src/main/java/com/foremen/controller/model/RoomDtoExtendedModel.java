@@ -33,5 +33,7 @@ public record RoomDtoExtendedModel(
         BigDecimal narrowPlace,
         java.util.Map<String, String> dimensionFormulas,
         // FOR-05-02 (R22): read-only marker, true for rooms created from an AI import.
-        boolean aiImported
+        boolean aiImported,
+        // FOR-05-02 Round 11 #3: formula + resolved variable values of each CALCULATED metric, by field.
+        java.util.Map<String, MetricExplanationDto> metricExplanations
 ) {}

@@ -55,13 +55,13 @@ final class DraftFixtures {
 
     static RoomCreateRequest request(RoomGeometry g, BigDecimal ceiling, Integer corners, String label, Long typeId) {
         return new RoomCreateRequest(1L, typeId, label, ceiling, corners, g, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     /** Scalar-only request (no geometry) with the given floor area. */
     static RoomCreateRequest scalar(BigDecimal floorArea, Integer corners) {
         return new RoomCreateRequest(1L, 1L, "a", new BigDecimal("2.6"), corners, null, floorArea, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
     }
 
     static DraftRoom draft(RoomCreateRequest room, Map<String, Object> stated, double confidence) {

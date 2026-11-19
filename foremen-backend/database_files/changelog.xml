@@ -1007,4 +1007,8 @@
     <include file="database_files/changesets/252-goods-receipt-delegations.xml"/>
     <!-- FOR-11-06: drops the deprecated common payment columns of the detail tables. Registered LAST, after 252. -->
     <include file="database_files/changesets/253-drop-legacy-payment-columns.xml"/>
+    <!-- FOR-05-02 Round 11 #2: recompute CALCULATED room wall_area with the finish-gap formula. Registered LAST, after 255. -->
+    <include file="database_files/changesets/256-recompute-room-wall-area-finish-gap.xml"/>
+    <!-- FOR-05-02 Round 11 #2 follow-up: also subtract the missing wall (wall_gap) from the perimeter. Registered LAST, after 256. -->
+    <include file="database_files/changesets/257-recompute-room-wall-area-wall-gap.xml"/>
 </databaseChangeLog>

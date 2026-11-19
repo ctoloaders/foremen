@@ -731,3 +731,43 @@ Stack: local Docker, backend and frontend rebuilt. Screen: `/projects/2/rooms/2`
   - Frontend: `src/features/rooms` 903 passed, `tsc` clean.
 
 Result: 1 fixed / 0 failed.
+
+## Round 11 — approved refinement (2026-11-19)
+Item 3 (formula display): the "calculated" label (the badge marking a computed value) becomes clickable and opens a small popover that renders the formula the same way the work-formula editor does (`features/work-catalog` formula components). Under every formula element (variable/constant) the popover shows the value actually used in the calculation. The remaining items of the round are approved for implementation.
+
+## Round 11 (2026-11-19)
+
+Screen URL: `https://dev.foremen.eu/projects/5/rooms` (dimensions matrix) and `/projects/5/rooms/{roomId}` (room editor). Reproduce locally at `http://localhost:3000`.
+
+- [x] 1. Pressing Enter must work in the rooms matrix
+  - Triage: Enter only commits the entered value (no row navigation; approved). Layer: frontend. Files: `EditableCell.tsx`, `lib/preventEnterSubmit.ts`.
+  - _Requirements: FOR-05-02 matrix editing_
+  - _Depends on: none_
+- [~] 2. Missing finish/wall is not saved; wall area = (perimeter - missing finish - missing wall) x height - doors - windows
+  - Triage: `wallGap`/`finishGap` were missing from the create/update requests and the list DTO. Layer: both. Files: `RoomCalculationService`, `RoomService`, `dimensionsCalc.ts`, `lib/roomMetrics.ts`, changeset 256.
+  - _Requirements: FOR-05-02 11.x; FOR-04-14-room Requirement 2_
+  - _Depends on: none_
+- [x] 3. Show the formula of calculated dimensions: the "calculated" label opens a small popover with the formula (rendered like work formulas) and the value used under every element
+  - Layer: both. Files: `RoomMetricExplainer`, `FormulaExplanation.tsx`, `RoomSourceBadge.tsx`.
+  - _Requirements: FOR-05-02 formulas_
+  - _Depends on: 2_
+- [ ] V11. Validate Round 11 in browser
+  - _Depends on: 1, 2, 3_
+
+## Parallel execution plan (waves) — Round 11
+
+- **Wave 1 (parallel):** 1, 2.
+- **Wave 2:** 3.
+- **Wave 3:** V11.
+
+## Round 11 — validation results (2026-11-19)
+
+| # | Check | Evidence | Result |
+|---|---|---|---|
+| 1 | Enter commits the value | Project 1531: typing in the wall-area cell and Enter closes the editor | PASS |
+| 2 | Missing finish/wall saved, wall-area formula | Backend tests and changeset 256 applied. Formula must be changed to also subtract the missing wall (follow-up requested 2026-11-19) | PARTIAL |
+| 3 | Formula popover | Click on the "Obliczone" badge opens the popover: formula chips with the used value under each element and the result 26.43 | PASS |
+
+### Round 11 item 2 follow-up (2026-11-19)
+
+Wall area is now (perimeter - missing finish - missing wall) x height - doors - windows (the first implementation had dropped the missing-wall term). Backend `RoomCalculationService`, `RoomMetricExplainer` (formula and variables now include `wallGap`), frontend `dimensionsCalc.ts`, `roomMetrics.ts`, `metricExplanation.ts`; `wallGap` is a base input of wall area in the matrix. Changeset 257 corrects stored CALCULATED values (`new = max(0, old - wall_gap x height)`), registered after 256. Tests: `RoomCalculationFinishGapTest`, `RoomMetricExplainerTest`, `RoomWallAreaPropertyTest`, `RoomManualMetricsIT` pass; vitest `src/features/rooms` 1251/1251. Changeset 257 is not yet applied to the local stack (needs a rebuild); the item stays `[~]` until it is checked in the browser.

@@ -610,7 +610,7 @@ public class RoomsImportPipeline {
                 scalar ? decimal(fixed.value(PlausibilityInput.DOOR_WIDTH)) : null,
                 scalar ? decimal(fixed.value(PlausibilityInput.WINDOW_HEIGHT)) : null,
                 scalar ? decimal(fixed.value(PlausibilityInput.WINDOW_WIDTH)) : null,
-                decimal(fixed.value(PlausibilityInput.NARROW_PLACE)), null, null, null);
+                decimal(fixed.value(PlausibilityInput.NARROW_PLACE)), null, null, null, null, null);
         CalculatedMetrics calculated = validator.calculate(room);
 
         Double dc = detected.confidence();

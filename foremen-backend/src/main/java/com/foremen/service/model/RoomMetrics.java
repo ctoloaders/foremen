@@ -10,8 +10,8 @@ import java.math.BigDecimal;
  * <ul>
  *   <li>{@code floorArea} (m²) — absolute shoelace area of the polygon (Req 3.1).</li>
  *   <li>{@code perimeter} (mb) — sum of Euclidean wall-edge lengths (Req 3.2).</li>
- *   <li>{@code wallArea} (m²) — {@code max(0, perimeter × ceilingHeight − doorArea − windowArea −
- *       wallGap × ceilingHeight)} (Req 3.3).</li>
+ *   <li>{@code wallArea} (m²) — {@code max(0, (perimeter − finishGap) × ceilingHeight − doorArea −
+ *       windowArea)} (Req 3.3; Round 11 #2).</li>
  *   <li>{@code doorArea}/{@code windowArea} (m²) — Σ {@code count × height × width} per opening
  *       type (Req 3.4).</li>
  *   <li>{@code doorCount}/{@code windowCount} (szt) — Σ counts per opening type (Req 3.4).</li>

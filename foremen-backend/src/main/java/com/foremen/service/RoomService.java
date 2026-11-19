@@ -486,6 +486,13 @@ public class RoomService
         model.setPerimeterSource(stampManual("perimeter", model.getPerimeter(), model.getPerimeterSource()));
         model.setDoorAreaSource(stampManual("doorArea", model.getDoorArea(), model.getDoorAreaSource()));
         model.setWindowAreaSource(stampManual("windowArea", model.getWindowArea(), model.getWindowAreaSource()));
+        // FOR-05-02 Round 11 #2: the missing wall / missing finish lengths are kept (finishGap feeds wallArea).
+        if (model.getWallGap() != null) {
+            validateMetricRange("wallGap", model.getWallGap());
+        }
+        if (model.getFinishGap() != null) {
+            validateMetricRange("finishGap", model.getFinishGap());
+        }
     }
 
     /**

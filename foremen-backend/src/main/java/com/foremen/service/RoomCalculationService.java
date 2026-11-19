@@ -25,8 +25,8 @@ import java.util.List;
  *   <li>{@code doorArea}/{@code windowArea} = Σ {@code count × height × width} per opening type;
  *       {@code doorCount}/{@code windowCount} = Σ counts (Req 3.4)</li>
  *   <li>{@code wallGap}/{@code finishGap} = Σ per-wall gap lengths (Req 2.5)</li>
- *   <li>{@code wallArea} = {@code max(0, perimeter × ceilingHeight − doorArea − windowArea −
- *       wallGap × ceilingHeight)} (Req 3.3)</li>
+ *   <li>{@code wallArea} = {@code max(0, (perimeter − finishGap − wallGap) × ceilingHeight − doorArea −
+ *       windowArea)} (Req 3.3; FOR-05-02 Round 11 #2)</li>
  * </ul>
  *
  * <p>All {@code BigDecimal} metrics are rounded to 2 decimals ({@code NUMERIC(12,2)}) with
@@ -66,7 +66,7 @@ public class RoomCalculationService {
         BigDecimal finishGap = round(BigDecimal.valueOf(totals.finishGapRaw));
 
         BigDecimal height = ceilingHeight == null ? BigDecimal.ZERO : ceilingHeight;
-        BigDecimal wallArea = round(wallArea(perimeter, height, doorArea, windowArea, wallGap));
+        BigDecimal wallArea = round(wallArea(perimeter, height, doorArea, windowArea, finishGap, wallGap));
 
         return new RoomMetrics(
                 floorArea,
@@ -172,14 +172,14 @@ public class RoomCalculationService {
     }
 
     /**
-     * {@code max(0, perimeter × height − doorArea − windowArea − wallGap × height)} (Req 3.3),
-     * computed on the rounded components before the final rounding.
+     * {@code max(0, (perimeter − finishGap − wallGap) × height − doorArea − windowArea)} (Req 3.3;
+     * FOR-05-02 Round 11 #2: the missing finish and missing wall lengths are taken off the perimeter), computed on the
+     * rounded components before the final rounding.
      */
     private BigDecimal wallArea(BigDecimal perimeter, BigDecimal height, BigDecimal doorArea,
-                                BigDecimal windowArea, BigDecimal wallGap) {
-        BigDecimal gross = perimeter.multiply(height);
-        BigDecimal gapArea = wallGap.multiply(height);
-        BigDecimal net = gross.subtract(doorArea).subtract(windowArea).subtract(gapArea);
+                                BigDecimal windowArea, BigDecimal finishGap, BigDecimal wallGap) {
+        BigDecimal gross = perimeter.subtract(finishGap).subtract(wallGap).multiply(height);
+        BigDecimal net = gross.subtract(doorArea).subtract(windowArea);
         return net.max(BigDecimal.ZERO);
     }
 

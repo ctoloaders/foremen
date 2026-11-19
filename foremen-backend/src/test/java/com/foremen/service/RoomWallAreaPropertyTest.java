@@ -22,9 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Property 4 for FOR-04-14: wall area is non-negative and formula-consistent.
  *
  * <p><b>Property 4:</b> for any geometry and ceiling height,
- * {@code wallArea = max(0, perimeter × height − doorArea − windowArea − wallGap × height)},
+ * {@code wallArea = max(0, (perimeter − finishGap − wallGap) × height − doorArea − windowArea)},
  * where the components are the engine's own rounded {@code perimeter}, {@code doorArea},
- * {@code windowArea}, and {@code wallGap}. The result is always {@code >= 0} and rounded to
+ * {@code windowArea}, and {@code finishGap}. The result is always {@code >= 0} and rounded to
  * 2 decimals ({@code HALF_UP}).
  *
  * <p><b>Validates: Requirements 3.3</b>
@@ -50,16 +50,14 @@ class RoomWallAreaPropertyTest {
         RoomMetrics metrics = service.calculate(geometry, ceilingHeight);
 
         BigDecimal height = ceilingHeight == null ? BigDecimal.ZERO : ceilingHeight;
-        BigDecimal gross = metrics.perimeter().multiply(height);
-        BigDecimal gapArea = metrics.wallGap().multiply(height);
+        BigDecimal gross = metrics.perimeter().subtract(metrics.finishGap()).subtract(metrics.wallGap()).multiply(height);
         BigDecimal net = gross
                 .subtract(metrics.doorArea())
-                .subtract(metrics.windowArea())
-                .subtract(gapArea);
+                .subtract(metrics.windowArea());
         BigDecimal expected = round(net.max(BigDecimal.ZERO));
 
         assertThat(metrics.wallArea())
-                .as("wallArea must equal max(0, perimeter*h - doorArea - windowArea - wallGap*h)")
+                .as("wallArea must equal max(0, (perimeter-finishGap-wallGap)*h - doorArea - windowArea)")
                 .isEqualByComparingTo(expected);
         assertThat(metrics.wallArea().signum())
                 .as("wallArea must never be negative")

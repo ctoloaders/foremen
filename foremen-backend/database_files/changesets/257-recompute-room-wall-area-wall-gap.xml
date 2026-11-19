@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-02 Round 11 #2 (follow-up): the missing wall length is subtracted from the perimeter as well:
+            wallArea = (perimeter - finishGap - wallGap) x h - doors - windows.
+        Changeset 256 moved CALCULATED values to (perimeter - finishGap) x h - doors - windows, i.e. it
+        dropped the wallGap term the original formula had. This changeset takes it off again:
+            new = max(0, old - wall_gap x ceiling_height)
+        Manual values (wall_area_source = 'MANUAL') and rooms without a wall gap are untouched.
+        Runs once (the changeSet id is the guard).
+    -->
+    <changeSet id="257-recompute-room-wall-area-wall-gap" author="foremen">
+        <sql>
+            UPDATE rooms
+               SET wall_area = GREATEST(0, wall_area - COALESCE(wall_gap, 0) * COALESCE(ceiling_height, 0))
+             WHERE wall_area IS NOT NULL
+               AND wall_area_source = 'CALCULATED'
+               AND COALESCE(wall_gap, 0) &lt;&gt; 0
+        </sql>
+    </changeSet>
+</databaseChangeLog>

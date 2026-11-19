@@ -55,4 +55,6 @@ public class RoomServiceExtendedModel {
     private MeasureSource doorAreaSource;
     private BigDecimal windowArea;
     private MeasureSource windowAreaSource;
+    /** FOR-05-02 Round 11 #3 — formula explanation of each CALCULATED metric (read path only). */
+    private java.util.Map<String, MetricExplanation> metricExplanations;
 }

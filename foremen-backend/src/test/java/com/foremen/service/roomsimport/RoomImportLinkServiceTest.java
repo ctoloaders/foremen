@@ -88,7 +88,7 @@ class RoomImportLinkServiceTest {
         RoomControllerMapperImpl mapper = new RoomControllerMapperImpl();
         ImportMediaRef ref = new ImportMediaRef(9L, "a.png");
         RoomCreateRequest create = new RoomCreateRequest(5L, 2L, "Kitchen", null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, java.util.List.of(ref), 9L);
+                null, null, null, null, null, null, null, null, null, null, null, null, java.util.List.of(ref), 9L);
 
         RoomServiceExtendedModel model = mapper.toServiceExtendedModel(create);
 
@@ -106,7 +106,7 @@ class RoomImportLinkServiceTest {
     @Test
     void createRequestWithoutImportFieldsMapsToNullImportData() {
         RoomCreateRequest create = new RoomCreateRequest(5L, 2L, "Hall", null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         RoomServiceExtendedModel model = new RoomControllerMapperImpl().toServiceExtendedModel(create);
 

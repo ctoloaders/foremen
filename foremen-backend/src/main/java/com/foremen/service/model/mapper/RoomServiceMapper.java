@@ -5,6 +5,7 @@ import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.mapper.ServiceToDaoMapper;
+import com.foremen.service.RoomMetricExplainer;
 import com.foremen.service.model.RoomServiceExtendedModel;
 import com.foremen.service.model.RoomServiceModel;
 import jakarta.persistence.EntityManager;
@@ -94,6 +95,28 @@ public abstract class RoomServiceMapper
         if (roomType != null) {
             target.setRoomTypeName(isRussianLocale() ? roomType.getNameRU() : roomType.getNamePL());
         }
+    }
+
+    /** FOR-05-02 Round 11 #3: attaches the formula explanation of every CALCULATED metric (list read). */
+    @AfterMapping
+    protected void explainMetrics(@MappingTarget RoomServiceModel target) {
+        target.setMetricExplanations(RoomMetricExplainer.explain(new RoomMetricExplainer.Input(
+                target.getGeometry(), target.getCeilingHeight(),
+                target.getDoorCount(), target.getDoorHeight(), target.getDoorWidth(),
+                target.getWindowCount(), target.getWindowHeight(), target.getWindowWidth(),
+                target.getFinishGap(), target.getWallGap(), target.getPerimeter(), target.getDoorArea(), target.getWindowArea(),
+                target.getWallAreaSource(), target.getDoorAreaSource(), target.getWindowAreaSource())));
+    }
+
+    /** Same as {@link #explainMetrics(RoomServiceModel)} for the extended (single-room) read model. */
+    @AfterMapping
+    protected void explainMetrics(@MappingTarget RoomServiceExtendedModel target) {
+        target.setMetricExplanations(RoomMetricExplainer.explain(new RoomMetricExplainer.Input(
+                target.getGeometry(), target.getCeilingHeight(),
+                target.getDoorCount(), target.getDoorHeight(), target.getDoorWidth(),
+                target.getWindowCount(), target.getWindowHeight(), target.getWindowWidth(),
+                target.getFinishGap(), target.getWallGap(), target.getPerimeter(), target.getDoorArea(), target.getWindowArea(),
+                target.getWallAreaSource(), target.getDoorAreaSource(), target.getWindowAreaSource())));
     }
 
     private static boolean isRussianLocale() {

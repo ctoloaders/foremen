@@ -24,6 +24,9 @@ public record RoomDtoModel(
         BigDecimal doorWidth,
         BigDecimal windowHeight,
         BigDecimal windowWidth,
+        // FOR-05-02 Round 11: missing wall / missing finish lengths (mb), read back by the matrix.
+        BigDecimal wallGap,
+        BigDecimal finishGap,
         RoomGeometry geometry,
         MeasureValueDto floorArea,
         MeasureValueDto wallArea,
@@ -39,5 +42,7 @@ public record RoomDtoModel(
         // FOR-05-02 (R22): read-only marker, true for rooms created from an AI import.
         boolean aiImported,
         // FOR-05-02 (R10.4): number of attached media files (badge); no binary data.
-        Integer mediaCount
+        Integer mediaCount,
+        // FOR-05-02 Round 11 #3: formula + resolved variable values of each CALCULATED metric, by field.
+        java.util.Map<String, MetricExplanationDto> metricExplanations
 ) {}
