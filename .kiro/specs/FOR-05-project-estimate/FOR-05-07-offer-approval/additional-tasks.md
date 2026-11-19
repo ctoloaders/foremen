@@ -189,3 +189,68 @@ When the estimate (or room dimensions driving it) changes such that the estimate
 > Cross-spec dependency: tasks 3–5 depend on FOR-05-05 task 6 (`EstimateChangedEvent`) and task 2
 > (dry-run impact payload carrying the offer-reaction hint). Schedule this spec's Wave 2+ after
 > FOR-05-05's event/impact tasks land.
+
+## Batch 2 (2026-11-19): offer versioning as full snapshots, custom name, comparison, read-only view
+
+Source: bug-report Round 5, items 3 and 4. Tasks 1-7 and V above are done; this batch continues the numbering. English per the spec-doc standard; `test-cases.md` scenarios are in Russian.
+Screen URL: `http://localhost:3000/projects/{id}/offer`.
+
+### Scope and decisions
+- Every prepared offer stores a full, immutable snapshot of the estimate (works, rooms, quantities, unit prices, labour adjustment, totals, the project VAT rate at that moment).
+- An offer can be prepared with a custom name (free text, optional, no RU/PL variants; default "Offer N").
+- The client can compare two offers of one project. The comparison shows only client-visible data (no base prices, no labour comparison, no margins).
+- Clicking an offer opens a read-only estimate view built from the snapshot, for executor and client.
+- Notifications: none new. The existing offer-sent/withdrawn notifications are unchanged.
+- i18n: backend `name` is user text (no RU/PL variants). Frontend keys under `offer.*` in `pl.json` and `ru.json`: custom name label and placeholder, compare button, compare headings (added, removed, changed, quantity, price, total), snapshot banner ("Read-only snapshot of offer {name}"), empty states.
+- If the snapshot is JSONB or child rows of `Offer`, no new managed entity; a separate table would follow `.kiro/steering/entity-creation-rules.md`.
+
+### Tasks
+- [x] 8. Snapshot model and migration
+  - DONE: `offers.name` + `offers.snapshot` (JSONB) via changesets 258 (columns) and 259 (backfills "Offer N"); `OfferEntity.snapshot` is `updatable=false`; no new managed entity. The read models carry `hasSnapshot`, which hides view/compare for legacy offers.
+  - Add `name` and the snapshot (JSONB or child rows) to `Offer`; next free changeset number, registered last in `changelog.xml`. Existing offers without a snapshot are marked "no snapshot" and hide the view and compare actions.
+  - _Requirements: bug-report R5.3_
+  - _Depends on: none_
+- [x] 9. Prepare offer with custom name and snapshot capture
+  - DONE: optional body `PrepareOfferRequest(name)`; `OfferService.prepareOffer(projectId, name)` trims, max 255 (`error.offer.name.too.long`), default "Offer N"; the snapshot is built by `OfferSnapshotBuilder` in the same transaction.
+  - Optional `name` in the prepare request/DTO; capture the snapshot in the same transaction as the offer.
+  - _Depends on: 8_
+- [x] 10. Snapshot read and compare endpoints
+  - DONE: `OfferSnapshotController`: `GET /api/offers/project/{id}/list`, `GET /api/offers/{id}/snapshot`, `GET /api/offers/compare?left=&right=`, all `OFFERS` READ. `OfferSnapshotService` hides DRAFT offers from CLIENT (404); the allow-list view drops base prices for CLIENT and roles outside the Round 4 allow-list; compare never carries base prices; different projects give 400 `error.offer.compare.different.project`.
+  - `GET /api/offers/{id}/snapshot` (matrix-shaped, read-only) and `GET /api/offers/compare?left=&right=` (same project only). CLIENT responses are redacted with the same allow-list approach as Round 4. Guarded by existing `OFFERS` permissions.
+  - _Depends on: 9_
+- [x] 11. Frontend: name field and offers list with names
+  - DONE: name input in `OfferTab` (prepare and prepare-new), offer name heading, `OfferVersions` list (newest first, "no snapshot" marker).
+  - _Depends on: 9_
+- [x] 12. Frontend: read-only estimate view from an offer
+  - DONE: `OfferSnapshotPanel`, a matrix-shaped read-only table (category groups, room columns, totals) with the snapshot banner. The estimate matrix components were not reused because they are bound to the live editable estimate (staging store, materials, permissions).
+  - Reuse matrix components with a snapshot source, `readOnly`, no staging or edit controls.
+  - _Depends on: 10, 11_
+- [x] 13. Frontend: offer comparison
+  - DONE: `OfferComparisonPanel` (added / removed / changed, per-room quantities, total delta); compare is enabled for exactly two offers with snapshots, older on the left.
+  - Select two offers; diff table by work and room (added, removed, changed quantity or price, total delta).
+  - _Depends on: 10, 11_
+- [x] 14. Tests: snapshot immutability after estimate changes, CLIENT redaction, cross-project compare rejected; frontend tests for 12 and 13.
+  - DONE: `OfferSnapshotIntegrationTest` (6/6 pass), `OfferControllersAbacTest` updated for the new prepare signature + new handlers (pass), `OfferServiceIntegrationTest` / `OfferServicePrepareOfferPropertyTest` pass; `OfferVersions.test.tsx` (4 pass, project-offer vitest 44/44).
+  - _Depends on: 10, 12, 13_
+- [x] 15. Author test-cases.md (extend the existing file)
+  - DONE: section "Batch 2" in `test-cases.md` (TC-SN-01..12, regression TC-SN-REG-01..04, report template).
+  - Per `.kiro/steering/test-cases.md`: UI scenarios, repeatability via generated names and offer withdrawal, regression group, MD report template.
+  - _Depends on: 14_
+- [ ] 16. Checkpoint: browser validation of the whole flow.
+  - _Depends on: 15_
+
+## Task Dependency Graph
+
+```json
+{
+  "waves": [
+    { "id": 0, "tasks": ["8"] },
+    { "id": 1, "tasks": ["9"] },
+    { "id": 2, "tasks": ["10", "11"] },
+    { "id": 3, "tasks": ["12", "13"] },
+    { "id": 4, "tasks": ["14"] },
+    { "id": 5, "tasks": ["15"] },
+    { "id": 6, "tasks": ["16"] }
+  ]
+}
+```

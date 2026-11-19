@@ -159,7 +159,7 @@ class OfferControllersAbacTest {
         @Test
         @DisplayName("POST /project/{id}/prepare → (OFFERS, CREATE)")
         void prepareIsOffersCreate() {
-            assertResolvesTo(offerHandler("prepare", Long.class), OFFERS, CREATE);
+            assertResolvesTo(offerHandler("prepare", Long.class, OfferController.PrepareOfferRequest.class), OFFERS, CREATE);
         }
 
         @Test
@@ -204,6 +204,20 @@ class OfferControllersAbacTest {
         @DisplayName("GET /project/{projectId} → (OFFERS, READ) — the by-project current-offer read")
         void getCurrentOfferByProjectIsOffersRead() {
             assertResolvesTo(offerHandler("getCurrentOfferByProject", Long.class), OFFERS, READ);
+        }
+
+        @Test
+        @DisplayName("FOR-05-07 Batch 2: offers list / snapshot / compare → (OFFERS, READ), handlers COMPLETE")
+        void snapshotEndpointsAreOffersRead() {
+            OfferSnapshotController snapshotController = new OfferSnapshotController(null);
+            HandlerMethod list = handlerFor(OfferSnapshotController.class, snapshotController, "list", Long.class);
+            HandlerMethod snapshot = handlerFor(OfferSnapshotController.class, snapshotController, "snapshot", Long.class);
+            HandlerMethod compare = handlerFor(OfferSnapshotController.class, snapshotController, "compare",
+                    Long.class, Long.class);
+            for (HandlerMethod h : List.of(list, snapshot, compare)) {
+                assertResolvesTo(h, OFFERS, READ);
+                assertComplete(h);
+            }
         }
 
         @Test
@@ -274,7 +288,7 @@ class OfferControllersAbacTest {
         @Test
         @DisplayName("every OfferController handler classifies COMPLETE")
         void offerHandlersComplete() {
-            assertComplete(offerHandler("prepare", Long.class));
+            assertComplete(offerHandler("prepare", Long.class, OfferController.PrepareOfferRequest.class));
             assertComplete(offerHandler("selectPackage", Long.class,
                     OfferController.SelectPackageRequest.class));
             assertComplete(offerHandler("send", Long.class));
@@ -631,7 +645,7 @@ class OfferControllersAbacTest {
         @DisplayName("the endpoints ESTIMATOR exercises resolve to OFFERS operations it holds; approve/reject to APPROVE it lacks")
         void estimatorEndpointOperationsMatchGrant() {
             // Prepare resolves to (OFFERS, CREATE) — granted to ESTIMATOR.
-            assertResolvesTo(offerHandler("prepare", Long.class), OFFERS, CREATE);
+            assertResolvesTo(offerHandler("prepare", Long.class, OfferController.PrepareOfferRequest.class), OFFERS, CREATE);
             // Read resolves to (OFFERS, READ) — granted to ESTIMATOR.
             assertResolvesTo(offerHandler("getOffer", Long.class), OFFERS, READ);
             // Select-package / write-paths resolve to (OFFERS, UPDATE) — granted to ESTIMATOR.
@@ -653,7 +667,7 @@ class OfferControllersAbacTest {
         void estimatorAdmissionKeepsStartupComplete() {
             // No new handler is introduced by task 18.4; the full handler set still classifies COMPLETE,
             // so PermissionAnnotationValidator startup is unaffected.
-            assertComplete(offerHandler("prepare", Long.class));
+            assertComplete(offerHandler("prepare", Long.class, OfferController.PrepareOfferRequest.class));
             assertComplete(offerHandler("getOffer", Long.class));
             assertComplete(offerHandler("approve", Long.class));
             assertComplete(offerHandler("reject", Long.class));

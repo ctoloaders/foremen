@@ -100,7 +100,10 @@ public class ClientOfferReadModelAssembler {
                 finishingSelections(offer),
                 negotiationThread(offer),
                 // Readiness populated in task 9.x via OfferReadinessCalculator.
-                null);
+                null,
+                // FOR-05-07 Batch 2: custom name + whether an immutable snapshot exists (never the snapshot itself).
+                offer.getName(),
+                offer.getSnapshot() != null);
     }
 
     /**

@@ -406,3 +406,29 @@ Notes:
   temporary users deactivated (audit rows reference them), and the E2E client password hash restored.
 
 Result: 6 of 6 checks passed. Round 4 closed.
+
+## Round 5 (2026-11-19)
+
+Screen URL: `https://dev.foremen.eu/projects/5/estimate` (labour adjustment) and `https://dev.foremen.eu/projects/5/offer` (offers). Reproduce locally at `http://localhost:3000`.
+
+- [ ] 1. `POST /api/estimates/project/5/labour-price-adjustment`: other cells are reset when several cells are edited at the same time
+  - Triage: observed — saving one adjustment overwrites/reset the other adjustments (concurrent edit). Expected — each save changes only its own cell/scope; adjustments of other cells are preserved. Probably the request replaces the whole adjustment set or the client sends a stale snapshot. Layer: both. Suspect: `EstimateMatrixController`, `LabourPriceAdjustmentRequest`, `LabourPriceAdjustControl.tsx`, `mutation-hooks.ts`.
+  - _Requirements: FOR-05-07 Round 4 labour override_
+  - _Depends on: none_
+- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. lick opens the in- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. x` shows an always-- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. lick opens the in- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. x` shows an alway FO- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. lick opens the in- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ]r - [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. lick opens the in- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. x` shows an always-- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. lick opens the in- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. x` shows an alway FO- [ ] 2. Esti- [ ] 2. Esti- [onal custom `name`, and a compare vie- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Esti- [ ] 2. Estien two offers, visible to the client role as well, without internal data (base prices, labour comparison).
+  - i18n: offer `name` is user text (no RU/PL variants); UI labels PL/RU. Notifications: none beyond the existing offer-sent one.
+  - _Requirements: FOR-05-07 (to be amended)_
+  - _Depends on: none_
+- [ ] 4. Clicking an offer opens a read-only view of the estimate
+  - Triage: **feature-sized**, depends on 3 (the snapshot is what is shown). Expected — a read-only estimate matrix rendered from the offer snapshot, for executor and client.
+  - _Requirements: FOR-05-07 (to be amended)_
+  - _Depends on: 3_
+- [ ] 5. Remove material selection from the offer; rename menu item "Оферты/согласование" to "Оферты"
+  - Triage: expected — the offer tab/flow no longer includes the material selection step; menu/tab label becomes "Оферты" (PL "Oferty"). Check that the material-selection data still exists elsewhere (FOR-05-05) and the offer approval flow does not require it. Layer: frontend (+ backend validation   - Triage: expected — the offer tab/flow no longer includes the material seleea  - Triage: expected — the offer tab/flow no longer includes the material selection step; menu/tab label becomes "Оферты" on  - Triage: expected — the offer tab/flower
+  - Triage: expected dj  - Triage: expected dj  - Triage: expected dj  - Triage: expect s  - Triage: expected dj  - Triage: expected dj  - Triage: expected dj  - Triage: expect s  - Triage: expected dj  - Triage: expected dj  - Triage: expected dj  - Triage: expeve   - Triage: expected dj  - Triage: expectes (a  - Triage: expect, offer snapshot, offer tab).
+- **Wave 2 (parallel):** 2 (after 1, same control), 4 (after 3).
+- **Wave 3:** V5.
+
+## Round 5 — decisions and validation results (2026-11-19)
+
+Items 3 and 4 (offer versioning, read-only offer view) moved to the "Batch 2" section of `additional-tasks.md` in this folder. Item 1 (labour adjustment reset): fixed with `@DynamicUpdate` on `EstimateLineEntity`; an integration test reproduces the race and passes; not tried with two browsers (`[~]`). Item 2 (% icon): the estimate page shows the "adjust labour price by percent" icon buttons (PASS). Item 5: the tab is named "Oferty" in the project tabs (seen in the browser); material selection removed from `OfferTab` (vitest 156 pass), not opened in the browser (`[~]`).

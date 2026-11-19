@@ -14,6 +14,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import com.foremen.service.offer.OfferSnapshot;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -55,6 +58,18 @@ public class OfferEntity extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "selected_package_id")
     private OfferPackageEntity selectedPackage;
+
+    /** FOR-05-07 Batch 2: optional free-text offer name (no RU/PL variants); default "Offer N". */
+    @Column(name = "name", length = 255)
+    private String name;
+
+    /**
+     * FOR-05-07 Batch 2: immutable JSONB snapshot of the estimate captured when the offer was prepared;
+     * {@code null} for offers created before snapshots existed. Written once, never updated.
+     */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "snapshot", columnDefinition = "jsonb", updatable = false)
+    private OfferSnapshot snapshot;
 
     /** Monotonically increasing revision; defaults to 1 on creation (R1.5). */
     @Column(name = "revision", nullable = false)

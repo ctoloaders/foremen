@@ -59,5 +59,7 @@ public record ClientOfferReadModel(
         List<AppliedDiscountView> appliedDiscounts,
         List<FinishingSelectionView> finishing,
         List<NegotiationRoundView> negotiationThread,
-        OfferReadinessView readiness) {
+        OfferReadinessView readiness,
+        String name,
+        boolean hasSnapshot) {
 }

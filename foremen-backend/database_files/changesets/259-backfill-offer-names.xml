@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-05-07 Batch 2: existing offers get the default name "Offer N" (N = order within the project).
+         Idempotent: only rows without a name are touched. -->
+    <changeSet id="259-backfill-offer-names" author="foremen">
+        <sql>
+            UPDATE offers o
+            SET name = 'Offer ' || s.rn
+            FROM (SELECT id, ROW_NUMBER() OVER (PARTITION BY project_id ORDER BY id) AS rn FROM offers) s
+            WHERE o.id = s.id AND o.name IS NULL
+        </sql>
+    </changeSet>
+</databaseChangeLog>

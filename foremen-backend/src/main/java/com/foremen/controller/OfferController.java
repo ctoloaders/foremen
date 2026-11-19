@@ -88,8 +88,10 @@ public class OfferController {
      */
     @PostMapping("/project/{projectId}/prepare")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = CREATE_OPERATION)
-    public ResponseEntity<ExecutorOfferReadModel> prepare(@PathVariable Long projectId) {
-        OfferEntity offer = offerService.prepareOffer(projectId);
+    public ResponseEntity<ExecutorOfferReadModel> prepare(
+            @PathVariable Long projectId,
+            @RequestBody(required = false) PrepareOfferRequest request) {
+        OfferEntity offer = offerService.prepareOffer(projectId, request != null ? request.name() : null);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
 
@@ -242,6 +244,10 @@ public class OfferController {
             }
         }
         return null;
+    }
+
+    /** Optional body for {@code POST /project/{projectId}/prepare}: the custom offer name (FOR-05-07 Batch 2). */
+    public record PrepareOfferRequest(String name) {
     }
 
     /** Request body for {@code POST /{offerId}/select-package}: the target package code. */

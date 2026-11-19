@@ -1019,4 +1019,7 @@
     <include file="database_files/changesets/262-work-internal-price.xml"/>
     <include file="database_files/changesets/263-work-related-works.xml"/>
     <include file="database_files/changesets/264-standard-work-sets.xml"/>
+    <!-- FOR-05-07 Batch 2: offer name + immutable snapshot (258) and name backfill (259). -->
+    <include file="database_files/changesets/258-offer-name-and-snapshot.xml"/>
+    <include file="database_files/changesets/259-backfill-offer-names.xml"/>
 </databaseChangeLog>

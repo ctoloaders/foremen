@@ -53,6 +53,7 @@ import com.foremen.service.offer.DiscountResolver.DiscountInput;
 import com.foremen.service.offer.DiscountResolver.EffectiveDiscount;
 import com.foremen.service.offer.DiscountResolver.EstimateLineInput;
 import com.foremen.service.offer.OfferStateChangeEvent;
+import com.foremen.service.offer.OfferSnapshotBuilder;
 import com.foremen.service.offer.OfferStatusMachine;
 import com.foremen.service.offer.OfferTotalsCalculator;
 import com.foremen.service.offer.OfferTotalsCalculator.OfferTotals;
@@ -141,6 +142,10 @@ public class OfferService
     private final EstimateAssignmentService estimateAssignmentService;
     private final ApplicationEventPublisher eventPublisher;
     private final ClientOfferReadModelAssembler clientOfferReadModelAssembler;
+
+    /** FOR-05-04 package pricing; field-injected (null-safe) so the constructor signature stays stable. */
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.foremen.service.estimate.EstimatePackagePricingService packagePricingService;
 
     public OfferService(OfferDao offerDao,
                         EstimateDao estimateDao,
@@ -246,6 +251,16 @@ public class OfferService
      */
     @Transactional
     public OfferEntity prepareOffer(Long projectId) {
+        return prepareOffer(projectId, null);
+    }
+
+    /**
+     * FOR-05-07 Batch 2: prepares an offer with an optional custom {@code name} (free text, trimmed,
+     * max 255; blank/null yields the default "Offer N", N = the project's offer count + 1) and captures
+     * the immutable estimate snapshot in the same transaction.
+     */
+    @Transactional
+    public OfferEntity prepareOffer(Long projectId, String name) {
         EstimateEntity estimate = estimateDao.findByProjectId(projectId)
                 .orElseThrow(() -> new ForemenApiException(
                         HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "projectId", projectId));
@@ -267,9 +282,27 @@ public class OfferService
 
         recomputeTotals(offer);
 
+        // FOR-05-07 Batch 2: custom name + immutable estimate snapshot, captured in this transaction.
+        offer.setName(resolveOfferName(name, projectId));
+        offer.setSnapshot(OfferSnapshotBuilder.build(
+                estimate, vatRateOf(estimate), offer.getTotalNet(), offer.getTotalVat(), offer.getTotalGross()));
+
         OfferEntity saved = offerDao.save(offer);
         entityManager.flush();
         return saved;
+    }
+
+    /** The trimmed custom name (max 255), or the default "Offer N" (N = project's offer count + 1) when blank. */
+    private String resolveOfferName(String name, Long projectId) {
+        String trimmed = name == null ? "" : name.trim();
+        if (trimmed.isEmpty()) {
+            List<OfferEntity> existing = offerDao.findByProjectIdOrderByIdAsc(projectId);
+            return "Offer " + ((existing != null ? existing.size() : 0) + 1);
+        }
+        if (trimmed.length() > 255) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.offer.name.too.long");
+        }
+        return trimmed;
     }
 
     // --- Lifecycle: select package (R1.5, R20.1) ---
@@ -847,6 +880,13 @@ public class OfferService
      * read from the estimate's lines on every recompute.
      */
     private Map<Long, BigDecimal> estimateClientPrices(EstimateEntity estimate) {
+        // FOR-05-04: with an applied package the net is package price per m2 x area + extra works.
+        if (packagePricingService != null) {
+            java.util.Optional<Map<Long, BigDecimal>> packagePrices = packagePricingService.clientPricesOf(estimate);
+            if (packagePrices.isPresent()) {
+                return packagePrices.get();
+            }
+        }
         Map<Long, BigDecimal> prices = new HashMap<>();
         if (estimate.getLines() != null) {
             for (EstimateLineEntity line : estimate.getLines()) {
@@ -860,9 +900,15 @@ public class OfferService
         return prices;
     }
 
-    /** The project VAT rate as a percentage, or zero when the estimate has no rate. */
+    /**
+     * The project VAT rate as a percentage. Falls back to the estimate's own rate for a project
+     * without one, and to zero when neither has a rate.
+     */
     private BigDecimal vatRateOf(EstimateEntity estimate) {
-        VatRateEntity vatRate = estimate.getVatRate();
+        VatRateEntity vatRate = estimate.getProject() != null ? estimate.getProject().getVatRate() : null;
+        if (vatRate == null) {
+            vatRate = estimate.getVatRate();
+        }
         return vatRate != null && vatRate.getRate() != null ? vatRate.getRate() : BigDecimal.ZERO;
     }
 
