@@ -7,6 +7,7 @@ import java.util.List;
 import com.foremen.dao.model.ConsumptionBranch;
 import com.foremen.service.estimate.EstimateAssignmentService.EditKind;
 import com.foremen.service.estimate.EstimateAssignmentService.StagedEdit;
+import com.foremen.service.estimate.LabourPriceAdjustmentScope;
 
 /**
  * The batched Save request body for the Estimate tab
@@ -65,6 +66,10 @@ public record ApplyAssignmentsRequest(List<StagedEditPayload> edits, List<String
      *                       or the manual physical quantity for a {@code SET_MATERIAL_QUANTITY} line
      *                       override (amendment #1); {@code null} for every other kind (including
      *                       {@code CLEAR_QUANTITY} / {@code CLEAR_MATERIAL_QUANTITY})
+     * @param scope          adjustment scope for {@code ADJUST_LABOUR_PRICE} (FOR-05-05c); {@code null} otherwise
+     * @param targetId       work category / work id for a scoped {@code ADJUST_LABOUR_PRICE};
+     *                       {@code null} for {@code PROJECT} scope and every other kind
+     * @param pct            signed percentage for {@code ADJUST_LABOUR_PRICE}; {@code null} otherwise
      */
     public record StagedEditPayload(
             EditKind kind,
@@ -76,13 +81,32 @@ public record ApplyAssignmentsRequest(List<StagedEditPayload> edits, List<String
             Long materialLineId,
             Long materialId,
             String packageCode,
-            BigDecimal quantity) {
+            BigDecimal quantity,
+            LabourPriceAdjustmentScope scope,
+            Long targetId,
+            BigDecimal pct) {
+
+        /** Backwards-compatible constructor without the {@code ADJUST_LABOUR_PRICE} fields. */
+        public StagedEditPayload(
+                EditKind kind,
+                Long workItemId,
+                Long roomId,
+                Long roomQtyId,
+                ConsumptionBranch branch,
+                Long typeId,
+                Long materialLineId,
+                Long materialId,
+                String packageCode,
+                BigDecimal quantity) {
+            this(kind, workItemId, roomId, roomQtyId, branch, typeId, materialLineId, materialId,
+                    packageCode, quantity, null, null, null);
+        }
 
         /** Maps this request payload to the service {@link StagedEdit} record. */
         public StagedEdit toStagedEdit() {
             return new StagedEdit(
                     kind, workItemId, roomId, roomQtyId, branch, typeId, materialLineId, materialId,
-                    packageCode, quantity);
+                    packageCode, quantity, scope, targetId, pct);
         }
     }
 }

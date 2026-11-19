@@ -195,7 +195,14 @@ public class EstimateMatrixController {
      * cells + the divergence badge). DRAFT-gated + project-scoped in the service write path. It is a
      * real server write (unlike the read-only calculate/preview endpoints), so it carries
      * {@code ESTIMATE} UPDATE — reusing the existing resource, no new managed entity.
+     *
+     * @deprecated FOR-05-05c: the Estimate tab now stages the adjustment as an
+     *     {@code ADJUST_LABOUR_PRICE} staged edit (preview / Save via the assignments endpoints). This
+     *     endpoint is kept unchanged for existing API callers; it writes immediately and does NOT see
+     *     staged or shared-draft edits.
      */
+    @Deprecated
+    @SuppressWarnings("deprecation")
     @PostMapping("/project/{projectId}/labour-price-adjustment")
     @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<EstimateMatrixDto> adjustLabourPrice(

@@ -1905,6 +1905,324 @@ class EstimateAssignmentServiceIntegrationTest {
                 .setParameter("w", workItemId)
                 .getSingleResult());
     }
+    // =====================================================================================
+    // FOR-05-05c: ADJUST_LABOUR_PRICE staged edit (replay by preview and Save)
+    // =====================================================================================
+
+    /** Extra rows for the adjustment tests: W2 (same category, 200), W3 (second category, 100), room R2 (10 m2). */
+    private static final class AdjExtras {
+        Long work2Id;
+        Long work3Id;
+        Long category1Id;
+        Long category2Id;
+        Long room2Id;
+    }
+
+    private AdjExtras createAdjExtras(Fixture f) {
+        AdjExtras x = new AdjExtras();
+        tx().executeWithoutResult(status -> {
+            WorkItemEntity first = workItemDao.findById(f.workItemId).orElseThrow();
+            CurrencyEntity currency = persistCurrency();
+            WorkItemEntity w2 = persistWorkItem("W2_" + runId, first.getWorkCategory(), first.getUnit());
+            persistWorkPrice(w2, currency, new BigDecimal("200.00"));
+            WorkCategoryEntity cat2 = new WorkCategoryEntity();
+            cat2.setCode("CAT2_" + runId);
+            cat2.setOrderNo(2);
+            cat2.setNameRU("Категория2 " + runId);
+            cat2.setNamePL("Kategoria2 " + runId);
+            cat2.setActive(true);
+            cat2 = workCategoryDao.save(cat2);
+            WorkItemEntity w3 = persistWorkItem("W3_" + runId, cat2, first.getUnit());
+            persistWorkPrice(w3, currency, new BigDecimal("100.00"));
+            ProjectEntity project = projectDao.findById(f.projectId).orElseThrow();
+            RoomTypeEntity roomType = roomTypeDao.findById(f.roomTypeId).orElseThrow();
+            RoomEntity r2 = persistRoom(project, roomType, new BigDecimal("10.00"));
+            x.work2Id = w2.getId();
+            x.work3Id = w3.getId();
+            x.category1Id = first.getWorkCategory().getId();
+            x.category2Id = cat2.getId();
+            x.room2Id = r2.getId();
+        });
+        return x;
+    }
+
+    private EstimateLineEntity lineOf(Long projectId, Long workItemId) {
+        return tx().execute(status -> entityManager.createQuery(
+                        "select l from EstimateLineEntity l where l.estimate.project.id = :p and l.workItem.id = :w",
+                        EstimateLineEntity.class)
+                .setParameter("p", projectId)
+                .setParameter("w", workItemId)
+                .getSingleResult());
+    }
+
+    private long lineCount(Long projectId, Long workItemId) {
+        return tx().execute(status -> entityManager.createQuery(
+                        "select count(l) from EstimateLineEntity l "
+                                + "where l.estimate.project.id = :p and l.workItem.id = :w", Long.class)
+                .setParameter("p", projectId)
+                .setParameter("w", workItemId)
+                .getSingleResult());
+    }
+
+    private static EstimateAssignmentService.StagedEdit assignEdit(Long workId, Long roomId) {
+        return EstimateAssignmentService.StagedEdit.assign(workId, roomId, null);
+    }
+
+    private static EstimateAssignmentService.StagedEdit adjust(
+            LabourPriceAdjustmentScope scope, Long targetId, String pct) {
+        return EstimateAssignmentService.StagedEdit.adjustLabourPrice(
+                scope, targetId, pct == null ? null : new BigDecimal(pct));
+    }
+
+    private void assertLabour(EstimateMatrixDto matrix, Long workId, Long roomId, String expected) {
+        var cell = findCell(matrix, workId, roomId);
+        assertThat(cell).as("cell (%s, %s) must exist", workId, roomId).isNotNull();
+        assertThat(cell.labour()).isEqualByComparingTo(expected);
+    }
+
+    private void assertOriginalsUntouched(Long projectId, Long workId, String unitPrice, String quantity) {
+        EstimateLineEntity line = lineOf(projectId, workId);
+        assertThat(line.getUnitPrice()).as("unit_price stays the original").isEqualByComparingTo(unitPrice);
+        assertThat(line.getValueNet()).as("value_net stays on the original price")
+                .isEqualByComparingTo(new BigDecimal(unitPrice).multiply(new BigDecimal(quantity)));
+    }
+
+    private void assertScopeViaStagedSave(
+            LabourPriceAdjustmentScope scope, boolean byCategory, String pct,
+            String w1, String w2, String w3) {
+        Fixture f = createFixture();
+        AdjExtras x = createAdjExtras(f);
+        Long target = switch (scope) {
+            case PROJECT -> null;
+            case WORK_CATEGORY -> byCategory ? x.category1Id : x.category2Id;
+            case WORK_ITEM -> x.work2Id;
+        };
+        List<EstimateAssignmentService.StagedEdit> assigns = List.of(
+                assignEdit(f.workItemId, f.roomId), assignEdit(x.work2Id, f.roomId), assignEdit(x.work3Id, f.roomId));
+        assignmentService.saveAndAssemble(f.projectId, assigns);
+        EstimateMatrixDto baseline = assignmentService.previewStagedEdits(f.projectId, List.of(), true);
+
+        // Staged-only cell is covered in preview (nothing persisted yet).
+        EstimateMatrixDto preview = assignmentService.previewStagedEdits(
+                f.projectId, List.of(adjust(scope, target, pct)), true);
+        assertLabour(preview, f.workItemId, f.roomId, new BigDecimal(w1).multiply(BigDecimal.valueOf(20)).toPlainString());
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride())
+                .as("preview persists nothing").isEqualByComparingTo("150.00");
+
+        EstimateMatrixDto saved = assignmentService.saveAndAssemble(
+                f.projectId, List.of(adjust(scope, target, pct)));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo(w1);
+        assertThat(lineOf(f.projectId, x.work2Id).getUnitPriceOverride()).isEqualByComparingTo(w2);
+        assertThat(lineOf(f.projectId, x.work3Id).getUnitPriceOverride()).isEqualByComparingTo(w3);
+        assertOriginalsUntouched(f.projectId, f.workItemId, "150.00", "20");
+        assertOriginalsUntouched(f.projectId, x.work2Id, "200.00", "20");
+        assertOriginalsUntouched(f.projectId, x.work3Id, "100.00", "20");
+        assertLabour(saved, f.workItemId, f.roomId, new BigDecimal(w1).multiply(BigDecimal.valueOf(20)).toPlainString());
+        assertLabour(saved, x.work2Id, f.roomId, new BigDecimal(w2).multiply(BigDecimal.valueOf(20)).toPlainString());
+        assertLabour(saved, x.work3Id, f.roomId, new BigDecimal(w3).multiply(BigDecimal.valueOf(20)).toPlainString());
+        // Materials are never touched by the labour adjustment.
+        assertThat(findCell(saved, f.workItemId, f.roomId).materials())
+                .isEqualTo(findCell(baseline, f.workItemId, f.roomId).materials());
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: staged ADJUST_LABOUR_PRICE at PROJECT scope adjusts every labour line, "
+            + "previewed then persisted by Save; unit_price/value_net/materials untouched")
+    void stagedAdjustLabourPrice_projectScope() {
+        assertScopeViaStagedSave(LabourPriceAdjustmentScope.PROJECT, true, "10", "165.00", "220.00", "110.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: staged ADJUST_LABOUR_PRICE at WORK_CATEGORY scope adjusts only that category")
+    void stagedAdjustLabourPrice_workCategoryScope() {
+        assertScopeViaStagedSave(LabourPriceAdjustmentScope.WORK_CATEGORY, true, "10", "165.00", "220.00", "100.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: staged ADJUST_LABOUR_PRICE at WORK_ITEM scope adjusts only that work")
+    void stagedAdjustLabourPrice_workItemScope() {
+        assertScopeViaStagedSave(LabourPriceAdjustmentScope.WORK_ITEM, true, "-20", "150.00", "160.00", "100.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: a staged-only ASSIGN cell before the adjustment gets the adjusted labour "
+            + "in preview and after Save (all three scopes, one set)")
+    void stagedAdjustLabourPrice_coversStagedOnlyCell() {
+        Fixture f = createFixture();
+        AdjExtras x = createAdjExtras(f);
+        for (var scopeAndTarget : List.of(
+                java.util.Map.entry(LabourPriceAdjustmentScope.PROJECT, 0L),
+                java.util.Map.entry(LabourPriceAdjustmentScope.WORK_CATEGORY, x.category1Id),
+                java.util.Map.entry(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId))) {
+            Long target = scopeAndTarget.getKey() == LabourPriceAdjustmentScope.PROJECT ? null : scopeAndTarget.getValue();
+            var staged = List.of(assignEdit(f.workItemId, f.roomId), adjust(scopeAndTarget.getKey(), target, "10"));
+            assertLabour(assignmentService.previewStagedEdits(f.projectId, staged, true),
+                    f.workItemId, f.roomId, "3300.00");
+            assertThat(lineCount(f.projectId, f.workItemId)).as("preview rolls back").isZero();
+        }
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                assignEdit(f.workItemId, f.roomId), adjust(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, "10")));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("165.00");
+        assertOriginalsUntouched(f.projectId, f.workItemId, "150.00", "20");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: pct = 0 resets the override to the original price; a persisted adjustment "
+            + "is reset by a later staged 0%")
+    void stagedAdjustLabourPrice_zeroResets() {
+        Fixture f = createFixture();
+        assignmentService.saveAndAssemble(f.projectId, List.of(assignEdit(f.workItemId, f.roomId),
+                adjust(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, "10")));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("165.00");
+
+        EstimateMatrixDto preview = assignmentService.previewStagedEdits(f.projectId,
+                List.of(adjust(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, "0")), true);
+        assertLabour(preview, f.workItemId, f.roomId, "3000.00");
+        assignmentService.saveAndAssemble(f.projectId,
+                List.of(adjust(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, "0")));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("150.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: malformed ADJUST_LABOUR_PRICE gives 400 error.validation in preview and Save, "
+            + "and a failing Save leaves the database unchanged")
+    void stagedAdjustLabourPrice_validation() {
+        Fixture f = createFixture();
+        assignmentService.saveAndAssemble(f.projectId, List.of(assignEdit(f.workItemId, f.roomId)));
+
+        List<EstimateAssignmentService.StagedEdit> invalid = List.of(
+                adjust(null, null, "10"),
+                adjust(LabourPriceAdjustmentScope.WORK_ITEM, null, "10"),
+                adjust(LabourPriceAdjustmentScope.WORK_CATEGORY, null, "10"),
+                adjust(LabourPriceAdjustmentScope.PROJECT, null, null));
+        for (var bad : invalid) {
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () -> assignmentService.previewStagedEdits(f.projectId, List.of(bad), true))
+                    .isInstanceOfSatisfying(com.foremen.exception.ForemenApiException.class, ex -> {
+                        assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                        assertThat(ex.getMessageCode()).isEqualTo("error.validation");
+                    });
+            // A valid adjustment precedes the bad one: the whole Save must abort atomically.
+            org.assertj.core.api.Assertions.assertThatThrownBy(() -> assignmentService.saveAndAssemble(
+                            f.projectId,
+                            List.of(adjust(LabourPriceAdjustmentScope.PROJECT, null, "10"), bad)))
+                    .isInstanceOfSatisfying(com.foremen.exception.ForemenApiException.class, ex -> {
+                        assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+                        assertThat(ex.getMessageCode()).isEqualTo("error.validation");
+                    });
+            assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride())
+                    .as("failed Save must not persist the preceding valid adjustment").isEqualByComparingTo("150.00");
+        }
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: an unknown target is a no-op; a non-DRAFT estimate rejects Save with 409")
+    void stagedAdjustLabourPrice_unknownTargetNoOp_andNonDraftRejected() {
+        Fixture f = createFixture();
+        assignmentService.saveAndAssemble(f.projectId, List.of(assignEdit(f.workItemId, f.roomId)));
+        assignmentService.saveAndAssemble(f.projectId,
+                List.of(adjust(LabourPriceAdjustmentScope.WORK_ITEM, 987654321L, "10"),
+                        adjust(LabourPriceAdjustmentScope.WORK_CATEGORY, 987654321L, "10")));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("150.00");
+
+        tx().executeWithoutResult(status -> {
+            EstimateEntity estimate = entityManager.createQuery(
+                            "select e from EstimateEntity e where e.project.id = :p", EstimateEntity.class)
+                    .setParameter("p", f.projectId).getSingleResult();
+            estimate.setStatus(com.foremen.dao.model.EstimateStatus.PRICED);
+            entityManager.flush();
+        });
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> assignmentService.saveAndAssemble(
+                        f.projectId, List.of(adjust(LabourPriceAdjustmentScope.PROJECT, null, "10"))))
+                .isInstanceOfSatisfying(com.foremen.exception.ForemenApiException.class, ex -> {
+                    assertThat(ex.getStatus()).isEqualTo(org.springframework.http.HttpStatus.CONFLICT);
+                    assertThat(ex.getMessageCode()).isEqualTo("error.estimate.locked");
+                });
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("150.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c D2.2: a cell staged after the adjustment does not inherit it, except that a room "
+            + "added to an existing adjusted line keeps the line's override")
+    void stagedAdjustLabourPrice_replayOrder_laterCells() {
+        Fixture f = createFixture();
+        AdjExtras x = createAdjExtras(f);
+        assignmentService.saveAndAssemble(f.projectId, List.of(assignEdit(f.workItemId, f.roomId)));
+
+        // New line (W2 has none yet) created AFTER the adjustment: original price. Existing line W1 gets a
+        // second room AFTER the adjustment: keeps the adjusted override (it lives on the line).
+        EstimateMatrixDto saved = assignmentService.saveAndAssemble(f.projectId, List.of(
+                adjust(LabourPriceAdjustmentScope.PROJECT, null, "10"),
+                assignEdit(x.work2Id, f.roomId),
+                assignEdit(f.workItemId, x.room2Id)));
+        assertThat(lineOf(f.projectId, x.work2Id).getUnitPriceOverride()).isEqualByComparingTo("200.00");
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("165.00");
+        assertLabour(saved, x.work2Id, f.roomId, "4000.00");
+        assertLabour(saved, f.workItemId, x.room2Id, "1650.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c D2.3: unassigning the last cell removes the line, so an earlier adjustment has "
+            + "nothing to apply to and a re-assign starts at the original price")
+    void stagedAdjustLabourPrice_replayOrder_unassignThenReassign() {
+        Fixture f = createFixture();
+        assignmentService.saveAndAssemble(f.projectId, List.of(assignEdit(f.workItemId, f.roomId)));
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                adjust(LabourPriceAdjustmentScope.PROJECT, null, "10"),
+                EstimateAssignmentService.StagedEdit.unassign(f.workItemId, f.roomId),
+                assignEdit(f.workItemId, f.roomId)));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("150.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c D2.4: overlapping adjustments are computed from the original price; "
+            + "the later one wins on the lines both cover")
+    void stagedAdjustLabourPrice_replayOrder_overlappingLaterWins() {
+        Fixture f = createFixture();
+        AdjExtras x = createAdjExtras(f);
+        assignmentService.saveAndAssemble(f.projectId,
+                List.of(assignEdit(f.workItemId, f.roomId), assignEdit(x.work2Id, f.roomId)));
+
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                adjust(LabourPriceAdjustmentScope.PROJECT, null, "10"),
+                adjust(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, "5")));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("157.50");
+        assertThat(lineOf(f.projectId, x.work2Id).getUnitPriceOverride()).isEqualByComparingTo("220.00");
+
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                adjust(LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, "5"),
+                adjust(LabourPriceAdjustmentScope.PROJECT, null, "10")));
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("165.00");
+        assertThat(lineOf(f.projectId, x.work2Id).getUnitPriceOverride()).isEqualByComparingTo("220.00");
+    }
+
+    @Test
+    @DisplayName("FOR-05-05c: a mixed staged set (assign, set quantity, WORK_CATEGORY adjustment) previews and "
+            + "saves to the same matrix labour and the persisted override")
+    void stagedAdjustLabourPrice_mixedSet_previewMatchesSave() {
+        Fixture f = createFixture();
+        AdjExtras x = createAdjExtras(f);
+        List<EstimateAssignmentService.StagedEdit> staged = List.of(
+                assignEdit(f.workItemId, f.roomId),
+                assignEdit(x.work3Id, f.roomId),
+                setQuantity(f.workItemId, f.roomId, new BigDecimal("30.00")),
+                adjust(LabourPriceAdjustmentScope.WORK_CATEGORY, x.category1Id, "10"));
+
+        EstimateMatrixDto preview = assignmentService.previewStagedEdits(f.projectId, staged, true);
+        assertThat(lineCount(f.projectId, f.workItemId)).as("preview persists nothing").isZero();
+        EstimateMatrixDto saved = assignmentService.saveAndAssemble(f.projectId, staged);
+
+        for (String[] expected : new String[][] {
+                {"w1", "4950.00"}, {"w3", "2000.00"}}) {
+            Long work = expected[0].equals("w1") ? f.workItemId : x.work3Id;
+            assertLabour(preview, work, f.roomId, expected[1]);
+            assertLabour(saved, work, f.roomId, expected[1]);
+        }
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPriceOverride()).isEqualByComparingTo("165.00");
+        assertThat(lineOf(f.projectId, x.work3Id).getUnitPriceOverride()).isEqualByComparingTo("100.00");
+        assertThat(lineOf(f.projectId, f.workItemId).getUnitPrice()).isEqualByComparingTo("150.00");
+    }
+
     @Test
     @DisplayName("Remove_Package: unassigns the cells that still equal the package apply result, keeps a "
             + "manually changed cell, reverts its package finishing lines and clears the applied package")

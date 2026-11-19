@@ -344,10 +344,22 @@ public class EstimateAssignmentService
      * @param scope     the adjustment scope (PROJECT / WORK_CATEGORY / WORK_ITEM)
      * @param targetId  the scope target id (work-category id / work-item id; ignored for PROJECT)
      * @param pct       the signed percentage adjustment applied to the original price
+     *
+     * @deprecated writes immediately and does not see staged or shared-draft edits. The supported
+     *             path is the staged edit {@link EditKind#ADJUST_LABOUR_PRICE} (FOR-05-05c), replayed by
+     *             preview and persisted by the batched Save. Kept for API callers.
      */
+    @Deprecated
     @Transactional
     public void applyLabourPriceAdjustment(
             Long projectId, LabourPriceAdjustmentScope scope, Long targetId, BigDecimal pct) {
+        validateAdjustment(scope, targetId, pct);
+        EstimateEntity estimate = resolveDraftEstimate(projectId);
+        adjustLinesInScope(estimate, scope, targetId, pct);
+        entityManager.flush();
+    }
+
+    private static void validateAdjustment(LabourPriceAdjustmentScope scope, Long targetId, BigDecimal pct) {
         if (scope == null) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.validation");
         }
@@ -358,8 +370,16 @@ public class EstimateAssignmentService
                 || scope == LabourPriceAdjustmentScope.WORK_ITEM) && targetId == null) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.validation");
         }
+    }
 
-        EstimateEntity estimate = resolveDraftEstimate(projectId);
+    /**
+     * Shared by the direct endpoint and the staged {@code ADJUST_LABOUR_PRICE} replay: validates the
+     * arguments (400 {@code error.validation}) and rewrites {@code unitPriceOverride} of every
+     * in-scope line of {@code estimate} to {@code round2(unitPrice × (1 + pct/100))}. No flush.
+     */
+    private void adjustLinesInScope(
+            EstimateEntity estimate, LabourPriceAdjustmentScope scope, Long targetId, BigDecimal pct) {
+        validateAdjustment(scope, targetId, pct);
 
         // factor = 1 + pct/100, computed once with enough scale, then applied to each original price.
         BigDecimal factor = BigDecimal.ONE.add(pct.divide(BigDecimal.valueOf(100)));
@@ -374,7 +394,6 @@ public class EstimateAssignmentService
             BigDecimal override = original.multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);
             line.setUnitPriceOverride(override);
         }
-        entityManager.flush();
     }
 
     /** Whether an estimate line falls within the requested adjustment scope. */
@@ -786,6 +805,8 @@ public class EstimateAssignmentService
             case SET_MATERIAL_QUANTITY -> applySetMaterialQuantity(estimate, edit);
             case CLEAR_MATERIAL_QUANTITY -> applyClearMaterialQuantity(estimate, edit);
             case APPLY_CHEAPEST -> applyCheapest(estimate, edit);
+            case ADJUST_LABOUR_PRICE ->
+                    adjustLinesInScope(estimate, edit.scope(), edit.targetId(), edit.pct());
             case ADD_MATERIAL, REMOVE_MATERIAL, CHOOSE_CONCRETE, BULK_CHOOSE_CONCRETE ->
                     applyMaterialEdit(estimate, edit);
         }
@@ -3147,7 +3168,14 @@ public class EstimateAssignmentService
          * (qty = need − allocation) where consumption exceeds the allocation. Idempotent for the same
          * package; re-applying a different package recomputes cleanly.
          */
-        MERGE_PACKAGE_MATERIALS
+        MERGE_PACKAGE_MATERIALS,
+        /**
+         * FOR-05-05c: scoped labour price adjustment ({@code scope}, {@code targetId}, {@code pct}).
+         * A one-shot write at its staged position (not a live multiplier): every in-scope line of the
+         * replay graph (persisted lines and lines created by earlier staged edits) gets
+         * {@code unitPriceOverride = round2(unitPrice × (1 + pct/100))}. Labour only.
+         */
+        ADJUST_LABOUR_PRICE
     }
 
     /**
@@ -3174,6 +3202,11 @@ public class EstimateAssignmentService
      * @param packageCode    active package code (ASSIGN / APPLY_PACKAGE / RECOMPUTE_FINISHING)
      * @param quantity       the manual Volume for a {@code SET_QUANTITY} cell override (#7); {@code null}
      *                       for every other kind (including {@code CLEAR_QUANTITY})
+     * @param scope          adjustment scope for {@code ADJUST_LABOUR_PRICE} (FOR-05-05c); {@code null}
+     *                       for every other kind
+     * @param targetId       work-category / work-item id for {@code ADJUST_LABOUR_PRICE}; {@code null}
+     *                       for scope PROJECT and every other kind
+     * @param pct            signed percentage for {@code ADJUST_LABOUR_PRICE}; {@code null} otherwise
      */
     public record StagedEdit(
             EditKind kind,
@@ -3185,7 +3218,34 @@ public class EstimateAssignmentService
             Long materialLineId,
             Long materialId,
             String packageCode,
-            BigDecimal quantity) {
+            BigDecimal quantity,
+            LabourPriceAdjustmentScope scope,
+            Long targetId,
+            BigDecimal pct) {
+
+        /** Compatibility constructor: the pre-FOR-05-05c 10-component shape (adjustment fields null). */
+        public StagedEdit(
+                EditKind kind,
+                Long workItemId,
+                Long roomId,
+                Long roomQtyId,
+                ConsumptionBranch branch,
+                Long typeId,
+                Long materialLineId,
+                Long materialId,
+                String packageCode,
+                BigDecimal quantity) {
+            this(kind, workItemId, roomId, roomQtyId, branch, typeId, materialLineId, materialId,
+                    packageCode, quantity, null, null, null);
+        }
+
+        /** Convenience factory for an {@code ADJUST_LABOUR_PRICE} edit (FOR-05-05c). */
+        public static StagedEdit adjustLabourPrice(
+                LabourPriceAdjustmentScope scope, Long targetId, BigDecimal pct) {
+            return new StagedEdit(
+                    EditKind.ADJUST_LABOUR_PRICE, null, null, null, null, null, null, null, null, null,
+                    scope, targetId, pct);
+        }
 
         /** Convenience factory for an assign cell edit. */
         public static StagedEdit assign(Long workItemId, Long roomId, String packageCode) {

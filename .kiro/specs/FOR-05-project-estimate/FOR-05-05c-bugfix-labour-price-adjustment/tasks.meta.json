@@ -1,0 +1,369 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration test (backend)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003602
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129019764
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129185431
+      }
+    ],
+    "2. Write bug condition exploration test (frontend)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003638
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129020278
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129186326
+      }
+    ],
+    "3. Write preservation property tests (backend, BEFORE implementing fix)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003668
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129188183
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129636907
+      }
+    ],
+    "4. Write preservation property tests (frontend, BEFORE implementing fix)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003700
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129188403
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129637350
+      }
+    ],
+    "5.1 Backend: `EditKind`, `StagedEdit`, helper and replay in `EstimateAssignmentService.java`": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003739
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129647120
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129774111
+      }
+    ],
+    "5.2 Backend: `StagedEditPayload` in `controller/model/ApplyAssignmentsRequest.java`": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003766
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129932533
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130059691
+      }
+    ],
+    "5.3 Backend: deprecate the direct endpoint in `EstimateMatrixController.java`": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003793
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129933948
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130056686
+      }
+    ],
+    "5.4 Backend: staged replay integration tests (extend `EstimateAssignmentServiceIntegrationTest`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003816
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130068090
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130475233
+      }
+    ],
+    "5.5 Backend: property test `LabourPriceAdjustmentStagedReplayPropertyTest` (new class)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129003883
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130551052
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130757171
+      }
+    ],
+    "5.6 Backend: payload and JSON round-trip tests (new class `StagedEditPayloadAdjustLabourPriceTest`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004008
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130487584
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130544252
+      }
+    ],
+    "5.7 Frontend: types in `features/estimate/types/index.ts`": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004033
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129647475
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129775218
+      }
+    ],
+    "5.8 Frontend: `collapseStagedEdits.ts` barrier": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004056
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129783635
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129921171
+      }
+    ],
+    "5.9 Frontend: `projectStagedEdits.ts` overlay no-op": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004079
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129784124
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129922854
+      }
+    ],
+    "5.10 Frontend: stage the adjustment in `EstimateTab.tsx` and `EstimateTab.test.tsx`": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004111
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129935031
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130055382
+      }
+    ],
+    "5.11 Frontend: staged list label and locales": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004139
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130069409
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130476810
+      }
+    ],
+    "5.12 Frontend: remove the direct-call hook and API function": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004189
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130070274
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130477848
+      }
+    ],
+    "5.13 Frontend: store tests for stage / undo / redo / discard": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004217
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129935990
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130057810
+      }
+    ],
+    "5.14 Verify bug condition exploration tests now pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004236
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130764817
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130857644
+      }
+    ],
+    "5.15 Verify preservation tests still pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004267
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795130858133
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131026314
+      }
+    ],
+    "6. Author test-cases.md": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004294
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131026808
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131195145
+      }
+    ],
+    "7. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795129004327
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131195800
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131530989
+      }
+    ],
+    "5. Fix for labour price adjustment bypassing the staged-edit flow": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131026387
+      }
+    ]
+  }
+}
