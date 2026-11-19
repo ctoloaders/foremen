@@ -40,5 +40,10 @@ public record ProjectReadDto(
         List<ProjectMemberSummaryDto> clients,
         ProjectMemberSummaryDto client,
         /** FOR-11-06 (R4): payee IBAN; populated only for ADMIN and MANAGER callers, otherwise omitted. */
-        String bankAccount
+        String bankAccount,
+        Long vatRateId,
+        /** FOR-05-04: an offer package is applied to the project estimate. */
+        boolean packageApplied,
+        /** FOR-05-04: the applied offer package id, or null. */
+        Long offerPackageId
 ) {}

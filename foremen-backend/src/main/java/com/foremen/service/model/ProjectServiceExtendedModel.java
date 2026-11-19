@@ -22,5 +22,6 @@ public record ProjectServiceExtendedModel(Long id,
                                           BigDecimal area,
                                           LocalDate startDate,
                                           LocalDate endDate,
-                                          ProjectStatus status) {
+                                          ProjectStatus status,
+                                          Long vatRateId) {
 }

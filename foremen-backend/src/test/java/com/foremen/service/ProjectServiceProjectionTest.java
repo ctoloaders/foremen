@@ -173,7 +173,7 @@ class ProjectServiceProjectionTest {
     private ProjectListDto invokeToListDto(ProjectEntity entity) throws Exception {
         ProjectServiceModel model = new ProjectServiceModel(
                 entity.getId(), entity.getName(), null, null, null, null, null, null, null, null,
-                entity.getStatus());
+                entity.getStatus(), null);
         Method m = ProjectService.class.getDeclaredMethod(
                 "toListDto", ProjectServiceModel.class, ProjectEntity.class);
         m.setAccessible(true);
@@ -183,7 +183,7 @@ class ProjectServiceProjectionTest {
     private ProjectReadDto invokeToReadDto(ProjectEntity entity) throws Exception {
         ProjectServiceExtendedModel model = new ProjectServiceExtendedModel(
                 entity.getId(), entity.getName(), null, null, null, null, null, null, null, null,
-                entity.getStatus());
+                entity.getStatus(), null);
         Method m = ProjectService.class.getDeclaredMethod(
                 "toReadDto", ProjectServiceExtendedModel.class, ProjectEntity.class);
         m.setAccessible(true);
@@ -311,7 +311,7 @@ class ProjectServiceProjectionTest {
 
     private static CreateProjectRequest requestWithMember(Long userId, Long projectRoleId, Long workerTypeId) {
         return new CreateProjectRequest(
-                "New project", null, null, null, null, null, null, null, null, null,
+                "New project", null, null, null, null, null, null, null, null, null, null,
                 List.of(new ProjectMemberInput(userId, projectRoleId, workerTypeId)),
                 null);
     }
@@ -395,7 +395,7 @@ class ProjectServiceProjectionTest {
                         HttpStatus.CONFLICT, "error.project.member.duplicate"));
 
         CreateProjectRequest request = new CreateProjectRequest(
-                "Dup project", null, null, null, null, null, null, null, null, null,
+                "Dup project", null, null, null, null, null, null, null, null, null, null,
                 List.of(new ProjectMemberInput(10L, 3L, null), new ProjectMemberInput(10L, 3L, null)),
                 null);
 

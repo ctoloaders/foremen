@@ -18,6 +18,7 @@ import com.foremen.service.team.TeamComposition;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectMemberEntity;
 import com.foremen.dao.model.ProjectStatus;
+import com.foremen.dao.model.VatRateEntity;
 import com.foremen.dao.model.RoleEntity;
 import com.foremen.dao.model.UserEntity;
 import com.foremen.dao.model.WorkerTypeEntity;
@@ -91,6 +92,9 @@ public class ProjectService
     static final String WORKER_ROLE_CODE = "WORKER";
 
     /** Message code returned when the {@code CLIENT} role is not seeded (Requirement 2.8, Error Handling table). */
+    /** Rate value (percent) of the VAT rate new projects default to. */
+    static final java.math.BigDecimal DEFAULT_VAT_RATE = new java.math.BigDecimal("8.00");
+
     static final String CLIENT_ROLE_MISSING_MESSAGE = "error.role.client.missing";
 
     private final ProjectDao projectDao;
@@ -350,6 +354,9 @@ public class ProjectService
         project.setStartDate(request.startDate());
         project.setEndDate(request.endDate());
         project.setStatus(request.status() != null ? request.status() : ProjectStatus.DRAFT);
+        project.setVatRate(request.vatRateId() != null
+                ? entityManager.getReference(VatRateEntity.class, request.vatRateId())
+                : findDefaultVatRate());
 
         ProjectEntity saved = projectDao.save(project);
         Long projectId = saved.getId();
@@ -418,6 +425,7 @@ public class ProjectService
                 saved.getStartDate(),
                 saved.getEndDate(),
                 saved.getStatus(),
+                saved.getVatRate() == null ? null : saved.getVatRate().getId(),
                 memberSummaries,
                 clientSummary);
     }
@@ -505,7 +513,10 @@ public class ProjectService
                 model.getStatus(),
                 members,
                 clients,
-                firstOrNull(clients));
+                firstOrNull(clients),
+                model.getVatRateId(),
+                entity != null && entity.isPackageApplied(),
+                offerPackageIdOf(entity));
     }
 
     /**
@@ -532,7 +543,15 @@ public class ProjectService
                 clients,
                 firstOrNull(clients),
                 (entity != null && (callerHasRole("ADMIN") || callerHasRole("MANAGER")))
-                        ? entity.getBankAccount() : null);
+                        ? entity.getBankAccount() : null,
+                model.vatRateId(),
+                entity != null && entity.isPackageApplied(),
+                offerPackageIdOf(entity));
+    }
+
+    /** The applied offer package id of {@code entity} (FOR-05-04), or {@code null} when none. */
+    private static Long offerPackageIdOf(ProjectEntity entity) {
+        return entity == null || entity.getOfferPackage() == null ? null : entity.getOfferPackage().getId();
     }
 
     /**
@@ -726,6 +745,29 @@ public class ProjectService
         }
 
         return null;
+    }
+
+    /**
+     * The default project VAT rate: the seeded 8% rate, looked up by its rate value (never by a
+     * hard-coded id, since ids differ between environments). {@code null} when it is not seeded.
+     */
+    private VatRateEntity findDefaultVatRate() {
+        List<VatRateEntity> rates = projectDao.findVatRatesByRate(DEFAULT_VAT_RATE);
+        return rates == null || rates.isEmpty() ? null : rates.get(0);
+    }
+
+    /**
+     * Adds a client to an existing project (project edit form). Same behavior as the {@code client}
+     * block of {@link #createProject}: an existing CLIENT user is assigned, or a new client is
+     * registered and invited, always under the server-resolved CLIENT role. The by-id read asserts
+     * the caller can access the project before anything is written.
+     *
+     * @return the added client's summary, or {@code null} when the block is empty
+     */
+    @Transactional
+    public ProjectMemberSummaryDto addClient(Long projectId, ClientBlock client) {
+        findById(projectId);
+        return processClient(client, projectId);
     }
 
     /** Resolves the seeded {@code CLIENT} role server-side (Requirements 2.7, 2.8). */

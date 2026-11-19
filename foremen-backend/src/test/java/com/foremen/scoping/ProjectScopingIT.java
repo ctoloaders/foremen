@@ -288,6 +288,6 @@ class ProjectScopingIT {
 
     private ProjectServiceExtendedModel modelWithName(String name) {
         return new ProjectServiceExtendedModel(
-                null, name, null, null, null, null, null, null, null, null, ProjectStatus.ACTIVE);
+                null, name, null, null, null, null, null, null, null, null, ProjectStatus.ACTIVE, null);
     }
 }

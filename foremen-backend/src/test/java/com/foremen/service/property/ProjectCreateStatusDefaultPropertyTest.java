@@ -94,7 +94,7 @@ class ProjectCreateStatusDefaultPropertyTest {
     private static CreateProjectRequest request(ProjectStatus status) {
         return new CreateProjectRequest(
                 "Test Project", null, null, null, null, null, null, null, null,
-                status, null, null);
+                status, null, null, null);
     }
 
     // Feature: FOR-04-13-project, Property 1

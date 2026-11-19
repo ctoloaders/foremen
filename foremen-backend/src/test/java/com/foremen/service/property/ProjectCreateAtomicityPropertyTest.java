@@ -90,7 +90,7 @@ class ProjectCreateAtomicityPropertyTest {
         List<ProjectMemberInput> members = buildMembers(memberCount);
         ClientBlock client = buildClient(clientKind, name);
         CreateProjectRequest request = new CreateProjectRequest(
-                name, null, null, null, null, null, null, null, null, null, members, client);
+                name, null, null, null, null, null, null, null, null, null, null, members, client);
 
         // A member-assign failure is only meaningful when there is at least one member, and a
         // client-step failure only when a client block is present; otherwise fall back to failing
@@ -130,7 +130,7 @@ class ProjectCreateAtomicityPropertyTest {
         List<ProjectMemberInput> members = buildMembers(memberCount);
         ClientBlock client = buildClient(clientKind, name);
         CreateProjectRequest request = new CreateProjectRequest(
-                name, null, null, null, null, null, null, null, null, null, members, client);
+                name, null, null, null, null, null, null, null, null, null, null, members, client);
 
         ProjectCreateResponse response = f.service.createProject(request);
 

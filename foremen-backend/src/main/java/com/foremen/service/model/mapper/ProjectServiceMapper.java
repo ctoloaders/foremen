@@ -2,6 +2,9 @@ package com.foremen.service.model.mapper;
 
 import com.foremen.config.mapper.ForemenMapperConfig;
 import com.foremen.dao.model.ProjectEntity;
+import com.foremen.dao.model.VatRateEntity;
+import jakarta.persistence.EntityManager;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.foremen.mapper.ServiceToDaoMapper;
 import com.foremen.service.model.ProjectServiceExtendedModel;
 import com.foremen.service.model.ProjectServiceModel;
@@ -25,27 +28,45 @@ import java.util.Set;
  * ignore {@code members} so MapStruct does not attempt to populate the association.
  */
 @Mapper(config = ForemenMapperConfig.class)
-public interface ProjectServiceMapper
-        extends ServiceToDaoMapper<ProjectEntity, ProjectServiceModel, ProjectServiceExtendedModel> {
+public abstract class ProjectServiceMapper
+        implements ServiceToDaoMapper<ProjectEntity, ProjectServiceModel, ProjectServiceExtendedModel> {
+
+    @Autowired
+    protected EntityManager entityManager;
+
+    protected VatRateEntity vatRateRef(Long id) {
+        return id == null ? null : entityManager.getReference(VatRateEntity.class, id);
+    }
 
     @Override
-    default Set<String> getI18nSupportedProperties() {
+    public Set<String> getI18nSupportedProperties() {
         return Collections.emptySet();
     }
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "members", ignore = true)
-    ProjectEntity toCreateDaoModel(ProjectServiceExtendedModel source);
+    // FOR-05-04: the package flag / package are written only by the estimate apply/remove package path.
+    @Mapping(target = "packageApplied", ignore = true)
+    @Mapping(target = "offerPackage", ignore = true)
+    @Mapping(target = "vatRate", expression = "java(vatRateRef(source.vatRateId()))")
+    public abstract ProjectEntity toCreateDaoModel(ProjectServiceExtendedModel source);
 
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "members", ignore = true)
-    void updateFields(ProjectServiceExtendedModel source, @MappingTarget ProjectEntity target);
+    @Mapping(target = "packageApplied", ignore = true)
+    @Mapping(target = "offerPackage", ignore = true)
+    // A null vatRateId (older clients) keeps the stored rate instead of clearing it.
+    @Mapping(target = "vatRate",
+            expression = "java(source.vatRateId() == null ? target.getVatRate() : vatRateRef(source.vatRateId()))")
+    public abstract void updateFields(ProjectServiceExtendedModel source, @MappingTarget ProjectEntity target);
 
     @Override
-    ProjectServiceModel toServiceModel(ProjectEntity source);
+    @Mapping(target = "vatRateId", source = "vatRate.id")
+    public abstract ProjectServiceModel toServiceModel(ProjectEntity source);
 
     @Override
-    ProjectServiceExtendedModel toServiceExtendedModel(ProjectEntity source);
+    @Mapping(target = "vatRateId", source = "vatRate.id")
+    public abstract ProjectServiceExtendedModel toServiceExtendedModel(ProjectEntity source);
 }

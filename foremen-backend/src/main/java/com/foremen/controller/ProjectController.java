@@ -10,6 +10,8 @@ import com.foremen.controller.model.ProjectCreateResponse;
 import com.foremen.controller.model.ProjectListDto;
 import com.foremen.controller.model.ProjectReadDto;
 import com.foremen.controller.model.ProjectUpdateRequest;
+import com.foremen.controller.model.ProjectMemberSummaryDto;
+import com.foremen.controller.model.ClientBlock;
 import com.foremen.controller.model.ProjectUpdateResponse;
 import com.foremen.controller.model.mapper.ProjectControllerMapper;
 import com.foremen.dao.model.ProjectEntity;
@@ -201,6 +203,18 @@ public class ProjectController implements AdminController<
     }
 
     /**
+     * Adds a client (existing CLIENT user or a new invited one) to an existing project, for the
+     * project edit form. Same semantics as the {@code client} block of {@code POST /api/projects}.
+     */
+    @PostMapping("/{id}/client")
+    @RequiresPermission(resource = "PROJECTS", operation = "UPDATE")
+    public ResponseEntity<ProjectMemberSummaryDto> addClient(
+            @PathVariable Long id,
+            @Valid @RequestBody ClientBlock request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.addClient(id, request));
+    }
+
+    /**
      * FOR-11-06 (R4.2): sets or clears the project's payee bank account. The generic update ignores the
      * field, so this is its only write path. {@code PROJECTS} UPDATE plus the service check (ADMIN or
      * ACTIVE MANAGER member of the project, else 403 {@code error.project.bankAccount.forbidden}).
@@ -248,6 +262,9 @@ public class ProjectController implements AdminController<
                 dto.members(),
                 dto.clients(),
                 dto.client(),
-                null);
+                null,
+                dto.vatRateId(),
+                dto.packageApplied(),
+                dto.offerPackageId());
     }
 }

@@ -28,5 +28,6 @@ public record ProjectUpdateRequest(
         @DecimalMin("0.01") @DecimalMax("999999999.99") BigDecimal area,
         LocalDate startDate,
         LocalDate endDate,
-        ProjectStatus status
+        ProjectStatus status,
+        Long vatRateId
 ) {}

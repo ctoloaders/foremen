@@ -115,6 +115,7 @@ class ProjectFieldValidationPropertyTest {
                 null,        // startDate
                 null,        // endDate
                 null,        // status
+                null,        // vatRateId
                 null,        // members
                 null         // client
         );

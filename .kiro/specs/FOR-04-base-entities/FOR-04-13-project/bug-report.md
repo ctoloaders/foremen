@@ -151,3 +151,27 @@ Related spec: FOR-05-09-team-selection (admin-staff-only create form, Req 26.6/2
 - **Wave 1 (parallel):** 1 and 2 touch the same file (`TeamMemberSelect.tsx`), so run them serially
   within one stream; 3 is independent but gated on the user's split decision.
 - **Wave 2:** V2 — browser validation; depends on all approved fixes.
+
+## Round 3 (2026-11-19)
+
+Screen URL: `https://dev.foremen.eu/projects` (project edit form, `ProjectFormSheet.tsx`, edit mode).
+
+- [~] 1. Add VAT at project level so it affects the offer (it was always 0)
+  - Decision: existing projects are set to the 8% VAT rate, looked up by value (not by a fixed id). Layer: both. Changeset 255, `Project.vatRate`, `OfferService.vatRateOf`.
+  - _Requirements: FOR-04-13; cross-spec FOR-05-07_
+  - _Depends on: none_
+- [~] 2. In project editing: allow adding a client (was only on creation)
+  - Layer: both. New `POST /api/projects/{id}/client`, `ClientBlock` in edit mode.
+  - _Requirements: FOR-04-13_
+  - _Depends on: none_
+- [ ] V3. Validate Round 3 in browser
+  - _Depends on: 1, 2_
+
+## Parallel execution plan (waves) — Round 3
+
+- **Wave 1:** 1, 2 touch the same form and update service; run serially.
+- **Wave 2:** V3.
+
+## Round 3 — validation results (2026-11-19)
+
+Changesets 255 applied; all 459 projects have VAT 8% (id 2). The edit form of project 1531 shows the VAT select prefilled with 8% and the client block. Not verified in the browser: adding a new client in edit mode, VAT in a prepared offer. `ProjectVatRateAndClientTest` passes. Three older tests (`ProjectServiceProjectionTest`, `ProjectClientRolePropertyTest`) fail with NPEs in `autoAddCreator`/`toSummary`, code this change did not touch.

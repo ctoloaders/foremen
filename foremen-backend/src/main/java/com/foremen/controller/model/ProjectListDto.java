@@ -39,5 +39,10 @@ public record ProjectListDto(
         ProjectStatus status,
         List<ProjectMemberSummaryDto> members,
         List<ProjectMemberSummaryDto> clients,
-        ProjectMemberSummaryDto client
+        ProjectMemberSummaryDto client,
+        Long vatRateId,
+        /** FOR-05-04: an offer package is applied to the project estimate. */
+        boolean packageApplied,
+        /** FOR-05-04: the applied offer package id, or null. */
+        Long offerPackageId
 ) {}

@@ -53,6 +53,28 @@ public class ProjectEntity extends BaseEntity {
     @Column(name = "bank_account", length = 34)
     private String bankAccount;
 
+    /**
+     * Project-level VAT rate (reference data, FOR-04-04). Drives the offer totals (net / VAT /
+     * gross). New projects default to the 8% rate; see {@code ProjectService#createProject}.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vat_rate_id")
+    private VatRateEntity vatRate;
+
+    /**
+     * FOR-05-04 (additional tasks): whether an offer package is applied to the project's estimate.
+     * With a package the estimate total is package price per m2 x apartment area + extra works
+     * beyond the package; without one it is the price-list calculation. Set / cleared only by the
+     * estimate apply / remove package path (same transaction as the matrix change).
+     */
+    @Column(name = "package_applied", nullable = false)
+    private boolean packageApplied = false;
+
+    /** The applied offer package (FOR-05-04); {@code null} while {@link #packageApplied} is false. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "offer_package_id")
+    private OfferPackageEntity offerPackage;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private ProjectStatus status = ProjectStatus.DRAFT;

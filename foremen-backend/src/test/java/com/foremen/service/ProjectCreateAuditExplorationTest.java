@@ -79,7 +79,7 @@ class ProjectCreateAuditExplorationTest {
     private static CreateProjectRequest request() {
         return new CreateProjectRequest(
                 "Audit Test Project", null, null, null, null, null, null, null, null,
-                null, null, null);
+                null, null, null, null);
     }
 
     @Test

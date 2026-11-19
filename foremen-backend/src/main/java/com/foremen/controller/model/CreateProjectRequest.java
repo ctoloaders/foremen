@@ -49,6 +49,7 @@ public record CreateProjectRequest(
         LocalDate startDate,
         LocalDate endDate,
         ProjectStatus status,
+        Long vatRateId,
         @Valid List<ProjectMemberInput> members,
         @Valid ClientBlock client
 ) {}

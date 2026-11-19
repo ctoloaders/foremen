@@ -26,6 +26,7 @@ public record ProjectCreateResponse(
         LocalDate startDate,
         LocalDate endDate,
         ProjectStatus status,
+        Long vatRateId,
         List<ProjectMemberSummaryDto> members,
         ProjectMemberSummaryDto client
 ) {}

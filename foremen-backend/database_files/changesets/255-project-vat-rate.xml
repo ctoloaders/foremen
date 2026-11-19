@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!-- FOR-04-13 (round 3): project-level VAT rate. Nullable FK to vat_rates. -->
+    <changeSet id="255-add-projects-vat-rate-id" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="projects" columnName="vat_rate_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="projects">
+            <column name="vat_rate_id" type="BIGINT"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="projects" baseColumnNames="vat_rate_id"
+                                 constraintName="fk_projects_vat_rate"
+                                 referencedTableName="vat_rates" referencedColumnNames="id"/>
+        <createIndex tableName="projects" indexName="idx_projects_vat_rate_id">
+            <column name="vat_rate_id"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- All existing projects get the 8% rate, selected by its rate value (ids differ per environment). -->
+    <changeSet id="255-backfill-projects-vat-rate-8" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM vat_rates WHERE rate = 8.00) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <sql>
+            UPDATE projects
+               SET vat_rate_id = (SELECT id FROM vat_rates WHERE rate = 8.00 ORDER BY id LIMIT 1)
+             WHERE vat_rate_id IS NULL
+        </sql>
+    </changeSet>
+</databaseChangeLog>

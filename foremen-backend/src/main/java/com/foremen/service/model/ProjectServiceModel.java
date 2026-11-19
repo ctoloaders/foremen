@@ -33,4 +33,5 @@ public class ProjectServiceModel {
     private LocalDate startDate;
     private LocalDate endDate;
     private ProjectStatus status;
+    private Long vatRateId;
 }

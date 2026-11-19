@@ -118,7 +118,7 @@ class ProjectCreateAutoAddCreatorTest {
 
     private static CreateProjectRequest request(List<ProjectMemberInput> members) {
         return new CreateProjectRequest(
-                "P", null, null, null, null, null, null, null, null, null, members, null);
+                "P", null, null, null, null, null, null, null, null, null, null, members, null);
     }
 
     private static final class Fixture {

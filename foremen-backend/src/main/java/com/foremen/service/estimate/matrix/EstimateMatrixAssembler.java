@@ -71,6 +71,7 @@ public class EstimateMatrixAssembler {
     private final WorkVolumeFormulaDao workVolumeFormulaDao;
     private final WorkMaterialConsumptionDao workMaterialConsumptionDao;
     private final WorkPriceDao workPriceDao;
+    private final com.foremen.service.estimate.EstimatePackagePricingService packagePricingService;
 
     public EstimateMatrixAssembler(
             RoomDao roomDao,
@@ -78,11 +79,23 @@ public class EstimateMatrixAssembler {
             WorkVolumeFormulaDao workVolumeFormulaDao,
             WorkMaterialConsumptionDao workMaterialConsumptionDao,
             WorkPriceDao workPriceDao) {
+        this(roomDao, workItemDao, workVolumeFormulaDao, workMaterialConsumptionDao, workPriceDao, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public EstimateMatrixAssembler(
+            RoomDao roomDao,
+            WorkItemDao workItemDao,
+            WorkVolumeFormulaDao workVolumeFormulaDao,
+            WorkMaterialConsumptionDao workMaterialConsumptionDao,
+            WorkPriceDao workPriceDao,
+            com.foremen.service.estimate.EstimatePackagePricingService packagePricingService) {
         this.roomDao = roomDao;
         this.workItemDao = workItemDao;
         this.workVolumeFormulaDao = workVolumeFormulaDao;
         this.workMaterialConsumptionDao = workMaterialConsumptionDao;
         this.workPriceDao = workPriceDao;
+        this.packagePricingService = packagePricingService;
     }
 
     /**
@@ -215,7 +228,23 @@ public class EstimateMatrixAssembler {
                 fillCounter.toPct(),
                 headerPackageFold.volume(),
                 headerPackageFold.toMoney(),
-                estimate.getAppliedPackageCode());
+                estimate.getAppliedPackageCode(),
+                packageSummary(estimate));
+    }
+
+    /** The package state + split totals for the header (FOR-05-04); "none" when no package is applied. */
+    private EstimatePackageSummaryDto packageSummary(EstimateEntity estimate) {
+        if (packagePricingService == null) {
+            return EstimatePackageSummaryDto.NONE;
+        }
+        return packagePricingService.pricingOf(estimate)
+                .map(pricing -> new EstimatePackageSummaryDto(
+                        true,
+                        estimate.getProject().getOfferPackage().getId(),
+                        estimate.getProject().getOfferPackage().getCode(),
+                        pricing.zlM2(), pricing.areaM2(), pricing.packageSubtotal(),
+                        pricing.extrasSubtotal(), pricing.total()))
+                .orElse(EstimatePackageSummaryDto.NONE);
     }
 
     // --- per-cell assembly ------------------------------------------------------------------

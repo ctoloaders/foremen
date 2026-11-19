@@ -33,6 +33,8 @@ import java.util.List;
  * @param appliedPackageCode the offer-package code last APPLIED to this estimate (FOR-05-05 Wave 1b,
  *                         #1), or {@code null} when none was ever applied. Mirrored by the frontend
  *                         (a later wave) to pre-select the header package; exposed read-only here.
+ * @param packageSummary   the project's package state and split totals (FOR-05-04 additional tasks):
+ *                         flag, package, package subtotal, extras subtotal; never {@code null}
  */
 public record EstimateMatrixDto(
         Long projectId,
@@ -43,5 +45,21 @@ public record EstimateMatrixDto(
         BigDecimal fillIndicatorPct,
         BigDecimal packageMaterialsTotal,
         MoneyRange packageMaterialsMoney,
-        String appliedPackageCode) {
+        String appliedPackageCode,
+        EstimatePackageSummaryDto packageSummary) {
+
+    /** Compatibility constructor without a package summary (treated as "no package applied"). */
+    public EstimateMatrixDto(
+            Long projectId,
+            boolean editable,
+            List<EstimateMatrixRoomDto> rooms,
+            List<WorkTypeGroupDto> groups,
+            BranchSubtotals totals,
+            BigDecimal fillIndicatorPct,
+            BigDecimal packageMaterialsTotal,
+            MoneyRange packageMaterialsMoney,
+            String appliedPackageCode) {
+        this(projectId, editable, rooms, groups, totals, fillIndicatorPct, packageMaterialsTotal,
+                packageMaterialsMoney, appliedPackageCode, EstimatePackageSummaryDto.NONE);
+    }
 }

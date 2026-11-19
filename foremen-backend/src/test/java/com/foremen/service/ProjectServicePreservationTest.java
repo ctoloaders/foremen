@@ -154,7 +154,7 @@ class ProjectServicePreservationTest {
         // Request carries a placeId but NO formattedAddress/latitude/longitude → triggers resolution.
         CreateProjectRequest request = new CreateProjectRequest(
                 "Place Resolution Project", null, placeId, null, null, null, null,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
 
         f.service().createProject(request);
 
@@ -171,6 +171,6 @@ class ProjectServicePreservationTest {
 
     private static ProjectServiceExtendedModel model(Long id, String name) {
         return new ProjectServiceExtendedModel(
-                id, name, null, null, null, null, null, null, null, null, ProjectStatus.DRAFT);
+                id, name, null, null, null, null, null, null, null, null, ProjectStatus.DRAFT, null);
     }
 }

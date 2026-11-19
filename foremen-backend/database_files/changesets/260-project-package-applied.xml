@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- FOR-05-04 additional-tasks #1: project-level "package applied" flag + the applied offer package. -->
+    <changeSet id="260-add-projects-package-applied" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="projects" columnName="package_applied"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="projects">
+            <column name="package_applied" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+    </changeSet>
+    <changeSet id="260-add-projects-offer-package-id" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="projects" columnName="offer_package_id"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="projects">
+            <column name="offer_package_id" type="BIGINT"/>
+        </addColumn>
+        <addForeignKeyConstraint baseTableName="projects" baseColumnNames="offer_package_id"
+                                 constraintName="fk_projects_offer_package"
+                                 referencedTableName="offer_packages" referencedColumnNames="id"/>
+        <createIndex tableName="projects" indexName="idx_projects_offer_package_id">
+            <column name="offer_package_id"/>
+        </createIndex>
+    </changeSet>
+    <!-- Backfill: a project whose estimate already remembers an applied package code is "package applied". -->
+    <changeSet id="260-backfill-projects-package-applied" author="foremen">
+        <sql>
+            UPDATE projects p
+               SET package_applied = TRUE,
+                   offer_package_id = (SELECT op.id FROM offer_packages op WHERE op.code = e.applied_package_code)
+              FROM estimates e
+             WHERE e.project_id = p.id
+               AND e.applied_package_code IS NOT NULL
+               AND EXISTS (SELECT 1 FROM offer_packages op2 WHERE op2.code = e.applied_package_code)
+               AND p.package_applied = FALSE
+        </sql>
+    </changeSet>
+</databaseChangeLog>

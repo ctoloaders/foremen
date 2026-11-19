@@ -519,3 +519,141 @@ finishing-материал (все три части определены).
 
 Итог: X пройдено / Y провалено / Z пропущено. Run-id: `<timestamp/uuid>`. Стратегия
 повторяемости: `генератор`.
+
+---
+
+# Часть B. Дополнительные задачи: флаг «пакет применён» и цена пакета
+
+Источник: `additional-tasks.md` (bug-report, Round 1, п. 1, 2026-11-19). Тип: **UI + API** (экран
+`http://localhost:3000/projects/{id}/estimate` и API против Docker-стека, базовый URL
+`http://localhost:8080`). UI-шаги выполняются браузерным движком, результат прогона фиксируется
+MD-таблицей (скриншоты не требуются).
+
+## Стратегия повторяемости (Part B)
+
+- **Генератор данных:** проект создаётся на каждый прогон с именем `pkg-flag-{run-id}`
+  (`run-id` = timestamp/uuid); комнаты и работы создаются заново под этот проект.
+- **Teardown (обязательный):** последним шагом каждого кейса выполняется «Удалить пакет»
+  (`REMOVE_PACKAGE` / кнопка «Удалить пакет») и затем «Очистить смету», после чего проект
+  архивируется/удаляется. Флаг `packageApplied` после teardown должен быть `false`.
+- Каталожные данные (пакет с `zlM2`, работы-члены пакета) не изменяются; используется существующий
+  пакет с `zlM2 > 0`, минимум одна работа, входящая в пакет, и одна работа вне пакета.
+
+## Общие предусловия Part B
+
+1. Docker-стек поднят (`docker compose up`), пользователь с ролью ADMIN (`FOREMEN_ADMIN_*`).
+2. Проект в статусе DRAFT с двумя комнатами: площадь пола 20,00 м² и 30,00 м² (итого 50,00 м²).
+3. Пакет `P` с `zlM2 = 1200,00`; работа `W-in` входит в пакет `P` (override `member = true`),
+   работа `W-out` в пакет не входит. Цена работы `W-out` в прайс-листе известна (`price-out`).
+
+## Фича 9: Флаг пакета на проекте и атомарность применения/удаления
+
+### TC-30. Применение пакета выставляет флаг и пакет проекта
+**Предусловия:** общие Part B; пакет на проекте не применён.
+**Шаги:**
+1. `GET /api/projects/{id}`. Ожидание: `200`, `packageApplied = false`, `offerPackageId` отсутствует/`null`.
+2. `POST /api/estimates/project/{id}/assignments` с набором: `ASSIGN`(`W-in`, комната 1, пакет `P`) +
+   `MERGE_PACKAGE_MATERIALS`(`P`). Ожидание: `200`, в теле `packageSummary.applied = true`,
+   `packageSummary.packageCode = P`.
+3. `GET /api/projects/{id}`. Ожидание: `packageApplied = true`, `offerPackageId` = id пакета `P`.
+4. `GET /api/projects` (список). Ожидание: у проекта те же `packageApplied = true` и `offerPackageId`.
+**Teardown:** TC-32 (шаг удаления пакета).
+
+### TC-31. Предпросмотр отражает флаг, но ничего не сохраняет
+**Предусловия:** общие Part B; пакет не применён.
+**Шаги:**
+1. `POST /api/estimates/project/{id}/preview` с набором `ASSIGN`(`W-in`, комната 1, `P`) +
+   `MERGE_PACKAGE_MATERIALS`(`P`). Ожидание: `200`, `packageSummary.applied = true`.
+2. `GET /api/projects/{id}`. Ожидание: `packageApplied = false` (предпросмотр откатывается).
+3. `GET /api/estimates/project/{id}/matrix`. Ожидание: `packageSummary.applied = false`.
+
+### TC-32. «Удалить пакет» сбрасывает флаг
+**Предусловия:** выполнен TC-30 (пакет применён и сохранён).
+**Шаги:**
+1. `POST /api/estimates/project/{id}/assignments` с набором `REMOVE_PACKAGE`(`P`). Ожидание: `200`,
+   `packageSummary.applied = false`, суммы пакета `null`.
+2. `GET /api/projects/{id}`. Ожидание: `packageApplied = false`, `offerPackageId` пуст.
+3. `GET /api/estimates/project/{id}/matrix`. Ожидание: `appliedPackageCode = null`.
+
+### TC-33. Флаг и изменения матрицы фиксируются атомарно
+**Предусловия:** общие Part B.
+**Шаги:**
+1. Отправить `assignments` с некорректным элементом набора (несуществующий `workItemId`) после
+   валидного `ASSIGN`+`MERGE_PACKAGE_MATERIALS`(`P`). Ожидание: ошибка `4xx`.
+2. `GET /api/projects/{id}`. Ожидание: `packageApplied = false` (нет частичного применения).
+3. `GET /api/estimates/project/{id}/matrix`. Ожидание: нет назначенных ячеек, `appliedPackageCode = null`.
+
+## Фича 10: Цена пакета = цена пакета за м² × площадь + работы вне пакета
+
+### TC-34. Разложение итога в матрице
+**Предусловия:** пакет `P` применён (TC-30), дополнительно назначена работа `W-out` в комнате 1
+(объём `q`, цена прайс-листа `price-out`).
+**Шаги:**
+1. `GET /api/estimates/project/{id}/matrix`. Ожидание в `packageSummary`: `zlM2 = 1200,00`,
+   `areaM2 = 50,00`, `packageSubtotal = 60000,00`, `extrasSubtotal = round2(price-out × q)`,
+   `total = packageSubtotal + extrasSubtotal`.
+2. Работа `W-in` в `extrasSubtotal` не входит (покрыта пакетом).
+3. Удалить пакет (TC-32). `GET .../matrix`. Ожидание: `packageSummary.applied = false`, итог «Работы»
+   считается только по прайс-листу.
+
+### TC-35. Итог предложения совпадает с итогом сметы с пакетом
+**Предусловия:** как в TC-34, пакет применён.
+**Шаги:**
+1. `POST /api/offers/project/{id}/prepare`. Ожидание: успех, `totalNet` =
+   `packageSubtotal + extrasSubtotal` из TC-34 (до скидок), `totalVat` = `totalNet × ставка НДС проекта`.
+2. `GET /api/offers/{offerId}`. Ожидание: те же суммы (live-пересчёт).
+3. Удалить пакет (TC-32), `GET /api/offers/{offerId}`. Ожидание: `totalNet` пересчитан по прайс-листу
+   (сумма цен всех назначенных работ).
+
+### TC-36. Без пакета считается только по прайс-листу
+**Предусловия:** общие Part B; пакет не применён, назначены `W-in` и `W-out`.
+**Шаги:**
+1. `GET /api/estimates/project/{id}/matrix`. Ожидание: `packageSummary.applied = false`, суммы `null`.
+2. Проверить `totals.works`. Ожидание: сумма `цена × объём` обеих работ.
+
+## Фича 11: Шапка сметы на UI (PL/RU)
+
+### TC-37. Бейдж и разложение итога при применённом пакете
+**Предусловия:** общие Part B, UI под ADMIN.
+**Шаги:**
+1. Открыть `/projects/{id}/estimate`, выбрать пакет `P` в селекторе, нажать «Применить пакет», затем «Сохранить».
+   Ожидание: появляется блок `data-testid="estimate-package-summary"` с бейджем
+   (`estimate-package-applied-badge`) «Пакет применён: <название пакета>».
+2. Проверить карточки: `estimate-package-price-m2` = 1 200,00; `estimate-package-area` = 50,00;
+   `estimate-package-subtotal` = 60 000,00; `estimate-package-extras` = сумма работ вне пакета;
+   `estimate-package-total` = сумма двух предыдущих.
+3. Перезагрузить страницу. Ожидание: блок сохраняется (состояние берётся с сервера).
+4. Переключить язык PL ↔ RU. Ожидание: подписи переводятся («Pakiet zastosowany: …», «Cena pakietu
+   za m²», «Powierzchnia mieszkania», «Roboty poza pakietem», «Razem netto z pakietem» и русские
+   аналоги), ключей вида `estimate.package.*` на экране нет.
+**Teardown:** нажать «Удалить пакет», «Сохранить» (см. TC-38).
+
+### TC-38. После «Удалить пакет» блок исчезает
+**Предусловия:** выполнен TC-37 до шага 4.
+**Шаги:**
+1. Нажать «Удалить пакет», затем «Сохранить». Ожидание: блок `estimate-package-summary` скрыт.
+2. `GET /api/projects/{id}`. Ожидание: `packageApplied = false`.
+
+## Регрессия (Part B)
+
+### TC-R10. Применение/удаление пакета не ломает ранее закрытое поведение
+**Шаги:**
+1. Повторить TC-30 → TC-32 дважды подряд на одном проекте. Ожидание: каждый цикл даёт
+   `packageApplied` true → false, повторное применение не падает.
+2. Обновить проект (`PUT /api/projects/{id}`, смена названия). Ожидание: `packageApplied` и
+   `offerPackageId` не изменились (обновление проекта их не затирает), `vatRateId` сохранён.
+3. Без применённого пакета `GET .../matrix` отдаёт те же `totals`, что и до внедрения Part B.
+
+## Шаблон MD-репорта прогона (Part B)
+
+| # | Тест-кейс | Шаг | Запрос/Действие | Ожидание | Факт | Статус |
+|---|-----------|-----|-----------------|----------|------|--------|
+| 1 | TC-30     | 1   | GET /api/projects/{id} | 200, packageApplied=false | — | ⬜ |
+| 2 | TC-30     | 2   | POST /api/estimates/project/{id}/assignments (ASSIGN + MERGE) | 200, packageSummary.applied=true | — | ⬜ |
+| 3 | TC-30     | 3   | GET /api/projects/{id} | packageApplied=true, offerPackageId=P | — | ⬜ |
+| 4 | TC-34     | 1   | GET .../matrix | packageSubtotal=60000,00, total=пакет+внепакетные | — | ⬜ |
+| 5 | TC-37     | 2   | UI: карточки пакета | значения совпадают с API | — | ⬜ |
+| … | …         | …   | … | … | … | … |
+
+Итог: X пройдено / Y провалено / Z пропущено. Run-id: `<timestamp/uuid>`. Стратегия
+повторяемости: `генератор + teardown (удалить пакет)`.

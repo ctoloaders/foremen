@@ -167,7 +167,7 @@ class ProjectClientRolePropertyTest {
 
     private static CreateProjectRequest request(List<ProjectMemberInput> members, ClientBlock client) {
         return new CreateProjectRequest(
-                "Project", null, null, null, null, null, null, null, null, null,
+                "Project", null, null, null, null, null, null, null, null, null, null,
                 members, client);
     }
 
