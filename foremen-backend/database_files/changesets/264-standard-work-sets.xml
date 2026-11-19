@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-04-11 additional tasks 6-8: standard work set by room type. Each row says "this work belongs to
+        the standard set of this room type". When a room is added to a project, the works of the set for its
+        room type are applied to the estimate. Company-wide (not project-scoped).
+        UNIQUE (room_type_id, work_item_id). Both FKs ON DELETE CASCADE.
+    -->
+    <changeSet id="264-create-standard-work-set-items" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="standard_work_set_items"/>
+            </not>
+        </preConditions>
+        <createTable tableName="standard_work_set_items">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="room_type_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <addUniqueConstraint constraintName="uk_swsi_room_type_work" tableName="standard_work_set_items"
+            columnNames="room_type_id, work_item_id"/>
+        <addForeignKeyConstraint constraintName="fk_swsi_room_type" baseTableName="standard_work_set_items"
+            baseColumnNames="room_type_id" referencedTableName="room_types" referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_swsi_work_item" baseTableName="standard_work_set_items"
+            baseColumnNames="work_item_id" referencedTableName="work_items" referencedColumnNames="id"
+            onDelete="CASCADE"/>
+    </changeSet>
+    <changeSet id="264-seed-standard-work-sets-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'STANDARD_WORK_SETS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="STANDARD_WORK_SETS"/>
+            <column name="name_ru" value="Стандартные наборы работ"/>
+            <column name="name_pl" value="Standardowe zestawy prac"/>
+            <column name="description_ru" value="Наборы работ по типу помещения, применяемые при добавлении помещения в проект"/>
+            <column name="description_pl" value="Zestawy prac według typu pomieszczenia, stosowane przy dodaniu pomieszczenia do projektu"/>
+        </insert>
+    </changeSet>
+    <changeSet id="264-seed-standard-work-sets-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'STANDARD_WORK_SETS'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'STANDARD_WORK_SETS';
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'STANDARD_WORK_SETS';
+        </sql>
+    </changeSet>
+    <!-- Roles that already manage the work catalog get the same operations on standard sets. -->
+    <changeSet id="264-seed-standard-work-sets-permissions-catalog-roles" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code &lt;&gt; 'ADMIN' AND res.code = 'STANDARD_WORK_SETS'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT src.role_id, tgt.id, NOW(), 'system'
+            FROM role_resources src
+            JOIN resources catalog ON catalog.id = src.resource_id AND catalog.code = 'WORK_CATALOG'
+            JOIN roles r ON r.id = src.role_id AND r.code &lt;&gt; 'ADMIN'
+            JOIN resources tgt ON tgt.code = 'STANDARD_WORK_SETS';
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT new_rr.id, src_op.operation_id
+            FROM role_resources src
+            JOIN resources catalog ON catalog.id = src.resource_id AND catalog.code = 'WORK_CATALOG'
+            JOIN roles r ON r.id = src.role_id AND r.code &lt;&gt; 'ADMIN'
+            JOIN role_resource_operations src_op ON src_op.role_resource_id = src.id
+            JOIN resources tgt ON tgt.code = 'STANDARD_WORK_SETS'
+            JOIN role_resources new_rr ON new_rr.role_id = src.role_id AND new_rr.resource_id = tgt.id;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

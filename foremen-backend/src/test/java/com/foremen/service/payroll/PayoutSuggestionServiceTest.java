@@ -118,6 +118,21 @@ class PayoutSuggestionServiceTest {
     }
 
     @Test
+    @DisplayName("worker pay is derived from the frozen internal price when the report has one (FOR-04-11)")
+    void internalPriceIsThePayrollBase() {
+        WorkReportEntity withInternal = report(RATE, 7L, "Alpha", FROM, TO);
+        withInternal.setPayrollBasePrice(new BigDecimal("200.00"));
+        WorkReportRoomEntity l = line(10L, "3.000", "0", withInternal);
+        when(workReportRoomDao.findPayableLines(WORKER_ID, TO)).thenReturn(List.of(l));
+
+        PayoutSuggestionDto dto = service.suggest(WORKER_ID, FROM, TO, false);
+
+        // base tier 40% of 200.00 = 80.00 per unit; 3 units = 240.00 (the client price would give 120.00).
+        assertThat(dto.breakdown().get(0).unitServiceCost()).isEqualByComparingTo("80.00");
+        assertThat(dto.breakdown().get(0).costValue()).isEqualByComparingTo("240.00");
+    }
+
+    @Test
     @DisplayName("lines across projects; fully paid lines dropped; order preserved (R4.2, R4.3)")
     void crossProjectCandidatesAndFullyPaidDropped() {
         LocalDate older = LocalDate.of(2025, 11, 3); // before periodFrom: still a candidate (R4.2)

@@ -100,3 +100,29 @@ browser persistence (keyed by `entityKey`), like every other CRUD table.
   `data-table` suites 186/186 green.
 
 Result: all tasks (1, 2, 3) fixed / 0 failed. All Round 1 bugs closed.
+
+## Round 2 (2026-11-19)
+
+Screen URL: `https://dev.foremen.eu/catalog/works/210` (work edit page; reproduce locally at `http://localhost:3000/catalog/works/{id}`).
+
+- [x] 1. Change the saving logic of the work page: all changes are shown visually; leaving asks for confirmation; Save shows a was/now dialog; everything is saved as a whole
+  - Layer: both. New `PUT /api/work-items/{id}/aggregate` (one transaction), draft store in `unsaved-changes.tsx`, was/now dialog in `WorkItemEditPage.tsx`.
+  - _Requirements: FOR-04-11, FOR-04-19-work-catalog-rework_
+  - _Depends on: none_
+- [ ] 2. Internal work price (payroll base) — **feature-sized**, moved to `additional-tasks.md` in this folder.
+  - _Depends on: 1_
+- [ ] 3. Related works (one-way; one level, no cycles, only links set explicitly on the parent; approved) — **feature-sized**, moved to `additional-tasks.md`.
+  - _Depends on: 1_
+- [ ] 4. Standard work set by room type, applied on room creation — **feature-sized**, moved to `additional-tasks.md`.
+  - _Depends on: none_
+- [ ] V2. Validate Round 2 in browser
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 2
+
+- **Wave 1:** 1.
+- **Wave 2:** V2. Items 2 to 4 are executed from `additional-tasks.md`.
+
+## Round 2 — validation results (2026-11-19)
+
+Item 1 (`/catalog/works/1`; the local DB has no work 210): editing a field and pressing Save opens a was/now dialog; confirming saves in one call and the value persists after reload (test value reverted). `WorkItemAggregateSaveControllerIntegrationTest` 3/3, vitest work-catalog 190/190. Not browser-checked: leave-page confirmation and highlights.

@@ -946,6 +946,8 @@ public class WorkReportService
             totalQuantity = totalQuantity.add(room.getQuantity());
         }
         entity.setClientUnitPrice(clientUnitPrice);
+        // FOR-04-11: freeze the work's internal price (payroll base) next to the client price.
+        entity.setPayrollBasePrice(line.getWorkItem() == null ? null : line.getWorkItem().getInternalPrice());
         entity.setTotalQuantity(totalQuantity);
         entity.setRevenueValue(clientUnitPrice.multiply(totalQuantity).setScale(2, RoundingMode.HALF_UP));
     }

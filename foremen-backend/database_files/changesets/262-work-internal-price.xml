@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-04-11 additional tasks 1-2: optional internal price of a work (payroll base).
+          - work_items.internal_price      : NUMERIC(19,2) NULL, CHECK >= 0. NULL means "use the base price".
+          - work_reports.payroll_base_price: NUMERIC(19,2) NULL. Frozen together with client_unit_price when the
+                                             report is valued: the work's internal price at that moment, or NULL
+                                             when the work has none. Payroll reads
+                                             COALESCE(payroll_base_price, client_unit_price).
+        Existing reports keep NULL, so their payroll is unchanged.
+    -->
+    <changeSet id="262-work-items-internal-price" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="work_items" columnName="internal_price"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="work_items">
+            <column name="internal_price" type="NUMERIC(19,2)"/>
+        </addColumn>
+        <sql>ALTER TABLE work_items ADD CONSTRAINT ck_work_items_internal_price_nonneg
+            CHECK (internal_price IS NULL OR internal_price >= 0)</sql>
+    </changeSet>
+    <changeSet id="262-work-reports-payroll-base-price" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="work_reports" columnName="payroll_base_price"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="work_reports">
+            <column name="payroll_base_price" type="NUMERIC(19,2)"/>
+        </addColumn>
+    </changeSet>
+</databaseChangeLog>

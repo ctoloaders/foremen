@@ -419,7 +419,7 @@ public class PayrollReadModelService {
             Long wid = report.getWorker().getId();
             Map<Long, WorkerProfile> p = profiles;
             ResolvedTier tier = tiers.computeIfAbsent(wid, k -> WorkerProfile.resolve(p.get(k), baseType));
-            BigDecimal rate = report.getClientUnitPrice();
+            BigDecimal rate = report.payrollBase();
             BigDecimal unitCost = WorkerCostDerivation.unitServiceCost(rate, tier.tier(), baseTier);
             BigDecimal cost = scaledOrNull(WorkerCostDerivation.costValue(rate, tier.tier(), baseTier,
                     line.getQuantity()));

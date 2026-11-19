@@ -25,6 +25,7 @@ import com.foremen.dao.model.RoomEntity;
 import com.foremen.exception.EstimateRecalcConflictException;
 import com.foremen.exception.ForemenApiException;
 import com.foremen.service.ProjectAccessCache;
+import com.foremen.service.EstimateService;
 import com.foremen.service.RoomService;
 import com.foremen.service.estimate.DraftGateGuard;
 import com.foremen.service.estimate.EstimateAssignmentService;
@@ -74,6 +75,7 @@ public class RoomsSaveService {
     private final EstimateAssignmentService estimateAssignmentService;
     private final EstimateRecomputeService estimateRecomputeService;
     private final DraftGateGuard draftGateGuard;
+    private final EstimateService estimateService;
     private final ProjectAccessCache projectAccessCache;
     private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
@@ -123,6 +125,7 @@ public class RoomsSaveService {
                 .filter(e -> e.getStatus() == EstimateStatus.DRAFT)
                 .orElse(null);
         EstimateSnapshot before = estimate != null ? EstimateSnapshot.of(estimate) : null;
+        boolean estimateMissing = estimateOpt.isEmpty();
 
         // --- 1. Deletes: drop the room's estimate cells first, then the room row. ---
         for (Long roomId : deleteList) {
@@ -174,6 +177,13 @@ public class RoomsSaveService {
             }
         }
         entityManager.flush();
+        if (estimate == null && estimateMissing && !created.isEmpty()
+                && created.stream().anyMatch(id -> estimateAssignmentService.hasStandardWorkSet(
+                        requireRoomOfProject(id, projectId)))) {
+            // FOR-04-11: a project without an estimate yet still gets the standard work set of its rooms.
+            estimate = estimateService.getOrCreateEntityForProject(projectId);
+            before = EstimateSnapshot.of(estimate);
+        }
         if (estimate != null && !created.isEmpty()) {
             Set<Long> createdSet = new HashSet<>(created);
             List<RoomEntity> projectRooms = roomDao.findByProjectId(projectId);
@@ -184,6 +194,8 @@ public class RoomsSaveService {
                         .filter(r -> sameRoomType(r, newRoom))
                         .toList();
                 estimateAssignmentService.replicateFromSibling(estimate, newRoom, siblings);
+                // FOR-04-11: then the standard work set of the room type (works already copied are skipped).
+                estimateAssignmentService.applyStandardWorkSet(estimate, newRoom);
             }
         }
 

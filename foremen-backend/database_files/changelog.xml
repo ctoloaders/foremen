@@ -1015,4 +1015,8 @@
     <include file="database_files/changesets/255-project-vat-rate.xml"/>
     <!-- FOR-05-04 additional-tasks #1: project package_applied flag + offer_package_id. -->
     <include file="database_files/changesets/260-project-package-applied.xml"/>
+    <!-- FOR-04-11 additional tasks: work internal price + payroll base (262), related works (263), standard work sets (264). -->
+    <include file="database_files/changesets/262-work-internal-price.xml"/>
+    <include file="database_files/changesets/263-work-related-works.xml"/>
+    <include file="database_files/changesets/264-standard-work-sets.xml"/>
 </databaseChangeLog>

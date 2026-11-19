@@ -1,5 +1,6 @@
 package com.foremen.controller.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -24,4 +25,5 @@ import java.util.List;
 public record WorkItemDtoModel(Long id, Long workCategoryId, String workCategoryName, Long unitId, String unitName,
                                String name, String code, boolean active,
                                WorkCostCellDto costCell, List<RefDto> packages,
-                               long constructionConsumptionCount, long finishingConsumptionCount) {}
+                               long constructionConsumptionCount, long finishingConsumptionCount,
+                               BigDecimal internalPrice) {}

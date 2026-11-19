@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-04-11 additional tasks 3-5: related works. A one-way link parent -> related, set explicitly on the
+        parent. Selecting the parent in the estimate also adds the related works (one level, no cycles).
+        Both FKs are ON DELETE CASCADE. UNIQUE (work_item_id, related_work_item_id); a work never links to
+        itself (CHECK).
+    -->
+    <changeSet id="263-create-work-related-works" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="work_related_works"/>
+            </not>
+        </preConditions>
+        <createTable tableName="work_related_works">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="related_work_item_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <addUniqueConstraint constraintName="uk_wrw_pair" tableName="work_related_works"
+            columnNames="work_item_id, related_work_item_id"/>
+        <addForeignKeyConstraint constraintName="fk_wrw_work_item" baseTableName="work_related_works"
+            baseColumnNames="work_item_id" referencedTableName="work_items" referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <addForeignKeyConstraint constraintName="fk_wrw_related_work_item" baseTableName="work_related_works"
+            baseColumnNames="related_work_item_id" referencedTableName="work_items" referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <sql>ALTER TABLE work_related_works ADD CONSTRAINT ck_wrw_not_self
+            CHECK (work_item_id &lt;&gt; related_work_item_id)</sql>
+        <createIndex indexName="idx_wrw_related" tableName="work_related_works">
+            <column name="related_work_item_id"/>
+        </createIndex>
+    </changeSet>
+    <!-- Resource WORK_RELATED_WORKS (entity-creation-rules step 1). -->
+    <changeSet id="263-seed-work-related-works-resource" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">SELECT COUNT(*) FROM resources WHERE code = 'WORK_RELATED_WORKS'</sqlCheck>
+        </preConditions>
+        <insert tableName="resources">
+            <column name="code" value="WORK_RELATED_WORKS"/>
+            <column name="name_ru" value="Связанные работы"/>
+            <column name="name_pl" value="Powiązane prace"/>
+            <column name="description_ru" value="Связи между работами каталога: при выборе работы в смете добавляются связанные"/>
+            <column name="description_pl" value="Powiązania między pracami katalogu: wybór pracy w kosztorysie dodaje prace powiązane"/>
+        </insert>
+    </changeSet>
+    <!-- ADMIN grant (entity-creation-rules step 2). -->
+    <changeSet id="263-seed-work-related-works-permissions-admin" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code = 'ADMIN' AND res.code = 'WORK_RELATED_WORKS'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT r.id, res.id, NOW(), 'system'
+            FROM roles r, resources res
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_RELATED_WORKS';
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT rr.id, o.id
+            FROM role_resources rr
+            JOIN roles r ON rr.role_id = r.id
+            JOIN resources res ON rr.resource_id = res.id
+            JOIN operations o ON o.code IN ('CREATE', 'READ', 'UPDATE', 'DELETE')
+            WHERE r.code = 'ADMIN' AND res.code = 'WORK_RELATED_WORKS';
+        </sql>
+    </changeSet>
+    <!-- Every non-ADMIN role that can already use WORK_CATALOG gets the same operations on related works. -->
+    <changeSet id="263-seed-work-related-works-permissions-catalog-roles" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM role_resources rr
+                JOIN roles r ON rr.role_id = r.id
+                JOIN resources res ON rr.resource_id = res.id
+                WHERE r.code &lt;&gt; 'ADMIN' AND res.code = 'WORK_RELATED_WORKS'
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resources (role_id, resource_id, created_date, created_by)
+            SELECT DISTINCT src.role_id, tgt.id, NOW(), 'system'
+            FROM role_resources src
+            JOIN resources catalog ON catalog.id = src.resource_id AND catalog.code = 'WORK_CATALOG'
+            JOIN roles r ON r.id = src.role_id AND r.code &lt;&gt; 'ADMIN'
+            JOIN resources tgt ON tgt.code = 'WORK_RELATED_WORKS';
+        </sql>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT new_rr.id, src_op.operation_id
+            FROM role_resources src
+            JOIN resources catalog ON catalog.id = src.resource_id AND catalog.code = 'WORK_CATALOG'
+            JOIN roles r ON r.id = src.role_id AND r.code &lt;&gt; 'ADMIN'
+            JOIN role_resource_operations src_op ON src_op.role_resource_id = src.id
+            JOIN resources tgt ON tgt.code = 'WORK_RELATED_WORKS'
+            JOIN role_resources new_rr ON new_rr.role_id = src.role_id AND new_rr.resource_id = tgt.id;
+        </sql>
+    </changeSet>
+</databaseChangeLog>

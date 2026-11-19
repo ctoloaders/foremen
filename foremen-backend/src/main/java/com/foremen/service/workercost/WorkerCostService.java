@@ -199,7 +199,7 @@ public class WorkerCostService
                     : activeTypeName(profile.workerType(), ru);
             BigDecimal seniorityPct = profile == null ? BigDecimal.ZERO : profile.seniorityPct();
 
-            BigDecimal rate = report.getClientUnitPrice();   // read as-is (R1.4)
+            BigDecimal rate = report.payrollBase();   // FOR-04-11: internal price else client price
             BigDecimal quantity = report.getTotalQuantity();
             BigDecimal unitServiceCost =
                     WorkerCostDerivation.unitServiceCost(rate, resolved.tier(), baseTier);
@@ -261,7 +261,7 @@ public class WorkerCostService
         WorkerProfile profile = workerId == null || profilesById == null ? null : profilesById.get(workerId);
         ResolvedTier resolved = WorkerProfile.resolve(profile, baseType);
         return WorkerCostDerivation.costValue(
-                report.getClientUnitPrice(), resolved.tier(), baseTier, report.getTotalQuantity());
+                report.payrollBase(), resolved.tier(), baseTier, report.getTotalQuantity());
     }
 
     /**

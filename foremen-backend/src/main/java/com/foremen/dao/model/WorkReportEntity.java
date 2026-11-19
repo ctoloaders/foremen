@@ -91,6 +91,14 @@ public class WorkReportEntity extends BaseEntity {
     @Column(name = "client_unit_price", nullable = false, precision = 19, scale = 2)
     private BigDecimal clientUnitPrice = BigDecimal.ZERO;
 
+    /**
+     * Frozen internal price of the work at valuation time (FOR-04-11 additional tasks); {@code null}
+     * when the work had none. Payroll reads {@link #payrollBase()}, never {@link #clientUnitPrice}
+     * directly.
+     */
+    @Column(name = "payroll_base_price", precision = 19, scale = 2)
+    private BigDecimal payrollBasePrice;
+
     /** Derived {@code Σ rooms.quantity} (R1.4); never hand-entered. */
     @Column(name = "total_quantity", nullable = false, precision = 19, scale = 3)
     private BigDecimal totalQuantity = BigDecimal.ZERO;
@@ -110,4 +118,9 @@ public class WorkReportEntity extends BaseEntity {
      */
     @OneToMany(mappedBy = "report", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<WorkReportRoomEntity> rooms = new ArrayList<>();
+
+    /** The rate worker pay is derived from: the frozen internal price when set, else the client unit price. */
+    public BigDecimal payrollBase() {
+        return payrollBasePrice != null ? payrollBasePrice : clientUnitPrice;
+    }
 }

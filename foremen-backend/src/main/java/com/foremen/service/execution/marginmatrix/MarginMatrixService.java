@@ -294,7 +294,7 @@ public class MarginMatrixService
                     resolved.workerTypeName(),
                     resolved.baseTierFallback(),
                     resolved.tier(),
-                    report.getClientUnitPrice(),
+                    report.payrollBase(),
                     report.getTotalQuantity(),
                     report.getRevenueValue()));
         }

@@ -200,7 +200,7 @@ public class PayoutSuggestionService {
                     continue;
                 }
                 // The advance basis is the planned quantity (FOR-06-11 R3.5, FOR-07-06 R4.7).
-                BigDecimal cost = WorkerCostDerivation.costValue(report.getClientUnitPrice(),
+                BigDecimal cost = WorkerCostDerivation.costValue(report.payrollBase(),
                         ctx.resolved().tier(), ctx.baseTier(), line.getPlanQuantity());
                 LineRow row = new LineRow(line, line.getPlanQuantity(), cost, null);
                 breakdown.add(toDto(row, BigDecimal.ZERO.setScale(SCALE), ctx, ru));
@@ -218,7 +218,7 @@ public class PayoutSuggestionService {
 
     /** The line's {@code Cost_Value} on its reported quantity; {@code null} ⇒ unavailable. */
     private static BigDecimal lineCost(WorkReportRoomEntity line, CostContext ctx) {
-        return WorkerCostDerivation.costValue(line.getReport().getClientUnitPrice(),
+        return WorkerCostDerivation.costValue(line.getReport().payrollBase(),
                 ctx.resolved().tier(), ctx.baseTier(), line.getQuantity());
     }
 
@@ -263,7 +263,7 @@ public class PayoutSuggestionService {
         WorkReportEntity report = line.getReport();
         ProjectEntity project = report.getProject();
         BigDecimal unitServiceCost = WorkerCostDerivation.unitServiceCost(
-                report.getClientUnitPrice(), ctx.resolved().tier(), ctx.baseTier());
+                report.payrollBase(), ctx.resolved().tier(), ctx.baseTier());
         BigDecimal paid = line.getPaidAmount() == null ? BigDecimal.ZERO : line.getPaidAmount();
         return new PayoutLineDto(
                 line.getId(),

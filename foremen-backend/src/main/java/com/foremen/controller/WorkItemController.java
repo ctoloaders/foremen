@@ -5,30 +5,44 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.foremen.config.security.PermissionOperation;
 import com.foremen.config.security.PermissionResource;
+import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.MetadataResponse;
+import com.foremen.controller.model.WorkItemAggregateSaveRequest;
 import com.foremen.controller.model.WorkItemCreateRequest;
 import com.foremen.controller.model.WorkItemCreateResponse;
 import com.foremen.controller.model.WorkItemDtoExtendedModel;
 import com.foremen.controller.model.WorkItemDtoModel;
+import com.foremen.controller.model.WorkItemRelatedWorksRequest;
+import com.foremen.controller.model.WorkItemRelatedWorksResponse;
 import com.foremen.controller.model.WorkItemRoomTypesRequest;
 import com.foremen.controller.model.WorkItemRoomTypesResponse;
 import com.foremen.controller.model.WorkItemUpdateRequest;
 import com.foremen.controller.model.WorkItemUpdateResponse;
 import com.foremen.controller.model.mapper.WorkItemControllerMapper;
+import com.foremen.controller.model.mapper.WorkMaterialConsumptionControllerMapper;
+import com.foremen.exception.ForemenApiException;
+import com.foremen.service.WorkItemAggregateSaveService;
+import com.foremen.service.permission.ForemenPermissionEvaluator;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.mapper.ControllerToServiceMapper;
 import com.foremen.service.AdminService;
 import com.foremen.service.WorkItemService;
+import com.foremen.service.WorkRelatedWorkService;
 import com.foremen.service.model.WorkItemServiceExtendedModel;
 import com.foremen.service.model.WorkItemServiceModel;
 import com.foremen.service.model.mapper.AuditServiceMapper;
@@ -55,6 +69,10 @@ public class WorkItemController implements AdminController<
     private final WorkItemService service;
     private final WorkItemControllerMapper controllerMapper;
     private final AuditServiceMapper auditServiceMapper;
+    private final WorkItemAggregateSaveService aggregateSaveService;
+    private final WorkRelatedWorkService relatedWorkService;
+    private final WorkMaterialConsumptionControllerMapper consumptionControllerMapper;
+    private final ForemenPermissionEvaluator permissionEvaluator;
 
     @Override
     public ControllerToServiceMapper<WorkItemServiceModel, WorkItemServiceExtendedModel,
@@ -154,5 +172,101 @@ public class WorkItemController implements AdminController<
             @PathVariable Long id, @RequestBody WorkItemRoomTypesRequest request) {
         List<Long> resulting = service.setRoomTypeIds(id, request.roomTypeIds());
         return ResponseEntity.ok(new WorkItemRoomTypesResponse(resulting));
+    }
+
+    /**
+     * Reads the works linked FROM this work (FOR-04-11 additional tasks 3-5): selecting this work in
+     * the estimate also adds them. Guarded by {@code (WORK_RELATED_WORKS, READ)}.
+     */
+    @GetMapping("/{id}/related-works")
+    @RequiresPermission(resource = "WORK_RELATED_WORKS", operation = "READ")
+    public ResponseEntity<WorkItemRelatedWorksResponse> getRelatedWorks(@PathVariable Long id) {
+        return ResponseEntity.ok(new WorkItemRelatedWorksResponse(relatedWorkService.getRelatedIds(id)));
+    }
+
+    /**
+     * Replaces the related works of this work ({@code []} clears). {@code 400} for a self link or a
+     * duplicate, {@code 404} for an unknown work. Guarded by {@code (WORK_RELATED_WORKS, UPDATE)}.
+     */
+    @PutMapping("/{id}/related-works")
+    @RequiresPermission(resource = "WORK_RELATED_WORKS", operation = "UPDATE")
+    public ResponseEntity<WorkItemRelatedWorksResponse> setRelatedWorks(
+            @PathVariable Long id, @RequestBody WorkItemRelatedWorksRequest request) {
+        return ResponseEntity.ok(new WorkItemRelatedWorksResponse(
+                relatedWorkService.setRelatedIds(id, request.relatedWorkIds())));
+    }
+
+    /**
+     * Saves every pending edit of the work edit page (attributes, default formula, package
+     * overrides, room-type attachment, labour price, consumption norms) as ONE atomic transaction
+     * (FOR-04-11 bug-report Round 2, item 1). Any failure rolls back every part.
+     *
+     * <p>The method-level {@link PermissionOperation @PermissionOperation("UPDATE")} combines with the
+     * class {@link PermissionResource @PermissionResource("WORK_CATALOG")} (formula, overrides, room
+     * types and attributes all live under it). The price and consumption parts belong to other
+     * resources, so they are additionally checked against {@code WORK_PRICES} /
+     * {@code WORK_MATERIAL_CONSUMPTION} when present ({@code 403 error.access.denied}).
+     */
+    @PutMapping("/{id}/aggregate")
+    @PermissionOperation("UPDATE")
+    public ResponseEntity<Void> saveAggregate(
+            @PathVariable Long id, @Valid @RequestBody WorkItemAggregateSaveRequest request) {
+        var price = request.price();
+        if (price != null) {
+            requireOperation("WORK_PRICES", price.netPrice() == null ? "DELETE" : "UPDATE");
+            if (price.netPrice() != null) {
+                requireOperation("WORK_PRICES", "CREATE");
+            }
+        }
+        if (request.relatedWorkIds() != null) {
+            requireOperation("WORK_RELATED_WORKS", "UPDATE");
+        }
+        if (request.consumptions() != null) {
+            for (var c : request.consumptions()) {
+                requireOperation("WORK_MATERIAL_CONSUMPTION",
+                        c.delete() ? "DELETE" : c.id() == null ? "CREATE" : "UPDATE");
+            }
+        }
+        var consumptions = request.consumptions() == null ? null : request.consumptions().stream()
+                .map(c -> new WorkItemAggregateSaveService.ConsumptionChange(
+                        c.id(), c.delete(),
+                        c.delete() || c.data() == null ? null
+                                : consumptionControllerMapper.toUpdateServiceExtendedModel(c.data())))
+                .toList();
+        var overrides = request.packageOverrides() == null ? null : request.packageOverrides().stream()
+                .map(o -> new WorkItemAggregateSaveService.OverrideChange(
+                        o.offerPackageId(), Boolean.TRUE.equals(o.member()), o.overrideSourceText()))
+                .toList();
+        var command = new WorkItemAggregateSaveService.Command(
+                request.workItem() == null ? null
+                        : controllerMapper.toUpdateServiceExtendedModel(request.workItem()),
+                request.formula() != null,
+                request.formula() == null ? null : request.formula().sourceText(),
+                overrides,
+                request.roomTypeIds(),
+                price != null,
+                price == null ? null : price.currencyId(),
+                price == null ? null : price.netPrice(),
+                consumptions,
+                request.relatedWorkIds());
+        aggregateSaveService.save(id, command);
+        return ResponseEntity.noContent().build();
+    }
+
+    private void requireOperation(String resource, String operation) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String roleCode = null;
+        if (auth != null && auth.isAuthenticated()) {
+            for (GrantedAuthority ga : auth.getAuthorities()) {
+                String a = ga.getAuthority();
+                if (a != null && a.startsWith("ROLE_")) {
+                    roleCode = a.substring("ROLE_".length());
+                    break;
+                }
+            }
+        }
+        if (roleCode == null || !permissionEvaluator.isAllowed(roleCode, resource, operation)) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.access.denied");
+        }
     }
 }

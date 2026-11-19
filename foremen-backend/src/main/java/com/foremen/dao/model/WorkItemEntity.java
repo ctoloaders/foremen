@@ -1,5 +1,6 @@
 package com.foremen.dao.model;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -42,6 +43,14 @@ public class WorkItemEntity extends BaseEntity {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    /**
+     * Optional internal price (FOR-04-11 additional tasks): the payroll base of the work. When set it
+     * replaces the client unit price as the rate worker pay is derived from; {@code null} means
+     * "use the base price". Never shown to the client.
+     */
+    @Column(name = "internal_price", precision = 19, scale = 2)
+    private BigDecimal internalPrice;
 
     /**
      * Optional Room_Type_Attachment (FOR-05-05, design B2 / R10): the set of room types this work

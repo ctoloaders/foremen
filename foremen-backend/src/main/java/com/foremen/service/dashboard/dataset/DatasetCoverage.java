@@ -38,6 +38,8 @@ public final class DatasetCoverage {
             Map.entry("RESOURCES", PERMISSION_CATALOG),
             Map.entry("OPERATIONS", PERMISSION_CATALOG),
             Map.entry("EXPENSE_UPLOAD", "action-only permission (upload), no own data"),
+            Map.entry("WORK_RELATED_WORKS", "link table of the work catalog (work to related work), no own business data (FOR-04-11)"),
+            Map.entry("STANDARD_WORK_SETS", "configuration: which catalog works belong to the standard set of a room type, no own business data (FOR-04-11)"),
             Map.entry("DASHBOARD_WIDGETS", "widget definitions are dashboard configuration, not business data"));
 
     public static Set<String> excludedCodes() {

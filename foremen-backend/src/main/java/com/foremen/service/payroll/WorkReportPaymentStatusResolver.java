@@ -111,7 +111,7 @@ public class WorkReportPaymentStatusResolver {
                     continue;
                 }
                 BigDecimal cost = WorkerCostDerivation.costValue(
-                        report.getClientUnitPrice(), tier, baseTier, line.getQuantity());
+                        report.payrollBase(), tier, baseTier, line.getQuantity());
                 LinePaymentStatus status = LinePaymentStatus.of(cost, line.getPaidAmount());
                 all.add(status);
                 if (line.getId() != null) {

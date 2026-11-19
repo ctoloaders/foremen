@@ -1,5 +1,6 @@
 package com.foremen.service.model;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,4 +52,6 @@ public class WorkItemServiceModel {
 
     /** Number of finishing-branch consumption norms of this work (computed per page; default 0). */
     private long finishingConsumptionCount;
+    /** Optional internal price (payroll base); {@code null} when the work uses its base price. */
+    private BigDecimal internalPrice;
 }
