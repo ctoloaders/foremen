@@ -15,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -1849,6 +1850,113 @@ class EstimateAssignmentServiceIntegrationTest {
                 .getResultList();
     }
 
+    @Test
+    @DisplayName("labour-price adjustment changes only its own scope, and a concurrent stale write of the "
+            + "same line (e.g. a Save recompute) does not reset the committed override")
+    void labourPriceAdjustment_changesOnlyItsOwnScope_andSurvivesStaleConcurrentWrite() {
+        Fixture f = createFixture();
+        Long[] second = new Long[1];
+        tx().executeWithoutResult(status -> {
+            WorkItemEntity first = workItemDao.findById(f.workItemId).orElseThrow();
+            WorkItemEntity other = persistWorkItem("W2_" + runId, first.getWorkCategory(), first.getUnit());
+            persistWorkPrice(other, persistCurrency(), new BigDecimal("200.00"));
+            second[0] = other.getId();
+        });
+        assignmentService.assign(f.projectId, f.workItemId, f.roomId, null);
+        assignmentService.assign(f.projectId, second[0], f.roomId, null);
+
+        assignmentService.applyLabourPriceAdjustment(
+                f.projectId, LabourPriceAdjustmentScope.WORK_ITEM, f.workItemId, new BigDecimal("10"));
+        assertThat(overrideOf(f.projectId, f.workItemId)).isEqualByComparingTo("165.00");
+        assertThat(overrideOf(f.projectId, second[0]))
+                .as("the other work's override must not be touched by the first save")
+                .isEqualByComparingTo("200.00");
+
+        // Race: a transaction holding a STALE snapshot of the second line (override 200) writes an
+        // unrelated column after a concurrent adjustment of that line committed.
+        TransactionTemplate inner = tx();
+        inner.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        tx().executeWithoutResult(status -> {
+            EstimateLineEntity stale = entityManager.createQuery(
+                            "select l from EstimateLineEntity l "
+                                    + "where l.estimate.project.id = :p and l.workItem.id = :w",
+                            EstimateLineEntity.class)
+                    .setParameter("p", f.projectId)
+                    .setParameter("w", second[0])
+                    .getSingleResult();
+            inner.executeWithoutResult(s2 -> assignmentService.applyLabourPriceAdjustment(
+                    f.projectId, LabourPriceAdjustmentScope.WORK_ITEM, second[0], new BigDecimal("-5")));
+            stale.setQuantity(stale.getQuantity().add(BigDecimal.ONE));
+        });
+
+        assertThat(overrideOf(f.projectId, second[0]))
+                .as("the concurrent stale write must not reset the committed adjustment")
+                .isEqualByComparingTo("190.00");
+        assertThat(overrideOf(f.projectId, f.workItemId))
+                .as("the first work's adjustment survives the second save")
+                .isEqualByComparingTo("165.00");
+    }
+
+    private BigDecimal overrideOf(Long projectId, Long workItemId) {
+        return tx().execute(status -> entityManager.createQuery(
+                        "select l.unitPriceOverride from EstimateLineEntity l "
+                                + "where l.estimate.project.id = :p and l.workItem.id = :w", BigDecimal.class)
+                .setParameter("p", projectId)
+                .setParameter("w", workItemId)
+                .getSingleResult());
+    }
+    @Test
+    @DisplayName("Remove_Package: unassigns the cells that still equal the package apply result, keeps a "
+            + "manually changed cell, reverts its package finishing lines and clears the applied package")
+    void removePackageRevertsUntouchedCellsAndKeepsManualOnes() {
+        MergeFixture f = createMergeFixture();
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                EstimateAssignmentService.StagedEdit.assign(f.workItemId, f.smallRoomId, f.packageCode),
+                EstimateAssignmentService.StagedEdit.assign(f.workItemId, f.largeRoomId, f.packageCode),
+                EstimateAssignmentService.StagedEdit.mergePackageMaterials(f.packageCode)));
+        // Manual change on the large room's cell: a Volume override.
+        assignmentService.saveAndAssemble(f.projectId, List.of(new EstimateAssignmentService.StagedEdit(
+                EstimateAssignmentService.EditKind.SET_QUANTITY, f.workItemId, f.largeRoomId,
+                null, null, null, null, null, null, new BigDecimal("16.00"))));
+
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                EstimateAssignmentService.StagedEdit.removePackage(f.packageCode)));
+
+        tx().executeWithoutResult(status -> {
+            assertThat(finishingLines(f.projectId, f.workItemId, f.smallRoomId))
+                    .as("the untouched small-room cell is removed with the package").isEmpty();
+            List<EstimateLineRoomMaterialEntity> large = finishingLines(f.projectId, f.workItemId, f.largeRoomId);
+            assertThat(large).as("the manually changed large-room cell is kept with one plain line").hasSize(1);
+            assertThat(large.get(0).isAppliedFromPackage()).isFalse();
+            assertThat(large.get(0).isQtyOverridden())
+                    .as("the package split is reverted to the full consumption need").isFalse();
+            EstimateEntity estimate = estimateDao.findByProjectId(f.projectId).orElseThrow();
+            assertThat(estimate.getAppliedPackageCode()).as("no package is applied any more").isNull();
+        });
+    }
+
+    @Test
+    @DisplayName("FOR-05-04: applying a package sets project.packageApplied + offerPackage in the same "
+            + "save; Remove_Package clears both")
+    void applyPackageSetsAndRemovePackageClearsProjectFlag() {
+        MergeFixture f = createMergeFixture();
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                EstimateAssignmentService.StagedEdit.assign(f.workItemId, f.smallRoomId, f.packageCode),
+                EstimateAssignmentService.StagedEdit.mergePackageMaterials(f.packageCode)));
+        tx().executeWithoutResult(status -> {
+            com.foremen.dao.model.ProjectEntity project = projectDao.findById(f.projectId).orElseThrow();
+            assertThat(project.isPackageApplied()).as("apply sets the flag").isTrue();
+            assertThat(project.getOfferPackage()).isNotNull();
+            assertThat(project.getOfferPackage().getCode()).isEqualTo(f.packageCode);
+        });
+        assignmentService.saveAndAssemble(f.projectId, List.of(
+                EstimateAssignmentService.StagedEdit.removePackage(f.packageCode)));
+        tx().executeWithoutResult(status -> {
+            com.foremen.dao.model.ProjectEntity project = projectDao.findById(f.projectId).orElseThrow();
+            assertThat(project.isPackageApplied()).as("remove clears the flag").isFalse();
+            assertThat(project.getOfferPackage()).isNull();
+        });
+    }
     @Test
     @DisplayName("A1 merge: applying a package water-fills the package finishing total across the "
             + "consuming rooms — a fully-covered room gets ONE package line (= its need, no extra), a "

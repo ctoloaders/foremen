@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.hibernate.annotations.DynamicUpdate;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -39,6 +41,12 @@ import lombok.Setter;
  * The derived columns default to {@code 0} so a freshly-inserted line is well-formed
  * before the first recompute (a line with no room quantities reads {@code 0} — R3.4).
  */
+/*
+ * @DynamicUpdate: an UPDATE writes only the columns that actually changed. Without it a concurrent
+ * write of an unrelated column (e.g. a Save recompute) rewrote the whole row from a stale snapshot
+ * and reset another request's unit_price_override (labour-price-adjustment race).
+ */
+@DynamicUpdate
 @Entity
 @Table(name = "estimate_lines")
 @Getter

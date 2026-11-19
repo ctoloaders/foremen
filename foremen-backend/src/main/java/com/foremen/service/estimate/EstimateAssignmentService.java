@@ -146,6 +146,16 @@ public class EstimateAssignmentService
     private final FinishingPriceRangeResolver finishingPriceRangeResolver;
     private final EstimateMatrixAssembler estimateMatrixAssembler;
     private final EstimateService estimateService;
+    /**
+     * Related-works / standard-set lookups (FOR-04-11). Setter-injected so the constructor above stays
+     * untouched.
+     */
+    private WorkSetResolver workSetResolver;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setWorkSetResolver(WorkSetResolver workSetResolver) {
+        this.workSetResolver = workSetResolver;
+    }
 
     public EstimateAssignmentService(
             EstimateLineRoomMaterialDao estimateLineRoomMaterialDao,
@@ -397,6 +407,31 @@ public class EstimateAssignmentService
      */
     @Transactional
     public EstimateEntity applyAssignments(Long projectId, List<StagedEdit> stagedEdits) {
+        boolean ownsCache = beginReplayCache();
+        try {
+            return doApplyAssignments(projectId, stagedEdits);
+        } finally {
+            endReplayCache(ownsCache);
+        }
+    }
+
+    /**
+     * FOR-05-04: sets the project's {@code packageApplied} flag + {@code offerPackage} for a non-empty
+     * {@code appliedPackageCode} that resolves to a package, and clears both for {@code ""}
+     * (REMOVE_PACKAGE) or an unknown code. Runs inside the apply transaction, so the flag and the
+     * matrix change commit or roll back together.
+     */
+    private void syncProjectPackageFlag(EstimateEntity estimate, String appliedPackageCode) {
+        com.foremen.dao.model.ProjectEntity project = estimate.getProject();
+        if (project == null) {
+            return;
+        }
+        OfferPackageEntity offerPackage = appliedPackageCode.isEmpty() ? null : resolvePackageOrNull(appliedPackageCode);
+        project.setPackageApplied(offerPackage != null);
+        project.setOfferPackage(offerPackage);
+    }
+
+    private EstimateEntity doApplyAssignments(Long projectId, List<StagedEdit> stagedEdits) {
         EstimateEntity estimate = resolveDraftEstimate(projectId);
 
         if (stagedEdits != null) {
@@ -413,7 +448,9 @@ public class EstimateAssignmentService
             // value unchanged (do not clear — the "clear kosztorys" flow owns clearing in a later wave).
             String appliedPackageCode = latestAppliedPackageCode(stagedEdits);
             if (appliedPackageCode != null) {
-                estimate.setAppliedPackageCode(appliedPackageCode);
+                estimate.setAppliedPackageCode(appliedPackageCode.isEmpty() ? null : appliedPackageCode);
+                // FOR-05-04: the project's package-applied flag moves in the SAME transaction.
+                syncProjectPackageFlag(estimate, appliedPackageCode);
             }
         }
 
@@ -439,6 +476,8 @@ public class EstimateAssignmentService
             }
             switch (edit.kind()) {
                 case APPLY_PACKAGE, RECOMPUTE_FINISHING, MERGE_PACKAGE_MATERIALS -> latest = edit.packageCode();
+                // Remove_Package: the estimate no longer has an applied package ("" = clear).
+                case REMOVE_PACKAGE -> latest = "";
                 default -> { /* ASSIGN etc. carry a packageCode only to drive the override formula. */ }
             }
         }
@@ -535,7 +574,7 @@ public class EstimateAssignmentService
         // assigns in the same batch, so each room's finishing consumption NEED is known (point 3).
         List<StagedEdit> edits = new ArrayList<>(plan.toStagedEdits());
         edits.add(StagedEdit.mergePackageMaterials(packageCode));
-        return assemblePreview(projectId, edits, editable);
+        return assemblePreviewWithoutRelated(projectId, edits, editable);
     }
 
     /**
@@ -575,7 +614,7 @@ public class EstimateAssignmentService
     public EstimateMatrixDto previewApplyWork(
             Long projectId, Long workItemId, String packageCode, boolean editable) {
         CalculatedApply plan = calculateApplyWorkToRooms(projectId, workItemId, packageCode);
-        return assemblePreview(projectId, plan.toStagedEdits(), editable);
+        return assemblePreviewWithoutRelated(projectId, plan.toStagedEdits(), editable);
     }
 
     /**
@@ -625,6 +664,35 @@ public class EstimateAssignmentService
      * here — the preview needs only the assembled read model, not persisted derived totals.
      */
     private EstimateMatrixDto assemblePreview(Long projectId, List<StagedEdit> stagedEdits, boolean editable) {
+        boolean ownsCache = beginReplayCache();
+        try {
+            return doAssemblePreview(projectId, stagedEdits, editable);
+        } finally {
+            endReplayCache(ownsCache);
+        }
+    }
+
+    /**
+     * The calculate previews (apply-package, apply-work) replay their plan WITHOUT expanding related
+     * works: the client diffs the preview into explicit per-cell {@code ASSIGN} edits, and those edits
+     * are expanded once, at the staged preview and at Save. Expanding here as well would make the
+     * explicit edits of the related works expand again (a second level).
+     */
+    private EstimateMatrixDto assemblePreviewWithoutRelated(
+            Long projectId, List<StagedEdit> stagedEdits, boolean editable) {
+        boolean ownsCache = beginReplayCache();
+        ReplayCache cache = REPLAY_CACHE.get();
+        boolean previous = cache.skipRelatedExpansion;
+        cache.skipRelatedExpansion = true;
+        try {
+            return doAssemblePreview(projectId, stagedEdits, editable);
+        } finally {
+            cache.skipRelatedExpansion = previous;
+            endReplayCache(ownsCache);
+        }
+    }
+
+    private EstimateMatrixDto doAssemblePreview(Long projectId, List<StagedEdit> stagedEdits, boolean editable) {
         EstimateEntity estimate = resolveEstimateForRead(projectId);
         if (stagedEdits != null) {
             // Batch-load every referenced work's consumptions ONCE for the whole replay so the
@@ -668,7 +736,9 @@ public class EstimateAssignmentService
                 WorkItemEntity workItem = resolveWorkItem(edit.workItemId());
                 RoomEntity room = resolveRoom(edit.roomId());
                 assertRoomInProject(room, projectId);
-                doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()), consumptionsByWork);
+                OfferPackageEntity assignPackage = resolvePackageOrNull(edit.packageCode());
+                doAssign(estimate, workItem, room, assignPackage, consumptionsByWork);
+                assignRelatedWorks(estimate, workItem, room, assignPackage, consumptionsByWork);
             }
             case UNASSIGN -> {
                 EstimateLineEntity line = findLine(estimate, edit.workItemId());
@@ -710,6 +780,7 @@ public class EstimateAssignmentService
             }
             case RECOMPUTE_FINISHING -> recopyFinishingRange(estimate, edit);
             case MERGE_PACKAGE_MATERIALS -> mergePackageMaterials(estimate, projectId, edit.packageCode());
+            case REMOVE_PACKAGE -> removePackage(estimate, projectId, edit.packageCode());
             case SET_QUANTITY -> applySetQuantity(estimate, edit);
             case CLEAR_QUANTITY -> applyClearQuantity(estimate, edit);
             case SET_MATERIAL_QUANTITY -> applySetMaterialQuantity(estimate, edit);
@@ -883,7 +954,7 @@ public class EstimateAssignmentService
             return null;
         }
         ConstructionMaterialEntity cheapest = null;
-        for (ConstructionMaterialEntity product : constructionMaterialDao.findByActiveTrueAndRetailNetNotNull()) {
+        for (ConstructionMaterialEntity product : activeConstructionMaterials()) {
             if (product.getType() == null || !typeId.equals(product.getType().getId())
                     || product.getRetailNet() == null) {
                 continue;
@@ -904,7 +975,7 @@ public class EstimateAssignmentService
             return null;
         }
         FinishingMaterialEntity cheapest = null;
-        for (FinishingMaterialEntity product : finishingMaterialDao.findByActiveTrueAndRetailNetNotNull()) {
+        for (FinishingMaterialEntity product : activeFinishingMaterials()) {
             if (product.getType() == null || !typeId.equals(product.getType().getId())
                     || product.getRetailNet() == null) {
                 continue;
@@ -1048,7 +1119,7 @@ public class EstimateAssignmentService
             ConstructionMaterialTypeEntity type = resolveConstructionType(typeId);
             material.setConstructionType(type);
             PriceRangeResolver.PriceRange range = priceRangeResolver.rangeFor(
-                    constructionMaterialDao.findByActiveTrueAndRetailNetNotNull(), typeId);
+                    activeConstructionMaterials(), typeId);
             material.setRangeMin(range.min());
             material.setRangeMax(range.max());
         } else if (branch == ConsumptionBranch.finishing) {
@@ -1056,7 +1127,7 @@ public class EstimateAssignmentService
             material.setFinishingType(type);
             // Assignment default is the package-less fold across all packages (R3.4).
             FinishingPriceRangeResolver.PriceRange range = finishingPriceRangeResolver.rangeFor(
-                    finishingMaterialDao.findByActiveTrueAndRetailNetNotNull(), typeId, null);
+                    activeFinishingMaterials(), typeId, null);
             material.setRangeMin(range.min());
             material.setRangeMax(range.max());
         } else {
@@ -1156,7 +1227,7 @@ public class EstimateAssignmentService
             return null;
         }
         List<WorkMaterialConsumptionEntity> consumptions =
-                workMaterialConsumptionDao.findByWorkItemIdIn(List.of(workItem.getId()));
+                consumptionsOfWork(workItem.getId());
         for (WorkMaterialConsumptionEntity consumption : consumptions) {
             if (consumption.getBranch() != branch) {
                 continue;
@@ -1186,7 +1257,7 @@ public class EstimateAssignmentService
             return ConsumptionBasis.PER_UNIT;
         }
         List<WorkMaterialConsumptionEntity> consumptions =
-                workMaterialConsumptionDao.findByWorkItemIdIn(List.of(workItem.getId()));
+                consumptionsOfWork(workItem.getId());
         for (WorkMaterialConsumptionEntity consumption : consumptions) {
             if (consumption.getBranch() != branch) {
                 continue;
@@ -1304,6 +1375,75 @@ public class EstimateAssignmentService
     }
 
     /**
+     * Adds the related works of {@code parent} to {@code room} (FOR-04-11 additional task 4). ONE level
+     * only: the related works' own links are not read, so a cycle ({@code A -> B -> A}) cannot loop and
+     * a work never adds itself. A related work is skipped when its room-type attachment excludes the
+     * room, or when the cell is already assigned (an existing Volume is never overridden). Runs inside
+     * the same staged ASSIGN replay as the parent, so an undo of the parent edit removes them too.
+     */
+    private void assignRelatedWorks(
+            EstimateEntity estimate, WorkItemEntity parent, RoomEntity room, OfferPackageEntity offerPackage,
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork) {
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (workSetResolver == null || (cache != null && cache.skipRelatedExpansion)) {
+            return;
+        }
+        for (WorkItemEntity related : workSetResolver.relatedWorks(parent.getId())) {
+            if (related.getId().equals(parent.getId())
+                    || !roomAttaches(room, attachedRoomTypeIds(related))) {
+                continue;
+            }
+            EstimateLineEntity existing = findLine(estimate, related.getId());
+            if (existing != null && findRoomQty(existing, room.getId()) != null) {
+                continue;
+            }
+            Map<Long, List<WorkMaterialConsumptionEntity>> withRelated = new HashMap<>(consumptionsByWork);
+            withRelated.putIfAbsent(related.getId(),
+                    groupConsumptionsBy(List.of(related.getId())).getOrDefault(related.getId(), List.of()));
+            doAssign(estimate, related, room, offerPackage, withRelated);
+        }
+    }
+
+    /** Whether the room's type has at least one active work in its standard set (FOR-04-11). */
+    public boolean hasStandardWorkSet(RoomEntity room) {
+        return workSetResolver != null && room.getRoomType() != null
+                && !workSetResolver.standardWorks(room.getRoomType().getId()).isEmpty();
+    }
+
+    /**
+     * Applies the standard work set of the room's type to a freshly created {@code newRoom}
+     * (FOR-04-11 additional task 8). Each configured work is assigned through {@link #doAssign} (the
+     * path a matrix ASSIGN takes), plus its related works one level deep. A work already assigned to
+     * the room (for example copied from a sibling) is left alone. The set is explicit configuration, so
+     * the work's own room-type attachment is not consulted. Does NOT recompute.
+     *
+     * @return the number of standard works newly applied to the room
+     */
+    public int applyStandardWorkSet(EstimateEntity estimate, RoomEntity newRoom) {
+        if (workSetResolver == null || newRoom.getRoomType() == null) {
+            return 0;
+        }
+        List<WorkItemEntity> works = workSetResolver.standardWorks(newRoom.getRoomType().getId());
+        if (works.isEmpty()) {
+            return 0;
+        }
+        OfferPackageEntity offerPackage = resolvePackageOrNull(estimate.getAppliedPackageCode());
+        Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                groupConsumptionsBy(works.stream().map(WorkItemEntity::getId).distinct().toList());
+        int applied = 0;
+        for (WorkItemEntity work : works) {
+            EstimateLineEntity line = findLine(estimate, work.getId());
+            if (line != null && findRoomQty(line, newRoom.getId()) != null) {
+                continue;
+            }
+            doAssign(estimate, work, newRoom, offerPackage, consumptionsByWork);
+            assignRelatedWorks(estimate, work, newRoom, offerPackage, consumptionsByWork);
+            applied++;
+        }
+        return applied;
+    }
+
+    /**
      * Applies to a freshly created {@code newRoom} the works already assigned to a same-room-type
      * sibling (additional task 4, user decision 2c). The sibling is the candidate with the most
      * assigned works (ties broken by the lowest room id, so the choice is deterministic). Each of
@@ -1418,7 +1558,7 @@ public class EstimateAssignmentService
         line.setUnit(workItem.getUnit());
 
         // Frozen labour price copy + provenance FK (R3.4, R13.1).
-        WorkPriceEntity workPrice = workPriceDao.findByWorkItemId(workItem.getId()).orElse(null);
+        WorkPriceEntity workPrice = workPriceOf(workItem.getId());
         line.setWorkPrice(workPrice);
         line.setUnitPrice(workPrice != null && workPrice.getNetPrice() != null
                 ? workPrice.getNetPrice()
@@ -1468,7 +1608,7 @@ public class EstimateAssignmentService
                 Long typeId = consumption.getConstructionMaterialType().getId();
                 material.setConstructionType(consumption.getConstructionMaterialType());
                 if (constructionMaterials == null) {
-                    constructionMaterials = constructionMaterialDao.findByActiveTrueAndRetailNetNotNull();
+                    constructionMaterials = activeConstructionMaterials();
                 }
                 PriceRangeResolver.PriceRange range = priceRangeResolver.rangeFor(constructionMaterials, typeId);
                 material.setRangeMin(range.min());
@@ -1478,7 +1618,7 @@ public class EstimateAssignmentService
                 Long typeId = consumption.getFinishingMaterialType().getId();
                 material.setFinishingType(consumption.getFinishingMaterialType());
                 if (finishingMaterials == null) {
-                    finishingMaterials = finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+                    finishingMaterials = activeFinishingMaterials();
                 }
                 // Assignment default is the package-less fold across all packages (R3.4).
                 FinishingPriceRangeResolver.PriceRange range =
@@ -1496,12 +1636,9 @@ public class EstimateAssignmentService
 
     /** Resolves the cell's single Volume (R4.1): applicable formula → unit fallback, vs the room's dims. */
     private BigDecimal resolveVolume(WorkItemEntity workItem, OfferPackageEntity offerPackage, RoomEntity room) {
-        WorkVolumeFormulaEntity defaultFormula =
-                workVolumeFormulaDao.findByWorkItemId(workItem.getId()).orElse(null);
+        WorkVolumeFormulaEntity defaultFormula = volumeFormulaOf(workItem.getId());
         WorkPackageOverrideEntity override = offerPackage == null ? null
-                : workPackageOverrideDao
-                        .findByWorkItemIdAndOfferPackageId(workItem.getId(), offerPackage.getId())
-                        .orElse(null);
+                : packageOverrideOf(workItem.getId(), offerPackage.getId());
         String unitCode = workItem.getUnit() != null ? workItem.getUnit().getCode() : null;
         VolumeResolver.Resolution resolution = VolumeResolver.resolve(override, defaultFormula, unitCode, room);
         return resolution.volume();
@@ -1519,7 +1656,7 @@ public class EstimateAssignmentService
         OfferPackageEntity offerPackage = resolvePackageOrNull(edit.packageCode());
         Long packageId = offerPackage != null ? offerPackage.getId() : null;
         FinishingPriceRangeResolver.PriceRange range = finishingPriceRangeResolver.rangeFor(
-                finishingMaterialDao.findByActiveTrueAndRetailNetNotNull(),
+                activeFinishingMaterials(),
                 material.getFinishingType().getId(),
                 packageId);
         if (range.min() == null && range.max() == null) {
@@ -1611,6 +1748,154 @@ public class EstimateAssignmentService
     }
 
     /**
+     * Remove_Package replay (the inverse of an Apply_Package): reverts what applying
+     * {@code packageCode} produced and keeps everything the user changed by hand.
+     *
+     * <ol>
+     *   <li><b>Cells.</b> For every member work of the package and every room the work attaches to
+     *       (the same cell set {@link #calculateApplyPackage} plans), an assigned cell is unassigned
+     *       only when it still equals the package apply result: its Volume is not manually overridden
+     *       and equals the package-resolved Volume, its material lines are exactly the work's declared
+     *       consumption types, no line carries a chosen concrete product, and no construction line has
+     *       a manual quantity (a finishing quantity override is accepted only on a package line or on
+     *       the "extra" line the package split created next to one). Any other cell is kept.</li>
+     *   <li><b>Materials.</b> The package's finishing distribution is reverted exactly like
+     *       re-applying with no package ({@link #resetAndReseedFinishing}): package lines are removed and
+     *       the plain consumption lines restored to their full need. A concrete product the user chose
+     *       on a package line is carried over to the restored line of the same type.</li>
+     * </ol>
+     * The untouched check runs on the graph BEFORE the material revert, so the revert cannot hide a
+     * manual change. A blank/unknown package is a total no-op (a preview must stay total).
+     */
+    private void removePackage(EstimateEntity estimate, Long projectId, String packageCode) {
+        OfferPackageEntity offerPackage = resolvePackageOrNull(packageCode);
+        if (offerPackage == null) {
+            return;
+        }
+        List<WorkItemEntity> memberWorks = memberWorksOf(offerPackage);
+        List<RoomEntity> rooms = roomDao.findByProjectId(projectId);
+        Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork = consumptionsByWorkId(memberWorks);
+        List<CellKey> toUnassign = new ArrayList<>();
+        for (WorkItemEntity work : memberWorks) {
+            EstimateLineEntity line = findLine(estimate, work.getId());
+            if (line == null) {
+                continue;
+            }
+            WorkVolumeFormulaEntity defaultFormula = volumeFormulaOf(work.getId());
+            WorkPackageOverrideEntity override = packageOverrideOf(work.getId(), offerPackage.getId());
+            String unitCode = work.getUnit() != null ? work.getUnit().getCode() : null;
+            Set<Long> attachedTypeIds = attachedRoomTypeIds(work);
+            List<WorkMaterialConsumptionEntity> consumptions =
+                    consumptionsByWork.getOrDefault(work.getId(), List.of());
+            for (RoomEntity room : rooms) {
+                if (!roomAttaches(room, attachedTypeIds)) {
+                    continue;
+                }
+                EstimateLineRoomQtyEntity roomQty = findRoomQty(line, room.getId());
+                if (roomQty == null) {
+                    continue;
+                }
+                BigDecimal packageVolume = VolumeResolver.resolve(override, defaultFormula, unitCode, room).volume();
+                if (cellEqualsPackageResult(roomQty, packageVolume, consumptions)) {
+                    toUnassign.add(new CellKey(work.getId(), room.getId()));
+                }
+            }
+        }
+        revertPackageMaterials(estimate);
+        for (CellKey cell : toUnassign) {
+            EstimateLineEntity line = findLine(estimate, cell.workItemId());
+            if (line != null) {
+                doUnassign(estimate, line, cell.roomId());
+            }
+        }
+    }
+
+    /** Whether an assigned cell is still exactly what Apply_Package seeded (see {@link #removePackage}). */
+    static boolean cellEqualsPackageResult(
+            EstimateLineRoomQtyEntity roomQty, BigDecimal packageVolume,
+            List<WorkMaterialConsumptionEntity> consumptions) {
+        if (roomQty.isVolumeOverridden()) {
+            return false;
+        }
+        BigDecimal quantity = roomQty.getQuantity();
+        if (quantity == null || packageVolume == null || quantity.compareTo(packageVolume) != 0) {
+            return false;
+        }
+        Set<String> declared = new HashSet<>();
+        for (WorkMaterialConsumptionEntity consumption : consumptions) {
+            if (consumption.getBranch() == ConsumptionBranch.construction
+                    && consumption.getConstructionMaterialType() != null) {
+                declared.add("c:" + consumption.getConstructionMaterialType().getId());
+            } else if (consumption.getBranch() == ConsumptionBranch.finishing
+                    && consumption.getFinishingMaterialType() != null) {
+                declared.add("f:" + consumption.getFinishingMaterialType().getId());
+            }
+        }
+        Set<Long> packageFinishingTypes = new HashSet<>();
+        for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
+            if (material.isAppliedFromPackage() && material.getFinishingType() != null) {
+                packageFinishingTypes.add(material.getFinishingType().getId());
+            }
+        }
+        Set<String> present = new HashSet<>();
+        for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
+            if (material.getConcreteConstructionMaterial() != null
+                    || material.getConcreteFinishingMaterial() != null) {
+                return false; // a chosen product is a manual change
+            }
+            if (material.getBranch() == ConsumptionBranch.construction) {
+                if (material.isQtyOverridden() || material.getConstructionType() == null) {
+                    return false;
+                }
+                present.add("c:" + material.getConstructionType().getId());
+            } else if (material.getBranch() == ConsumptionBranch.finishing) {
+                if (material.getFinishingType() == null) {
+                    return false;
+                }
+                Long typeId = material.getFinishingType().getId();
+                if (material.isQtyOverridden() && !packageFinishingTypes.contains(typeId)) {
+                    return false; // a manual quantity, not the package split's extra line
+                }
+                present.add("f:" + typeId);
+            } else {
+                return false;
+            }
+        }
+        return present.equals(declared);
+    }
+
+    /**
+     * Reverts the package finishing distribution ({@link #resetAndReseedFinishing}) while keeping any
+     * concrete product the user chose on a package line: it is re-applied to the restored plain line
+     * of the same finishing type in the same cell.
+     */
+    private void revertPackageMaterials(EstimateEntity estimate) {
+        Map<EstimateLineRoomQtyEntity, Map<Long, Long>> chosen = new java.util.IdentityHashMap<>();
+        for (EstimateLineEntity line : estimate.getLines()) {
+            for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+                for (EstimateLineRoomMaterialEntity material : roomQty.getMaterials()) {
+                    if (material.isAppliedFromPackage() && material.getFinishingType() != null
+                            && material.getConcreteFinishingMaterial() != null) {
+                        chosen.computeIfAbsent(roomQty, k -> new HashMap<>())
+                                .put(material.getFinishingType().getId(),
+                                        material.getConcreteFinishingMaterial().getId());
+                    }
+                }
+            }
+        }
+        resetAndReseedFinishing(estimate);
+        for (Map.Entry<EstimateLineRoomQtyEntity, Map<Long, Long>> entry : chosen.entrySet()) {
+            for (Map.Entry<Long, Long> typeChoice : entry.getValue().entrySet()) {
+                EstimateLineRoomMaterialEntity base =
+                        findMaterialLine(entry.getKey(), ConsumptionBranch.finishing, typeChoice.getKey());
+                if (base != null && base.getConcreteFinishingMaterial() == null) {
+                    applyChooseConcrete(base, typeChoice.getValue());
+                }
+            }
+        }
+    }
+
+    /**
      * Reset step (point 5) — makes the estimate's finishing lines a clean, package-free base the
      * water-fill re-splits from, so applying a package is idempotent and switching packages recomputes
      * cleanly:
@@ -1657,7 +1942,7 @@ public class EstimateAssignmentService
                 continue;
             }
             List<WorkMaterialConsumptionEntity> consumptions =
-                    workMaterialConsumptionDao.findByWorkItemIdIn(List.of(work.getId()));
+                    consumptionsOfWork(work.getId());
             for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
                 reseedMissingFinishingLines(roomQty, consumptions);
             }
@@ -1690,7 +1975,7 @@ public class EstimateAssignmentService
             material.setNormQty(consumption.getNormQty());
             material.setConsumptionBasis(basisOf(consumption));
             if (finishingMaterials == null) {
-                finishingMaterials = finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+                finishingMaterials = activeFinishingMaterials();
             }
             FinishingPriceRangeResolver.PriceRange range =
                     finishingPriceRangeResolver.rangeFor(finishingMaterials, typeId, null);
@@ -2040,7 +2325,7 @@ public class EstimateAssignmentService
         }
 
         Collection<FinishingMaterialEntity> finishingMaterials =
-                finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+                activeFinishingMaterials();
 
         List<FinishingRangePlan> plans = new ArrayList<>();
         for (EstimateLineEntity line : estimate.getLines()) {
@@ -2099,11 +2384,132 @@ public class EstimateAssignmentService
 
     /** Single DAO call + group-by-work-id for a batch of work ids (perf: avoids per-work N+1). */
     private Map<Long, List<WorkMaterialConsumptionEntity>> groupConsumptionsBy(List<Long> workIds) {
-        return (workIds.isEmpty() ? List.<WorkMaterialConsumptionEntity>of()
-                : workMaterialConsumptionDao.findByWorkItemIdIn(workIds))
+        ReplayCache cache = REPLAY_CACHE.get();
+        List<Long> missing = cache == null ? workIds
+                : workIds.stream().filter(id -> !cache.consumptionsByWork.containsKey(id)).toList();
+        Map<Long, List<WorkMaterialConsumptionEntity>> loaded = (missing.isEmpty()
+                ? List.<WorkMaterialConsumptionEntity>of()
+                : workMaterialConsumptionDao.findByWorkItemIdIn(missing))
                 .stream()
                 .filter(c -> c.getWorkItem() != null && c.getWorkItem().getId() != null)
                 .collect(java.util.stream.Collectors.groupingBy(c -> c.getWorkItem().getId()));
+        if (cache == null) {
+            return loaded;
+        }
+        for (Long id : missing) {
+            cache.consumptionsByWork.put(id, loaded.getOrDefault(id, List.of()));
+        }
+        Map<Long, List<WorkMaterialConsumptionEntity>> result = new HashMap<>();
+        for (Long id : workIds) {
+            List<WorkMaterialConsumptionEntity> list = cache.consumptionsByWork.get(id);
+            if (list != null && !list.isEmpty()) {
+                result.put(id, list);
+            }
+        }
+        return result;
+    }
+
+    // --- per-request catalog cache (perf: the staged-set replay re-read the same catalog per edit) ---
+
+    /**
+     * Catalog rows read during one staged-set replay (preview or Save). The replay mutates only the
+     * estimate graph, never these catalog tables, so reading each of them once per request returns
+     * exactly what the repeated per-edit queries returned (identical results, far fewer queries:
+     * previously every assigned cell re-loaded the full active construction + finishing catalogs,
+     * the work's formula / package override / price, and the package by code). Held in a
+     * {@link ThreadLocal} for the duration of {@link #assemblePreview} / {@link #applyAssignments};
+     * outside a replay every helper queries directly, as before.
+     */
+    private static final class ReplayCache {
+        private Collection<ConstructionMaterialEntity> constructionMaterials;
+        private Collection<FinishingMaterialEntity> finishingMaterials;
+        private final Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork = new HashMap<>();
+        private final Map<String, java.util.Optional<OfferPackageEntity>> packagesByCode = new HashMap<>();
+        private final Map<Long, java.util.Optional<WorkVolumeFormulaEntity>> formulasByWork = new HashMap<>();
+        private final Map<String, java.util.Optional<WorkPackageOverrideEntity>> overrides = new HashMap<>();
+        private final Map<Long, java.util.Optional<WorkPriceEntity>> pricesByWork = new HashMap<>();
+        /** FOR-04-11: when {@code true} an ASSIGN replay does not add the work's related works. */
+        private boolean skipRelatedExpansion;
+    }
+
+    private static final ThreadLocal<ReplayCache> REPLAY_CACHE = new ThreadLocal<>();
+
+    /** Opens the replay cache; returns {@code true} when this call owns it (and must close it). */
+    private static boolean beginReplayCache() {
+        if (REPLAY_CACHE.get() != null) {
+            return false;
+        }
+        REPLAY_CACHE.set(new ReplayCache());
+        return true;
+    }
+
+    private static void endReplayCache(boolean owns) {
+        if (owns) {
+            REPLAY_CACHE.remove();
+        }
+    }
+
+    private Collection<ConstructionMaterialEntity> activeConstructionMaterials() {
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (cache == null) {
+            return constructionMaterialDao.findByActiveTrueAndRetailNetNotNull();
+        }
+        if (cache.constructionMaterials == null) {
+            cache.constructionMaterials = constructionMaterialDao.findByActiveTrueAndRetailNetNotNull();
+        }
+        return cache.constructionMaterials;
+    }
+
+    private Collection<FinishingMaterialEntity> activeFinishingMaterials() {
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (cache == null) {
+            return finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+        }
+        if (cache.finishingMaterials == null) {
+            cache.finishingMaterials = finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+        }
+        return cache.finishingMaterials;
+    }
+
+    private List<WorkMaterialConsumptionEntity> consumptionsOfWork(Long workItemId) {
+        if (REPLAY_CACHE.get() == null) {
+            return workMaterialConsumptionDao.findByWorkItemIdIn(List.of(workItemId));
+        }
+        return groupConsumptionsBy(List.of(workItemId)).getOrDefault(workItemId, List.of());
+    }
+
+    private WorkVolumeFormulaEntity volumeFormulaOf(Long workItemId) {
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (cache == null) {
+            return workVolumeFormulaDao.findByWorkItemId(workItemId).orElse(null);
+        }
+        return cache.formulasByWork
+                .computeIfAbsent(workItemId, id -> java.util.Optional.ofNullable(
+                        workVolumeFormulaDao.findByWorkItemId(id).orElse(null)))
+                .orElse(null);
+    }
+
+    private WorkPackageOverrideEntity packageOverrideOf(Long workItemId, Long packageId) {
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (cache == null) {
+            return workPackageOverrideDao.findByWorkItemIdAndOfferPackageId(workItemId, packageId).orElse(null);
+        }
+        return cache.overrides
+                .computeIfAbsent(workItemId + ":" + packageId, k -> java.util.Optional.ofNullable(
+                        workPackageOverrideDao.findByWorkItemIdAndOfferPackageId(workItemId, packageId)
+                                .orElse(null)))
+                .orElse(null);
+    }
+
+    private WorkPriceEntity workPriceOf(Long workItemId) {
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (cache == null) {
+            return workPriceDao.findByWorkItemId(workItemId).orElse(null);
+        }
+        return cache.pricesByWork
+                .computeIfAbsent(workItemId, id -> java.util.Optional.ofNullable(
+                        workPriceDao.findByWorkItemId(id).orElse(null)))
+                .orElse(null);
     }
 
     private void planWorkOverRooms(
@@ -2114,12 +2520,9 @@ public class EstimateAssignmentService
             Map<Long, AssortmentPositionPriceEntity> assortmentByType,
             Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork,
             List<AssignmentPlan> out) {
-        WorkVolumeFormulaEntity defaultFormula =
-                workVolumeFormulaDao.findByWorkItemId(work.getId()).orElse(null);
+        WorkVolumeFormulaEntity defaultFormula = volumeFormulaOf(work.getId());
         WorkPackageOverrideEntity override = offerPackage == null ? null
-                : workPackageOverrideDao
-                        .findByWorkItemIdAndOfferPackageId(work.getId(), offerPackage.getId())
-                        .orElse(null);
+                : packageOverrideOf(work.getId(), offerPackage.getId());
         String unitCode = work.getUnit() != null ? work.getUnit().getCode() : null;
         // Consumptions are batch-loaded ONCE by the caller (perf: was one DAO call per work — a
         // severe N+1 across all member works during apply-package / apply-work).
@@ -2175,7 +2578,7 @@ public class EstimateAssignmentService
                     && consumption.getConstructionMaterialType() != null) {
                 Long typeId = consumption.getConstructionMaterialType().getId();
                 if (constructionMaterials == null) {
-                    constructionMaterials = constructionMaterialDao.findByActiveTrueAndRetailNetNotNull();
+                    constructionMaterials = activeConstructionMaterials();
                 }
                 PriceRangeResolver.PriceRange range = priceRangeResolver.rangeFor(constructionMaterials, typeId);
                 lines.add(new MaterialLinePlan(
@@ -2192,7 +2595,7 @@ public class EstimateAssignmentService
                             assortment.getMinPrice(), assortment.getMaxPrice(), true, basisOf(consumption)));
                 } else {
                     if (finishingMaterials == null) {
-                        finishingMaterials = finishingMaterialDao.findByActiveTrueAndRetailNetNotNull();
+                        finishingMaterials = activeFinishingMaterials();
                     }
                     FinishingPriceRangeResolver.PriceRange range =
                             finishingPriceRangeResolver.rangeFor(finishingMaterials, typeId, packageId);
@@ -2632,7 +3035,14 @@ public class EstimateAssignmentService
         if (packageCode == null || packageCode.isBlank()) {
             return null;
         }
-        return offerPackageDao.findByCode(packageCode).orElse(null);
+        ReplayCache cache = REPLAY_CACHE.get();
+        if (cache == null) {
+            return offerPackageDao.findByCode(packageCode).orElse(null);
+        }
+        return cache.packagesByCode
+                .computeIfAbsent(packageCode, c -> java.util.Optional.ofNullable(
+                        offerPackageDao.findByCode(c).orElse(null)))
+                .orElse(null);
     }
 
     /** Enforces the cross-project rule: the room's project must equal the estimate's project (R3.6). */
@@ -2717,6 +3127,13 @@ public class EstimateAssignmentService
          * {@code roomId == null}), or one cell ({@code workItemId} + {@code roomId}).
          */
         APPLY_CHEAPEST,
+        /**
+         * Remove_Package: the inverse of applying {@code packageCode}. Replayed against the current
+         * graph: unassigns the package's member-work cells that still equal the apply result, keeps
+         * manually changed cells, and reverts the package finishing distribution (see
+         * {@code removePackage}). Clears the estimate's applied package on Save.
+         */
+        REMOVE_PACKAGE,
         /**
          * FOR-05-05 Amendment A1: merge the applied package's assortment finishing materials into the
          * estimate. The client stages ONE such edit (carrying only {@code packageCode}) when applying
@@ -2813,6 +3230,12 @@ public class EstimateAssignmentService
             return new StagedEdit(
                     EditKind.CLEAR_MATERIAL_QUANTITY, workItemId, roomId, null, branch, typeId, null, null,
                     null, null);
+        }
+
+        /** Convenience factory for a {@code REMOVE_PACKAGE} edit (the inverse of applying the package). */
+        public static StagedEdit removePackage(String packageCode) {
+            return new StagedEdit(
+                    EditKind.REMOVE_PACKAGE, null, null, null, null, null, null, null, packageCode, null);
         }
 
         /**
