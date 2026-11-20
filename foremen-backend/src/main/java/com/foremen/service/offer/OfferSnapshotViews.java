@@ -13,7 +13,8 @@ import com.foremen.dao.model.OfferStatus;
  * <p>CLIENT redaction is an allow-list: {@link #toView} copies only client-visible fields and sets the
  * staff-only {@code baseUnitPrice}/{@code baseValueNet} solely when {@code includeBase} is true (roles
  * allowed by {@code ClientOfferReadModelAssembler#canSeeLabourComparison}). The comparison never
- * carries base prices for any role.
+ * carries base prices for any role. The snapshot's restore data (unitPriceOverride, workPriceId, lineNo,
+ * comment) is never copied into any view; only the package marker is added.
  */
 public final class OfferSnapshotViews {
 
@@ -23,13 +24,17 @@ public final class OfferSnapshotViews {
     /** One entry of the project's offers list. */
     public record OfferSummary(
             Long id, String name, Integer revision, OfferStatus status,
-            BigDecimal totalNet, BigDecimal totalGross, boolean hasSnapshot, String createdDate) {
+            BigDecimal totalNet, BigDecimal totalGross, boolean hasSnapshot, String createdDate,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String appliedPackageCode,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String appliedPackageName) {
     }
 
     public record SnapshotView(
             Long offerId, String name, OfferStatus status, String capturedAt, BigDecimal vatRatePct,
             BigDecimal totalNet, BigDecimal totalVat, BigDecimal totalGross,
-            List<OfferSnapshot.Room> rooms, List<GroupView> groups) {
+            List<OfferSnapshot.Room> rooms, List<GroupView> groups,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String appliedPackageCode,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String appliedPackageName) {
     }
 
     public record GroupView(Long categoryId, String name, List<RowView> rows) {
@@ -44,7 +49,9 @@ public final class OfferSnapshotViews {
     }
 
     public record CompareSide(
-            Long offerId, String name, BigDecimal totalNet, BigDecimal totalVat, BigDecimal totalGross) {
+            Long offerId, String name, BigDecimal totalNet, BigDecimal totalVat, BigDecimal totalGross,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String appliedPackageCode,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String appliedPackageName) {
     }
 
     public record RoomDiff(Long roomId, String label, BigDecimal leftQuantity, BigDecimal rightQuantity) {
@@ -82,7 +89,17 @@ public final class OfferSnapshotViews {
             groups.add(new GroupView(g.categoryId(), pick(ru, g.nameRu(), g.namePl()), rows));
         }
         return new SnapshotView(offerId, name, status, s.capturedAt(), s.vatRatePct(),
-                s.totalNet(), s.totalVat(), s.totalGross(), nz(s.rooms()), groups);
+                s.totalNet(), s.totalVat(), s.totalGross(), nz(s.rooms()), groups,
+                s.appliedPackageCode(), packageName(s, ru));
+    }
+
+    /** Localized applied-package name of a snapshot; null when no package was applied. */
+    public static String packageName(OfferSnapshot s, boolean ru) {
+        if (s == null || s.appliedPackageCode() == null) {
+            return null;
+        }
+        String name = pick(ru, s.appliedPackageNameRu(), s.appliedPackageNamePl());
+        return name != null && !name.isBlank() ? name : s.appliedPackageCode();
     }
 
     public static String pick(boolean ru, String nameRu, String namePl) {

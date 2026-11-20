@@ -17,6 +17,8 @@ public record EstimateChangedEvent(Long projectId, Long estimateId, Long actingU
         /** A room save (dimensions changed, room added or deleted) re-derived the estimate. */
         ROOMS_CHANGED,
         /** An Estimate-tab batched Save changed the estimate totals. */
-        ESTIMATE_SAVED
+        ESTIMATE_SAVED,
+        /** The estimate was restored from an offer snapshot (FOR-05-07b). */
+        OFFER_RESTORE
     }
 }

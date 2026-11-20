@@ -65,10 +65,11 @@ public class OfferEntity extends BaseEntity {
 
     /**
      * FOR-05-07 Batch 2: immutable JSONB snapshot of the estimate captured when the offer was prepared;
-     * {@code null} for offers created before snapshots existed. Written once, never updated.
+     * {@code null} for offers created before snapshots existed. Written while the offer is DRAFT (prepare, refresh, send); frozen afterwards
+     * (enforced in {@code OfferService}).
      */
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "snapshot", columnDefinition = "jsonb", updatable = false)
+    @Column(name = "snapshot", columnDefinition = "jsonb")
     private OfferSnapshot snapshot;
 
     /** Monotonically increasing revision; defaults to 1 on creation (R1.5). */

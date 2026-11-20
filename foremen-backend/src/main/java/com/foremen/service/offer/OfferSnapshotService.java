@@ -4,9 +4,11 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,8 +44,15 @@ public class OfferSnapshotService {
     private final OfferDao offerDao;
     private final OfferVisibilityResolver visibilityResolver;
 
+    /** Lists with the package name localized from the request locale (the controller passes no locale). */
     @Transactional(readOnly = true)
     public List<OfferSummary> listByProject(Long projectId, boolean client) {
+        Locale locale = LocaleContextHolder.getLocale();
+        return listByProject(projectId, client, locale != null && "ru".equalsIgnoreCase(locale.getLanguage()));
+    }
+
+    @Transactional(readOnly = true)
+    public List<OfferSummary> listByProject(Long projectId, boolean client, boolean ru) {
         List<OfferSummary> result = new ArrayList<>();
         List<OfferEntity> offers = offerDao.findByProjectIdOrderByIdAsc(projectId);
         for (int i = offers.size() - 1; i >= 0; i--) { // newest first
@@ -54,7 +63,9 @@ public class OfferSnapshotService {
             result.add(new OfferSummary(
                     o.getId(), displayName(o, i + 1), o.getRevision(), o.getStatus(),
                     o.getTotalNet(), o.getTotalGross(), o.getSnapshot() != null,
-                    o.getCreatedDate() != null ? o.getCreatedDate().toString() : null));
+                    o.getCreatedDate() != null ? o.getCreatedDate().toString() : null,
+                    o.getSnapshot() != null ? o.getSnapshot().appliedPackageCode() : null,
+                    OfferSnapshotViews.packageName(o.getSnapshot(), ru)));
         }
         return result;
     }
@@ -105,7 +116,7 @@ public class OfferSnapshotService {
             }
         }
         return new Comparison(
-                side(left, ls), side(right, rs), added, removed, changed,
+                side(left, ls, ru), side(right, rs, ru), added, removed, changed,
                 sub(rs.totalNet(), ls.totalNet()), sub(rs.totalGross(), ls.totalGross()));
     }
 
@@ -138,8 +149,9 @@ public class OfferSnapshotService {
         return position != null ? "Offer " + position : "Offer #" + offer.getId();
     }
 
-    private CompareSide side(OfferEntity o, OfferSnapshot s) {
-        return new CompareSide(o.getId(), displayName(o, null), s.totalNet(), s.totalVat(), s.totalGross());
+    private CompareSide side(OfferEntity o, OfferSnapshot s, boolean ru) {
+        return new CompareSide(o.getId(), displayName(o, null), s.totalNet(), s.totalVat(), s.totalGross(),
+                s.appliedPackageCode(), OfferSnapshotViews.packageName(s, ru));
     }
 
     private record RowCtx(OfferSnapshot.Row row, String categoryName, String name, String unitName) {

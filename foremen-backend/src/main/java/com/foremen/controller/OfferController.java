@@ -1,7 +1,12 @@
 package com.foremen.controller;
 
+import java.util.Locale;
 import java.util.Optional;
 
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -20,6 +25,8 @@ import com.foremen.service.OfferService;
 import com.foremen.service.offer.ClientOfferReadModel;
 import com.foremen.service.offer.ClientOfferReadModelAssembler;
 import com.foremen.service.offer.ExecutorOfferReadModel;
+import com.foremen.service.offer.OfferPdfService;
+import com.foremen.service.offer.OfferRestoreService;
 import com.foremen.service.offer.OfferVisibilityResolver;
 
 import lombok.RequiredArgsConstructor;
@@ -80,6 +87,26 @@ public class OfferController {
     private final OfferService offerService;
     private final ClientOfferReadModelAssembler clientOfferReadModelAssembler;
     private final OfferVisibilityResolver offerVisibilityResolver;
+    private final OfferPdfService offerPdfService;
+    private final OfferRestoreService offerRestoreService;
+
+    /**
+     * The offer PDF generated from its snapshot (FOR-05-07b 3.6). {@code OFFERS} READ. CLIENT gets the
+     * redacted variant; a DRAFT offer is 404 for a CLIENT; a legacy offer without snapshot is 404
+     * {@code error.offer.snapshot.missing}.
+     */
+    @GetMapping("/{offerId}/pdf")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
+    public ResponseEntity<byte[]> pdf(@PathVariable Long offerId) {
+        Locale locale = LocaleContextHolder.getLocale();
+        boolean ru = locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
+        OfferPdfService.OfferPdf pdf = offerPdfService.render(offerId, isClient(), ru);
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename(pdf.fileName()).build().toString())
+                .body(pdf.content());
+    }
 
     /**
      * Prepares a new offer for the project from its PRICED estimate (R1.1/R1.2, R5.4). Executor
@@ -117,6 +144,28 @@ public class OfferController {
     public ResponseEntity<ExecutorOfferReadModel> send(@PathVariable Long offerId) {
         OfferEntity offer = offerService.send(offerId);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false, canSeeLabourComparison()));
+    }
+
+    /**
+     * Rebuilds the snapshot of a DRAFT offer from the live estimate ("Refresh from estimate");
+     * 409 when the offer is not DRAFT. {@code OFFERS} UPDATE. Returns the same shape as send.
+     */
+    @PostMapping("/{offerId}/refresh-snapshot")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
+    public ResponseEntity<ExecutorOfferReadModel> refreshSnapshot(@PathVariable Long offerId) {
+        OfferEntity offer = offerService.refreshSnapshot(offerId);
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
+    }
+
+    /**
+     * Restores the live estimate from the offer's snapshot (FOR-05-07b 3.7). {@code OFFERS} UPDATE.
+     * 409 {@code error.estimate.locked} when the estimate is not DRAFT; 404
+     * {@code error.offer.snapshot.missing} for an offer without a version 2 snapshot.
+     */
+    @PostMapping("/{offerId}/restore")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
+    public ResponseEntity<OfferRestoreService.RestoreResult> restore(@PathVariable Long offerId) {
+        return ResponseEntity.ok(offerRestoreService.restore(offerId));
     }
 
     /**

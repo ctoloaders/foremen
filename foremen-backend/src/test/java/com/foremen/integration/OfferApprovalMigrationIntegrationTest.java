@@ -33,9 +33,8 @@ import liquibase.resource.ClassLoaderResourceAccessor;
  *   <li>the five new tables — {@code offers}, {@code offer_discounts},
  *       {@code offer_negotiation_rounds}, {@code notifications}, {@code offer_project_settings} —
  *       exist post-apply with their documented columns (changesets 128–132);</li>
- *   <li>the {@code offers} partial unique index {@code ux_offers_active_project} enforces exactly one
- *       non-terminal offer per project — two active offers for the same project are rejected, while
- *       terminal (APPROVED/REJECTED/WITHDRAWN) offers may coexist — Requirement 1.4 (changeset 128);</li>
+ *   <li>the {@code offers} partial unique index {@code ux_offers_active_project} (changeset 128) is
+ *       dropped by changeset 267 (FOR-05-07b): several non-terminal offers per project coexist;</li>
  *   <li>the {@code offer_discounts} CHECK {@code ck_offer_discounts_value_non_negative} rejects a
  *       negative {@code value} — Requirement 2.2 (changeset 129);</li>
  *   <li>the {@code offer_negotiation_rounds} figure-ownership CHECK
@@ -84,7 +83,41 @@ class OfferApprovalMigrationIntegrationTest {
         if (!POSTGRES.isRunning()) {
             POSTGRES.start();
         }
-        runChangelog();
+        try {
+            runChangelog();
+        } catch (Exception first) {
+            // Empty DB: changeset 160 (document templates) needs an ADMIN user. Seed one and resume
+            // (same pattern as PayrollMigrationIntegrationTest).
+            seedAdminUserIfPossible();
+            runChangelog();
+        }
+    }
+
+    private static void seedAdminUserIfPossible() throws Exception {
+        try (Connection connection = DriverManager.getConnection(
+                POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+             var stmt = connection.createStatement()) {
+            long adminRoleId;
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT COALESCE((SELECT id FROM roles WHERE code = 'ADMIN' LIMIT 1), 0)")) {
+                rs.next();
+                adminRoleId = rs.getLong(1);
+            }
+            if (adminRoleId == 0) {
+                return;
+            }
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT COUNT(*) FROM users u JOIN roles r ON u.role_id = r.id WHERE r.code = 'ADMIN'")) {
+                rs.next();
+                if (rs.getLong(1) > 0) {
+                    return;
+                }
+            }
+            stmt.executeUpdate(
+                    "INSERT INTO users (name, email, role_id, active, locale, created_date, created_by) "
+                            + "VALUES ('mig-admin', 'mig-admin@example.com', " + adminRoleId
+                            + ", true, 'ru', NOW(), 'test')");
+        }
     }
 
     /** Applies the full Liquibase changelog once against the running container. */
@@ -157,21 +190,29 @@ class OfferApprovalMigrationIntegrationTest {
     // --- offers partial unique index: one non-terminal offer per project (R1.4) ---
 
     @Test
-    @DisplayName("ux_offers_active_project allows only one non-terminal offer per project")
-    void partialUniqueIndexEnforcesOneActiveOfferPerProject() throws Exception {
+    @DisplayName("ux_offers_active_project is dropped (267): several non-terminal offers per project coexist")
+    void partialUniqueIndexIsDroppedAndSeveralActiveOffersAllowed() throws Exception {
         assertThat(indexExists("ux_offers_active_project"))
-                .as("128 must create the partial unique index")
+                .as("267 must drop the one-active-offer partial unique index")
+                .isFalse();
+        assertThat(indexExists("ix_offers_project_status"))
+                .as("267 must add the plain (project_id, status) index")
                 .isTrue();
+
+        // Applying the changelog again is a no-op: the index stays gone.
+        runChangelog();
+        assertThat(indexExists("ux_offers_active_project"))
+                .as("re-applying the changelog must not recreate the index")
+                .isFalse();
 
         long projectId = seedProjectWithEstimate();
         try {
-            // First non-terminal (DRAFT) offer for the project succeeds.
             insertOffer(projectId, "DRAFT");
 
-            // A SECOND non-terminal offer for the same project must be rejected by the index.
+            // A SECOND non-terminal offer for the same project is now allowed (FOR-05-07b).
             assertThat(tryInsertOffer(projectId, "SENT"))
-                    .as("a second non-terminal offer for the same project must violate ux_offers_active_project")
-                    .isFalse();
+                    .as("a second non-terminal offer for the same project must be accepted")
+                    .isTrue();
 
             // Terminal offers may coexist freely alongside the active one.
             assertThat(tryInsertOffer(projectId, "APPROVED"))

@@ -20,7 +20,16 @@ public record OfferSnapshot(
         BigDecimal totalVat,
         BigDecimal totalGross,
         List<Room> rooms,
-        List<Group> groups) {
+        List<Group> groups,
+        String appliedPackageCode,
+        String appliedPackageNameRu,
+        String appliedPackageNamePl) {
+
+    /** Version 1 shape (no package marker); kept for readers and tests that build snapshots by hand. */
+    public OfferSnapshot(int version, String capturedAt, BigDecimal vatRatePct, BigDecimal totalNet,
+                         BigDecimal totalVat, BigDecimal totalGross, List<Room> rooms, List<Group> groups) {
+        this(version, capturedAt, vatRatePct, totalNet, totalVat, totalGross, rooms, groups, null, null, null);
+    }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Room(Long id, String label) {
@@ -43,7 +52,19 @@ public record OfferSnapshot(
             BigDecimal baseUnitPrice,
             BigDecimal valueNet,
             BigDecimal baseValueNet,
-            List<Cell> cells) {
+            List<Cell> cells,
+            BigDecimal unitPriceOverride,
+            String comment,
+            Long workPriceId,
+            Integer lineNo) {
+
+        /** Version 1 shape (no restore data). */
+        public Row(Long workItemId, String nameRu, String namePl, String unitCode, String unitNameRu,
+                   String unitNamePl, BigDecimal quantity, BigDecimal unitPrice, BigDecimal baseUnitPrice,
+                   BigDecimal valueNet, BigDecimal baseValueNet, List<Cell> cells) {
+            this(workItemId, nameRu, namePl, unitCode, unitNameRu, unitNamePl, quantity, unitPrice,
+                    baseUnitPrice, valueNet, baseValueNet, cells, null, null, null, null);
+        }
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

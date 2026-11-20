@@ -71,7 +71,12 @@ public class OfferEstimateReactionService {
     private final EntityManager entityManager;
 
     /** The outcome of a reaction (never {@code NONE}). */
-    public record Reaction(OfferEstimateImpact kind, Long projectId, Long offerId, Integer revision) {
+    public record Reaction(OfferEstimateImpact kind, Long projectId, Long offerId, Integer revision,
+                           List<Long> withdrawnOfferIds) {
+
+        public Reaction(OfferEstimateImpact kind, Long projectId, Long offerId, Integer revision) {
+            this(kind, projectId, offerId, revision, offerId == null ? List.of() : List.of(offerId));
+        }
     }
 
     /**
@@ -118,22 +123,29 @@ public class OfferEstimateReactionService {
     }
 
     private Reaction withdraw(Long projectId, EstimateChangedEvent event) {
-        OfferEntity offer = offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL).stream()
+        // FOR-05-07b A4: several non-terminal offers may coexist; every offer the client has seen is withdrawn.
+        List<OfferEntity> targets = offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL).stream()
                 .filter(o -> WITHDRAWABLE.contains(o.getStatus()))
-                .max(Comparator.comparing(OfferEntity::getId))
-                .orElse(null);
-        if (offer == null) {
+                .sorted(Comparator.comparing(OfferEntity::getId))
+                .toList();
+        if (targets.isEmpty()) {
             return null;
         }
-        OfferStatus previous = offer.getStatus();
-        // System actor: the acting user's own offer role is irrelevant (decision 3b); the machine still
-        // rejects a terminal source, so a closed offer can never be reopened here.
-        offer.setStatus(offerStatusMachine.transition(previous, OfferAction.WITHDRAW, SYSTEM_ACTOR));
-        offerDao.save(offer);
-        entityManager.flush();
-        audit(offer, AUDIT_WITHDRAW, event, "{\"status\":\"" + previous + "\"}",
-                "{\"status\":\"" + offer.getStatus() + "\"" + triggerJson(event) + "}");
-        return new Reaction(OfferEstimateImpact.WITHDRAW, projectId, offer.getId(), offer.getRevision());
+        List<Long> withdrawnIds = new java.util.ArrayList<>();
+        for (OfferEntity offer : targets) {
+            OfferStatus previous = offer.getStatus();
+            // System actor: the acting user's own offer role is irrelevant (decision 3b); the machine still
+            // rejects a terminal source, so a closed offer can never be reopened here.
+            offer.setStatus(offerStatusMachine.transition(previous, OfferAction.WITHDRAW, SYSTEM_ACTOR));
+            offerDao.save(offer);
+            entityManager.flush();
+            audit(offer, AUDIT_WITHDRAW, event, "{\"status\":\"" + previous + "\"}",
+                    "{\"status\":\"" + offer.getStatus() + "\"" + triggerJson(event) + "}");
+            withdrawnIds.add(offer.getId());
+        }
+        OfferEntity last = targets.get(targets.size() - 1);
+        return new Reaction(OfferEstimateImpact.WITHDRAW, projectId, last.getId(), last.getRevision(),
+                List.copyOf(withdrawnIds));
     }
 
     private Reaction revise(Long projectId, EstimateChangedEvent event) {

@@ -23,13 +23,11 @@ public interface OfferDao extends AdminDao<OfferEntity, Long> {
     /**
      * Every offer of a project whose status is NOT one of {@code excludedStatuses} — used with the
      * three terminal statuses ({@code APPROVED}/{@code REJECTED}/{@code WITHDRAWN}) to detect an
-     * existing <b>active</b> (non-terminal) offer and reject a second {@code prepareOffer} with a
-     * clean {@code 409 error.offer.active.exists} (R1.4) rather than letting the DB partial unique
-     * index surface a raw constraint violation.
+     * <b>active</b> (non-terminal) offers of a project. Several may coexist (FOR-05-07b).
      *
      * @param projectId        the owning project id
      * @param excludedStatuses the statuses to exclude (the terminal statuses, to find only active offers)
-     * @return the project's non-terminal offers (normally at most one)
+     * @return the project's non-terminal offers (any number)
      */
     List<OfferEntity> findByProjectIdAndStatusNotIn(Long projectId, List<OfferStatus> excludedStatuses);
 

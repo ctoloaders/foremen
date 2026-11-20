@@ -95,7 +95,7 @@ class OfferControllersAbacTest {
     // Bare controller instances used solely as the bean for HandlerMethod construction; their null
     // collaborators are never dereferenced because only annotations are inspected.
     private final OfferController offerController =
-            new OfferController(null, null, null);
+            new OfferController(null, null, null, null, null);
     private final OfferNegotiationController negotiationController =
             new OfferNegotiationController(null, null, null);
     private final ClientOfferController clientOfferController =

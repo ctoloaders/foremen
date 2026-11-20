@@ -141,11 +141,11 @@ public class ProformaHtmlBuilder {
 
     // --- formatting (locale independent; PL and RU both use the decimal comma) ---
 
-    static String money(BigDecimal v) {
+    public static String money(BigDecimal v) {
         return v == null ? "" : v.setScale(2, RoundingMode.HALF_UP).toPlainString().replace('.', ',');
     }
 
-    static String qty(BigDecimal v) {
+    public static String qty(BigDecimal v) {
         if (v == null) {
             return "";
         }
@@ -172,7 +172,7 @@ public class ProformaHtmlBuilder {
     }
 
     /** XML-escapes and drops characters that are illegal in XML 1.0. */
-    static String esc(String text) {
+    public static String esc(String text) {
         if (text == null) {
             return "";
         }

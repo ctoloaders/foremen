@@ -31,12 +31,15 @@ import com.foremen.dao.ProjectDao;
 import com.foremen.dao.model.CurrencyEntity;
 import com.foremen.dao.model.EstimateEntity;
 import com.foremen.dao.model.EstimateLineEntity;
+import com.foremen.dao.model.EstimateLineRoomQtyEntity;
 import com.foremen.dao.model.EstimateStatus;
 import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.OfferEntity;
 import com.foremen.dao.model.OfferStatus;
 import com.foremen.dao.model.ProjectEntity;
 import com.foremen.dao.model.ProjectStatus;
+import com.foremen.dao.model.RoomEntity;
+import com.foremen.dao.model.RoomTypeEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.exception.ForemenApiException;
@@ -106,11 +109,16 @@ class OfferSnapshotIntegrationTest {
             String p = "%" + runId + "%";
             entityManager.createQuery("delete from OfferEntity o where o.project.id in "
                     + "(select pr.id from ProjectEntity pr where pr.name like :p)").setParameter("p", p).executeUpdate();
+            entityManager.createQuery("delete from EstimateLineRoomQtyEntity q where q.line.estimate.id in "
+                    + "(select e.id from EstimateEntity e where e.project.name like :p)").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from EstimateLineEntity l where l.estimate.id in "
                     + "(select e.id from EstimateEntity e where e.project.name like :p)").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from EstimateEntity e where e.project.id in "
                     + "(select pr.id from ProjectEntity pr where pr.name like :p)").setParameter("p", p).executeUpdate();
+            entityManager.createQuery("delete from RoomEntity r where r.project.id in "
+                    + "(select pr.id from ProjectEntity pr where pr.name like :p)").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from ProjectEntity pr where pr.name like :p").setParameter("p", p).executeUpdate();
+            entityManager.createQuery("delete from RoomTypeEntity rt where rt.code like :p").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from WorkItemEntity wi where wi.code like :p").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from WorkCategoryEntity wc where wc.code like :p").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from MeasurementUnitEntity u where u.code like :p").setParameter("p", p).executeUpdate();
@@ -202,8 +210,10 @@ class OfferSnapshotIntegrationTest {
         authenticateAdmin();
         OfferEntity left = offerService.prepareOffer(f.projectId, "Left");
         offerService.withdraw(left.getId());
-        tx().executeWithoutResult(s ->
-                entityManager.find(EstimateLineEntity.class, f.lineId).setQuantity(new BigDecimal("8.00")));
+        tx().executeWithoutResult(s -> {
+            entityManager.find(EstimateLineEntity.class, f.lineId).setQuantity(new BigDecimal("8.00"));
+            entityManager.find(EstimateLineRoomQtyEntity.class, f.cellId).setQuantity(new BigDecimal("8.00"));
+        });
         OfferEntity right = offerService.prepareOffer(f.projectId, "Right");
 
         Comparison c = offerSnapshotService.compare(left.getId(), right.getId(), false, false);
@@ -255,6 +265,7 @@ class OfferSnapshotIntegrationTest {
     private static final class Fx {
         Long projectId;
         Long lineId;
+        Long cellId;
     }
 
     private Fx fixture(String tag, BigDecimal unitPrice, BigDecimal quantity) {
@@ -311,9 +322,28 @@ class OfferSnapshotIntegrationTest {
             line.setQuantity(quantity);
             line.setValueNet(unitPrice.multiply(quantity));
             entityManager.persist(line);
+
+            // Snapshot v2 keeps only lines applied to a room, so the line gets one room cell.
+            RoomTypeEntity roomType = new RoomTypeEntity();
+            roomType.setCode("RT_" + id);
+            roomType.setNameRU("Room");
+            roomType.setNamePL("Room");
+            roomType.setActive(true);
+            entityManager.persist(roomType);
+            RoomEntity room = new RoomEntity();
+            room.setProject(project);
+            room.setRoomType(roomType);
+            room.setLabel("Kitchen");
+            entityManager.persist(room);
+            EstimateLineRoomQtyEntity cell = new EstimateLineRoomQtyEntity();
+            cell.setLine(line);
+            cell.setRoom(room);
+            cell.setQuantity(quantity);
+            entityManager.persist(cell);
             entityManager.flush();
             f.projectId = project.getId();
             f.lineId = line.getId();
+            f.cellId = cell.getId();
         });
         return f;
     }

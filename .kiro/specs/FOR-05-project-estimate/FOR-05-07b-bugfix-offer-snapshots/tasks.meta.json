@@ -1,0 +1,437 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Write bug condition exploration test": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131606546
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131620819
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131920439
+      }
+    ],
+    "2. Write preservation property tests (BEFORE implementing fix)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131606636
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131921042
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132562238
+      }
+    ],
+    "3.1 Database: drop the one-active-offer index (changeset 267)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131606801
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132571329
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132830122
+      }
+    ],
+    "3.2 Snapshot v2 content and skipping rows applied to no room": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131606939
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132571604
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132830268
+      }
+    ],
+    "3.3 Snapshot lifecycle: refresh on send, explicit refresh of a DRAFT, freeze afterwards": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131606975
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132843504
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133632221
+      }
+    ],
+    "3.4 Several non-terminal offers per project": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607010
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795134491261
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795135142125
+      }
+    ],
+    "3.5 Snapshot read model with package marker": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607043
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132844496
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133632861
+      }
+    ],
+    "3.6 Offer PDF endpoint": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607071
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795134491296
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795135142189
+      }
+    ],
+    "3.7 Restore the estimate from a snapshot": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607117
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795135151606
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795136025447
+      }
+    ],
+    "3.8 Backend message keys (PL and RU)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607146
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795136026406
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795136065057
+      }
+    ],
+    "3.9 Frontend API layer, types and package marker component (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607168
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132573101
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132830763
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133373914
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133630264
+      }
+    ],
+    "3.10 Snapshot matrix view through WorksRoomsMatrix, read-only (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607194
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132845609
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133630695
+      }
+    ],
+    "3.11 Offer PDF button (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607219
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133651473
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133784499
+      }
+    ],
+    "3.12 Restore button with confirmation (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607245
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133651589
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133784606
+      }
+    ],
+    "3.13 Offers tab with several offers, offer cards and per-offer actions (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607270
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795134492003
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795135142837
+      }
+    ],
+    "3.14 Offer name dialog on \"Przygotuj ofertę\" in the estimate tab (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607301
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132847674
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795133631044
+      }
+    ],
+    "3.15 Package marker in the comparison and the summary header (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607325
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132848141
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795134479851
+      }
+    ],
+    "3.16 Frontend PL and RU keys (repo `foremen-frontend/`)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607351
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132573830
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795132831624
+      }
+    ],
+    "3.17 Verify bug condition exploration test now passes": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607474
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795136074621
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795136158182
+      }
+    ],
+    "3.18 Verify preservation tests still pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607494
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795136158911
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795137888865
+      }
+    ],
+    "4.1 Backend fix-check integration tests": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607516
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795137898129
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795138445615
+      }
+    ],
+    "4.2 Frontend fix-check run": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607542
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795137898845
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795138446578
+      }
+    ],
+    "5. Author test-cases.md": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607560
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795138447676
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795138660222
+      }
+    ],
+    "6. Checkpoint - Ensure all tests pass": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795131607580
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795138660858
+      },
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795139412456
+      }
+    ],
+    "3. Fix for offer snapshots (empty or stale snapshot, no matrix view, no PDF, no restore, one offer only, no name dialog, no package marker)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795137888932
+      }
+    ],
+    "4. Fix checking (new tests for the fixed behavior)": [
+      {
+        "executionId": "28ab9277-75b8-41f7-8203-c5a17f1a735b",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795138446621
+      }
+    ]
+  }
+}

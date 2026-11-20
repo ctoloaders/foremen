@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-07b: a project may have several non-terminal offers, so the one-active-offer partial
+        unique index of changeset 128 is dropped and replaced by a plain lookup index.
+    -->
+    <changeSet id="267-drop-offers-active-project-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <indexExists indexName="ux_offers_active_project" tableName="offers"/>
+        </preConditions>
+        <sql>
+            DROP INDEX IF EXISTS ux_offers_active_project;
+        </sql>
+        <rollback>
+            <!-- Recreate the index only when no project has two non-terminal offers; otherwise skip. -->
+            <sql splitStatements="false">
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT 1 FROM offers
+                        WHERE status NOT IN ('APPROVED', 'REJECTED', 'WITHDRAWN')
+                        GROUP BY project_id HAVING COUNT(*) > 1
+                    ) THEN
+                        CREATE UNIQUE INDEX IF NOT EXISTS ux_offers_active_project
+                            ON offers (project_id)
+                            WHERE status NOT IN ('APPROVED', 'REJECTED', 'WITHDRAWN');
+                    END IF;
+                END $$;
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <changeSet id="267-create-offers-project-status-index" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <indexExists indexName="ix_offers_project_status" tableName="offers"/>
+            </not>
+        </preConditions>
+        <createIndex indexName="ix_offers_project_status" tableName="offers">
+            <column name="project_id"/>
+            <column name="status"/>
+        </createIndex>
+        <rollback>
+            <dropIndex indexName="ix_offers_project_status" tableName="offers"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

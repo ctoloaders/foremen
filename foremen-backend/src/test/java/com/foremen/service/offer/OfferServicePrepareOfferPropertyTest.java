@@ -71,7 +71,7 @@ class OfferServicePrepareOfferPropertyTest {
     // For all estimate statuses (including DRAFT and other non-PRICED statuses), prepareOffer
     // SUCCEEDS and creates a DRAFT, revision-1 offer. The former PRICED precondition and its
     // error.offer.estimate.not.priced message are removed (R1.1/R1.2); the only prepare guards are
-    // the single-active-offer rule and entity existence.
+    // entity existence (several non-terminal offers per project are allowed, FOR-05-07b).
     // Validates: Requirements 1.1, 1.2
     // ------------------------------------------------------------------------------------------
 

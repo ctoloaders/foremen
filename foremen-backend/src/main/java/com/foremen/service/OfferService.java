@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -74,8 +75,8 @@ import jakarta.persistence.EntityManager;
  * <ul>
  *   <li>{@link #prepareOffer(Long)} — prepares an offer from the project's estimate in <b>any</b>
  *       status (pricing is no longer a precondition, R1.1/R1.2); the only prepare guards are entity
- *       existence (404) and the single-active-offer rule — a second non-terminal offer is rejected
- *       (409 {@code error.offer.active.exists}); creates {@code Offer{status=DRAFT, revision=1}}, seeds
+ *       existence (404); several non-terminal offers per project are allowed (FOR-05-07b);
+ *       creates {@code Offer{status=DRAFT, revision=1}}, seeds
  *       {@code selectedPackage} from {@code estimate.appliedPackageCode} (null-safe, R1.7), and
  *       computes totals from the live-referenced estimate prices (R1.3).</li>
  *   <li>{@link #selectPackage(Long, String)} — persists the selection, re-derives the finishing
@@ -96,9 +97,6 @@ import jakarta.persistence.EntityManager;
 @Service
 public class OfferService
         implements ProjectScopedService<OfferServiceModel, OfferServiceExtendedModel, OfferEntity, Long> {
-
-    /** 409 when a project already has a non-terminal (active) offer (R1.4). */
-    static final String ACTIVE_OFFER_EXISTS_MESSAGE = "error.offer.active.exists";
 
     /** 404 when the referenced offer / project / estimate cannot be resolved. */
     static final String ENTITY_NOT_FOUND_MESSAGE = "error.entity.not.found";
@@ -233,8 +231,7 @@ public class OfferService
      * <ol>
      *   <li>Resolves the project's estimate; if the project has no estimate the request is rejected
      *       with {@code 404 error.entity.not.found}.</li>
-     *   <li>Rejects a second active offer: if the project already has a non-terminal offer, throws
-     *       {@code 409 error.offer.active.exists} (R1.4).</li>
+     *   <li>Several non-terminal offers per project are allowed (FOR-05-07b).</li>
      *   <li>Creates {@code Offer{status=DRAFT, revision=1}} linked to the project and estimate
      *       (R1.1).</li>
      *   <li>Seeds {@code selectedPackage} from {@code estimate.appliedPackageCode} resolved to an
@@ -267,11 +264,6 @@ public class OfferService
 
         // R1.1/R1.2: preparation works from an estimate in ANY status (no PRICED precondition).
 
-        // R1.4: at most one non-terminal offer per project.
-        if (!offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES).isEmpty()) {
-            throw new ForemenApiException(HttpStatus.CONFLICT, ACTIVE_OFFER_EXISTS_MESSAGE);
-        }
-
         OfferEntity offer = new OfferEntity();
         offer.setProject(estimate.getProject());
         offer.setEstimate(estimate);
@@ -284,8 +276,7 @@ public class OfferService
 
         // FOR-05-07 Batch 2: custom name + immutable estimate snapshot, captured in this transaction.
         offer.setName(resolveOfferName(name, projectId));
-        offer.setSnapshot(OfferSnapshotBuilder.build(
-                estimate, vatRateOf(estimate), offer.getTotalNet(), offer.getTotalVat(), offer.getTotalGross()));
+        offer.setSnapshot(buildSnapshot(offer, estimate));
 
         OfferEntity saved = offerDao.save(offer);
         entityManager.flush();
@@ -451,12 +442,55 @@ public class OfferService
     @Transactional
     public OfferEntity send(Long offerId) {
         OfferEntity offer = resolveOffer(offerId);
+        if (offer.getStatus() == OfferStatus.DRAFT) {
+            // Snapshot lifecycle: the client receives numbers equal to the snapshot; frozen after SEND.
+            rebuildDraftSnapshot(offer);
+        }
         transitionStatus(offer, OfferAction.SEND);
         // R3.2: drive the project READY_TO_OFFER -> OFFERED alongside the offer send.
         advanceProjectStatus(offer.getProject(), ProjectStatus.READY_TO_OFFER, ProjectStatus.OFFERED);
         offerDao.save(offer);
         entityManager.flush();
         return offer;
+    }
+
+    // --- Snapshot lifecycle: explicit refresh of a DRAFT offer (A6, A7) ---
+
+    /**
+     * Rebuilds the snapshot of a {@code DRAFT} offer from the live estimate (and recomputes the offer
+     * totals so they equal the snapshot). A legacy DRAFT offer without a snapshot receives one (A7).
+     *
+     * @throws ForemenApiException 404 when the offer is missing; 409 when the offer is not DRAFT
+     */
+    @Transactional
+    public OfferEntity refreshSnapshot(Long offerId) {
+        OfferEntity offer = resolveOffer(offerId);
+        rebuildDraftSnapshot(offer);
+        offerDao.save(offer);
+        entityManager.flush();
+        return offer;
+    }
+
+    /** The only snapshot writer besides {@link #prepareOffer}: recompute totals, rebuild, set. */
+    private void rebuildDraftSnapshot(OfferEntity offer) {
+        assertSnapshotWritable(offer);
+        recomputeTotals(offer);
+        offer.setSnapshot(buildSnapshot(offer, offer.getEstimate()));
+    }
+
+    /** A snapshot is writable only while the offer is DRAFT; afterwards it is frozen. */
+    private void assertSnapshotWritable(OfferEntity offer) {
+        if (offer.getStatus() != OfferStatus.DRAFT) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, ILLEGAL_TRANSITION_MESSAGE);
+        }
+    }
+
+    private com.foremen.service.offer.OfferSnapshot buildSnapshot(OfferEntity offer, EstimateEntity estimate) {
+        String code = estimate.getAppliedPackageCode();
+        OfferPackageEntity pkg = resolvePackageOrNull(code);
+        return OfferSnapshotBuilder.build(
+                estimate, vatRateOf(estimate), offer.getTotalNet(), offer.getTotalVat(), offer.getTotalGross(),
+                code, pkg != null ? pkg.getNameRU() : null, pkg != null ? pkg.getNamePL() : null);
     }
 
     // --- Lifecycle: withdraw (R3.7) ---
@@ -525,6 +559,9 @@ public class OfferService
         offerDao.save(offer);
         entityManager.flush();
 
+        // FOR-05-07b A2: approving one offer withdraws every other non-terminal offer of the project.
+        withdrawSiblingsOnApprove(offer);
+
         // Emit the state-change event downstream consumers (FOR-05-14/09) read.
         eventPublisher.publishEvent(new OfferStateChangeEvent(
                 offer.getId(),
@@ -534,6 +571,44 @@ public class OfferService
                 offer.getStatus(),
                 offer.getApprovedRevision()));
         return offer;
+    }
+
+    /** Operation of the audit row written for each sibling offer withdrawn by an approval (A2). */
+    static final String AUDIT_WITHDRAW_ON_APPROVE = "SYSTEM_WITHDRAW_ON_APPROVE";
+
+    private void withdrawSiblingsOnApprove(OfferEntity approved) {
+        if (approved.getProject() == null) {
+            return;
+        }
+        Long projectId = approved.getProject().getId();
+        List<OfferEntity> siblings = offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES);
+        if (siblings == null) {
+            return;
+        }
+        for (OfferEntity other : siblings) {
+            if (Objects.equals(other.getId(), approved.getId())) {
+                continue;
+            }
+            OfferStatus before = other.getStatus();
+            other.setStatus(offerStatusMachine.transition(before, OfferAction.WITHDRAW, "ADMIN"));
+            offerDao.save(other);
+            com.foremen.service.audit.AuditLogEntity row = new com.foremen.service.audit.AuditLogEntity();
+            row.setEntityClass(OfferEntity.class.getSimpleName());
+            row.setEntityId(other.getId());
+            row.setOperation(AUDIT_WITHDRAW_ON_APPROVE);
+            row.setPerformedBy(resolveActingUserLabel());
+            row.setPerformedAt(java.time.LocalDateTime.now());
+            row.setSnapshotBefore("{\"status\":\"" + before + "\"}");
+            row.setSnapshotAfter("{\"status\":\"" + other.getStatus() + "\",\"approvedOfferId\":"
+                    + approved.getId() + "}");
+            auditLogDao.save(row);
+        }
+        entityManager.flush();
+    }
+
+    private static String resolveActingUserLabel() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth != null && auth.getName() != null ? auth.getName() : "SYSTEM";
     }
 
     // --- Agreed-version read model (R7.2, R7.4, R10.8) ---
@@ -613,10 +688,9 @@ public class OfferService
      *
      * <p>Resolution order:
      * <ol>
-     *   <li>the single non-terminal (active) offer if one exists
-     *       ({@code findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES)} — the one-active-offer
-     *       invariant, R1.4, normally yields at most one; if more than one somehow exists, the latest
-     *       by id is taken);</li>
+     *   <li>the latest non-terminal (active) offer if any exists
+     *       ({@code findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES)}; several may coexist,
+     *       FOR-05-07b, the latest by id is taken);</li>
      *   <li>otherwise the latest offer overall ({@code findByProjectIdOrderByIdAsc} &rarr; last) — e.g.
      *       the most recent terminal offer when the project has no active one;</li>
      *   <li>{@link Optional#empty()} when the project has NO offer at all.</li>
@@ -631,8 +705,7 @@ public class OfferService
      */
     @Transactional(readOnly = true)
     public Optional<OfferEntity> getCurrentOfferByProject(Long projectId) {
-        // R1.4: prefer the single active (non-terminal) offer; defensively take the latest by id if
-        // the invariant were ever violated.
+        // Prefer the latest active (non-terminal) offer by id.
         Optional<OfferEntity> active = offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES)
                 .stream()
                 .reduce((first, second) -> second);

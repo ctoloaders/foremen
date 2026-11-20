@@ -86,6 +86,27 @@ class OfferEstimateReactionServiceTest {
     }
 
     @Test
+    void everySeenOfferIsWithdrawnWithOneAuditRowEachAndDraftIsUntouched() {
+        OfferEntity sent = offer(20L, OfferStatus.SENT, 1);
+        OfferEntity countered = offer(21L, OfferStatus.COUNTERED, 2);
+        OfferEntity draft = offer(22L, OfferStatus.DRAFT, 1);
+        when(offerDao.findByProjectIdAndStatusNotIn(eq(PROJECT), anyList()))
+                .thenReturn(List.of(sent, countered, draft));
+
+        OfferEstimateReactionService.Reaction reaction = service.react(event);
+
+        assertThat(reaction.kind()).isEqualTo(OfferEstimateImpact.WITHDRAW);
+        assertThat(reaction.withdrawnOfferIds()).containsExactly(20L, 21L);
+        assertThat(reaction.offerId()).isEqualTo(21L);
+        assertThat(sent.getStatus()).isEqualTo(OfferStatus.WITHDRAWN);
+        assertThat(countered.getStatus()).isEqualTo(OfferStatus.WITHDRAWN);
+        assertThat(draft.getStatus()).isEqualTo(OfferStatus.DRAFT);
+        ArgumentCaptor<AuditLogEntity> captor = ArgumentCaptor.forClass(AuditLogEntity.class);
+        verify(auditLogDao, org.mockito.Mockito.times(2)).save(captor.capture());
+        assertThat(captor.getAllValues()).extracting(AuditLogEntity::getEntityId).containsExactly(20L, 21L);
+    }
+
+    @Test
     void counteredAndChangesRequestedAreWithdrawableToo() {
         for (OfferStatus status : List.of(OfferStatus.COUNTERED, OfferStatus.CHANGES_REQUESTED)) {
             when(offerDao.findByProjectIdAndStatusNotIn(eq(PROJECT), anyList()))

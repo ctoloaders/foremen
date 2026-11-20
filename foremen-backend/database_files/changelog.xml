@@ -1024,4 +1024,6 @@
     <include file="database_files/changesets/259-backfill-offer-names.xml"/>
     <!-- FOR-05-02c: manual/calculated source flags for room gaps and door/window sizes. -->
     <include file="database_files/changesets/266-room-manual-dimension-sources.xml"/>
+    <!-- FOR-05-07b: allow several non-terminal offers per project (drop ux_offers_active_project). -->
+    <include file="database_files/changesets/267-drop-offers-active-project-index.xml"/>
 </databaseChangeLog>

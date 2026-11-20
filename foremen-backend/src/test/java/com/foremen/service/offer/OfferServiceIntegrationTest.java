@@ -271,22 +271,21 @@ class OfferServiceIntegrationTest {
     // =====================================================================================
 
     @Test
-    @DisplayName("prepareOffer rejects a second non-terminal offer for the same project (R1.4)")
-    void prepareRejectsSecondActiveOffer() {
+    @DisplayName("prepareOffer allows a second non-terminal offer for the same project (FOR-05-07b)")
+    void prepareAllowsSecondActiveOffer() {
         Fixture f = createFixture(EstimateStatus.PRICED, null);
 
         OfferEntity first = offerService.prepareOffer(f.projectId);
         assertThat(first.getStatus()).isEqualTo(OfferStatus.DRAFT);
 
-        assertThatThrownBy(() -> offerService.prepareOffer(f.projectId))
-                .as("a project may hold at most one non-terminal offer (R1.4)")
-                .isInstanceOf(ForemenApiException.class)
-                .hasMessageContaining("error.offer.active.exists");
+        OfferEntity second = offerService.prepareOffer(f.projectId);
+        assertThat(second.getId()).isNotEqualTo(first.getId());
+        assertThat(second.getStatus()).isEqualTo(OfferStatus.DRAFT);
 
         tx().executeWithoutResult(status ->
                 assertThat(offerDao.findByProjectIdOrderByIdAsc(f.projectId))
-                        .as("only the first offer may exist (R1.4)")
-                        .hasSize(1));
+                        .as("both offers exist")
+                        .hasSize(2));
     }
 
     @Test
