@@ -173,6 +173,26 @@ public interface ProjectScopedService<ServiceModel, ServiceExtendedModel, DaoMod
         }
     }
 
+    /**
+     * FOR-05-07b: the project-id form of {@link #assertProjectAccess(Object)} for actions addressed by
+     * project (list, prepare, current-by-project). ADMIN bypasses; any other caller must have the
+     * project in its allowed set, otherwise 404 {@code error.entity.not.found} (same deny outcome).
+     */
+    default void assertProjectIdAccess(Long projectId) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw denied(projectId);
+        }
+        if (isAdmin(auth)) {
+            return;
+        }
+        Long userId = parseUserId(auth.getName());
+        Set<Long> allowed = userId == null ? null : allowedProjectIds(userId);
+        if (allowed == null || projectId == null || !allowed.contains(projectId)) {
+            throw denied(projectId);
+        }
+    }
+
     // --- by-id CRUD overrides (FOR-03-04a) ---
     // Every by-id read/mutation inherited from AdminService/ReadOnlyAdminService is overridden here
     // ONCE: it runs assertProjectAccess (per targeted id for the batch variants, aborting on the

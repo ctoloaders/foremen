@@ -81,3 +81,47 @@ This work is sizable. It is handled as a bug fix by the user's decision, and it 
 3.7 WHEN the estimate is edited, a package is applied or labour prices are adjusted THEN the system SHALL CONTINUE TO work as specified in FOR-05-03, FOR-05-04 and FOR-05-06, and the existing estimate matrix components SHALL NOT change behavior.
 
 3.8 WHEN document signing or client payments generate PDFs THEN the system SHALL CONTINUE TO use the existing `PdfRenderer` seam without changes to their output.
+
+## Round 2 (2026-11-20): user decisions on A1 to A7 and follow-up defects
+
+Source: browser validation of Round 1 on project 7678 and the user answers to assumptions A1 to A7 (`design.md`, "Assumptions"). The user model: **the estimate is a working sheet** of the estimator, financier and foreman, and its unsaved state lives in the browser until it is saved. **An offer is a self-contained container** of the whole estimate (its snapshot), built from the saved estimate. Several offers can be sent to the client at the same time so the client can compare them. Estimate edits never change an offer.
+
+### Current Behavior (Defect), Round 2
+
+1.9 WHEN an offer is sent while its snapshot view is open (or was opened before) THEN the view keeps showing the pre-send snapshot until the page is reloaded, although the backend rebuilt the snapshot on send.
+
+1.10 WHEN one of several offers is approved THEN the other non-terminal offers of the project are WITHDRAWN, and there is no way to mark an offer inactive by hand while keeping it visible to the client.
+
+1.11 WHEN the estimate changes (save, package apply, labour adjustment, room change, restore from an offer) THEN offers the client has seen are WITHDRAWN and, after an approved offer, a new DRAFT revision is created. The restore dialog warns about this.
+
+1.12 WHEN offers are compared THEN only two offers can be compared, inside the offers tab, with a per-room layout. There is no multi-select and no comparison screen.
+
+1.13 WHEN "Przygotuj ofertę" is pressed THEN a new offer is always created. An existing offer cannot be chosen and updated, and unsaved estimate edits are not considered.
+
+1.14 WHEN a DRAFT offer is shown THEN its card totals live-track the current estimate and can differ from its own snapshot.
+
+### Expected Behavior (Correct), Round 2
+
+2.9 WHEN an offer snapshot is rebuilt (send, refresh, update of an existing offer) THEN the frontend SHALL invalidate the snapshot query of that offer, and an open snapshot view SHALL show the new snapshot without a page reload.
+
+2.10 WHEN the executor marks an offer inactive or active again (manual action, any non-terminal offer) THEN the system SHALL store an `inactive` flag that is independent of the status, and SHALL show an "Nieaktywna" badge next to the status. An inactive offer SHALL still be sendable, visible to the client when it is not DRAFT, viewable, comparable and downloadable as PDF, but the client SHALL NOT approve, reject or negotiate it (409 `error.offer.inactive`). Approving an offer SHALL NOT change the other offers of the project. While the project has an APPROVED offer, approving another one SHALL be refused with 409 `error.offer.already.approved`. Several offers MAY be SENT at the same time. (Replaces A2.)
+
+2.11 WHEN the estimate or rooms change, including a restore from an offer, THEN the system SHALL NOT change the status, totals or snapshot of any offer and SHALL NOT create offer revisions. The offer reaction to estimate changes (withdraw of seen offers, revise after approval) SHALL be removed, and no change-impact dialog SHALL announce an offer withdrawal. (Replaces A4.)
+
+2.12 WHEN the executor or the client selects two or more offers with a snapshot by checkbox THEN a "Porównaj" button SHALL open a simple comparison screen: one column per selected offer (header: name, status, inactive badge, version, package marker, totals net, VAT, gross), one row per work category with its cost in each offer and the difference to the first selected offer, expandable to the works of that category. A work row SHALL show the project-wide volume (with unit) and cost in each offer and the difference to the first selected offer. Clicking a work cell SHALL show the rooms of that offer with their volumes for that work. Room columns SHALL NOT be shown. A category row shows cost only, because its works can have different units. A CLIENT SHALL only select non-DRAFT offers and SHALL receive redacted data (3.2). Offers of different projects SHALL be rejected with 400.
+
+2.13 WHEN the executor presses "Przygotuj ofertę" (estimate tab or offers tab) THEN a dialog SHALL list every offer of the project with its name, status, inactive badge and version, plus a "new offer" choice with a name input. Entering a new name SHALL create a new DRAFT offer. Choosing an existing non-terminal offer (active or inactive) SHALL update it: rebuild its snapshot from the saved estimate, recompute its totals, KEEP its status, increase its version by one, write an audit row (`REPREPARE`, previous version and totals) and, when the offer is visible to the client (not DRAFT), send an in-app notification to the client members of the project. Terminal offers (APPROVED, REJECTED, WITHDRAWN) SHALL be listed but not selectable.
+
+2.14 WHEN "Przygotuj ofertę", "Odśwież migawkę z kosztorysu" or "Przywróć kosztorys z oferty" is used while the estimate has unsaved (staged, browser-only) edits THEN the UI SHALL first ask to save or discard them ("Zapisz i kontynuuj", "Odrzuć zmiany", "Anuluj"). The snapshot SHALL always be built from the saved estimate.
+
+2.15 WHEN an offer is shown, in any status, THEN its totals SHALL come from its own snapshot (the container), not from the live estimate. The live estimate is read only when a snapshot is built.
+
+2.16 WHEN the executor selects several DRAFT offers by checkbox THEN a "Wyślij zaznaczone (n)" action SHALL send all of them to the client in one step.
+
+### Changes to Unchanged Behavior, Round 2
+
+- 2.1 is amended: the snapshot of a sent, non-terminal offer may be rebuilt only by the update of 2.13 (version + 1, client notified). Terminal offers stay frozen.
+- 3.1 is amended: the `inactive` flag blocks client approve, reject and negotiation (2.10), a project holds at most one APPROVED offer, and update (2.13) keeps the status. All other transitions, role gates and audit rows stay.
+- 3.5 is extended: the two-offer comparison endpoint stays for existing callers, and the N-offer comparison of 2.12 is added.
+- 3.6 is superseded by 2.11: estimate and room changes no longer react on offers.
+- A1, A3, A5, A6, A7 are confirmed by the user without change. A2 is replaced by 2.10 and A4 by 2.11.

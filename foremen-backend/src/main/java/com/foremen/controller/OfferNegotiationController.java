@@ -18,6 +18,7 @@ import com.foremen.dao.model.DiscountKind;
 import com.foremen.dao.model.DiscountScope;
 import com.foremen.dao.model.OfferEntity;
 import com.foremen.dao.model.OfferNegotiationRoundEntity;
+import com.foremen.service.OfferService;
 import com.foremen.service.offer.ClientOfferReadModel;
 import com.foremen.service.offer.ClientOfferReadModelAssembler;
 import com.foremen.service.offer.ExecutorOfferReadModel;
@@ -80,6 +81,7 @@ public class OfferNegotiationController {
     private final NegotiationService negotiationService;
     private final ClientOfferReadModelAssembler clientOfferReadModelAssembler;
     private final OfferVisibilityResolver offerVisibilityResolver;
+    private final OfferService offerService;
 
     /**
      * CLIENT opens a discount request — a {@code DISCOUNT_REQUEST} round carrying scope + target +
@@ -91,6 +93,7 @@ public class OfferNegotiationController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = APPROVE_OPERATION)
     public ResponseEntity<?> openDiscountRequest(
             @PathVariable Long offerId, @RequestBody DiscountRequest request) {
+        offerService.assertOfferAccess(offerId);
         OfferNegotiationRoundEntity round = negotiationService.openDiscountRequest(
                 offerId,
                 request != null ? request.scope() : null,
@@ -110,6 +113,7 @@ public class OfferNegotiationController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<?> propose(
             @PathVariable Long roundId, @RequestBody ProposeRequest request) {
+        offerService.assertOfferAccess(negotiationService.offerIdOfRound(roundId));
         OfferNegotiationRoundEntity round = negotiationService.managerPropose(
                 roundId,
                 request != null ? request.kind() : null,
@@ -126,6 +130,7 @@ public class OfferNegotiationController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<?> reject(
             @PathVariable Long roundId, @RequestBody RejectRequest request) {
+        offerService.assertOfferAccess(negotiationService.offerIdOfRound(roundId));
         OfferNegotiationRoundEntity round = negotiationService.managerReject(
                 roundId, request != null ? request.explanation() : null);
         return readModelOf(round);
@@ -140,6 +145,7 @@ public class OfferNegotiationController {
     @PostMapping("/rounds/{roundId}/accept")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = APPROVE_OPERATION)
     public ResponseEntity<?> accept(@PathVariable Long roundId) {
+        offerService.assertOfferAccess(negotiationService.offerIdOfRound(roundId));
         OfferNegotiationRoundEntity round = negotiationService.clientAccept(roundId);
         return readModelOf(round);
     }
@@ -152,6 +158,7 @@ public class OfferNegotiationController {
     @PostMapping("/rounds/{roundId}/decline")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = APPROVE_OPERATION)
     public ResponseEntity<?> decline(@PathVariable Long roundId) {
+        offerService.assertOfferAccess(negotiationService.offerIdOfRound(roundId));
         OfferNegotiationRoundEntity round = negotiationService.clientDecline(roundId);
         return readModelOf(round);
     }

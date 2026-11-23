@@ -15,17 +15,17 @@ No new managed entity or ABAC resource is introduced (everything sits under the 
 
 ### Assumptions to confirm with the user
 
-These are carried over from bugfix.md and refined here. Each one is marked **TO CONFIRM WITH THE USER**. The design is written to be cheap to change if an answer differs.
+These are carried over from bugfix.md and refined here. The user answered all of them on 2026-11-20; A2 and A4 changed and are redesigned in "Round 2 design". The design is written to be cheap to change if an answer differs.
 
 | # | Assumption | Status |
 |---|------------|--------|
-| A1 | Restore replaces the whole live estimate (lines, room quantities, prices, comments, applied package) with the snapshot content in one transaction, writes an audit row, and is refused with 409 `error.estimate.locked` when the estimate is not DRAFT (locked). | **TO CONFIRM WITH THE USER** |
-| A2 | When one of several awaiting offers is approved, every other non-terminal offer of the project is withdrawn in the same transaction. | **TO CONFIRM WITH THE USER** |
-| A3 | Legacy offers without a snapshot cannot be viewed, exported to PDF or restored. | **TO CONFIRM WITH THE USER** |
-| A4 | A restore changes the estimate, so the existing estimate-change reaction runs (seen offers are withdrawn, including the offer restored from if it is SENT). The confirmation dialog shows this impact beforehand through `impactOf`. | **TO CONFIRM WITH THE USER** |
-| A5 | During restore, snapshot cells whose room no longer exists in the project are skipped and reported in the response (`skippedRooms`); the rest of the estimate is restored. | **TO CONFIRM WITH THE USER** |
-| A6 | An explicit refresh of a DRAFT snapshot is a user action ("Refresh from estimate") on the DRAFT offer; DRAFT snapshots are not refreshed automatically on every estimate edit, only on send. | **TO CONFIRM WITH THE USER** |
-| A7 | A legacy DRAFT offer (no snapshot) receives a snapshot when it is sent or refreshed. Legacy offers in other statuses stay without one. | **TO CONFIRM WITH THE USER** |
+| A1 | Restore replaces the whole live estimate (lines, room quantities, prices, comments, applied package) with the snapshot content in one transaction, writes an audit row, and is refused with 409 `error.estimate.locked` when the estimate is not DRAFT (locked). | **Confirmed (2026-11-20)** |
+| A2 | When one of several awaiting offers is approved, every other non-terminal offer of the project is withdrawn in the same transaction. | **Changed (2026-11-20): manual inactive flag, approve leaves other offers unchanged, see Round 2 D2** |
+| A3 | Legacy offers without a snapshot cannot be viewed, exported to PDF or restored. | **Confirmed (2026-11-20)** |
+| A4 | A restore changes the estimate, so the existing estimate-change reaction runs (seen offers are withdrawn, including the offer restored from if it is SENT). The confirmation dialog shows this impact beforehand through `impactOf`. | **Changed (2026-11-20): no offer reaction to estimate changes, see Round 2 D3** |
+| A5 | During restore, snapshot cells whose room no longer exists in the project are skipped and reported in the response (`skippedRooms`); the rest of the estimate is restored. | **Confirmed (2026-11-20)** |
+| A6 | An explicit refresh of a DRAFT snapshot is a user action ("Refresh from estimate") on the DRAFT offer; DRAFT snapshots are not refreshed automatically on every estimate edit, only on send. | **Confirmed (2026-11-20)** |
+| A7 | A legacy DRAFT offer (no snapshot) receives a snapshot when it is sent or refreshed. Legacy offers in other statuses stay without one. | **Confirmed (2026-11-20)** |
 
 ## Glossary
 
@@ -408,3 +408,62 @@ Run against the Testcontainers integration setup, selected by class only:
   `./gradlew test --tests "com.foremen.service.offer.OfferSnapshotBuilderTest" --tests "com.foremen.service.offer.OfferSnapshotRefreshIntegrationTest" --tests "com.foremen.service.offer.OfferMultiOfferIntegrationTest" --tests "com.foremen.service.offer.OfferRestoreIntegrationTest" --tests "com.foremen.service.offer.OfferEstimateReactionServiceTest" --tests "com.foremen.service.offer.OfferServicePrepareOfferPropertyTest" --tests "com.foremen.service.offer.OfferServiceIntegrationTest" --tests "com.foremen.integration.OfferApprovalMigrationIntegrationTest" > /tmp/for-05-07b-test.log 2>&1; echo "EXIT=$?"`
 - Frontend: `npx vitest --run src/features/project-offer src/features/estimate/EstimateTab.test.tsx src/features/estimate/components/WorksRoomsMatrix.test.tsx`.
 - The spec's `test-cases.md` (API and UI browser scenarios against the Docker stack, repeatable through a generated run id) is authored in the tasks phase per `.kiro/steering/test-cases.md`.
+
+## Round 2 design (2026-11-20)
+
+Covers bugfix.md 1.9 to 1.14 and 2.9 to 2.16. Model: the estimate is a working sheet; an offer is a self-contained container built from the saved estimate; several offers can be sent to the client at the same time. After Round 2 the live estimate is read only when a snapshot is built (prepare, refresh, send, update).
+
+### D1. Snapshot cache after send (2.9)
+
+- `foremen-frontend/src/features/project-offer/api/mutation-hooks.ts`: `useSendOffer` and the update mutation invalidate `offerKeys.snapshot(offerId)` (or `offerKeys.all`, as `useRefreshOfferSnapshot` does). `useOfferSnapshot` keeps `staleTime: Infinity`, because a snapshot changes only through these mutations.
+
+### D2. Manual inactive flag (2.10, replaces A2)
+
+- Changeset `268-offers-inactive-flag.xml` (take the next free number at edit time): `offers.inactive boolean not null default false`, guarded by a `columnExists` NOT precondition with `MARK_RAN`, registered last in `changelog.xml`. `OfferEntity.inactive`.
+- `POST /api/offers/{offerId}/deactivate` and `/activate` (`OFFERS` UPDATE, executor roles; 409 `error.offer.illegal.transition` for a terminal offer), one audit row each (`DEACTIVATE`, `ACTIVATE`).
+- Client `APPROVE`, `REJECT` and `REQUEST_CHANGES` on an inactive offer answer 409 `error.offer.inactive`. Executor send and withdraw stay allowed.
+- `OfferService.approve`: the Round 1 sibling withdraw is removed. Approve answers 409 `error.offer.already.approved` when the project already has an APPROVED offer.
+- Read models (`OfferSummary`, offer read model, snapshot view, comparison) expose `inactive`. Frontend: badge `offer-inactive-badge` ("Nieaktywna"), toggle `offer-toggle-inactive-{id}`; the client sees the badge and no approve, reject or negotiation buttons on inactive offers.
+
+### D3. No offer reaction to estimate changes (2.11, replaces A4)
+
+- Remove `OfferEstimateReactionListener` and the withdraw and revise paths of `OfferEstimateReactionService`. Offers keep status, totals and snapshot on any estimate or room change, including a restore.
+- The offer-impact endpoint of `EstimateMatrixController` answers `NONE` for compatibility (`@Deprecated`); `RoomsSaveService` sends `NONE`. The frontend drops `OfferImpactWarning` from the estimate Save confirmation (`EstimateTab`), `EstimateRecalcDialog` and `OfferRestoreButton`.
+
+### D4. Simple comparison screen (2.12)
+
+- Backend: `GET /api/offers/compare-many?ids=1,2,3` in `OfferSnapshotController` (`OFFERS` READ). 2 to 10 ids of one project with a snapshot, else 400; a DRAFT id for a CLIENT answers 404. CLIENT data goes through the existing redaction allow-list.
+- Response `MultiComparison`: `offers[]` (id, name, status, inactive, version, package marker, totals net, VAT, gross); `groups[]` (category code, localized name, `valueNet` per offer); `works[]` (work item id, name, unit, category code, per offer `quantity` and `valueNet` or null, and per offer `rooms[]` with room id, label and quantity). Differences are computed on the client against the first selected offer.
+- The two-offer `GET /compare` stays for existing callers (3.5).
+- Frontend: checkbox `offer-select-{id}` on every card and history row with a snapshot; `offer-compare-open` ("Porównaj (n)") for 2 or more selected navigates to `/projects/{id}/pricing/compare?ids=...` (the existing `:tab/:subId` route). New `OfferComparisonPage`: one column per offer, category rows (`offer-compare-group-{code}`, cost and delta, collapsed by default) expanding to work rows (volume with unit, cost, deltas). Clicking a work cell (`offer-compare-cell-{workItemId}-{offerId}`) opens a popover with that offer rooms and volumes. No room columns. It replaces the in-tab `OfferComparisonPanel`.
+
+### D5. Prepare into a new or an existing offer (2.13)
+
+- `POST /api/offers/project/{projectId}/prepare` body becomes `{ name?, offerId? }`. Without `offerId` it creates a new DRAFT offer as today. With `offerId` it calls the new `OfferService.reprepare(offerId)`: 400 for an offer of another project, 409 `error.offer.reprepare.terminal` for APPROVED, REJECTED or WITHDRAWN; otherwise it rebuilds the snapshot from the saved estimate, recomputes the totals from it (D7), keeps status, name and inactive flag, increases the version (`revision`) by one and writes an audit row `REPREPARE` with the previous version and totals. The frozen-snapshot guard of Round 1 (`assertSnapshotWritable`) allows this one writer for non-terminal offers.
+- Notification: when the offer is not DRAFT, an after-commit event (the `NegotiationService` pattern, so a failure never rolls back the update) notifies the CLIENT members of the project through `NotificationService` (PL and RU text: offer name and new version).
+- An open discount request or negotiation round is left as is; its figures refer to the previous version (open point O2).
+- Frontend: `PrepareOfferDialog` becomes a chooser used by the estimate tab and the offers tab (the inline name input of the offers tab becomes a button that opens it). It lists all offers of the project (`prepare-offer-option-{id}`: name, status, inactive badge, version; terminal ones disabled) and a "Nowa oferta" option with `prepare-offer-name-input` (max 255). Choosing a sent offer shows `prepare-offer-update-hint` (the client gets the new version and a notification).
+
+### D6. Unsaved estimate edits (2.14)
+
+- One `UnsavedEstimateGuard` dialog, reading the existing staged-edits store of the project, wraps "Przygotuj ofertę", "Odśwież migawkę z kosztorysu" and "Przywróć kosztorys z oferty". Actions: "Zapisz i kontynuuj" (runs the existing estimate Save and continues only on success), "Odrzuć zmiany" (discards and continues), "Anuluj". It replaces the disabled-with-tooltip state of the restore button.
+
+### D7. Offer totals come from the snapshot (2.15)
+
+- For offers with a version 2 snapshot, `OfferService.computeLiveTotals` is replaced by a computation over the snapshot rows (effective unit price times quantity), the offer discounts and the snapshot `vatRatePct`. The read path no longer calls `applyLiveTotals`: reads return the stored totals. `OfferDiscountService` and `NegotiationService` use the same computation. Legacy offers without a snapshot keep the live path. The labour comparison comes from the snapshot (`baseValueNet` against `valueNet`).
+
+### D8. Send several offers at once (2.16)
+
+- Frontend only: with DRAFT offers checked, `offer-send-selected` ("Wyślij zaznaczone (n)") calls the existing send endpoint for each, then invalidates the list. Failures are reported per offer in one toast.
+
+### Open points, Round 2
+
+- **O1.** The previous version of an updated offer is not kept as a separate snapshot; only the audit row records its version and totals. The client sees the current version only.
+- **O2.** An open discount request or negotiation round survives an update of its offer.
+- **O3.** Selecting a package on an offer (`useSelectPackage`) keeps its current behavior.
+
+### Testing, Round 2
+
+- Backend (affected classes only, `/tmp/for-05-07b-r2-test.log`): new `OfferInactiveFlagIntegrationTest` (toggle, client approve refused, one APPROVED per project), new `OfferReprepareIntegrationTest` (status kept, version + 1, audit, notification only when not DRAFT, terminal refused), new `OfferCompareManyIntegrationTest` (CLIENT redaction, 400 and 404 cases, rooms per work), new `EstimateChangeLeavesOffersPropertyTest`, new `OfferSnapshotTotalsTest`, updated `OfferFixCheckIntegrationTest`, `OfferServiceIntegrationTest` and `OfferApprovalMigrationIntegrationTest` (changeset 268).
+- Frontend: `PrepareOfferDialog.test.tsx`, `UnsavedEstimateGuard.test.tsx`, `OfferComparisonPage.test.tsx` (expand group, deltas, rooms popover), `OfferTab.test.tsx` (inactive toggle and badge, selection, compare and send-selected buttons), send invalidates the snapshot.
+- `test-cases.md` gets a Round 2 group (Russian), and the browser validation is repeated on a fresh QA project.

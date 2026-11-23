@@ -134,7 +134,7 @@ class OfferRestoreIntegrationTest extends OfferExplorationSupport {
 
     @Test
     @DisplayName("cells of rooms that no longer exist are skipped and listed; a SENT source offer is withdrawn")
-    void missingRoomIsSkippedAndReactionRuns() throws Exception {
+    void missingRoomIsSkippedAndOfferIsUntouched() throws Exception {
         Fx f = emptyEstimateFixture("R4");
         addLine(f, new BigDecimal("10.00"), new BigDecimal("2.00"));
         authenticateAdmin();
@@ -171,8 +171,8 @@ class OfferRestoreIntegrationTest extends OfferExplorationSupport {
         assertThat(body.get("skippedRooms").get(0).get("label").asText()).isEqualTo("Ghost");
         assertThat(body.get("estimateTotals").get("totalNet").decimalValue()).isEqualByComparingTo("20.00");
 
-        // The estimate-change reaction runs after commit: the seen (SENT) source offer is withdrawn.
+        // D3: offers do not react to the restore; the seen (SENT) source offer keeps its status.
         OfferStatus status = tx().execute(s -> entityManager.find(OfferEntity.class, offer.getId()).getStatus());
-        assertThat(status).isEqualTo(OfferStatus.WITHDRAWN);
+        assertThat(status).isEqualTo(OfferStatus.SENT);
     }
 }

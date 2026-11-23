@@ -98,6 +98,7 @@ public class OfferController {
     @GetMapping("/{offerId}/pdf")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<byte[]> pdf(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         Locale locale = LocaleContextHolder.getLocale();
         boolean ru = locale != null && "ru".equalsIgnoreCase(locale.getLanguage());
         OfferPdfService.OfferPdf pdf = offerPdfService.render(offerId, isClient(), ru);
@@ -118,7 +119,10 @@ public class OfferController {
     public ResponseEntity<ExecutorOfferReadModel> prepare(
             @PathVariable Long projectId,
             @RequestBody(required = false) PrepareOfferRequest request) {
-        OfferEntity offer = offerService.prepareOffer(projectId, request != null ? request.name() : null);
+        offerService.assertProjectIdAccess(projectId);
+        OfferEntity offer = request != null && request.offerId() != null
+                ? offerService.reprepare(projectId, request.offerId())
+                : offerService.prepareOffer(projectId, request != null ? request.name() : null);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
 
@@ -131,6 +135,7 @@ public class OfferController {
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> selectPackage(
             @PathVariable Long offerId, @RequestBody SelectPackageRequest request) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.selectPackage(offerId, request != null ? request.packageCode() : null);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
@@ -142,6 +147,7 @@ public class OfferController {
     @PostMapping("/{offerId}/send")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> send(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.send(offerId);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false, canSeeLabourComparison()));
     }
@@ -153,6 +159,7 @@ public class OfferController {
     @PostMapping("/{offerId}/refresh-snapshot")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> refreshSnapshot(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.refreshSnapshot(offerId);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
@@ -165,7 +172,29 @@ public class OfferController {
     @PostMapping("/{offerId}/restore")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<OfferRestoreService.RestoreResult> restore(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         return ResponseEntity.ok(offerRestoreService.restore(offerId));
+    }
+
+    /**
+     * Marks a non-terminal offer inactive (manual flag, FOR-05-07b Round 2 D2). {@code OFFERS} UPDATE;
+     * 409 {@code error.offer.illegal.transition} for a terminal offer.
+     */
+    @PostMapping("/{offerId}/deactivate")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
+    public ResponseEntity<ExecutorOfferReadModel> deactivate(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
+        OfferEntity offer = offerService.deactivate(offerId);
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
+    }
+
+    /** Marks a non-terminal offer active again. {@code OFFERS} UPDATE. */
+    @PostMapping("/{offerId}/activate")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
+    public ResponseEntity<ExecutorOfferReadModel> activate(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
+        OfferEntity offer = offerService.activate(offerId);
+        return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, true, canSeeLabourComparison()));
     }
 
     /**
@@ -175,6 +204,7 @@ public class OfferController {
     @PostMapping("/{offerId}/withdraw")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = UPDATE_OPERATION)
     public ResponseEntity<ExecutorOfferReadModel> withdraw(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.withdraw(offerId);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toExecutorReadModel(offer, false, canSeeLabourComparison()));
     }
@@ -187,6 +217,7 @@ public class OfferController {
     @PostMapping("/{offerId}/approve")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = APPROVE_OPERATION)
     public ResponseEntity<ClientOfferReadModel> approve(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.approve(offerId);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
     }
@@ -199,6 +230,7 @@ public class OfferController {
     @PostMapping("/{offerId}/reject")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = APPROVE_OPERATION)
     public ResponseEntity<ClientOfferReadModel> reject(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.reject(offerId);
         return ResponseEntity.ok(clientOfferReadModelAssembler.toClientReadModel(offer));
     }
@@ -212,6 +244,7 @@ public class OfferController {
     @GetMapping("/{offerId}")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<?> getOffer(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.getOffer(offerId);
         if (isClient()) {
             // R5.9/R17.5: a not-yet-sent (DRAFT-visibility) offer is indistinguishable from missing.
@@ -247,6 +280,7 @@ public class OfferController {
     @GetMapping("/project/{projectId}")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<?> getCurrentOfferByProject(@PathVariable Long projectId) {
+        offerService.assertProjectIdAccess(projectId);
         Optional<OfferEntity> current = offerService.getCurrentOfferByProject(projectId);
         if (current.isEmpty()) {
             // 204: the project has no offer yet — an unambiguous "no offer" for the by-project lookup.
@@ -295,8 +329,12 @@ public class OfferController {
         return null;
     }
 
-    /** Optional body for {@code POST /project/{projectId}/prepare}: the custom offer name (FOR-05-07 Batch 2). */
-    public record PrepareOfferRequest(String name) {
+    /**
+     * Optional body for {@code POST /project/{projectId}/prepare}: the custom offer name (FOR-05-07
+     * Batch 2) and, since FOR-05-07b D5, the id of an existing offer to update from the estimate
+     * instead of creating a new one.
+     */
+    public record PrepareOfferRequest(String name, Long offerId) {
     }
 
     /** Request body for {@code POST /{offerId}/select-package}: the target package code. */

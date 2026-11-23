@@ -103,7 +103,8 @@ public class ClientOfferReadModelAssembler {
                 null,
                 // FOR-05-07 Batch 2: custom name + whether an immutable snapshot exists (never the snapshot itself).
                 offer.getName(),
-                offer.getSnapshot() != null);
+                offer.getSnapshot() != null,
+                offer.isInactive());
     }
 
     /**

@@ -14,9 +14,9 @@
 | Допущение | Суть | Кейсы |
 |-----------|------|-------|
 | A1 | Restore заменяет всю смету одной транзакцией, пишет аудит, при заблокированной смете (не DRAFT) → 409 `error.estimate.locked` | TC-RST-01, TC-RST-03, TC-UI-RST-01, TC-UI-RST-03 |
-| A2 | Approve одной оферты withdraw-ит все остальные нетерминальные оферты проекта | TC-MULTI-03, TC-UI-MULTI-02 |
+| A2 | ~~Approve одной оферты withdraw-ит остальные~~ **Заменено в Round 2 (D2):** ручной флаг `inactive`, approve не трогает другие оферты, один APPROVED на проект | TC-MULTI-03 и TC-UI-MULTI-02 (устарели), см. TC-R2-INACT-*, TC-R2-APPR-* |
 | A3 | Legacy-оферта без snapshot: нет просмотра, PDF и restore | TC-LEG-01, TC-RST-04, TC-PDF-05 |
-| A4 | Restore меняет смету → срабатывает реакция (виденные оферты → WITHDRAWN, включая исходную SENT); диалог показывает это заранее | TC-RST-05, TC-UI-RST-02 |
+| A4 | ~~Restore/правка сметы withdraw-ит виденные оферты~~ **Заменено в Round 2 (D3):** правки сметы и restore не меняют ни одну оферту | TC-RST-05, TC-MULTI-04, TC-UI-RST-02 (устарели), см. TC-R2-EST-* |
 | A5 | Ячейки несуществующих комнат пропускаются и возвращаются в `skippedRooms` | TC-RST-02, TC-UI-RST-04 |
 | A6 | «Обновить из сметы» — действие пользователя над DRAFT; автоматического обновления на каждую правку сметы нет | TC-SNAP-02, TC-SNAP-04 |
 | A7 | Legacy DRAFT без snapshot получает его при send / refresh; legacy в других статусах остаются без snapshot | TC-LEG-02 |
@@ -25,7 +25,7 @@
 
 ## Запуск окружения
 
-1. В корне репозитория: `docker compose up` — `postgres` (:5432), `liquibase` (миграции, включая **267** `drop-offers-active-project-index`), `backend` (:8080, профиль `docker`), `frontend` (:3000).
+1. В корне репозитория: `docker compose up` — `postgres` (:5432), `liquibase` (миграции, включая **267** `drop-offers-active-project-index` и **268** `offers-inactive-flag`), `backend` (:8080, профиль `docker`), `frontend` (:3000).
 2. Первый ADMIN: `FOREMEN_ADMIN_CREATE=true`, `FOREMEN_ADMIN_EMAIL`, `FOREMEN_ADMIN_PASSWORD`.
 3. Перед прогоном дождаться завершения миграций. Проверка: в БД нет индекса `ux_offers_active_project`, есть `ix_offers_project_status`.
 4. Заголовок языка `Accept-Language: pl` (по умолчанию) или `ru`; в UI язык фиксируется в начале кейса (по умолчанию RU).
@@ -83,7 +83,7 @@
 **Предусловия:** `OFFER_1` в статусе SENT (TC-SNAP-01).
 1. Сохранить тело `GET /api/offers/{OFFER_1}/snapshot` как `SNAP_BEFORE`.
 2. Изменить смету: `PUT /api/estimate-line-room-qty/{id}` увеличить количество `LINE_1` в A.
-3. `GET /api/offers/{OFFER_1}/snapshot` → тело **побайтно равно** `SNAP_BEFORE` (смена сметы переводит `OFFER_1` в WITHDRAWN реакцией FOR-05-07, но snapshot не меняется).
+3. `GET /api/offers/{OFFER_1}/snapshot` → тело **побайтно равно** `SNAP_BEFORE`. (Round 2: смена сметы не меняет и статус `OFFER_1`, он остаётся SENT. Единственный писатель snapshot у отправленной оферты — обновление из сметы, TC-R2-REP-*.)
 4. `POST /api/offers/{OFFER_1}/refresh-snapshot` → **409**, код `error.offer.illegal.transition`.
 
 ### TC-SNAP-04 — Refresh неприменим к недрафтовой оферте и CLIENT-у (2.1, 3.1, A6)
@@ -127,6 +127,7 @@
 3. У каждой оферты свой замороженный snapshot (`GET .../snapshot` двух оферт возвращает разные `name`/`id`).
 
 ### TC-MULTI-03 — Approve одной withdraw-ит остальные (2.5, A2, 3.1)
+> **УСТАРЕЛ (Round 2, D2).** Шаги 2–4 больше не выполняются: approve не меняет остальные оферты. Актуальные кейсы: TC-R2-APPR-01..03. Кейс выполняется только в части шага 1 (approve → APPROVED).
 **Предусловия:** TC-MULTI-02 (две SENT).
 1. `POST /api/offers/{OFFER_A}/approve` (CLIENT) → **200**; `OFFER_A.status == "APPROVED"`.
 2. `GET /api/offers/{OFFER_B}` (ADMIN) → `status == "WITHDRAWN"`.
@@ -135,6 +136,7 @@
 5. `POST .../prepare` после approve допустим (новая оферта создаётся, как в FOR-05-07).
 
 ### TC-MULTI-04 — Изменение сметы withdraw-ит все виденные оферты (3.6)
+> **УСТАРЕЛ (Round 2, D3).** Реакция оферт на изменение сметы удалена; ожидание обратное: обе оферты остаются SENT. Актуальный кейс: TC-R2-EST-01.
 **Предусловия:** две SENT-оферты `OFFER_C`, `OFFER_D` в свежем проекте (повторить S2–S3 и prepare/send ×2).
 1. `PUT /api/estimate-line-room-qty/{id}` — изменить количество.
 2. `GET /api/offers/{OFFER_C}` и `GET /api/offers/{OFFER_D}` → обе `WITHDRAWN` (раньше реагировала только оферта с max id).
@@ -226,6 +228,7 @@
 4. Несуществующий id → **404**.
 
 ### TC-RST-05 — Реакция на изменение сметы после restore (A4, 3.6)
+> **УСТАРЕЛ (Round 2, D3).** После restore оферты НЕ отзываются, статус, итоги и snapshot всех оферт неизменны. Актуальный кейс: TC-R2-EST-02.
 **Предусловия:** `BASE` SENT; ещё одна SENT-оферта `OFFER_X`; смета в DRAFT.
 1. `POST /api/offers/{BASE}/restore` → **200**.
 2. После коммита: `GET /api/offers/{BASE}` и `GET /api/offers/{OFFER_X}` → обе `WITHDRAWN` (виденные оферты, включая исходную).
@@ -341,6 +344,7 @@
 6. У каждой карточки свои итоги (`totalNet`) и свои действия в `offer-card-actions-{id}`.
 
 ### TC-UI-MULTI-02 — Approve одной убирает остальные из «ожидающих» (2.5, A2)
+> **УСТАРЕЛ (Round 2, D2).** После approve остальные карточки остаются в списке со своим статусом. Актуальный кейс: TC-R2-UI-APPR-01.
 **Предусловия:** TC-UI-MULTI-01, две SENT-оферты; вход под CLIENT (или ADMIN с правом APPROVE по настройкам стенда).
 1. Открыть `/projects/{PID}/pricing` → две карточки в `offer-awaiting-list`.
 2. В карточке A нажать `offer-approve` → после подтверждения (если запрошено) список обновился: карточка B исчезла из `offer-awaiting-list` (WITHDRAWN) и находится в `offer-versions` со статусом «Отозвана».
@@ -430,12 +434,14 @@
 5. Аудит (через API) содержит `RESTORE_ESTIMATE`.
 
 ### TC-UI-RST-02 — Диалог показывает влияние на оферты (A4)
+> **УСТАРЕЛ (Round 2, D3).** `offer-restore-impact-{id}` и предупреждение об отзыве оферт удалены; оферты после restore не меняются (TC-R2-EST-02, TC-R2-UI-EST-01). Проверяется только отмена (шаг 3).
 **Предусловия:** есть SENT-оферта (в т.ч. исходная).
 1. Нажать `offer-restore-{id}` → в `offer-restore-impact-{id}` перечислено, что виденные оферты будут отозваны.
 2. Подтвердить → после успеха в `offer-awaiting-list` виденные оферты исчезли, в `offer-versions` они «Отозвана».
 3. Отмена (`offer-restore-cancel-{id}`) на другом проходе: диалог закрыт, запросов нет, оферты не изменены.
 
 ### TC-UI-RST-03 — Недоступность: смета заблокирована или есть несохранённые правки (2.6, A1)
+> **Изменён (Round 2, D6).** Пункт 2 устарел: при несохранённых правках кнопка не блокируется, а открывает диалог `UnsavedEstimateGuard` (TC-R2-UI-GUARD-*). Пункты 1 и 3 (блокировка сметы) действуют.
 1. Смета не в DRAFT → `offer-restore-{id}` **неактивна** (disabled), есть подсказка `offer-restore-hint-{id}` про блокировку сметы. Клик не открывает диалог.
 2. Смета DRAFT, но на вкладке сметы есть staged (несохранённые) правки → кнопка неактивна, подсказка просит сохранить или отменить правки; после сохранения/отмены кнопка активна.
 3. Принудительный вызов API при заблокированной смете (в обход UI) → 409 `error.estimate.locked`, смета не меняется (см. TC-RST-03).
@@ -488,6 +494,316 @@
 
 ---
 
+# Часть C. Round 2 (2026-11-20): оферта как контейнер, неактивные оферты, сравнение, обновление оферты
+
+Покрывает требования 2.9–2.16 и решения D1–D8 (`design.md`, «Round 2 design»). Модель: смета — рабочий лист, оферта — самодостаточный контейнер (snapshot), построенный из **сохранённой** сметы; несколько оферт могут быть отправлены клиенту одновременно; правки сметы оферты не меняют.
+
+**Повторяемость (общая для Части C):** генератор `run-id` + teardown.
+- Setup: S0–S4 из «Общего Setup» (свой проект `PID` под `run-id`, клиент `test+client-{run-id}@example.com`, комнаты A/B/C, смета S3, `NET_0`). Дополнительно **S5**: две-три оферты `R2-{run-id}-A/B/C`, подготовленные из S3 (`POST /api/offers/project/{PID}/prepare` `{"name":"R2-{run-id}-X"}`), id — `OFFER_A`, `OFFER_B`, `OFFER_C`.
+- Все имена оферт содержат `run-id`; фиксированные id не используются.
+- Teardown (T): снять `inactive` (`POST /api/offers/{id}/activate`) у всех оферт проекта, нетерминальные оферты → `POST /api/offers/{id}/withdraw`; APPROVED-оферты терминальны и остаются в проекте `run-id` без влияния на следующий прогон; клиент деактивируется; смета возвращается к состоянию S3 (`POST /api/offers/{BASE}/restore`, пока смета DRAFT).
+
+## Фича C1. Обновление snapshot в UI после отправки (D1, 2.9)
+
+### TC-R2-SNAP-01 — Открытая матрица snapshot обновляется после send без перезагрузки (2.9)
+**Предусловия:** ADMIN, `/projects/{PID}/pricing`, DRAFT-оферта `OFFER_A`, подготовленная **до** добавления `LINE_2` (сохранена в смету после prepare, snapshot без `LINE_2`).
+1. Нажать `offer-view-snapshot-{OFFER_A}` → матрица `offer-snapshot-matrix`: строки `LINE_2` нет.
+2. На вкладке сметы сохранить `LINE_2` (Save), вернуться на `/pricing`, снова открыть матрицу: `LINE_2` по-прежнему нет (автообновления нет, A6).
+3. В карточке нажать `offer-send` → запрос `POST /api/offers/{OFFER_A}/send` → **200**; **без F5**, повторно открыть/оставить открытой матрицу: появилась строка `LINE_2`; `offer-snapshot-matrix-total-net` = итогу карточки = `GET .../snapshot` `totalNet`.
+4. В сети после send виден повторный `GET /api/offers/{OFFER_A}/snapshot` (инвалидация кэша).
+5. Обновление через «Przygotuj ofertę» → выбор существующей оферты (TC-R2-UI-REP-01): открытая матрица тоже показывает новый snapshot без перезагрузки.
+
+## Фича C2. Неактивные оферты (D2, 2.10)
+
+### TC-R2-INACT-01 — Переключение флага `inactive` (API) (2.10)
+**Предусловия:** S0–S5; `OFFER_A` в статусе DRAFT, `OFFER_B` в статусе SENT.
+1. `POST /api/offers/{OFFER_A}/deactivate` (ADMIN) → **200**; `inactive == true`, `status` не изменился (DRAFT).
+2. `POST /api/offers/{OFFER_B}/deactivate` → **200**; `inactive == true`, `status == "SENT"`.
+3. `GET /api/offers/project/{PID}/list` (ADMIN) → у `OFFER_A` и `OFFER_B` `inactive == true`; у `OFFER_C` — `false`.
+4. Повторный `deactivate` уже неактивной оферты → **200**, состояние то же (идемпотентно).
+5. `POST /api/offers/{OFFER_B}/activate` → **200**, `inactive == false`, статус SENT.
+6. Аудит: по одной записи на каждое реальное переключение (шаги 1, 2, 5).
+
+### TC-R2-INACT-02 — Неактивную оферту можно отправить, смотреть и сравнивать (2.10)
+**Предусловия:** `OFFER_A` DRAFT и `inactive == true`.
+1. `POST /api/offers/{OFFER_A}/send` → **200**, `status == "SENT"`, `inactive == true` (флаг сохранён).
+2. `GET /api/offers/{OFFER_A}/snapshot` (CLIENT) → **200** (оферта не DRAFT), в теле `inactive == true`.
+3. `GET /api/offers/{OFFER_A}/pdf` (CLIENT) → **200**, `%PDF`.
+4. `GET /api/offers/project/{PID}/list` (CLIENT) → оферта видна, `inactive == true`.
+5. `GET /api/offers/compare-many?ids={OFFER_A},{OFFER_B}` (CLIENT, `OFFER_B` SENT) → **200**, в `offers[0].inactive == true`.
+
+### TC-R2-INACT-03 — Клиент не может approve / reject / negotiate неактивную оферту (2.10)
+**Предусловия:** `OFFER_A` SENT, `inactive == true`.
+1. `POST /api/offers/{OFFER_A}/approve` (CLIENT) → **409**, код `error.offer.inactive`.
+2. `POST /api/offers/{OFFER_A}/reject` (CLIENT) → **409**, `error.offer.inactive`.
+3. Запрос изменений / скидки (`POST /api/offers/{OFFER_A}/rounds/discount-request` и аналог request-changes) (CLIENT) → **409**, `error.offer.inactive`.
+4. Статус `OFFER_A` по-прежнему SENT; аудит approve/reject не записан.
+5. После `POST /api/offers/{OFFER_A}/activate` → `approve` (CLIENT) → **200**, `APPROVED`.
+
+### TC-R2-INACT-04 — Права и граничные случаи (2.10, 3.1)
+1. `deactivate`/`activate` с `clientToken` → **403**; без токена → **401**; несуществующий id → **404**.
+2. `deactivate` терминальной оферты (APPROVED/REJECTED/WITHDRAWN) → **409** `error.offer.illegal.transition` (флаг ставится только на нетерминальные оферты).
+3. `deactivate` оферты другого проекта по id из чужого проекта у не-участника → **403/404** (как для прочих действий `OFFERS`).
+
+## Фича C3. Одна APPROVED-оферта на проект, approve не трогает остальные (D2, 2.10, 3.1)
+
+### TC-R2-APPR-01 — Approve не меняет другие оферты (2.10)
+**Предусловия:** `OFFER_A`, `OFFER_B`, `OFFER_C` — все SENT, активны; по `GET /api/offers/{id}/snapshot` сохранены тела `SNAP_B_BEFORE`, `SNAP_C_BEFORE`.
+1. `POST /api/offers/{OFFER_A}/approve` (CLIENT) → **200**, `APPROVED`.
+2. `GET /api/offers/{OFFER_B}`, `GET /api/offers/{OFFER_C}` → статусы **SENT** (не WITHDRAWN), `totalNet` без изменений.
+3. `GET .../snapshot` оферт B и C → тела **побайтно равны** `SNAP_B_BEFORE`/`SNAP_C_BEFORE`.
+4. Аудита `SYSTEM_WITHDRAW_ON_APPROVE` для B и C **нет**.
+
+### TC-R2-APPR-02 — Вторая APPROVED запрещена (2.10)
+**Предусловия:** TC-R2-APPR-01 (APPROVED = `OFFER_A`; `OFFER_B` SENT, активна).
+1. `POST /api/offers/{OFFER_B}/approve` (CLIENT) → **409**, `error.offer.already.approved`.
+2. `OFFER_B` остаётся SENT; в проекте ровно одна APPROVED.
+3. `POST /api/offers/{OFFER_B}/reject` (CLIENT) → **200** (reject разрешён: ограничение касается только approve).
+4. Исполнитель делает `withdraw` для `OFFER_C` → `WITHDRAWN` (ручное действие работает).
+
+### TC-R2-APPR-03 — Несколько SENT одновременно (2.10)
+1. `POST /api/offers/{OFFER_A}/send`, `{OFFER_B}/send`, `{OFFER_C}/send` → везде **200**; `GET /list` (CLIENT) → все три видны, статусы SENT.
+2. Приход approve от двух клиентов параллельно (два одновременных `POST .../approve` на A и B) → ровно один **200**, второй **409** `error.offer.already.approved` (проверка гонки; в проекте одна APPROVED).
+
+### TC-R2-APPR-04 — Prepare после approve допустим (3.4)
+1. После approve `POST /api/offers/project/{PID}/prepare` `{"name":"R2-{run-id}-D"}` → **200**, новая DRAFT-оферта; исходная APPROVED не изменилась.
+
+## Фича C4. Изменения сметы оставляют оферты нетронутыми (D3, 2.11)
+
+### TC-R2-EST-01 — Правка количества, пакет, трудозатраты, комнаты (2.11)
+**Предусловия:** S0–S5; `OFFER_A` SENT, `OFFER_B` DRAFT, `OFFER_C` APPROVED (или SENT); сохранены `STATE_BEFORE` = для каждой оферты `status`, `revision`, `totalNet/Vat/Gross`, тело snapshot.
+Для каждого воздействия **1–5** сравнить `STATE_BEFORE` и состояние после:
+1. `PUT /api/estimate-line-room-qty/{id}` — изменить количество.
+2. `POST /api/estimates/project/{PID}/apply-package` (другой пакет).
+3. Корректировка трудозатрат (`labour-price-adjustment`).
+4. Добавить комнату `Room D {run-id}` и удалить `Room C`.
+5. Сохранение сметы через `PUT /api/estimates/project/{PID}/matrix`.
+Ожидание после каждого: ни статус, ни `revision`, ни итоги, ни snapshot **ни одной** оферты не изменились; новых DRAFT-ревизий нет; список `GET /api/offers/project/{PID}/list` содержит те же id; аудит `WITHDRAW`/`REVISE` по реакции не пишется.
+
+### TC-R2-EST-02 — Restore из оферты не меняет оферты (2.11)
+**Предусловия:** `OFFER_A` SENT, `OFFER_B` SENT; смета DRAFT и изменена.
+1. `POST /api/offers/{OFFER_A}/restore` → **200**.
+2. Состояние A и B (`status`, `revision`, итоги, snapshot) равно `STATE_BEFORE`; обе остаются SENT.
+3. Смета равна snapshot оферты A (как в TC-RST-01).
+
+### TC-R2-EST-03 — Endpoint влияния возвращает NONE (2.11)
+1. `GET /api/estimates/project/{PID}/offer-impact` (префикс контроллера сверить в Swagger; `@Deprecated`) → **200**, `{"impact":"NONE"}` при любых правках сметы (в т.ч. при наличии SENT и APPROVED оферт).
+2. Ответ сохранения комнат (`RoomsSaveService`) не содержит влияния на оферты (`NONE`).
+
+## Фича C5. Итоги оферты берутся из её snapshot (D7, 2.15)
+
+### TC-R2-TOT-01 — Итоги карточки не следуют за сметой (2.15)
+**Предусловия:** `OFFER_A` DRAFT (итоги = `NET_0`), `OFFER_B` SENT; `GET /api/offers/{id}` → `totalNet == NET_0`.
+1. Изменить смету (увеличить количество `LINE_1` в A) и сохранить; живой итог сметы стал `NET_1 != NET_0`.
+2. `GET /api/offers/{OFFER_A}`, `GET /api/offers/{OFFER_B}`, `GET /api/offers/project/{PID}/list` → `totalNet/totalVat/totalGross` у обеих **равны** `NET_0`-значениям, а не `NET_1`.
+3. `GET .../snapshot` → `totals.totalNet == totalNet` оферты.
+4. Для DRAFT `OFFER_A`: `POST .../refresh-snapshot` → итоги и snapshot обновились до `NET_1` (итог сходится со сметой, `totals.totalNet == NET_1`).
+
+### TC-R2-TOT-02 — Скидки считаются от snapshot (2.15)
+**Предусловия:** `OFFER_B` SENT, смета после TC-R2-TOT-01 (`NET_1`).
+1. Запросить/согласовать скидку 10% по раундам переговоров (`rounds/discount-request` → `propose` → `accept`).
+2. Итог оферты = `NET_0 × 0,9` (скидка на цены snapshot), а не `NET_1 × 0,9`; VAT считается по `vatRatePct` snapshot.
+3. Метки трудозатрат (`baseValueNet` против `valueNet`, ADMIN) строятся из snapshot; у CLIENT их нет.
+
+### TC-R2-TOT-03 — Legacy идёт по старому пути (2.15, 3.3)
+1. Legacy-оферта без snapshot: `totalNet` в списке соответствует живому расчёту (как до Round 2), `hasSnapshot == false`; правка сметы меняет её итог (допустимое отличие legacy, фиксируется в отчёте).
+2. Оферта со snapshot версии 1 (до Round 1) без `lineNo`: итоги не падают (`200`), расчёт идёт по живому пути или по snapshot по реализации; ответ без 5xx.
+
+## Фича C6. Обновление существующей оферты из сметы (D5, 2.13, 2.1)
+
+### TC-R2-REP-01 — Новая оферта без `offerId` (2.13, 3.4)
+1. `POST /api/offers/project/{PID}/prepare` `{"name":"R2-{run-id}-N"}` → **200**, новая DRAFT, `revision == 1`.
+2. Тело без `offerId` и с пустым именем → дефолтное «Offer N» (3.4); имя > 255 → **400** `error.offer.name.too.long`.
+
+### TC-R2-REP-02 — Обновление DRAFT-оферты: статус сохраняется, версия +1 (2.13)
+**Предусловия:** `OFFER_A` DRAFT, `revision == r`, смета сохранена и отличается от snapshot (изменено количество, добавлена работа).
+1. `POST /api/offers/project/{PID}/prepare` `{"offerId": OFFER_A}` → **200**; `id == OFFER_A`; `status == "DRAFT"`; `revision == r + 1`; имя и `inactive` прежние.
+2. Snapshot пересобран из сохранённой сметы: `GET .../snapshot` содержит новую работу; `totalNet == totals.totalNet` = живому итогу сметы.
+3. Аудит: одна запись `REPREPARE` с прежней версией `r` и прежними итогами.
+4. Новая оферта не создана: количество оферт проекта не изменилось.
+5. Уведомление клиенту **не** отправляется (оферта DRAFT): `GET /api/notifications` (CLIENT) без записи `notification.offer.reprepared`.
+
+### TC-R2-REP-03 — Обновление отправленной (в т.ч. неактивной) оферты: клиент уведомлён (2.13)
+**Предусловия:** `OFFER_B` SENT; `OFFER_C` SENT и `inactive == true`; в проекте клиент `CLIENT` (ACTIVE-член).
+1. `POST .../prepare` `{"offerId": OFFER_B}` → **200**; `status == "SENT"`, `revision == r+1`, snapshot обновлён, итоги — из нового snapshot.
+2. То же для `OFFER_C` → `status == "SENT"`, `inactive == true` (флаг сохранён), `revision + 1`.
+3. `GET /api/notifications` (CLIENT) → **ровно по одному** уведомлению типа `notification.offer.reprepared` на каждую обновлённую оферту (после коммита транзакции), текст на языке пользователя (PL/RU) с именем оферты.
+4. Уведомление получают только CLIENT-члены этого проекта: `GET /api/notifications` у `CLIENT_OTHER` и у исполнителя — без таких записей.
+5. Клиент видит новую версию: `GET .../snapshot` (CLIENT) = новый snapshot.
+6. Snapshot остальных оферт проекта не изменился (побайтно).
+
+### TC-R2-REP-04 — Терминальные и чужие оферты (2.13)
+1. `prepare` с `offerId` оферты APPROVED / REJECTED / WITHDRAWN → **409**, `error.offer.reprepare.terminal`; snapshot и версия не изменились.
+2. `prepare` проекта `PID` с `offerId` оферты **другого** проекта → **400**.
+3. Несуществующий `offerId` → **404**.
+4. `prepare` с `offerId` с `clientToken` → **403**.
+
+### TC-R2-REP-05 — Snapshot строится из сохранённой сметы (2.14)
+1. Изменить смету через API без сохранения невозможно (staged-правки живут только в браузере) — поэтому проверяется контракт: snapshot после `prepare {offerId}` совпадает с `GET /api/estimates/project/{PID}/matrix` (сохранённое состояние) по строкам, количествам, ценам, пакету.
+
+## Фича C7. Сравнение нескольких оферт (D4, 2.12, 3.2, 3.5)
+
+### TC-R2-CMP-01 — `compare-many` для исполнителя (2.12)
+**Предусловия:** три оферты `OFFER_A/B/C` со snapshot, отличающиеся количествами и составом работ (в B добавлена работа, в C изменено количество `LINE_1`).
+1. `GET /api/offers/compare-many?ids={A},{B},{C}` (ADMIN) → **200**; `offers` — в порядке запрошенных id, у каждого `name`, `status`, `inactive`, `version`, `totalNet/Vat/Gross`, маркер пакета.
+2. `groups[]` — по категории работ, в `values[]` по оферте `valueNet` (у оферты без категории `null`); `works[]` — по работе: `unitCode/unitName`, `offers[]` с `quantity`, `valueNet`, `rooms[]` (`roomId`, `label`, `quantity`).
+3. Суммы по группам сходятся с `totalNet` оферт; для работы, которой нет в оферте, `quantity` и `valueNet` `null`, `rooms == []`.
+4. Колонок/полей по комнатам на уровне групп нет (комнаты только внутри работы).
+5. Максимум 10 id: 10 id → **200**; 11 id → **400**.
+
+### TC-R2-CMP-02 — Ошибки валидации (2.12)
+1. 1 id → **400**; пустой `ids` → **400**; нечисловой id → **400**.
+2. Оферты разных проектов → **400**.
+3. Оферта без snapshot (legacy) среди id → **400**.
+4. Несуществующий id → **404**.
+5. Без токена → **401**.
+
+### TC-R2-CMP-03 — Редакция для CLIENT (2.12, 3.2)
+1. `GET /api/offers/compare-many?ids={A},{B}` (CLIENT, обе SENT) → **200**; в теле нет `baseUnitPrice`, `baseValueNet`, labour-сравнения, маржи, `unitPriceOverride`, `workPriceId`, `lineNo`.
+2. В списке id есть DRAFT-оферта → **404** (CLIENT не видит DRAFT).
+3. Неактивная SENT-оферта в списке допустима (200), `inactive == true`.
+4. CLIENT другого проекта → **403/404**.
+
+### TC-R2-CMP-04 — Двухоферточный `compare` сохранён (3.5)
+1. `GET /api/offers/compare?left={A}&right={B}` → **200**, `added/removed/changed`, дельта итога (TC-REG-04); разные проекты → **400**.
+
+## Фича C8. UI: неактивные оферты и approve (D2, 2.10)
+
+### TC-R2-UI-INACT-01 — Переключатель и бейдж у исполнителя (2.10)
+**Предусловия:** ADMIN, RU, `/projects/{PID}/pricing`, S5 (A DRAFT, B SENT).
+1. В карточке A нажать `offer-toggle-inactive-{A}` → запрос `POST .../deactivate` → **200**; в карточке появился `offer-inactive-badge` («Nieaktywna») рядом со статусом; статус «Черновик» прежний.
+2. Повторный клик по переключателю → запрос `.../activate`, бейдж исчез.
+3. Для B (SENT): тот же переключатель работает, статус «Отправлена» не меняется.
+4. После F5 состояние сохранилось.
+5. Для APPROVED/REJECTED/WITHDRAWN карточек (в истории) переключателя нет.
+
+### TC-R2-UI-INACT-02 — Клиент видит бейдж, но не может решать (2.10)
+**Предусловия:** CLIENT, B SENT и неактивна.
+1. В карточке B виден `offer-inactive-badge`.
+2. Кнопок `offer-approve`, `offer-reject` и запроса изменений/скидки **нет**.
+3. Доступны просмотр матрицы `offer-view-snapshot-{B}`, PDF `offer-pdf-{B}`, чекбокс `offer-select-{B}`.
+4. Переключателя `offer-toggle-inactive-{B}` у клиента нет.
+5. Исполнитель снимает флаг → после перезагрузки у клиента появляются `offer-approve`/`offer-reject`.
+
+### TC-R2-UI-APPR-01 — Approve одной оферты не убирает другие (2.10)
+**Предусловия:** CLIENT, три SENT-оферты, активны.
+1. Нажать `offer-approve` в карточке A → A «Согласована».
+2. Карточки B и C остаются в `offer-awaiting-list` со статусом «Отправлена»; они не в «Отозвана».
+3. В карточках B и C кнопка `offer-approve` отсутствует или при попытке показывает ошибку `error.offer.already.approved`; ошибка читаема, страница работоспособна.
+4. F5: состояние сохранилось.
+
+## Фича C9. UI: предупреждения об отзыве оферт удалены (D3, 2.11)
+
+### TC-R2-UI-EST-01 — Нет предупреждений об оферте (2.11)
+**Предусловия:** ADMIN; в проекте SENT-оферты.
+1. На вкладке сметы изменить количество и нажать Save → диалог подтверждения сохранения **не содержит** блока `OfferImpactWarning` (упоминаний отзыва оферт).
+2. Диалог пересчёта `EstimateRecalcDialog` (корректировка трудозатрат/пакет) не содержит предупреждения об офертах.
+3. Открыть диалог restore (`offer-restore-dialog-{id}`): нет `offer-restore-impact-{id}`; есть только текст о замене сметы и о пересчёте материалов.
+4. После Save и restore на `/pricing` статусы и итоги SENT-оферт те же, что до действий.
+
+## Фича C10. UI: защита от несохранённых правок сметы (D6, 2.14)
+
+**Подготовка:** на вкладке сметы внести правку количества и **не сохранять** (staged, `projectStagedEdits`); затем перейти на `/pricing` (SPA-навигацией, состояние staged сохраняется).
+
+### TC-R2-UI-GUARD-01 — «Przygotuj ofertę» (2.14)
+1. Нажать `estimate-prepare-offer` (или кнопку подготовки на вкладке оферт) → открыт `unsaved-estimate-guard` с текстом `unsaved-estimate-guard-body`; диалог выбора оферты ещё **не** открыт; запросов prepare нет.
+2. Нажать `unsaved-estimate-guard-save` («Zapisz i kontynuuj») → выполнился Save сметы (`PUT .../matrix` → **200**), затем открылся `prepare-offer-dialog`; staged-правок нет.
+3. Повторить с новой правкой: `unsaved-estimate-guard-discard` («Odrzuć zmiany») → правка отброшена (`GET matrix` без неё), открыт `prepare-offer-dialog`.
+4. Повторить: `unsaved-estimate-guard-cancel` («Anuluj») → диалоги закрыты, staged-правка **сохранена**, запросов save/prepare нет.
+
+### TC-R2-UI-GUARD-02 — Save завершился ошибкой (2.14)
+1. Перехватить `PUT .../matrix` → 500; нажать «Zapisz i kontynuuj».
+2. Показан toast ошибки; **продолжение не выполняется** (`prepare-offer-dialog` не открыт, обновление/restore не запущены); staged-правки на месте.
+
+### TC-R2-UI-GUARD-03 — «Odśwież migawkę» и restore (2.14)
+1. При staged-правках нажать `offer-refresh-snapshot-{DRAFT}` → открыт `unsaved-estimate-guard`; «Zapisz i kontynuuj» → Save, затем `POST .../refresh-snapshot` → snapshot равен сохранённой смете.
+2. При staged-правках нажать `offer-restore-{id}` → открыт `unsaved-estimate-guard` (кнопка не disabled, прежнего состояния «заблокировано из-за staged» нет); «Odrzuć zmiany» → открыт `offer-restore-dialog-{id}`; подтверждение → restore **200**.
+3. «Anuluj» в обоих случаях: никаких запросов, staged-правки остаются.
+4. Без staged-правок диалог guard **не** показывается, действия идут напрямую.
+
+### TC-R2-UI-GUARD-04 — Snapshot из сохранённой сметы (2.14, 2.15)
+1. После «Zapisz i kontynuuj» итоги новой/обновлённой оферты = итог **сохранённой** сметы; несохранённое значение, введённое до Save, попало в snapshot только благодаря Save.
+2. После «Odrzuć zmiany» snapshot не содержит отброшенной правки.
+
+## Фича C11. UI: диалог подготовки — новая или существующая оферта (D5, 2.13)
+
+### TC-R2-UI-REP-01 — Обновление существующей оферты (2.13)
+**Предусловия:** ADMIN, в проекте оферты: A DRAFT, B SENT (с `inactive`), C APPROVED, D WITHDRAWN; staged-правок нет.
+1. Нажать `estimate-prepare-offer` → `prepare-offer-dialog`: в `prepare-offer-options` строки `prepare-offer-option-{id}` для **всех** оферт проекта (имя, статус, бейдж неактивности `prepare-offer-inactive-{id}`, версия) и вариант `prepare-offer-option-new` с `prepare-offer-name-input`.
+2. Оферты C (APPROVED) и D (WITHDRAWN) отображены, но **не выбираются** (disabled).
+3. Выбрать `prepare-offer-option-{B}` → виден `prepare-offer-update-hint` (клиент получит новую версию и уведомление); для A (DRAFT) подсказки нет.
+4. Нажать `prepare-offer-confirm` → один `POST .../prepare` с `{"offerId": B}` (без `name`) → **200**; навигация на `/projects/{PID}/pricing` только после успеха.
+5. У B: статус SENT, `inactive` сохранён, версия +1, итоги = новому snapshot; открытая матрица B обновлена без F5 (D1).
+6. Список/карточка/snapshot B инвалидированы (повторные GET в сети).
+7. Клиент (отдельная сессия) получил уведомление в колокольчике «oferta zaktualizowana».
+
+### TC-R2-UI-REP-02 — Новая оферта и отмена (2.13)
+1. Выбрать `prepare-offer-option-new`, ввести `R2-{run-id}-UI`, подтвердить → `POST .../prepare` `{"name":"R2-{run-id}-UI"}` → **200**; появилась новая DRAFT-карточка, остальные оферты не изменены.
+2. Подтвердить с пустым именем → «Offer N».
+3. Отмена (`prepare-offer-cancel`, Esc) → запросов нет, URL прежний, оферты не изменены.
+4. В поле имени 256-й символ не вводится (`maxLength` 255).
+5. Подтверждение недоступно, пока не выбран ни один вариант (если так задано UI).
+
+### TC-R2-UI-REP-03 — Те же правила на вкладке оферт (2.13, 3.4)
+1. На `/pricing` блок подготовки — **кнопка** (inline-поле имени заменено), открывающая тот же диалог; поведение идентично TC-R2-UI-REP-01/02.
+2. Для CLIENT кнопки подготовки нет.
+
+## Фича C12. UI: сравнение нескольких оферт (D4, 2.12)
+
+### TC-R2-UI-CMP-01 — Выбор и переход на экран сравнения (2.12)
+**Предусловия:** ADMIN, три оферты со snapshot A, B, C (есть одна неактивная и пакет у одной); одна legacy-оферта без snapshot.
+1. У карточек/строк истории со snapshot есть чекбокс `offer-select-{id}`; у legacy-оферты чекбокса **нет**.
+2. Отметить одну → кнопка `offer-compare-open` неактивна/скрыта (нужно ≥2); панель `offer-selection-bar` показывает счётчик.
+3. Отметить вторую и третью → `offer-compare-open` («Porównaj (3)») активна → клик → URL `/projects/{PID}/pricing/compare?ids=A,B,C`, виден `offer-compare-page`.
+4. Прямая загрузка URL с `ids` из 1 id → `offer-compare-too-few`; несуществующие/чужие id → `offer-compare-error` (без падения страницы).
+5. Ссылка `offer-compare-back` возвращает на `/pricing`.
+
+### TC-R2-UI-CMP-02 — Структура экрана: колонки и группы (2.12)
+1. В `offer-compare-table` по одной колонке на оферту (`offer-compare-col-{id}`) в порядке `ids`; в шапке: имя, статус (`offer-compare-status-{id}`), бейдж неактивности (`offer-compare-inactive-{id}`) для неактивной, версия, маркер пакета (где есть), итоги net/VAT/gross (`offer-compare-totals-{id}`).
+2. Строки категорий `offer-compare-group-{code}` содержат стоимость каждой оферты (`offer-compare-group-cost-{code}-{id}`) и разницу к **первой** выбранной (первая колонка без дельты, остальные: `+`/`−` и значение).
+3. По умолчанию группы **свёрнуты**; работ (`offer-compare-work-*`) не видно.
+4. Колонок по комнатам нет ни на одном уровне; в строке категории показана только стоимость (без объёма и единицы).
+5. Сумма по группам равна итогу в шапке (в пределах округления) для каждой оферты.
+
+### TC-R2-UI-CMP-03 — Раскрытие категории: работы, объём, стоимость, дельты (2.12)
+1. Клик по `offer-compare-group-row-{code}` → видны строки `offer-compare-work-{workItemId}`: название, и для каждой оферты объём **с единицей** и стоимость; разница к первой оферте (по объёму и по стоимости).
+2. Если работы нет в оферте: ячейка `offer-compare-missing-{workItemId}-{id}` (прочерк), дельта корректно считает отсутствие как 0 / «нет».
+3. Повторный клик сворачивает категорию.
+4. Значения совпадают с `GET /api/offers/compare-many` (TC-R2-CMP-01).
+
+### TC-R2-UI-CMP-04 — Комнаты по клику на ячейку работы (2.12)
+1. Клик по `offer-compare-cell-{workItemId}-{id}` → popover `offer-compare-rooms-{workItemId}-{id}` со списком комнат этой оферты и объёмами для этой работы (названия `Room A/B`).
+2. Сумма объёмов по комнатам равна объёму в ячейке.
+3. Клик в другую ячейку/Esc закрывает popover; для ячейки отсутствующей работы popover не открывается.
+4. Попап другой оферты показывает комнаты именно её snapshot (количества A и B различаются).
+
+### TC-R2-UI-CMP-05 — Клиент (2.12, 3.2)
+1. CLIENT видит чекбоксы только у не-DRAFT оферт (DRAFT нет в списке вовсе).
+2. Экран сравнения не показывает базовые цены, трудозатраты, маржу.
+3. Прямой URL с id DRAFT-оферты → `offer-compare-error` (404 от API).
+
+### TC-R2-UI-CMP-06 — Замена старой панели (2.12, 3.5)
+1. В `offer-versions` больше нет встроенной панели `OfferComparisonPanel` с per-room раскладкой; сравнение идёт только через `offer-compare-open`.
+2. Эталон 3.5 (два snapshot): `added/removed/changed` и дельта итога на экране эквивалентны ответу `GET /api/offers/compare` (проверка по сумме разностей).
+
+## Фича C13. UI: отправка нескольких оферт сразу (D8, 2.16)
+
+### TC-R2-UI-SEND-01 — «Wyślij zaznaczone» (2.16)
+**Предусловия:** ADMIN, три DRAFT-оферты A, B, C со snapshot.
+1. Отметить `offer-select-{A}`, `offer-select-{B}` → в `offer-selection-bar` кнопка `offer-send-selected` («Wyślij zaznaczone (2)»).
+2. Нажать → два запроса `POST /api/offers/{A}/send` и `.../{B}/send` → **200**; затем обновление списка.
+3. A и B в статусе «Отправлена», C остаётся «Черновик»; выбранные сброшены или остаются по реализации (фиксируется в отчёте).
+4. Клиент (отдельная сессия) видит A и B, C — нет.
+
+### TC-R2-UI-SEND-02 — Смешанный выбор и ошибки (2.16, 3.1)
+1. Отметить DRAFT и SENT оферту: кнопка отправляет только DRAFT; счётчик `(n)` показывает число именно DRAFT.
+2. Выбор без DRAFT → `offer-send-selected` скрыта/неактивна.
+3. Перехват: для одной из оферт `send` отвечает 409/500 → итоговый **один** toast с перечислением ошибок по офертам; остальные отправлены; список обновлён.
+4. Неактивную DRAFT-оферту можно отправить (TC-R2-INACT-02).
+5. CLIENT: `offer-send-selected` отсутствует.
+
+---
+
 # Регрессия
 
 **Повторяемость:** генератор `run-id` + teardown (все кейсы работают на собственных проектах под `run-id`; T: withdraw нетерминальных оферт).
@@ -523,11 +839,35 @@
 1. Повторный запуск `liquibase update` не падает; индекс `ux_offers_active_project` отсутствует; `ix_offers_project_status` существует в единственном экземпляре.
 2. Два нетерминальных `offers` одного проекта вставляются без нарушения ограничений.
 
+### TC-REG-08 — Миграция 268 идемпотентна (2.10)
+1. Повторный `liquibase update` не падает; колонка `offers.inactive` существует в единственном экземпляре, `boolean not null default false`.
+2. У всех существующих оферт `inactive == false`; новая оферта создаётся с `false`.
+
+### TC-REG-09 — Round 1: замечания браузерной валидации (проект 7678, Round 2 findings 1.9–1.14)
+Каждое замечание перепроверяется на своём проекте `run-id`; по нему есть один сквозной проход:
+- **1.9** snapshot открыт, затем send → без F5 показан новый snapshot (TC-R2-SNAP-01).
+- **1.10** approve не отзывает остальные; есть ручной `inactive` (TC-R2-APPR-01, TC-R2-INACT-01).
+- **1.11** правка сметы, пакет, трудозатраты, комнаты и restore не отзывают оферты и не создают ревизий; в диалогах нет предупреждений (TC-R2-EST-01, TC-R2-UI-EST-01).
+- **1.12** сравнение 3 оферт на экране `/pricing/compare` без колонок комнат (TC-R2-UI-CMP-01..04).
+- **1.13** «Przygotuj ofertę» позволяет выбрать существующую оферту и обновить её; несохранённые правки обрабатывает guard (TC-R2-UI-REP-01, TC-R2-UI-GUARD-01).
+- **1.14** итоги DRAFT-карточки равны её snapshot после правки сметы (TC-R2-TOT-01).
+Ожидание: все шесть проходов завершены без расхождений; в консоли браузера нет ошибок.
+
+### TC-REG-10 — Round 1 сохранено при Round 2 (3.1, 3.2, 3.3, 3.4, 3.8)
+1. TC-REG-02 (скрытие данных от CLIENT) расширен: ответы `compare-many`, `list`, `snapshot`, `pdf` содержат `inactive` и не содержат `baseUnitPrice`, `baseValueNet`, маржу, `unitPriceOverride`, `workPriceId`, `lineNo`.
+2. TC-REG-05 расширен: цепочки prepare → send → approve/reject/withdraw работают; `approve` при существующей APPROVED → 409 `error.offer.already.approved`; `approve` неактивной → 409 `error.offer.inactive`.
+3. Frozen snapshot: у терминальных оферт (APPROVED, REJECTED, WITHDRAWN) `prepare {offerId}` → 409 `error.offer.reprepare.terminal`, snapshot неизменен; у SENT он меняется **только** через `prepare {offerId}`.
+4. Правила имени (3.4) и legacy (3.3) — TC-MULTI-05, TC-REG-03 без изменений; PDF подписи и проформ (3.8) — TC-PDF-07.
+5. Restore (TC-RST-01..04, 06) работает как в Round 1, кроме отмены реакции оферт (TC-R2-EST-02) и замены предупреждения guard-ом (TC-R2-UI-GUARD-03).
+
+### TC-REG-11 — Эталонные данные только на чтение
+1. Проекты 1531 и 7678 (если есть в локальной БД) открываются на `/pricing`: список оферт, матрица, PDF, сравнение работают; legacy-оферты без snapshot без чекбокса выбора и без кнопок просмотра/PDF/restore; данные проектов не изменяются (все проверки — GET).
+
 ---
 
 # Шаблон MD-репорта прогона
 
-Заполняется по итогам прогона отдельно для Части A (API) и Части B (UI).
+Заполняется по итогам прогона отдельно для Части A (API), Части B (UI) и Части C (Round 2: API-кейсы `TC-R2-*` и UI-кейсы `TC-R2-UI-*`). Кейсы, помеченные «УСТАРЕЛ (Round 2)», в прогон не включаются или проверяются только в оговорённой части.
 
 **Окружение:** docker-стек (дата/commit), браузерный движок и версия, язык UI, пользователь.
 **Run-id:** `<yyyyMMdd-HHmmss-xxxx>`. **Проект(ы):** `PID=<...>`, `PID_NOPKG=<...>`.
@@ -539,6 +879,11 @@
 | 2 | TC-SNAP-01 | 4 | `GET /api/offers/{OFFER_1}/snapshot` | 200, итоги = `NET_0` | | |
 | 3 | TC-UI-NAME-01 | 2 | Клик `estimate-prepare-offer` | диалог открыт, запросов prepare нет | | |
 | 4 | TC-UI-SNAP-01 | 5 | Проверка `offer-snapshot-matrix-total-net` | равно `NET_0` | | |
+| 5 | TC-R2-INACT-03 | 1 | `POST /api/offers/{OFFER_A}/approve` (CLIENT, оферта inactive) | 409 `error.offer.inactive` | | |
+| 6 | TC-R2-APPR-01 | 2 | `GET /api/offers/{OFFER_B}` после approve A | статус SENT, итоги без изменений | | |
+| 7 | TC-R2-REP-03 | 3 | `GET /api/notifications` (CLIENT) | одно `notification.offer.reprepared` на оферту | | |
+| 8 | TC-R2-UI-CMP-02 | 2 | Проверка `offer-compare-group-cost-{code}-{id}` | стоимость и дельта к первой оферте | | |
+| 9 | TC-R2-UI-GUARD-01 | 2 | Клик `unsaved-estimate-guard-save` | Save 200, затем `prepare-offer-dialog` | | |
 
 Статусы: ✅ пройден, ❌ провален, ⏭ пропущен (с основанием).
 
@@ -550,4 +895,4 @@
 |----|----------|----------|----------|------|-------------|
 | | | | | | |
 
-**Teardown выполнен:** ☐ оферты withdraw ☐ клиент деактивирован ☐ смета возвращена ☐ артефакты загрузок удалены.
+**Teardown выполнен:** ☐ флаги `inactive` сняты ☐ оферты withdraw ☐ клиент деактивирован ☐ смета возвращена ☐ артефакты загрузок удалены.

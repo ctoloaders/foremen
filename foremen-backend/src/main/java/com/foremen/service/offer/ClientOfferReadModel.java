@@ -61,5 +61,6 @@ public record ClientOfferReadModel(
         List<NegotiationRoundView> negotiationThread,
         OfferReadinessView readiness,
         String name,
-        boolean hasSnapshot) {
+        boolean hasSnapshot,
+        boolean inactive) {
 }

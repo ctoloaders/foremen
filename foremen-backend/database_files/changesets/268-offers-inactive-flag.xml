@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-07b Round 2 (D2): manual "inactive" flag of an offer, independent of its status. An inactive
+        offer can still be sent, viewed, compared and exported, but the client cannot approve, reject or
+        negotiate it.
+    -->
+    <changeSet id="268-offers-inactive-flag" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <columnExists tableName="offers" columnName="inactive"/>
+            </not>
+        </preConditions>
+        <addColumn tableName="offers">
+            <column name="inactive" type="boolean" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="offers" columnName="inactive"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

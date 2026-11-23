@@ -167,6 +167,7 @@ public class EstimateLineService
      * removed line's contribution is dropped immediately (R8).
      */
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public void deleteById(Long id) {
         EstimateLineEntity existing = estimateLineDao.findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, id));
@@ -174,6 +175,9 @@ public class EstimateLineService
         draftGateGuard.assertDraft(existing.getEstimate());
 
         ProjectScopedService.super.deleteById(id);
+        // The removed line is still referenced by the cached estimate graph; detach everything so the
+        // recompute reloads the estimate without it (the delete is already flushed).
+        getEntityManager().clear();
 
         recomputeAndPersist(estimateId);
     }

@@ -186,6 +186,13 @@ class NegotiationServiceIntegrationTest {
             entityManager.createQuery("delete from ProjectEntity pr where pr.name like :p")
                     .setParameter("p", "%" + runId + "%")
                     .executeUpdate();
+            // Notifications created for the run-scoped users (REQUIRES_NEW, after commit) reference
+            // them by FK, so they must go before the users.
+            entityManager.createQuery(
+                            "delete from NotificationEntity n where n.recipient.id in "
+                                    + "(select u.id from UserEntity u where u.email like :p)")
+                    .setParameter("p", "%" + runId + "%")
+                    .executeUpdate();
             // Run-scoped users (the CLIENT / MANAGER actor fixtures).
             entityManager.createQuery("delete from UserEntity u where u.email like :p")
                     .setParameter("p", "%" + runId + "%")

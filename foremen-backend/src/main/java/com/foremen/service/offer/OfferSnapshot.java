@@ -23,12 +23,22 @@ public record OfferSnapshot(
         List<Group> groups,
         String appliedPackageCode,
         String appliedPackageNameRu,
-        String appliedPackageNamePl) {
+        String appliedPackageNamePl,
+        BigDecimal packageSubtotal) {
 
     /** Version 1 shape (no package marker); kept for readers and tests that build snapshots by hand. */
     public OfferSnapshot(int version, String capturedAt, BigDecimal vatRatePct, BigDecimal totalNet,
                          BigDecimal totalVat, BigDecimal totalGross, List<Room> rooms, List<Group> groups) {
-        this(version, capturedAt, vatRatePct, totalNet, totalVat, totalGross, rooms, groups, null, null, null);
+        this(version, capturedAt, vatRatePct, totalNet, totalVat, totalGross, rooms, groups,
+                null, null, null, null);
+    }
+
+    /** Shape with the package marker but without the package subtotal (D7 added it). */
+    public OfferSnapshot(int version, String capturedAt, BigDecimal vatRatePct, BigDecimal totalNet,
+                         BigDecimal totalVat, BigDecimal totalGross, List<Room> rooms, List<Group> groups,
+                         String appliedPackageCode, String appliedPackageNameRu, String appliedPackageNamePl) {
+        this(version, capturedAt, vatRatePct, totalNet, totalVat, totalGross, rooms, groups,
+                appliedPackageCode, appliedPackageNameRu, appliedPackageNamePl, null);
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -56,14 +66,26 @@ public record OfferSnapshot(
             BigDecimal unitPriceOverride,
             String comment,
             Long workPriceId,
-            Integer lineNo) {
+            Integer lineNo,
+            Long lineId,
+            Boolean packageCovered) {
+
+        /** Shape before D7 (no estimate line id, no package coverage flag). */
+        public Row(Long workItemId, String nameRu, String namePl, String unitCode, String unitNameRu,
+                   String unitNamePl, BigDecimal quantity, BigDecimal unitPrice, BigDecimal baseUnitPrice,
+                   BigDecimal valueNet, BigDecimal baseValueNet, List<Cell> cells,
+                   BigDecimal unitPriceOverride, String comment, Long workPriceId, Integer lineNo) {
+            this(workItemId, nameRu, namePl, unitCode, unitNameRu, unitNamePl, quantity, unitPrice,
+                    baseUnitPrice, valueNet, baseValueNet, cells, unitPriceOverride, comment, workPriceId,
+                    lineNo, null, null);
+        }
 
         /** Version 1 shape (no restore data). */
         public Row(Long workItemId, String nameRu, String namePl, String unitCode, String unitNameRu,
                    String unitNamePl, BigDecimal quantity, BigDecimal unitPrice, BigDecimal baseUnitPrice,
                    BigDecimal valueNet, BigDecimal baseValueNet, List<Cell> cells) {
             this(workItemId, nameRu, namePl, unitCode, unitNameRu, unitNamePl, quantity, unitPrice,
-                    baseUnitPrice, valueNet, baseValueNet, cells, null, null, null, null);
+                    baseUnitPrice, valueNet, baseValueNet, cells, null, null, null, null, null, null);
         }
     }
 

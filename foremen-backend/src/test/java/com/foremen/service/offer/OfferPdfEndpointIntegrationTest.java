@@ -2,8 +2,10 @@ package com.foremen.service.offer;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -20,11 +23,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 import com.foremen.dao.model.OfferEntity;
 import com.foremen.service.OfferService;
+import com.foremen.service.ProjectAccessCache;
 import com.foremen.testsupport.MockMvcSecurityConfig;
 
 /**
  * FOR-05-07b task 4.1: {@code GET /api/offers/{id}/pdf} through MockMvc. Staff 200 application/pdf,
  * CLIENT 404 for a DRAFT offer and 200 once SENT, legacy offer 404 error.offer.snapshot.missing.
+ * A CLIENT outside the offer project gets 404 even for a SENT offer (project scope, QA finding). The
+ * project-access cache is mocked: the client principal is its numeric user id, and its allowed
+ * projects are stubbed per test.
  * Repeatability: per-run ids, rows removed by {@link OfferExplorationSupport#cleanUpExploration()}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -38,6 +45,9 @@ class OfferPdfEndpointIntegrationTest extends OfferExplorationSupport {
     private OfferService offerService;
     @Autowired
     private MockMvc mockMvc;
+
+    @MockitoBean
+    private ProjectAccessCache projectAccessCache;
 
     private MvcResult getPdf(Long offerId, org.springframework.test.web.servlet.request.RequestPostProcessor who)
             throws Exception {
@@ -69,18 +79,35 @@ class OfferPdfEndpointIntegrationTest extends OfferExplorationSupport {
         addLine(f, new BigDecimal("10.00"), new BigDecimal("2.00"));
         authenticateAdmin();
         OfferEntity offer = offerService.prepareOffer(f.projectId, "Client pdf");
-        createClientUser();
+        Long clientId = createClientUser();
+        when(projectAccessCache.get(clientId)).thenReturn(Set.of(f.projectId));
 
-        MvcResult draft = getPdf(offer.getId(), user("client-" + runId).roles("CLIENT"));
+        MvcResult draft = getPdf(offer.getId(), user(String.valueOf(clientId)).roles("CLIENT"));
         assertThat(draft.getResponse().getStatus()).isEqualTo(404);
 
         authenticateAdmin();
         offerService.send(offer.getId());
-        MvcResult sent = getPdf(offer.getId(), user("client-" + runId).roles("CLIENT"));
+        MvcResult sent = getPdf(offer.getId(), user(String.valueOf(clientId)).roles("CLIENT"));
         assertThat(sent.getResponse().getStatus()).isEqualTo(200);
         assertThat(sent.getResponse().getContentType()).isEqualTo("application/pdf");
         assertThat(new String(sent.getResponse().getContentAsByteArray(), 0, 4, StandardCharsets.ISO_8859_1))
                 .isEqualTo("%PDF");
+    }
+
+    @Test
+    @DisplayName("a CLIENT of another project gets 404 for a SENT offer")
+    void clientOfAnotherProjectGetsNoPdf() throws Exception {
+        Fx f = emptyEstimateFixture("P4");
+        addLine(f, new BigDecimal("10.00"), new BigDecimal("2.00"));
+        authenticateAdmin();
+        OfferEntity offer = offerService.prepareOffer(f.projectId, "Foreign pdf");
+        offerService.send(offer.getId());
+        Long clientId = createClientUser();
+        when(projectAccessCache.get(clientId)).thenReturn(Set.of(f.projectId + 1_000_000L));
+
+        MvcResult result = getPdf(offer.getId(), user(String.valueOf(clientId)).roles("CLIENT"));
+
+        assertThat(result.getResponse().getStatus()).isEqualTo(404);
     }
 
     @Test

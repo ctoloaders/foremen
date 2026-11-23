@@ -55,6 +55,7 @@ import com.foremen.service.offer.DiscountResolver.EffectiveDiscount;
 import com.foremen.service.offer.DiscountResolver.EstimateLineInput;
 import com.foremen.service.offer.OfferStateChangeEvent;
 import com.foremen.service.offer.OfferSnapshotBuilder;
+import com.foremen.service.offer.OfferSnapshotTotals;
 import com.foremen.service.offer.OfferStatusMachine;
 import com.foremen.service.offer.OfferTotalsCalculator;
 import com.foremen.service.offer.OfferTotalsCalculator.OfferTotals;
@@ -218,6 +219,15 @@ public class OfferService
     @Override
     public Set<Long> allowedProjectIds(Long userId) {
         return projectAccessCache.get(userId);
+    }
+
+    /**
+     * FOR-05-07b: the caller must be able to see the offer's project (ADMIN bypasses); otherwise 404
+     * {@code error.entity.not.found}, indistinguishable from a missing offer. Called by every offer
+     * endpoint addressed by offer id, so a client of one project cannot read or act on another's offers.
+     */
+    public void assertOfferAccess(Long offerId) {
+        assertProjectAccess(offerId);
     }
 
     // --- Lifecycle: prepare (R1.1, R1.2, R1.3, R1.6, R1.7) ---
@@ -471,10 +481,69 @@ public class OfferService
         return offer;
     }
 
+    /** Audit operation of an update from the estimate (FOR-05-07b Round 2, D5). */
+    static final String AUDIT_REPREPARE = "REPREPARE";
+
+    /** 409 when a terminal offer is updated from the estimate. */
+    static final String REPREPARE_TERMINAL_MESSAGE = "error.offer.reprepare.terminal";
+
+    /** 400 when the offer belongs to another project than the one in the request path. */
+    static final String REPREPARE_PROJECT_MISMATCH_MESSAGE = "error.offer.reprepare.project.mismatch";
+
+    /**
+     * FOR-05-07b D5: rebuilds the snapshot of an existing non-terminal offer from the saved estimate.
+     * Status, name and inactive flag are kept, the totals are recomputed from the new snapshot, the
+     * version ({@code revision}) grows by one and an audit row {@code REPREPARE} records the previous
+     * version and totals. For a non-DRAFT offer an after-commit event notifies the project's CLIENT
+     * members. This is the only writer that replaces the snapshot of a SENT offer.
+     *
+     * @throws ForemenApiException 404 when the offer is missing; 400 when it belongs to another
+     *                             project; 409 {@code error.offer.reprepare.terminal} when terminal
+     */
+    @Transactional
+    public OfferEntity reprepare(Long projectId, Long offerId) {
+        OfferEntity offer = resolveOffer(offerId);
+        if (offer.getProject() == null || !Objects.equals(offer.getProject().getId(), projectId)) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, REPREPARE_PROJECT_MISMATCH_MESSAGE);
+        }
+        if (offer.getStatus() != null && offer.getStatus().isTerminal()) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, REPREPARE_TERMINAL_MESSAGE);
+        }
+        int previousRevision = offer.getRevision() == null ? 1 : offer.getRevision();
+        BigDecimal previousNet = offer.getTotalNet();
+        BigDecimal previousGross = offer.getTotalGross();
+
+        recomputeLiveTotals(offer);
+        offer.setSnapshot(buildSnapshot(offer, offer.getEstimate()));
+        recomputeTotals(offer);
+        offer.setRevision(previousRevision + 1);
+        offerDao.save(offer);
+
+        com.foremen.service.audit.AuditLogEntity row = new com.foremen.service.audit.AuditLogEntity();
+        row.setEntityClass(OfferEntity.class.getSimpleName());
+        row.setEntityId(offer.getId());
+        row.setOperation(AUDIT_REPREPARE);
+        row.setPerformedBy(resolveActingUserLabel());
+        row.setPerformedAt(java.time.LocalDateTime.now());
+        row.setSnapshotBefore("{\"revision\":" + previousRevision + ",\"totalNet\":" + previousNet
+                + ",\"totalGross\":" + previousGross + "}");
+        row.setSnapshotAfter("{\"revision\":" + offer.getRevision() + ",\"totalNet\":" + offer.getTotalNet()
+                + ",\"totalGross\":" + offer.getTotalGross() + "}");
+        auditLogDao.save(row);
+        entityManager.flush();
+
+        if (offer.getStatus() != OfferStatus.DRAFT) {
+            eventPublisher.publishEvent(new com.foremen.service.offer.OfferRepreparedEvent(
+                    offer.getId(), projectId, offer.getName(), offer.getRevision()));
+        }
+        return offer;
+    }
+
     /** The only snapshot writer besides {@link #prepareOffer}: recompute totals, rebuild, set. */
     private void rebuildDraftSnapshot(OfferEntity offer) {
         assertSnapshotWritable(offer);
-        recomputeTotals(offer);
+        // D7: the snapshot is about to be replaced, so the totals come from the live estimate here.
+        recomputeLiveTotals(offer);
         offer.setSnapshot(buildSnapshot(offer, offer.getEstimate()));
     }
 
@@ -488,9 +557,11 @@ public class OfferService
     private com.foremen.service.offer.OfferSnapshot buildSnapshot(OfferEntity offer, EstimateEntity estimate) {
         String code = estimate.getAppliedPackageCode();
         OfferPackageEntity pkg = resolvePackageOrNull(code);
+        Map<Long, BigDecimal> clientPrices = estimateClientPrices(estimate);
         return OfferSnapshotBuilder.build(
                 estimate, vatRateOf(estimate), offer.getTotalNet(), offer.getTotalVat(), offer.getTotalGross(),
-                code, pkg != null ? pkg.getNameRU() : null, pkg != null ? pkg.getNamePL() : null);
+                code, pkg != null ? pkg.getNameRU() : null, pkg != null ? pkg.getNamePL() : null,
+                clientPrices);
     }
 
     // --- Lifecycle: withdraw (R3.7) ---
@@ -550,6 +621,12 @@ public class OfferService
     @Transactional
     public OfferEntity approve(Long offerId) {
         OfferEntity offer = resolveOffer(offerId);
+        // One APPROVED offer per project: approvals of the same project run one after another. Without
+        // the row lock two concurrent approvals both read "no other APPROVED" and both succeed.
+        if (offer.getProject() != null && offer.getProject().getId() != null) {
+            entityManager.find(com.foremen.dao.model.ProjectEntity.class, offer.getProject().getId(),
+                    jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        }
         OfferStatus previous = offer.getStatus();
         transitionStatus(offer, OfferAction.APPROVE);
         // R3.5: drive the project OFFERED -> APPROVED alongside the offer approval.
@@ -558,9 +635,6 @@ public class OfferService
         offer.setApprovedRevision(offer.getRevision());
         offerDao.save(offer);
         entityManager.flush();
-
-        // FOR-05-07b A2: approving one offer withdraws every other non-terminal offer of the project.
-        withdrawSiblingsOnApprove(offer);
 
         // Emit the state-change event downstream consumers (FOR-05-14/09) read.
         eventPublisher.publishEvent(new OfferStateChangeEvent(
@@ -573,38 +647,57 @@ public class OfferService
         return offer;
     }
 
-    /** Operation of the audit row written for each sibling offer withdrawn by an approval (A2). */
-    static final String AUDIT_WITHDRAW_ON_APPROVE = "SYSTEM_WITHDRAW_ON_APPROVE";
+    /** Audit operations of the manual inactive flag (FOR-05-07b Round 2, D2). */
+    static final String AUDIT_DEACTIVATE = "DEACTIVATE";
+    static final String AUDIT_ACTIVATE = "ACTIVATE";
 
-    private void withdrawSiblingsOnApprove(OfferEntity approved) {
-        if (approved.getProject() == null) {
-            return;
-        }
-        Long projectId = approved.getProject().getId();
-        List<OfferEntity> siblings = offerDao.findByProjectIdAndStatusNotIn(projectId, TERMINAL_STATUSES);
-        if (siblings == null) {
-            return;
-        }
-        for (OfferEntity other : siblings) {
-            if (Objects.equals(other.getId(), approved.getId())) {
-                continue;
-            }
-            OfferStatus before = other.getStatus();
-            other.setStatus(offerStatusMachine.transition(before, OfferAction.WITHDRAW, "ADMIN"));
-            offerDao.save(other);
-            com.foremen.service.audit.AuditLogEntity row = new com.foremen.service.audit.AuditLogEntity();
-            row.setEntityClass(OfferEntity.class.getSimpleName());
-            row.setEntityId(other.getId());
-            row.setOperation(AUDIT_WITHDRAW_ON_APPROVE);
-            row.setPerformedBy(resolveActingUserLabel());
-            row.setPerformedAt(java.time.LocalDateTime.now());
-            row.setSnapshotBefore("{\"status\":\"" + before + "\"}");
-            row.setSnapshotAfter("{\"status\":\"" + other.getStatus() + "\",\"approvedOfferId\":"
-                    + approved.getId() + "}");
-            auditLogDao.save(row);
-        }
-        entityManager.flush();
+    /** 409 for a client decision on an inactive offer. */
+    static final String OFFER_INACTIVE_MESSAGE = "error.offer.inactive";
+
+    /** 409 when the project already holds an APPROVED offer. */
+    static final String ALREADY_APPROVED_MESSAGE = "error.offer.already.approved";
+
+    /**
+     * Marks a non-terminal offer inactive (manual flag, independent of the status). Idempotent: an offer
+     * already inactive is left as is and no audit row is written.
+     *
+     * @throws ForemenApiException 404 when the offer is missing; 409 when the offer is terminal
+     */
+    @Transactional
+    public OfferEntity deactivate(Long offerId) {
+        return setInactive(offerId, true);
     }
+
+    /** Marks a non-terminal offer active again; see {@link #deactivate(Long)}. */
+    @Transactional
+    public OfferEntity activate(Long offerId) {
+        return setInactive(offerId, false);
+    }
+
+    private OfferEntity setInactive(Long offerId, boolean inactive) {
+        OfferEntity offer = resolveOffer(offerId);
+        assertNonTerminal(offer);
+        if (offer.isInactive() == inactive) {
+            return offer;
+        }
+        offer.setInactive(inactive);
+        offerDao.save(offer);
+        com.foremen.service.audit.AuditLogEntity row = new com.foremen.service.audit.AuditLogEntity();
+        row.setEntityClass(OfferEntity.class.getSimpleName());
+        row.setEntityId(offer.getId());
+        row.setOperation(inactive ? AUDIT_DEACTIVATE : AUDIT_ACTIVATE);
+        row.setPerformedBy(resolveActingUserLabel());
+        row.setPerformedAt(java.time.LocalDateTime.now());
+        row.setSnapshotBefore("{\"inactive\":" + !inactive + "}");
+        row.setSnapshotAfter("{\"inactive\":" + inactive + "}");
+        auditLogDao.save(row);
+        entityManager.flush();
+        return offer;
+    }
+
+    /** Client decisions that an inactive offer refuses (D2). */
+    private static final Set<OfferAction> CLIENT_DECISIONS =
+            Set.of(OfferAction.APPROVE, OfferAction.REJECT, OfferAction.REQUEST_CHANGES);
 
     private static String resolveActingUserLabel() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -811,7 +904,31 @@ public class OfferService
      */
     private void transitionStatus(OfferEntity offer, OfferAction action) {
         OfferStatus next = offerStatusMachine.transition(offer.getStatus(), action, resolveActorRole());
+        // D2: the machine decided the transition is legal; the inactive flag and the one-approved rule
+        // are checked after it so an illegal transition keeps its own error.
+        if (CLIENT_DECISIONS.contains(action) && offer.isInactive()) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, OFFER_INACTIVE_MESSAGE);
+        }
+        if (action == OfferAction.APPROVE) {
+            assertNoOtherApproved(offer);
+        }
         offer.setStatus(next);
+    }
+
+    /** 409 when another offer of the project is already APPROVED. */
+    private void assertNoOtherApproved(OfferEntity offer) {
+        if (offer.getProject() == null) {
+            return;
+        }
+        List<OfferEntity> all = offerDao.findByProjectIdOrderByIdAsc(offer.getProject().getId());
+        if (all == null) {
+            return;
+        }
+        for (OfferEntity other : all) {
+            if (other.getStatus() == OfferStatus.APPROVED && !Objects.equals(other.getId(), offer.getId())) {
+                throw new ForemenApiException(HttpStatus.CONFLICT, ALREADY_APPROVED_MESSAGE);
+            }
+        }
     }
 
     /**
@@ -863,10 +980,26 @@ public class OfferService
      */
     @Transactional
     public void recomputeTotals(OfferEntity offer) {
+        OfferTotals totals = usesSnapshotTotals(offer)
+                ? OfferSnapshotTotals.compute(
+                        offer.getSnapshot(), offer.getDiscounts(), discountResolver, offerTotalsCalculator)
+                : computeLiveTotals(offer);
+        offer.setTotalNet(totals.totalNet());
+        offer.setTotalVat(totals.totalVat());
+        offer.setTotalGross(totals.totalGross());
+    }
+
+    /** FOR-05-07b D7: totals from the live estimate, used while the snapshot is being (re)built. */
+    private void recomputeLiveTotals(OfferEntity offer) {
         OfferTotals totals = computeLiveTotals(offer);
         offer.setTotalNet(totals.totalNet());
         offer.setTotalVat(totals.totalVat());
         offer.setTotalGross(totals.totalGross());
+    }
+
+    /** D7: an offer with a usable version 2 snapshot is priced from it; a legacy offer keeps the live path. */
+    private static boolean usesSnapshotTotals(OfferEntity offer) {
+        return OfferSnapshotTotals.usable(offer.getSnapshot());
     }
 
     /**
@@ -904,6 +1037,10 @@ public class OfferService
      * write path, which already calls {@link #recomputeTotals}.
      */
     private OfferEntity applyLiveTotals(OfferEntity offer) {
+        if (usesSnapshotTotals(offer)) {
+            // D7: reads return the stored totals, computed from the snapshot on the last write.
+            return offer;
+        }
         OfferTotals totals = computeLiveTotals(offer);
         offer.setTotalNet(totals.totalNet());
         offer.setTotalVat(totals.totalVat());

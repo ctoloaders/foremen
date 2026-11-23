@@ -65,7 +65,7 @@ public class OfferSnapshotService {
                     o.getTotalNet(), o.getTotalGross(), o.getSnapshot() != null,
                     o.getCreatedDate() != null ? o.getCreatedDate().toString() : null,
                     o.getSnapshot() != null ? o.getSnapshot().appliedPackageCode() : null,
-                    OfferSnapshotViews.packageName(o.getSnapshot(), ru)));
+                    OfferSnapshotViews.packageName(o.getSnapshot(), ru), o.isInactive()));
         }
         return result;
     }
@@ -75,7 +75,7 @@ public class OfferSnapshotService {
         OfferEntity offer = load(offerId, client);
         OfferSnapshot snapshot = requireSnapshot(offer);
         return OfferSnapshotViews.toView(
-                offer.getId(), displayName(offer, null), offer.getStatus(), snapshot, ru, includeBase && !client);
+                offer.getId(), displayName(offer, null), offer.getStatus(), snapshot, ru, includeBase && !client, offer.isInactive());
     }
 
     @Transactional(readOnly = true)
@@ -151,7 +151,7 @@ public class OfferSnapshotService {
 
     private CompareSide side(OfferEntity o, OfferSnapshot s, boolean ru) {
         return new CompareSide(o.getId(), displayName(o, null), s.totalNet(), s.totalVat(), s.totalGross(),
-                s.appliedPackageCode(), OfferSnapshotViews.packageName(s, ru));
+                s.appliedPackageCode(), OfferSnapshotViews.packageName(s, ru), o.isInactive());
     }
 
     private record RowCtx(OfferSnapshot.Row row, String categoryName, String name, String unitName) {

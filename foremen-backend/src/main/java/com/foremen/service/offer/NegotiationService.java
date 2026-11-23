@@ -630,6 +630,11 @@ public class NegotiationService {
                         HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "offerId", offerId));
     }
 
+    /** The id of the offer a negotiation round belongs to (404 when the round does not exist). */
+    public Long offerIdOfRound(Long roundId) {
+        return resolveRound(roundId).getOffer().getId();
+    }
+
     private OfferNegotiationRoundEntity resolveRound(Long roundId) {
         return roundDao.findById(roundId)
                 .orElseThrow(() -> new ForemenApiException(

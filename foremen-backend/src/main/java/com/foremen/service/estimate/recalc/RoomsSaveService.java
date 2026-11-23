@@ -31,7 +31,6 @@ import com.foremen.service.estimate.DraftGateGuard;
 import com.foremen.service.estimate.EstimateAssignmentService;
 import com.foremen.service.estimate.EstimateRecomputeService;
 import com.foremen.service.model.RoomServiceExtendedModel;
-import com.foremen.service.offer.OfferEstimateReactionService;
 import com.foremen.service.room.media.RoomMediaAttachService;
 import com.foremen.service.roomsimport.RoomImportLinkService;
 import com.foremen.service.roomsimport.model.ImportMediaRef;
@@ -79,7 +78,6 @@ public class RoomsSaveService {
     private final ProjectAccessCache projectAccessCache;
     private final EntityManager entityManager;
     private final ApplicationEventPublisher eventPublisher;
-    private final OfferEstimateReactionService offerReactionService;
     private final RoomMediaAttachService roomMediaAttachService;
     private final RoomImportLinkService roomImportLinkService;
 
@@ -206,9 +204,9 @@ public class RoomsSaveService {
             entityManager.flush();
             impact = EstimateSnapshot.diff(before, EstimateSnapshot.of(estimate));
             if (!impact.isEmpty() && !force) {
-                // FOR-05-07: tell the dialog what approving does to the offer (withdraw / new version).
+                // FOR-05-07b D3: offers no longer react to estimate changes, so the offer impact is always NONE.
                 throw new EstimateRecalcConflictException(
-                        impact, offerReactionService.impactOf(projectId).name()); // rolls back every write above
+                        impact, "NONE"); // rolls back every write above
             }
             if (!impact.isEmpty()) {
                 eventPublisher.publishEvent(new EstimateChangedEvent(

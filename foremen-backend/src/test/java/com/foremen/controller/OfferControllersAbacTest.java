@@ -97,7 +97,7 @@ class OfferControllersAbacTest {
     private final OfferController offerController =
             new OfferController(null, null, null, null, null);
     private final OfferNegotiationController negotiationController =
-            new OfferNegotiationController(null, null, null);
+            new OfferNegotiationController(null, null, null, null);
     private final ClientOfferController clientOfferController =
             new ClientOfferController(null);
     private final NotificationController notificationController =
@@ -209,7 +209,7 @@ class OfferControllersAbacTest {
         @Test
         @DisplayName("FOR-05-07 Batch 2: offers list / snapshot / compare → (OFFERS, READ), handlers COMPLETE")
         void snapshotEndpointsAreOffersRead() {
-            OfferSnapshotController snapshotController = new OfferSnapshotController(null);
+            OfferSnapshotController snapshotController = new OfferSnapshotController(null, null, null);
             HandlerMethod list = handlerFor(OfferSnapshotController.class, snapshotController, "list", Long.class);
             HandlerMethod snapshot = handlerFor(OfferSnapshotController.class, snapshotController, "snapshot", Long.class);
             HandlerMethod compare = handlerFor(OfferSnapshotController.class, snapshotController, "compare",

@@ -30,7 +30,6 @@ import com.foremen.exception.ForemenApiException;
 import com.foremen.service.estimate.EstimateAssignmentService;
 import com.foremen.service.estimate.matrix.EstimateMatrixDto;
 import com.foremen.service.estimate.recalc.EstimateChangedEvent;
-import com.foremen.service.offer.OfferEstimateReactionService;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
 
 import jakarta.validation.Valid;
@@ -84,7 +83,6 @@ public class EstimateMatrixController {
     private final EstimateCollabService collabService;
     private final CollabAccessGuard collabAccessGuard;
     private final ApplicationEventPublisher eventPublisher;
-    private final OfferEstimateReactionService offerReactionService;
 
     /**
      * The full Estimate matrix read model for a project (R1.1, R1.2, R2.1, R14): works grouped by
@@ -230,14 +228,16 @@ public class EstimateMatrixController {
     }
 
     /**
-     * FOR-05-07 additional task 5 — what an estimate change would do to the project's offer right
-     * now ({@code NONE} / {@code WITHDRAW} / {@code REVISE}), so the Estimate tab can warn before a
-     * Save that changes the estimate numbers (decision 3c). {@code ESTIMATE} READ.
+     * FOR-05-07b D3 — estimate changes no longer affect offers, so this always answers
+     * {@code NONE}. Kept only for compatibility with older clients. {@code ESTIMATE} READ.
+     *
+     * @deprecated offers do not react to estimate changes; the endpoint will be removed.
      */
+    @Deprecated
     @GetMapping("/project/{projectId}/offer-impact")
     @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = "READ")
     public ResponseEntity<java.util.Map<String, String>> offerImpact(@PathVariable Long projectId) {
-        return ResponseEntity.ok(java.util.Map.of("impact", offerReactionService.impactOf(projectId).name()));
+        return ResponseEntity.ok(java.util.Map.of("impact", "NONE"));
     }
 
     /** The REST caller as a {@link CollabPrincipal} (user id + role; name not needed here). */

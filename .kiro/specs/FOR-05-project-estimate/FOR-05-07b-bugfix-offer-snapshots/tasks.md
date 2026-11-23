@@ -245,6 +245,88 @@ Notes for the whole plan:
 - [x] 6. Checkpoint - Ensure all tests pass
   - Ensure all affected backend classes and frontend files pass (no full suite unless the user asks). Run `validate_spec_format` on this file. Ask the user if questions arise, in particular about assumptions A1 to A7 of `design.md`.
 
+## Round 2 (2026-11-20)
+
+Implements bugfix.md 2.9 to 2.16 and design.md "Round 2 design" (D1 to D8). Backend, changeset and spec live in the root repo, frontend in `foremen-frontend/`.
+
+- [x] 7. Backend, Round 2
+
+  - [x] 7.1 Manual inactive flag and one approved offer (D2)
+    - Changeset `268-offers-inactive-flag.xml` (next free number at edit time, `MARK_RAN` precondition, registered last in `changelog.xml`), `OfferEntity.inactive`, read models expose `inactive`.
+    - `POST /api/offers/{id}/deactivate` and `/activate` (`OFFERS` UPDATE, audit rows); client approve, reject and request-changes on an inactive offer answer 409 `error.offer.inactive`. Remove the Round 1 sibling withdraw from `OfferService.approve`; approve answers 409 `error.offer.already.approved` when an APPROVED offer exists. PL and RU message keys.
+    - Tests: new `OfferInactiveFlagIntegrationTest`; update `OfferFixCheckIntegrationTest` and `OfferApprovalMigrationIntegrationTest`.
+    - _Requirements: 2.10, 3.1_
+
+  - [x] 7.2 Remove the offer reaction to estimate changes (D3)
+    - Delete `OfferEstimateReactionListener` and the withdraw and revise paths of `OfferEstimateReactionService`. The offer-impact endpoint of `EstimateMatrixController` answers `NONE` (`@Deprecated`); `RoomsSaveService` sends `NONE`.
+    - Replace `OfferEstimateReactionServiceTest` and the reaction cases of the integration tests with `EstimateChangeLeavesOffersPropertyTest` (estimate save, package apply, labour adjustment, room change and restore leave every offer byte-identical).
+    - _Requirements: 2.11_
+
+  - [x] 7.3 Offer totals from the snapshot (D7)
+    - For version 2 snapshots replace `computeLiveTotals` with a computation over snapshot rows, offer discounts and the snapshot `vatRatePct`; drop `applyLiveTotals` from the read path; `OfferDiscountService` and `NegotiationService` use it; legacy offers keep the live path; labour comparison from the snapshot.
+    - Tests: new `OfferSnapshotTotalsTest` (card totals equal the snapshot after an estimate edit; discounts applied on snapshot prices).
+    - _Depends on: 7.1 (same `OfferService`)_
+    - _Requirements: 2.15_
+
+  - [x] 7.4 Update an existing offer from the estimate (D5, backend)
+    - Prepare body `{ name?, offerId? }`; `OfferService.reprepare(offerId)`: 400 for another project, 409 `error.offer.reprepare.terminal` for terminal offers, snapshot rebuilt from the saved estimate, totals from the snapshot, status, name and inactive flag kept, version + 1, audit `REPREPARE`. For a non-DRAFT offer, an after-commit event notifies the CLIENT members of the project through `NotificationService` (PL and RU text).
+    - Tests: new `OfferReprepareIntegrationTest` (SENT and inactive offers keep status, version + 1, notification only when not DRAFT, terminal refused, the snapshot of other offers unchanged).
+    - _Depends on: 7.3_
+    - _Requirements: 2.1, 2.13_
+
+  - [x] 7.5 Multi-offer comparison endpoint (D4, backend)
+    - `GET /api/offers/compare-many?ids=...` in `OfferSnapshotController` (`OFFERS` READ): 2 to 10 ids of one project with a snapshot, else 400; DRAFT for a CLIENT 404. `MultiComparison` with offers, groups (`valueNet` per offer) and works (per offer quantity, value and rooms); CLIENT redaction. `GET /compare` stays.
+    - Tests: new `OfferCompareManyIntegrationTest`.
+    - _Requirements: 2.12, 3.2, 3.5_
+
+- [x] 8. Frontend, Round 2 (repo `foremen-frontend/`)
+
+  - [x] 8.1 Snapshot cache after send (D1)
+    - `useSendOffer` invalidates the snapshot query of the offer. Test: send with an open snapshot view shows the rebuilt snapshot without reload.
+    - _Requirements: 2.9_
+
+  - [x] 8.2 Inactive toggle and no offer-impact warnings (D2, D3)
+    - Badge `offer-inactive-badge` ("Nieaktywna") and toggle `offer-toggle-inactive-{id}` for executors; the client sees the badge and no approve, reject or negotiation buttons on inactive offers. Remove `OfferImpactWarning` from the estimate Save confirmation (`EstimateTab`), `EstimateRecalcDialog` and `OfferRestoreButton`. PL and RU keys.
+    - Tests: `OfferTab.test.tsx` (toggle, badge, client actions hidden), updated `EstimateTab` and restore tests.
+    - _Depends on: 8.1 (shared offer files and locales), 7.1_
+    - _Requirements: 2.10, 2.11_
+
+  - [x] 8.3 Unsaved estimate edits guard (D6)
+    - New `UnsavedEstimateGuard` dialog over the staged-edits store: "Zapisz i kontynuuj" (continue only after a successful Save), "Odrzuć zmiany", "Anuluj". Wrap refresh snapshot and restore; it replaces the disabled restore state. PL and RU keys.
+    - Tests: `UnsavedEstimateGuard.test.tsx`.
+    - _Depends on: 8.2_
+    - _Requirements: 2.14_
+
+  - [x] 8.4 Prepare dialog: update an existing offer or create a new one (D5, frontend)
+    - `PrepareOfferDialog` lists every offer of the project (`prepare-offer-option-{id}`: name, status, inactive badge, version; terminal offers disabled) and "Nowa oferta" with `prepare-offer-name-input` (max 255). A sent offer shows `prepare-offer-update-hint`. Used by the estimate tab and the offers tab (the inline name input becomes a button). Goes through `UnsavedEstimateGuard`. `prepareOffer` sends `offerId` for an existing offer and invalidates the list, the offer and its snapshot.
+    - Tests: `PrepareOfferDialog.test.tsx` (existing offer, new name, cancel, terminal disabled, update hint, 255 limit), updated `EstimateTab.test.tsx` and `OfferTab.test.tsx`.
+    - _Depends on: 8.3, 7.4_
+    - _Requirements: 2.13, 2.14, 3.4_
+
+  - [x] 8.5 Selection, comparison screen and send selected (D4, D8)
+    - Checkbox `offer-select-{id}` on every card and history row with a snapshot. `offer-compare-open` ("Porównaj (n)", 2 or more) navigates to `/projects/{id}/pricing/compare?ids=...`; `offer-send-selected` ("Wyślij zaznaczone (n)") sends the checked DRAFT offers.
+    - New `OfferComparisonPage`: one column per offer (name, status, inactive badge, version, package marker, totals); category rows with cost and delta to the first offer, collapsed by default, expanding to work rows (volume with unit, cost, deltas); a click on a work cell opens a popover with the rooms and volumes of that offer; no room columns; back link. Replaces the in-tab `OfferComparisonPanel`. PL and RU keys.
+    - Tests: `OfferComparisonPage.test.tsx`, `OfferTab.test.tsx` (selection, buttons hidden below their thresholds, send selected).
+    - _Depends on: 8.4, 7.5_
+    - _Requirements: 2.12, 2.16, 3.2_
+
+- [x] 9. Fix checking, Round 2
+
+  - [x] 9.1 Backend affected-class run
+    - Run only the Round 2 classes of design.md "Testing, Round 2" with `--tests`, output to `/tmp/for-05-07b-r2-test.log`, read the JUnit XML.
+    - _Requirements: 2.10, 2.11, 2.12, 2.13, 2.15_
+
+  - [x] 9.2 Frontend run
+    - In `foremen-frontend/`: `npx vitest --run src/features/project-offer src/features/estimate src/features/rooms/components/EstimateRecalcDialog.test.tsx` and `npx tsc --noEmit`.
+    - _Requirements: 2.9, 2.10, 2.11, 2.12, 2.13, 2.14, 2.16_
+
+- [x] 10. Update test-cases.md for Round 2
+  - Add a Round 2 group in Russian following `.kiro/steering/test-cases.md`: inactive toggle (sendable, client cannot approve), one approved offer per project, estimate edit leaves offers unchanged, update of an existing offer (status kept, version + 1, client notified), unsaved-edits guard, comparison screen (groups, expand, deltas, rooms popover), send selected, snapshot view refreshed after send, totals from the snapshot. Repeatability through a run-id generator and teardown; extend "Регрессия" with the Round 1 browser findings.
+  - _Requirements: 2.9, 2.10, 2.11, 2.12, 2.13, 2.14, 2.15, 2.16_
+
+- [x] 11. Checkpoint, Round 2
+  - Ensure the affected backend classes and frontend files pass (no full suite unless asked), run `validate_spec_format` on this file, then repeat the browser validation on a fresh QA project. Ask the user about open points O1 and O2 of `design.md`.
+
 ## Task Dependency Graph
 
 ```json
@@ -258,7 +340,15 @@ Notes for the whole plan:
     { "id": 5, "tasks": ["3.17", "3.18"] },
     { "id": 6, "tasks": ["4.1", "4.2"] },
     { "id": 7, "tasks": ["5"] },
-    { "id": 8, "tasks": ["6"] }
+    { "id": 8, "tasks": ["6"] },
+    { "id": 9, "tasks": ["7.1", "7.2", "7.5", "8.1"] },
+    { "id": 10, "tasks": ["7.3", "8.2"] },
+    { "id": 11, "tasks": ["7.4", "8.3"] },
+    { "id": 12, "tasks": ["8.4"] },
+    { "id": 13, "tasks": ["8.5"] },
+    { "id": 14, "tasks": ["9.1", "9.2"] },
+    { "id": 15, "tasks": ["10"] },
+    { "id": 16, "tasks": ["11"] }
   ]
 }
 ```

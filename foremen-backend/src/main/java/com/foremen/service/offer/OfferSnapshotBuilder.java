@@ -14,6 +14,7 @@ import com.foremen.dao.model.MeasurementUnitEntity;
 import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
+import com.foremen.service.estimate.EstimatePackagePricingService;
 
 /**
  * FOR-05-07 Batch 2 / FOR-05-07b: builds the {@link OfferSnapshot} from the live estimate. Static and
@@ -46,6 +47,22 @@ public final class OfferSnapshotBuilder {
     public static OfferSnapshot build(EstimateEntity estimate, BigDecimal vatRatePct,
                                       BigDecimal totalNet, BigDecimal totalVat, BigDecimal totalGross,
                                       String packageCode, String packageNameRu, String packageNamePl) {
+        return build(estimate, vatRatePct, totalNet, totalVat, totalGross,
+                packageCode, packageNameRu, packageNamePl, null);
+    }
+
+    /**
+     * D7: as above, plus the client prices the offer totals were computed over (the map of
+     * {@code OfferService.estimateClientPrices}). When it carries the synthetic package key, the snapshot
+     * records the package subtotal and marks every row whose line is covered by the package (absent from
+     * the map); {@code null} means no package pricing.
+     */
+    public static OfferSnapshot build(EstimateEntity estimate, BigDecimal vatRatePct,
+                                      BigDecimal totalNet, BigDecimal totalVat, BigDecimal totalGross,
+                                      String packageCode, String packageNameRu, String packageNamePl,
+                                      Map<Long, BigDecimal> clientPrices) {
+        BigDecimal packageSubtotal = clientPrices != null
+                ? clientPrices.get(EstimatePackagePricingService.PACKAGE_PRICE_KEY) : null;
         Map<Long, OfferSnapshot.Room> rooms = new LinkedHashMap<>();
         Map<Long, List<OfferSnapshot.Row>> rowsByCategory = new LinkedHashMap<>();
         Map<Long, WorkCategoryEntity> categories = new LinkedHashMap<>();
@@ -86,7 +103,8 @@ public final class OfferSnapshotBuilder {
                     line.effectiveValueNet(), line.originalValueNet(), cells,
                     line.getUnitPriceOverride(), line.getComment(),
                     line.getWorkPrice() != null ? line.getWorkPrice().getId() : null,
-                    line.getLineNo()));
+                    line.getLineNo(), line.getId(),
+                    packageSubtotal != null ? !clientPrices.containsKey(line.getId()) : null));
         }
         List<OfferSnapshot.Group> groups = new ArrayList<>();
         rowsByCategory.forEach((categoryId, rows) -> {
@@ -99,6 +117,7 @@ public final class OfferSnapshotBuilder {
                 totalNet, totalVat, totalGross, new ArrayList<>(rooms.values()), groups,
                 hasPackage ? packageCode : null,
                 hasPackage ? packageNameRu : null,
-                hasPackage ? packageNamePl : null);
+                hasPackage ? packageNamePl : null,
+                packageSubtotal);
     }
 }

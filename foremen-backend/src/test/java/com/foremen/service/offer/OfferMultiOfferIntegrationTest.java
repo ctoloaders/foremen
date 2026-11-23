@@ -1,7 +1,6 @@
 package com.foremen.service.offer;
 
 import java.math.BigDecimal;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
@@ -14,7 +13,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import com.foremen.dao.model.OfferEntity;
 import com.foremen.dao.model.OfferStatus;
 import com.foremen.service.OfferService;
-import com.foremen.service.estimate.recalc.EstimateChangedEvent;
 
 /**
  * FOR-05-07b task 4.1: several non-terminal offers per project (A2, A4).
@@ -29,8 +27,6 @@ class OfferMultiOfferIntegrationTest extends OfferExplorationSupport {
     private OfferService offerService;
     @Autowired
     private OfferSnapshotService offerSnapshotService;
-    @Autowired
-    private OfferEstimateReactionService reactionService;
 
     private OfferStatus statusOf(Long offerId) {
         return tx().execute(s -> entityManager.find(OfferEntity.class, offerId).getStatus());
@@ -64,8 +60,8 @@ class OfferMultiOfferIntegrationTest extends OfferExplorationSupport {
     }
 
     @Test
-    @DisplayName("approving one of several offers withdraws every other non-terminal offer with an audit row (A2)")
-    void approveWithdrawsSiblings() {
+    @DisplayName("approving one of several offers leaves the other offers unchanged (Round 2 D2)")
+    void approveLeavesOthersUnchanged() {
         Fx f = emptyEstimateFixture("M2");
         addLine(f, new BigDecimal("10.00"), new BigDecimal("2.00"));
         authenticateAdmin();
@@ -75,42 +71,14 @@ class OfferMultiOfferIntegrationTest extends OfferExplorationSupport {
         offerService.send(a.getId());
         offerService.send(b.getId());
         // c stays DRAFT.
-
         authenticateAs(createClientUser(), "ROLE_CLIENT");
         OfferEntity approved = offerService.approve(a.getId());
 
         assertThat(approved.getStatus()).isEqualTo(OfferStatus.APPROVED);
         assertThat(statusOf(a.getId())).isEqualTo(OfferStatus.APPROVED);
-        assertThat(statusOf(b.getId())).isEqualTo(OfferStatus.WITHDRAWN);
-        assertThat(statusOf(c.getId())).isEqualTo(OfferStatus.WITHDRAWN);
-        assertThat(auditCount(b.getId(), "SYSTEM_WITHDRAW_ON_APPROVE")).isEqualTo(1L);
-        assertThat(auditCount(c.getId(), "SYSTEM_WITHDRAW_ON_APPROVE")).isEqualTo(1L);
-        assertThat(auditCount(a.getId(), "SYSTEM_WITHDRAW_ON_APPROVE")).isZero();
-    }
-
-    @Test
-    @DisplayName("an estimate change withdraws every seen offer and leaves a DRAFT untouched (A4)")
-    void estimateChangeWithdrawsSeenOffers() {
-        Fx f = emptyEstimateFixture("M3");
-        addLine(f, new BigDecimal("10.00"), new BigDecimal("2.00"));
-        authenticateAdmin();
-        OfferEntity a = offerService.prepareOffer(f.projectId, "A");
-        OfferEntity b = offerService.prepareOffer(f.projectId, "B");
-        OfferEntity draft = offerService.prepareOffer(f.projectId, "Draft");
-        offerService.send(a.getId());
-        offerService.send(b.getId());
-
-        OfferEstimateReactionService.Reaction reaction = reactionService.react(new EstimateChangedEvent(
-                f.projectId, f.estimateId, null, EstimateChangedEvent.Trigger.ESTIMATE_SAVED));
-
-        assertThat(reaction).isNotNull();
-        assertThat(reaction.withdrawnOfferIds()).containsExactlyInAnyOrder(a.getId(), b.getId());
-        assertThat(statusOf(a.getId())).isEqualTo(OfferStatus.WITHDRAWN);
-        assertThat(statusOf(b.getId())).isEqualTo(OfferStatus.WITHDRAWN);
-        assertThat(statusOf(draft.getId())).isEqualTo(OfferStatus.DRAFT);
-        assertThat(auditCount(a.getId(), "SYSTEM_WITHDRAW")).isEqualTo(1L);
-        assertThat(auditCount(b.getId(), "SYSTEM_WITHDRAW")).isEqualTo(1L);
-        assertThat(auditCount(draft.getId(), "SYSTEM_WITHDRAW")).isZero();
-        assertThat(List.of(a.getId(), b.getId(), draft.getId())).hasSize(3);
+        assertThat(statusOf(b.getId())).isEqualTo(OfferStatus.SENT);
+        assertThat(statusOf(c.getId())).isEqualTo(OfferStatus.DRAFT);
+        assertThat(auditCount(b.getId(), "SYSTEM_WITHDRAW_ON_APPROVE")).isZero();
+        assertThat(auditCount(c.getId(), "SYSTEM_WITHDRAW_ON_APPROVE")).isZero();
     }
 }

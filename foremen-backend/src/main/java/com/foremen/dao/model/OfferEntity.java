@@ -72,6 +72,13 @@ public class OfferEntity extends BaseEntity {
     @Column(name = "snapshot", columnDefinition = "jsonb")
     private OfferSnapshot snapshot;
 
+    /**
+     * FOR-05-07b Round 2: manual inactive flag, independent of the status. An inactive offer stays
+     * sendable, visible and comparable, but the client cannot approve, reject or negotiate it.
+     */
+    @Column(name = "inactive", nullable = false)
+    private boolean inactive = false;
+
     /** Monotonically increasing revision; defaults to 1 on creation (R1.5). */
     @Column(name = "revision", nullable = false)
     private Integer revision = 1;

@@ -72,6 +72,7 @@ public class ClientOfferController {
             @PathVariable Long offerId,
             @PathVariable Long materialLineId,
             @RequestBody ChooseConcreteRequest request) {
+        offerService.assertOfferAccess(offerId);
         OfferEntity offer = offerService.chooseFinishingConcrete(
                 offerId, materialLineId, request != null ? request.materialId() : null);
         return ResponseEntity.ok(ChooseConcreteResponse.of(offer));

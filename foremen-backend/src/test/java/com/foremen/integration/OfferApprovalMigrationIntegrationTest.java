@@ -154,7 +154,7 @@ class OfferApprovalMigrationIntegrationTest {
     void offersHasDocumentedColumns() throws Exception {
         assertColumns("offers",
                 "id", "project_id", "estimate_id", "selected_package_id", "revision",
-                "status", "approved_revision", "total_net", "total_vat", "total_gross");
+                "status", "approved_revision", "total_net", "total_vat", "total_gross", "inactive");
     }
 
     @Test

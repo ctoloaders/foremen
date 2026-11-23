@@ -40,8 +40,8 @@ import lombok.RequiredArgsConstructor;
  *
  * <p>Assumptions: A1 (whole estimate replaced, refused with 409 {@code error.estimate.locked} when not
  * DRAFT), A3 (a missing or version 1 snapshot is refused, 404 {@code error.offer.snapshot.missing}),
- * A4 (an {@link EstimateChangedEvent} with trigger {@code OFFER_RESTORE} is published, so the normal offer
- * reaction runs after commit), A5 (cells of rooms that no longer exist are skipped and listed).
+ * D3 (an {@link EstimateChangedEvent} with trigger {@code OFFER_RESTORE} is published for the collaboration
+ * broadcast; offers do not react to it), A5 (cells of rooms that no longer exist are skipped and listed).
  * Chosen materials are not part of the snapshot and are not restored.
  */
 @Service

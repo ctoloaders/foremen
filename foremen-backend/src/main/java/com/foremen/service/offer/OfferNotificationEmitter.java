@@ -3,6 +3,8 @@ package com.foremen.service.offer;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -60,6 +62,12 @@ public class OfferNotificationEmitter {
     /** {@code Notification_Type} i18n key: the manager rejected the request (to the CLIENT, R14.3). */
     static final String TYPE_MANAGER_REJECT = "notification.offer.manager.reject";
 
+    /** {@code Notification_Type} i18n key: an offer was updated from the estimate (to the CLIENT, D5). */
+    static final String TYPE_OFFER_REPREPARED = "notification.offer.reprepared";
+
+    /** The project role code of the offer's client recipients. */
+    private static final String CLIENT_ROLE = "CLIENT";
+
     /** The project role code of the offer's executor recipient (the discount-request recipient). */
     private static final String MANAGER_ROLE = "MANAGER";
 
@@ -92,6 +100,33 @@ public class OfferNotificationEmitter {
             // negotiation transition.
             log.error("Failed to emit offer-negotiation notification for offer {} (trigger {})",
                     event.offerId(), event.trigger(), e);
+        }
+    }
+
+    /**
+     * FOR-05-07b D5: a non-DRAFT offer was updated from the estimate; notifies every CLIENT member of
+     * the project (PL and RU text). Best effort and after commit, like the negotiation notifications.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
+    public void onOfferReprepared(OfferRepreparedEvent event) {
+        try {
+            if (event.projectId() == null) {
+                return;
+            }
+            String body = "Oferta „" + event.offerName() + "” została zaktualizowana (wersja "
+                    + event.revision() + ").\n"
+                    + "Оферта «" + event.offerName() + "» обновлена (версия " + event.revision() + ").";
+            for (ProjectMemberEntity member : projectMemberDao.findByProjectId(event.projectId())) {
+                RoleEntity role = member.getProjectRole();
+                UserEntity user = member.getUser();
+                if (role != null && CLIENT_ROLE.equals(role.getCode()) && user != null && user.getId() != null) {
+                    notificationService.create(user.getId(), TYPE_OFFER_REPREPARED, body,
+                            deepLink(event.projectId()));
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to emit offer-updated notification for offer {}", event.offerId(), e);
         }
     }
 

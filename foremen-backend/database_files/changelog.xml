@@ -1026,4 +1026,6 @@
     <include file="database_files/changesets/266-room-manual-dimension-sources.xml"/>
     <!-- FOR-05-07b: allow several non-terminal offers per project (drop ux_offers_active_project). -->
     <include file="database_files/changesets/267-drop-offers-active-project-index.xml"/>
+    <!-- FOR-05-07b Round 2: manual inactive flag of an offer. -->
+    <include file="database_files/changesets/268-offers-inactive-flag.xml"/>
 </databaseChangeLog>

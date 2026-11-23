@@ -47,6 +47,9 @@ dependencies {
     // constructor builds a LogFactory, so it must be on the runtime classpath explicitly.
     testImplementation "commons-logging:commons-logging:${commonsLoggingVersion}"
 
+    // ---- FOR-05-07b offers slice: read the text of downloaded offer PDFs ----
+    testImplementation "org.apache.pdfbox:pdfbox:${pdfboxVersion}"
+
     // ---- Logging backend for Playwright/HikariCP SLF4J calls ----
     testRuntimeOnly "org.slf4j:slf4j-simple:${slf4jVersion}"
 }
@@ -260,6 +263,26 @@ tasks.register('featureTestForQaAuto10', Test) {
     systemProperty 'cucumber.execution.enabled', 'true'
     systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
 
+    testLogging {
+        events 'passed', 'skipped', 'failed'
+        showStandardStreams = true
+    }
+}
+
+// Sub-sliced alias for the FOR-QA-AUTO-05-07B offer-snapshots slice (FOR-05-07b: snapshots, PDF,
+// restore, several offers, inactive flag, comparison, re-prepare). Pins the
+// '@detailed and @FOR-QA-AUTO-05-07B' tag so the slice runs alone; -DQA_TAGS is only an override
+// (for example "@detailed and @FOR-QA-AUTO-05-07B and @api" for the API half).
+tasks.register('featureTestForQaAuto0507b', Test) {
+    group = 'verification'
+    description = 'Runs the @detailed @FOR-QA-AUTO-05-07B offer-snapshots (API + UI) slice.'
+    useJUnitPlatform()
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    def tags = System.getProperty('QA_TAGS', System.getenv('QA_TAGS') ?: '@detailed and @FOR-QA-AUTO-05-07B')
+    systemProperty 'cucumber.filter.tags', tags
+    systemProperty 'cucumber.execution.enabled', 'true'
+    systemProperties System.getProperties().findAll { k, v -> k.toString().startsWith('QA_') || k.toString().startsWith('FOREMEN_') }
     testLogging {
         events 'passed', 'skipped', 'failed'
         showStandardStreams = true

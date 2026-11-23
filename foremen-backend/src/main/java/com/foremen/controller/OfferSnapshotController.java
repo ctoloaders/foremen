@@ -16,9 +16,12 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.foremen.config.security.PermissionResource;
 import com.foremen.config.security.RequiresPermission;
+import com.foremen.service.OfferService;
 import com.foremen.service.offer.ClientOfferReadModelAssembler;
+import com.foremen.service.offer.OfferMultiComparisonService;
 import com.foremen.service.offer.OfferSnapshotService;
 import com.foremen.service.offer.OfferSnapshotViews.Comparison;
+import com.foremen.service.offer.OfferSnapshotViews.MultiComparison;
 import com.foremen.service.offer.OfferSnapshotViews.OfferSummary;
 import com.foremen.service.offer.OfferSnapshotViews.SnapshotView;
 
@@ -41,11 +44,14 @@ public class OfferSnapshotController {
     private static final String CLIENT_ROLE = "CLIENT";
 
     private final OfferSnapshotService offerSnapshotService;
+    private final OfferMultiComparisonService offerMultiComparisonService;
+    private final OfferService offerService;
 
     /** All offers of the project, newest first (CLIENT: only offers already sent to the client). */
     @GetMapping("/project/{projectId}/list")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<List<OfferSummary>> list(@PathVariable Long projectId) {
+        offerService.assertProjectIdAccess(projectId);
         return ResponseEntity.ok(offerSnapshotService.listByProject(projectId, CLIENT_ROLE.equals(roleCode())));
     }
 
@@ -53,6 +59,7 @@ public class OfferSnapshotController {
     @GetMapping("/{offerId}/snapshot")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<SnapshotView> snapshot(@PathVariable Long offerId) {
+        offerService.assertOfferAccess(offerId);
         String role = roleCode();
         return ResponseEntity.ok(offerSnapshotService.snapshot(
                 offerId, CLIENT_ROLE.equals(role),
@@ -63,7 +70,19 @@ public class OfferSnapshotController {
     @GetMapping("/compare")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
     public ResponseEntity<Comparison> compare(@RequestParam("left") Long left, @RequestParam("right") Long right) {
+        offerService.assertOfferAccess(left);
+        offerService.assertOfferAccess(right);
         return ResponseEntity.ok(offerSnapshotService.compare(left, right, CLIENT_ROLE.equals(roleCode()), isRu()));
+    }
+
+    /** Comparison of 2 to 10 offers of one project (D4); the client computes differences against the first id. */
+    @GetMapping("/compare-many")
+    @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
+    public ResponseEntity<MultiComparison> compareMany(@RequestParam("ids") List<Long> ids) {
+        if (ids != null) {
+            ids.stream().distinct().forEach(offerService::assertOfferAccess);
+        }
+        return ResponseEntity.ok(offerMultiComparisonService.compareMany(ids, CLIENT_ROLE.equals(roleCode()), isRu()));
     }
 
     private static boolean isRu() {
