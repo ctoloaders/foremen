@@ -208,6 +208,7 @@ class ProjectCustomCreateIT {
             // Child tables that reference users must be cleared before deleting users, otherwise the
             // FK from these token tables (e.g. invite_tokens created by the newClient flow) blocks
             // userDao.deleteAll(). All four token tables exist under the create-drop JPA schema.
+            entityManager.createNativeQuery("DELETE FROM notifications").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM invite_tokens").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM otp_tokens").executeUpdate();
             entityManager.createNativeQuery("DELETE FROM refresh_tokens").executeUpdate();
@@ -262,7 +263,7 @@ class ProjectCustomCreateIT {
             assertThat(projectDao.findById(projectId)).as("project persisted").isPresent();
 
             List<ProjectMemberEntity> members = projectMemberDao.findByProjectId(projectId);
-            assertThat(members).as("two memberships: team member + client").hasSize(2);
+            assertThat(members).as("three memberships: team member + auto-added creator + client").hasSize(3);
 
             ProjectMemberEntity clientMembership = members.stream()
                     .filter(m -> "CLIENT".equals(m.getProjectRole().getCode()))
@@ -319,15 +320,68 @@ class ProjectCustomCreateIT {
             assertThat(created.getStatus()).as("new client is INVITED").isEqualTo(UserStatus.INVITED);
             assertThat(created.getPasswordHash()).as("new client has no password").isNull();
 
-            // Exactly one project_members row: the CLIENT membership on the new project.
+            // Two project_members rows: the auto-added MANAGER creator + the CLIENT membership.
             List<ProjectMemberEntity> members = projectMemberDao.findByProjectId(projectId);
-            assertThat(members).as("one membership: the new client under CLIENT").hasSize(1);
-            assertThat(members.get(0).getUser().getId()).isEqualTo(created.getId());
-            assertThat(members.get(0).getProjectRole().getCode()).isEqualTo("CLIENT");
+            assertThat(members).as("two memberships: creator + the new client under CLIENT").hasSize(2);
+            ProjectMemberEntity clientMembership = members.stream()
+                    .filter(m -> "CLIENT".equals(m.getProjectRole().getCode()))
+                    .findFirst()
+                    .orElseThrow(() -> new AssertionError("expected a CLIENT membership"));
+            assertThat(clientMembership.getUser().getId()).isEqualTo(created.getId());
         });
 
         // The client-portal invitation was dispatched exactly once (reused FOR-03-05 flow).
         verify(invitationMailSender, times(1)).sendClientPortalInvitation(any(UserEntity.class));
+    }
+
+    // === 7.2b : real non-ADMIN MANAGER caller + members[] + newClient (regression: 404 on create) ===
+
+    @Test
+    @DisplayName("POST /api/projects as a real MANAGER user with members[] + newClient -> 201 (no error.entity.not.found)")
+    void create_asRealManager_withMembersAndNewClient_returns201() throws Exception {
+        RoleEntity managerRole = roleDao.findByCode(MANAGER).orElseThrow();
+        UserEntity manager = tx.execute(status -> {
+            UserEntity user = new UserEntity();
+            user.setName("Real Manager " + nextId());
+            user.setEmail("real-manager+" + runId + "-" + nextId() + "@example.com");
+            user.setRole(managerRole);
+            user.setActive(true);
+            user.setStatus(UserStatus.ACTIVE);
+            user.setLocale(java.util.Locale.forLanguageTag("ru"));
+            return userDao.save(user);
+        });
+        UserEntity teamMember = createUser("Team Member", "member");
+        String projectName = "Manager Create " + nextId();
+        String clientEmail = uniqueEmail();
+
+        String body = """
+                {
+                  "name": "%s",
+                  "members": [ {"userId": %d, "projectRoleId": %d} ],
+                  "client": {"newClient": {"name": "New Client", "email": "%s"}}
+                }
+                """.formatted(projectName, teamMember.getId(), memberRole.getId(), clientEmail);
+
+        String token = "Bearer " + jwtTokenProvider.generateAccessToken(
+                manager.getId(), MANAGER, manager.getEmail());
+
+        MvcResult result = mockMvc.perform(post(PROJECTS_PATH)
+                        .header("Authorization", token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn();
+
+        assertThat(result.getResponse().getStatus())
+                .as("non-ADMIN creator must get 201, body=%s", result.getResponse().getContentAsString())
+                .isEqualTo(201);
+
+        long projectId = objectMapper.readTree(result.getResponse().getContentAsString()).path("id").asLong();
+        tx.executeWithoutResult(status -> {
+            assertThat(projectMemberDao.existsByUserIdAndProjectId(teamMember.getId(), projectId))
+                    .as("team member attached").isTrue();
+            assertThat(projectMemberDao.existsByUserIdAndProjectId(manager.getId(), projectId))
+                    .as("creator auto-added").isTrue();
+        });
     }
 
     // === 7.3 : failure rolls back -> no project, no membership, no client persisted ===
@@ -335,6 +389,7 @@ class ProjectCustomCreateIT {
     @Test
     @DisplayName("POST /api/projects with a member referencing an unknown user -> failure rolls back the whole transaction")
     void create_failingMember_rollsBackEverything() throws Exception {
+        String managerToken = bearer(MANAGER); // persists the caller BEFORE the baseline counts
         long projectsBefore = projectDao.count();
         long usersBefore = userDao.count();
         long membersBefore = projectMemberDao.count();
@@ -355,7 +410,7 @@ class ProjectCustomCreateIT {
                 """.formatted(projectName, unknownUserId, memberRole.getId(), clientEmail);
 
         MvcResult result = mockMvc.perform(post(PROJECTS_PATH)
-                        .header("Authorization", bearer(MANAGER))
+                        .header("Authorization", managerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andReturn();
@@ -420,8 +475,21 @@ class ProjectCustomCreateIT {
 
     /** Mints a JWT whose principal name is a userId (1L) and whose authority is ROLE_<code>. */
     private String bearer(String roleCode) {
+        // A REAL persisted caller (not a phantom id) so the creator auto-add and the scoped-access
+        // gates behave as in production for a non-ADMIN creator.
+        RoleEntity role = ensureRole(roleCode);
+        UserEntity caller = tx.execute(status -> {
+            UserEntity user = new UserEntity();
+            user.setName(roleCode + " caller " + nextId());
+            user.setEmail(roleCode.toLowerCase() + "+" + runId + "-" + nextId() + "@example.com");
+            user.setRole(role);
+            user.setActive(true);
+            user.setStatus(UserStatus.ACTIVE);
+            user.setLocale(java.util.Locale.forLanguageTag("ru"));
+            return userDao.save(user);
+        });
         return "Bearer " + jwtTokenProvider.generateAccessToken(
-                1L, roleCode, roleCode.toLowerCase() + "+" + nextId() + "@example.com");
+                caller.getId(), roleCode, caller.getEmail());
     }
 
     /** Persists an ACTIVE user under the generic member role with a unique email (repeatable). */

@@ -88,3 +88,52 @@ add-member flow is `AddMemberDialog.tsx`; the backend is `ProjectMemberService.a
   (backend). Backend and frontend halves are one logical change, serialized backend→frontend because
   the preselect consumes the new candidate `workerTypeId`.
 - **Wave 2:** V1 — browser validation; depends on 1.
+
+## Round 2 (2026-11-25)
+
+Screen URL: https://dev.foremen.eu/projects ("Nowy projekt" form) — reproduced locally at
+http://localhost:3000/projects.
+
+- [x] 1. Creating a project with team members as a MANAGER fails with 404 "Nie znaleziono encji o ID 27." (`error.entity.not.found`)
+  - Triage: observed `POST /api/projects` (MANAGER, `members:[{userId:5, projectRoleId:2}]`,
+    `client.newClient`) → 404 `error.entity.not.found` carrying the id of the project that was just
+    created in the same transaction (and rolled back). Expected 201 with the project, the submitted
+    team, the auto-added creator and the client. Layer: backend. Root cause:
+    `ProjectMemberService.assignAtCreation` ran the step-4 Accessible_Project gate
+    (`projectAccessCheck`). A non-ADMIN creator is not a member of the brand-new project yet (the
+    creator is auto-added only AFTER `members[]` are processed), so the gate rejected the first
+    submitted member with 404. ADMIN bypasses the gate, which is why it was not caught. The
+    creator-specific `assignCreator` already omitted this gate for the same reason.
+    Fix: `assignAtCreation` omits the step-4 gate as well (the orchestrator is guarded by
+    `PROJECTS`/`CREATE`, and the project provably exists in the caller's transaction); every other
+    check (role.mismatch, lifecycle lock, duplicate, user existence, creation team-composition) is
+    unchanged. Client attachment (step 5) keeps the regular gate and passes because the creator is
+    a member by then. Files: `foremen-backend/.../service/ProjectMemberService.java`.
+    Regression test: `ProjectCustomCreateIT.create_asRealManager_withMembersAndNewClient_returns201`;
+    the IT now mints tokens for a real persisted caller (the previous phantom user id 1 hid the bug),
+    and the existing assertions were updated for the auto-added creator membership.
+  - _Requirements: 26 (creation-time team assignment), 2.6/2.9 of FOR-04-13 project creation_
+  - _Depends on: none_
+- [x] V2. Validate Round 2 (API + browser)
+  - Result (2026-11-25, PASS):
+    - Before the fix (old local backend): the same payload as a local MANAGER (user 1246) →
+      `404 "Nie znaleziono encji o ID 9 603."` — identical to dev.
+    - After `docker compose up -d --build backend`: same request → `201`, project 9604 with
+      memberships FOREMAN 1247 (ACTIVE), MANAGER creator 1246 (ACTIVE), new CLIENT 23856 (INVITED).
+    - Browser (`/projects` → "Nowy projekt", MANAGER session): name, area 39.9, VAT 8%, team member
+      Tomasz Lewandowski, "Nowy klient" Olga Olegowna → "Utwórz projekt" sent
+      `members:[{userId:1247,projectRoleId:3}]` + `client.newClient` and got `201` (project 9605);
+      the sheet closed. Note: the local MANAGER has no `USERS` READ grant, so the team/client pickers
+      get 403 from `/api/users` locally; for this check only those two picker reads were stubbed in
+      the browser with the real user 1247. The `POST /api/projects` itself hit the real backend. On dev
+      the picker works, as the reported request shows.
+    - Tests: `ProjectCustomCreateIT` 5/5 pass (the new regression test fails with the exact 404 on
+      the pre-fix code); `ProjectCreateAutoAddCreatorTest` 5/5 pass. Failures that already existed
+      before this change and are unrelated (they fail on the pre-fix code too):
+      `ProjectMemberServiceTest` readiness ×2, `ProjectServiceProjectionTest` ×1,
+      `ProjectClientRolePropertyTest` ×2.
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 2
+- **Wave 1:** 1 — single backend change in `ProjectMemberService.assignAtCreation` + IT.
+- **Wave 2:** V2 — API + browser validation; depends on 1.

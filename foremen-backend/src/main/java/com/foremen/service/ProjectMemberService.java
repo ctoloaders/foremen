@@ -739,8 +739,10 @@ public class ProjectMemberService
                 // Step 3 — mandatory fields: role.mismatch for a supplied projectRoleId != Company_Role
                 // (no tags at creation).
                 .mandatoryFields(mandatoryFieldsCheck(userId, projectRoleId, null, userHolder, tagHolder))
-                // Step 4 — project existence / access (ADMIN bypass; 404 indistinguishable).
-                .projectAccess(projectAccessCheck(projectId))
+                // Step 4 — project access DELIBERATELY OMITTED (same as assignCreator): the project was
+                //          created moments ago in the caller's own transaction and the non-ADMIN creator
+                //          is not yet a member (the creator is added after members[]), so the
+                //          Accessible_Project gate would wrongly 404 with error.entity.not.found.
                 // Step 5 — lifecycle lock -> 409 error.project.team.locked.
                 .lifecycleLock(lifecycleLockCheck(projectId))
                 // Step 6 — duplicate pair (any status) -> 409 error.project.member.duplicate (Req 26.9).
