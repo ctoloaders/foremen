@@ -1,0 +1,119 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "12. Backend: `PUT /api/standard-work-sets/matrix` (atomic add/remove, idempotent, 400 on unknown ids),": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121730691
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121742793
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122389924
+      }
+    ],
+    "13. Frontend: matrix data hook (works by category, room types, current pairs) and staged-change state": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121731790
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122396707
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122599202
+      }
+    ],
+    "14. Frontend: `StandardWorkSetMatrix` on the estimate matrix layout (group sections, sticky work": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121733133
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122607634
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122894507
+      }
+    ],
+    "15. Frontend tests: vitest for toggle, undo/redo, discard, save payload, read-only; update": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121734607
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122901448
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795123095091
+      }
+    ],
+    "16. Update `test-cases.md` Part C for the matrix screen (Russian).": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121735605
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795122902119
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795123095356
+      }
+    ],
+    "17. e2e `foremen-qa-auto/e2e/tests/for04/11-standard-work-sets.e2e.ts` for the Part C UI cases.": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121737177
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795123105771
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795123496669
+      }
+    ],
+    "18. Checkpoint: rebuild the stack, validate in the browser side by side with the estimate.": [
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795121737696
+      },
+      {
+        "executionId": "2f2136ec-3a82-4a78-8f1f-7d684ef43fbb",
+        "chatSessionId": "sess_e6d2a7db-a846-4c0f-9f77-f23c940e169a",
+        "timestamp": 1795123833018
+      }
+    ]
+  }
+}

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        FOR-04-11 Round 2 task 12: PUT /api/standard-work-sets/matrix is guarded by (STANDARD_WORK_SETS, UPDATE).
+        Any role that holds STANDARD_WORK_SETS and may UPDATE the WORK_CATALOG (the roles whose grants 264 mirrored)
+        but lacks UPDATE on STANDARD_WORK_SETS gets it. Read-only roles are left untouched. Idempotent.
+    -->
+    <changeSet id="265-standard-work-sets-update-grant" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">
+                SELECT CASE WHEN EXISTS (
+                    SELECT 1 FROM role_resources sws
+                    JOIN resources sres ON sres.id = sws.resource_id AND sres.code = 'STANDARD_WORK_SETS'
+                    JOIN role_resources wc ON wc.role_id = sws.role_id
+                    JOIN resources wres ON wres.id = wc.resource_id AND wres.code = 'WORK_CATALOG'
+                    JOIN role_resource_operations wop ON wop.role_resource_id = wc.id
+                    JOIN operations o ON o.id = wop.operation_id AND o.code = 'UPDATE'
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM role_resource_operations x
+                        WHERE x.role_resource_id = sws.id AND x.operation_id = o.id)
+                ) THEN 1 ELSE 0 END
+            </sqlCheck>
+        </preConditions>
+        <sql>
+            INSERT INTO role_resource_operations (role_resource_id, operation_id)
+            SELECT DISTINCT sws.id, o.id
+            FROM role_resources sws
+            JOIN resources sres ON sres.id = sws.resource_id AND sres.code = 'STANDARD_WORK_SETS'
+            JOIN role_resources wc ON wc.role_id = sws.role_id
+            JOIN resources wres ON wres.id = wc.resource_id AND wres.code = 'WORK_CATALOG'
+            JOIN role_resource_operations wop ON wop.role_resource_id = wc.id
+            JOIN operations o ON o.id = wop.operation_id AND o.code = 'UPDATE'
+            WHERE NOT EXISTS (
+                SELECT 1 FROM role_resource_operations x
+                WHERE x.role_resource_id = sws.id AND x.operation_id = o.id);
+        </sql>
+    </changeSet>
+</databaseChangeLog>
