@@ -259,6 +259,29 @@ public class ProjectMemberService
         };
     }
 
+    /**
+     * Step 5 for an <em>add</em> (bug-report Round 4): only a CLIENT assignee is blocked by a
+     * Locked_Status. Workers and admin staff (every non-CLIENT Company_Role) can be added in any
+     * project status. A missing user (no role code) keeps the regular lock so the ordering of the
+     * existing rejections is unchanged.
+     */
+    private TeamRejectionChecklist.TeamCheck addLifecycleLockCheck(Long userId, Long projectId) {
+        return () -> {
+            if (projectId == null) {
+                return; // step 4 owns the missing/invalid project id
+            }
+            ProjectEntity project = projectDao.findById(projectId).orElse(null);
+            if (project == null || !isLockedStatus(project.getStatus())) {
+                return;
+            }
+            // Locked project: the role is looked up only now, so editable projects pay nothing extra.
+            String roleCode = userId == null ? null : userDao.findRoleCodeById(userId).orElse(null);
+            if (roleCode != null && !CLIENT_ROLE_CODE.equalsIgnoreCase(roleCode)) {
+                return; // WORKER / admin staff: no lifecycle lock on add
+            }
+            throw new ForemenApiException(HttpStatus.CONFLICT, "error.project.team.locked", projectId);
+        };
+    }
     /** A Locked_Status is {@code COMPLETED} or {@code CANCELLED} (Glossary); every other status is editable. */
     private static boolean isLockedStatus(ProjectStatus status) {
         return status == ProjectStatus.COMPLETED || status == ProjectStatus.CANCELLED;
@@ -546,6 +569,15 @@ public class ProjectMemberService
                 .build());
     }
 
+    /**
+     * Step 4 only (project access), for the Worker_Record_Flow: a worker can be added in any
+     * project status (bug-report Round 4), so no lifecycle lock runs here.
+     */
+    public void assertProjectAccessible(Long projectId) {
+        TeamRejectionChecklist.run(TeamRejectionContext.builder()
+                .projectAccess(projectAccessCheck(projectId))   // step 4
+                .build());
+    }
     // --- Bespoke membership operations (FOR-03-04/05, FOR-04-13 consumers) ---
 
     /**
@@ -618,8 +650,8 @@ public class ProjectMemberService
                 .mandatoryFields(mandatoryFieldsCheck(userId, projectRoleId, submittedTags, userHolder, tagHolder))
                 // Step 4 — project existence / access (ADMIN bypass; 404 indistinguishable).
                 .projectAccess(projectAccessCheck(projectId))
-                // Step 5 — lifecycle lock -> 409 error.project.team.locked.
-                .lifecycleLock(lifecycleLockCheck(projectId))
+                // Step 5 — lifecycle lock -> 409 error.project.team.locked, CLIENT assignees only.
+                .lifecycleLock(addLifecycleLockCheck(userId, projectId))
                 // Step 6 — duplicate pair (any status) -> 409 (Req 5.5).
                 .memberExistence(() -> assertNotDuplicate(userId, projectId))
                 // Step 7 — user existence -> 404 error.entity.not.found (Req 5.6).

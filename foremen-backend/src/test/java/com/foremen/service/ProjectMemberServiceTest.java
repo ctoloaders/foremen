@@ -18,6 +18,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -541,11 +543,13 @@ class ProjectMemberServiceTest {
     // --- lifecycle lock (FOR-05-09 task 6.3, Req 10.1-10.4) ---
 
     @Test
-    @DisplayName("assign raises 409 error.project.team.locked on a COMPLETED project, before the duplicate/user checks (ADMIN, no bypass)")
+    @DisplayName("assign of a CLIENT raises 409 error.project.team.locked on a COMPLETED project, before the duplicate/user checks (ADMIN, no bypass)")
     void assignLockedCompletedProjectRaisesConflict() {
         ProjectEntity completed = new ProjectEntity();
         completed.setStatus(ProjectStatus.COMPLETED);
         when(projectDao.findById(PROJECT_ID)).thenReturn(Optional.of(completed));
+        // Only a CLIENT assignee is blocked by a Locked_Status (bug-report Round 4).
+        when(userDao.findRoleCodeById(USER_ID)).thenReturn(Optional.of("CLIENT"));
 
         // A null projectRoleId skips the step-3 role.mismatch lookup, so step 5 (lock) is reached
         // without any user/role resolution and fires before the duplicate/user checks.
@@ -560,8 +564,25 @@ class ProjectMemberServiceTest {
         // Step 5 (lock) runs before step 6/7 (duplicate/user) and before any persist (Req 10.4).
         verify(projectMemberDao, never()).existsByUserIdAndProjectId(anyLong(), anyLong());
         verify(projectMemberDao, never()).save(any());
-        verifyNoInteractions(userDao, roleDao);
+        verify(userDao, never()).findById(anyLong());
+        verifyNoInteractions(roleDao);
         verify(projectAccessCache, never()).invalidate(anyLong());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"WORKER", "FOREMAN", "MANAGER"})
+    @DisplayName("assign of a worker or admin-staff member is not blocked by a Locked_Status (bug-report Round 4)")
+    void assignNonClientOnLockedProjectSkipsLifecycleLock(String roleCode) {
+        ProjectEntity completed = new ProjectEntity();
+        completed.setStatus(ProjectStatus.COMPLETED);
+        when(projectDao.findById(PROJECT_ID)).thenReturn(Optional.of(completed));
+        when(userDao.findRoleCodeById(USER_ID)).thenReturn(Optional.of(roleCode));
+        // The lock is skipped, so the next step (duplicate pair) is reached and decides the outcome.
+        when(projectMemberDao.existsByUserIdAndProjectId(USER_ID, PROJECT_ID)).thenReturn(true);
+        assertThatThrownBy(() -> service.assign(USER_ID, PROJECT_ID, null))
+                .isInstanceOf(ForemenApiException.class)
+                .satisfies(ex -> assertThat(((ForemenApiException) ex).getMessageCode())
+                        .isEqualTo("error.project.member.duplicate"));
     }
 
     @Test

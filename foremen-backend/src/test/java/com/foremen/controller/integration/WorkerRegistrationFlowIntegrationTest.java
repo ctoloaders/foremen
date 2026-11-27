@@ -65,7 +65,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  *
  * <p>Mirrors {@link ClientRegistrationControllerIntegrationTest} (permission seeding + JWT minting +
  * {@code InvitationMailSender} mock + per-test clean-up): requests hit the real endpoints through
- * {@link MockMvc}, so {@code @RequiresPermission(PROJECTS, EDIT)} and the programmatic
+ * {@link MockMvc}, so {@code @RequiresPermission(PROJECT_MEMBERS, CREATE)} and the programmatic
  * {@code PROJECT_MEMBERS CREATE} half of the dual guard run exactly as for a real HTTP request. The
  * class is intentionally NOT {@code @Transactional} so each flow's own transaction commits or rolls
  * back on its own, which the atomicity (rollback) and {@code AFTER_COMMIT} email / cache assertions
@@ -73,7 +73,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  *
  * <p>The {@code integration-test} profile disables Liquibase and builds the schema from JPA DDL
  * ({@code ddl-auto=create-drop}), so the ABAC matrix is seeded via the JPA layer per test: the
- * {@code PROJECTS/EDIT} and {@code PROJECT_MEMBERS/CREATE} grants on a MANAGER-like role (allowed), a
+ * {@code PROJECT_MEMBERS/CREATE} grant on a MANAGER-like role (allowed), a
  * WORKER-like role with no grant (denied), the {@code ADMIN} and {@code CLIENT} roles the flows
  * resolve by code, plus one Active_Worker_Type for the "with worker type" scenarios.
  *
@@ -127,7 +127,7 @@ class WorkerRegistrationFlowIntegrationTest {
     private static final String WORKER_PATH = "/api/users/worker";
 
     private static final String ADMIN = "ADMIN";      // bypass, reaches everything
-    private static final String MANAGER = "MANAGER";  // granted (PROJECTS, EDIT) + (PROJECT_MEMBERS, CREATE)
+    private static final String MANAGER = "MANAGER";  // granted (PROJECT_MEMBERS, CREATE) + (PROJECT_MEMBERS, CREATE)
     private static final String WORKER = "WORKER";    // no grant -> denied
 
     // Exact string from messages.properties (PL base) for error.access.denied.
@@ -214,14 +214,11 @@ class WorkerRegistrationFlowIntegrationTest {
         tx = new TransactionTemplate(transactionManager);
 
         tx.executeWithoutResult(status -> {
-            ResourceEntity projects = createResource("PROJECTS");
             ResourceEntity projectMembers = createResource("PROJECT_MEMBERS");
-            OperationEntity edit = createOperation("EDIT");
             OperationEntity create = createOperation("CREATE");
 
-            // MANAGER: both halves of the dual guard — PROJECTS/EDIT (handler) + PROJECT_MEMBERS/CREATE (service).
+            // MANAGER: PROJECT_MEMBERS/CREATE (handler guard and service check).
             RoleEntity manager = ensureRole(MANAGER);
-            grant(manager, projects, edit);
             grant(manager, projectMembers, create);
 
             // WORKER: no grant at all (deny-by-default) -> 403.

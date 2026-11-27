@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -174,7 +175,7 @@ class WorkerRecordServiceTest {
             service.register(request);
 
             var inOrder = Mockito.inOrder(projectMemberService, userService);
-            inOrder.verify(projectMemberService).assertProjectAccessibleAndEditable(PROJECT_ID);
+            inOrder.verify(projectMemberService).assertProjectAccessible(PROJECT_ID);
             inOrder.verify(userService).createWorkerRecord(any(), any(), any(), any(), any(), any(), any());
         }
     }
@@ -223,7 +224,7 @@ class WorkerRecordServiceTest {
         @DisplayName("non-accessible project (404 from the project check) -> no user created")
         void projectNotAccessibleRollsBack() {
             doThrow(new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", PROJECT_ID))
-                    .when(projectMemberService).assertProjectAccessibleAndEditable(PROJECT_ID);
+                    .when(projectMemberService).assertProjectAccessible(PROJECT_ID);
             WorkerRecordRequest request = new WorkerRecordRequest(
                     "PERSON", "X", "x@example.com", null, null, null, null, null, PROJECT_ID);
 
@@ -236,21 +237,14 @@ class WorkerRecordServiceTest {
         }
 
         @Test
-        @DisplayName("locked project (409 from the project check) -> no user created")
-        void lockedProjectRollsBack() {
-            doThrow(new ForemenApiException(HttpStatus.CONFLICT, "error.project.team.locked", PROJECT_ID))
-                    .when(projectMemberService).assertProjectAccessibleAndEditable(PROJECT_ID);
+        @DisplayName("worker flow checks project access only, no lifecycle lock (bug-report Round 4)")
+        void workerFlowSkipsLifecycleLock() {
             WorkerRecordRequest request = new WorkerRecordRequest(
                     "PERSON", "X", "x@example.com", null, null, null, null, null, PROJECT_ID);
-
-            ForemenApiException ex = catchThrowableOfType(
-                    () -> service.register(request), ForemenApiException.class);
-
-            assertThat(ex.getStatus()).isEqualTo(HttpStatus.CONFLICT);
-            assertThat(ex.getMessageCode()).isEqualTo("error.project.team.locked");
-            verify(userService, never()).createWorkerRecord(any(), any(), any(), any(), any(), any(), any());
+            catchThrowable(() -> service.register(request));
+            verify(projectMemberService).assertProjectAccessible(PROJECT_ID);
+            verify(projectMemberService, never()).assertProjectAccessibleAndEditable(any());
         }
-
         @Test
         @DisplayName("duplicate email (409 from the user create) -> no membership assigned")
         void duplicateEmailRollsBack() {

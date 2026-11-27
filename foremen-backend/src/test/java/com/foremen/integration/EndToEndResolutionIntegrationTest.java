@@ -235,29 +235,29 @@ class EndToEndResolutionIntegrationTest {
     }
 
     // ------------------------------------------------------------------
-    // POST /api/users/client -> PROJECTS/EDIT (@RequiresPermission precedence, Req 3.2 / 10.2)
+    // POST /api/users/client -> PROJECT_MEMBERS/CREATE (@RequiresPermission precedence, Req 3.2 / 10.2)
     // ------------------------------------------------------------------
 
     @Test
-    @DisplayName("POST /api/users/client resolves PROJECTS/EDIT via @RequiresPermission precedence")
-    void postUsersClient_resolvesProjectsEdit_allowedForGrantedRole() throws Exception {
-        RoleEntity role = persistRoleWithGrants(grant("PROJECTS", "EDIT"));
+    @DisplayName("POST /api/users/client resolves PROJECT_MEMBERS/CREATE via @RequiresPermission precedence")
+    void postUsersClient_resolvesProjectMembersCreate_allowedForGrantedRole() throws Exception {
+        RoleEntity role = persistRoleWithGrants(grant("PROJECT_MEMBERS", "CREATE"));
         MvcResult result = mockMvc.perform(post(USERS_CLIENT_PATH)
                         .header("Authorization", bearer(role))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andReturn();
 
-        assertNotForbidden(result, "POST /api/users/client must resolve PROJECTS/EDIT (its "
+        assertNotForbidden(result, "POST /api/users/client must resolve PROJECT_MEMBERS/CREATE (its "
                 + "@RequiresPermission wins over the class @PermissionResource(\"USERS\")) and be "
-                + "allowed for a role holding PROJECTS/EDIT");
+                + "allowed for a role holding PROJECT_MEMBERS/CREATE");
     }
 
     @Test
-    @DisplayName("POST /api/users/client resolves PROJECTS/EDIT, not USERS: a USERS-only role is denied 403")
-    void postUsersClient_resolvesProjectsEdit_deniedForUsersOnlyRole() throws Exception {
-        // Full USERS CRUD but no PROJECTS grant: if the endpoint resolved to USERS it would pass;
-        // it must resolve to PROJECTS/EDIT (precedence) and therefore be denied.
+    @DisplayName("POST /api/users/client resolves PROJECT_MEMBERS/CREATE, not USERS: a USERS-only role is denied 403")
+    void postUsersClient_resolvesProjectMembersCreate_deniedForUsersOnlyRole() throws Exception {
+        // Full USERS CRUD but no PROJECT_MEMBERS grant: if the endpoint resolved to USERS it would pass;
+        // it must resolve to PROJECT_MEMBERS/CREATE (precedence) and therefore be denied.
         RoleEntity role = persistRoleWithGrants(
                 grant("USERS", "READ", "CREATE", "EDIT"));
         MvcResult result = mockMvc.perform(post(USERS_CLIENT_PATH)
@@ -266,7 +266,7 @@ class EndToEndResolutionIntegrationTest {
                         .content("{}"))
                 .andReturn();
 
-        assertAccessDenied(result, "POST /api/users/client resolves PROJECTS/EDIT via "
+        assertAccessDenied(result, "POST /api/users/client resolves PROJECT_MEMBERS/CREATE via "
                 + "@RequiresPermission precedence; a role holding only USERS grants must be denied 403");
     }
 

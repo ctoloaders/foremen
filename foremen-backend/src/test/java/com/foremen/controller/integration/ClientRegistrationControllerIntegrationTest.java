@@ -58,13 +58,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  * {@link ProjectMemberControllerIntegrationTest} (permission seeding + JWT minting) and
  * {@link com.foremen.integration.InviteEndToEndIntegrationTest} (mail-sender mock + per-test
  * clean-up). Requests hit {@code /api/users/client} through {@link MockMvc}, so the
- * {@code @RequiresPermission(PROJECTS, EDIT)} enforcement runs exactly as it would for a real HTTP
+ * {@code @RequiresPermission(PROJECT_MEMBERS, CREATE)} enforcement runs exactly as it would for a real HTTP
  * request.
  *
  * <p>The {@code integration-test} profile disables Liquibase and builds the schema from JPA DDL
  * ({@code ddl-auto=create-drop}), so the ABAC matrix is seeded directly via the JPA layer per test:
- * the {@code PROJECTS} resource, the {@code EDIT} operation, a MANAGER-like role granted
- * {@code (PROJECTS, EDIT)} (allowed), a WORKER-like role with no grant (denied), and the seeded
+ * the {@code PROJECT_MEMBERS} resource, the {@code CREATE} operation, a MANAGER-like role granted
+ * {@code (PROJECT_MEMBERS, CREATE)} (allowed), a WORKER-like role with no grant (denied), and the seeded
  * {@code CLIENT} role the service resolves via {@code RoleDao.findByCode("CLIENT")} and which the
  * invite flow keys the client-portal email off of.
  *
@@ -80,7 +80,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
  *
  * <p>Covered acceptance criteria:
  * <ul>
- *   <li>with PROJECTS/EDIT: 201, created user is CLIENT + INVITED, exactly one {@code project_members}
+ *   <li>with PROJECT_MEMBERS/CREATE: 201, created user is CLIENT + INVITED, exactly one {@code project_members}
  *       row for {@code (userId, projectId)}, client-portal invitation captured (10.2, 10.6, 10.10);</li>
  *   <li>without the grant: 403 {@code error.access.denied}, no user or membership created (10.2);</li>
  *   <li>ADMIN reaches the endpoint via the bypass (10.2);</li>
@@ -101,7 +101,7 @@ class ClientRegistrationControllerIntegrationTest {
     private static final String CLIENT_PATH = "/api/users/client";
 
     private static final String ADMIN = "ADMIN";      // bypass, reaches everything
-    private static final String MANAGER = "MANAGER";  // granted (PROJECTS, EDIT) -> allowed
+    private static final String MANAGER = "MANAGER";  // granted (PROJECT_MEMBERS, CREATE) -> allowed
     private static final String WORKER = "WORKER";    // no PROJECTS grant -> denied
 
     // Exact string from messages.properties (PL base) for error.access.denied.
@@ -175,13 +175,13 @@ class ClientRegistrationControllerIntegrationTest {
         tx = new TransactionTemplate(transactionManager);
 
         // Liquibase is disabled under the integration-test profile, so seed the roles we
-        // authenticate as, the PROJECTS/EDIT ABAC matrix, and the CLIENT role directly via JPA.
+        // authenticate as, the PROJECT_MEMBERS/CREATE ABAC matrix, and the CLIENT role directly via JPA.
         tx.executeWithoutResult(status -> {
-            ResourceEntity projects = createResource("PROJECTS");
-            OperationEntity edit = createOperation("EDIT");
+            ResourceEntity projectMembers = createResource("PROJECT_MEMBERS");
+            OperationEntity create = createOperation("CREATE");
 
-            // MANAGER: granted (PROJECTS, EDIT) -> allowed to register clients.
-            grantRole(MANAGER, projects, edit);
+            // MANAGER: granted (PROJECT_MEMBERS, CREATE) -> allowed to register clients.
+            grantRole(MANAGER, projectMembers, create);
             // WORKER: no role_resources grant at all (deny-by-default) -> 403.
             ensureRole(WORKER);
             // ADMIN: no grant needed (bypass), but the role must exist to mint a ROLE_ADMIN token.
@@ -213,10 +213,10 @@ class ClientRegistrationControllerIntegrationTest {
         });
     }
 
-    // === 10.2 / 10.6 / 10.10 : PROJECTS/EDIT -> 201, CLIENT + INVITED, one membership, email captured ===
+    // === 10.2 / 10.6 / 10.10 : PROJECT_MEMBERS/CREATE -> 201, CLIENT + INVITED, one membership, email captured ===
 
     @Test
-    @DisplayName("POST /api/users/client with PROJECTS/EDIT -> 201; CLIENT+INVITED user, one project_members row, invite email captured")
+    @DisplayName("POST /api/users/client with PROJECT_MEMBERS/CREATE -> 201; CLIENT+INVITED user, one project_members row, invite email captured")
     void register_withEditPermission_createsClientAndMembershipAndSendsInvite() throws Exception {
         long projectId = nextId();
         String email = uniqueEmail();
@@ -228,7 +228,7 @@ class ClientRegistrationControllerIntegrationTest {
                 .andReturn();
 
         assertThat(result.getResponse().getStatus())
-                .as("PROJECTS/EDIT caller must receive 201 Created")
+                .as("PROJECT_MEMBERS/CREATE caller must receive 201 Created")
                 .isEqualTo(201);
 
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
@@ -262,7 +262,7 @@ class ClientRegistrationControllerIntegrationTest {
         verify(invitationMailSender, times(1)).sendClientPortalInvitation(any(UserEntity.class));
     }
 
-    // === 10.2 : without PROJECTS/EDIT -> 403 error.access.denied, nothing created ===
+    // === 10.2 : without PROJECT_MEMBERS/CREATE -> 403 error.access.denied, nothing created ===
 
     @Test
     @DisplayName("POST /api/users/client as WORKER (no PROJECTS grant) -> 403 error.access.denied, no user or membership created")

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-09 bug-report Round 3 #2: a WORKER created through the Worker_Record_Flow may have no
+        email (Requirement 13.1), but users.email was NOT NULL, so the insert failed. The unique
+        constraint uk_users_email stays; PostgreSQL allows many NULLs under it. Re-running is a no-op
+        because the precondition only matches while the column is still NOT NULL.
+    -->
+    <changeSet id="279-users-email-nullable" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'users' AND column_name = 'email' AND is_nullable = 'NO'</sqlCheck>
+        </preConditions>
+        <dropNotNullConstraint tableName="users" columnName="email" columnDataType="VARCHAR(255)"/>
+    </changeSet>
+</databaseChangeLog>

@@ -35,3 +35,23 @@ Screen URL: `https://dev.foremen.eu/projects/30` (rooms tab, "Create estimate" w
 
 - **Wave 1:** 1 — dev compose configuration and redeploy.
 - **Wave 2:** V1 — validation on dev, depends on 1.
+
+## Round 2 (2026-11-27)
+
+Screen URL: `https://dev.foremen.eu/projects/30/rooms` ("Create estimate" button, then "Create" in the dialog).
+
+- [ ] 2. After "Create estimate" → "Create", the dialog shows "ИИ сервис недоступен" (AI service unavailable)
+  - Triage: observed the message `error.estimateai.failed.llm_unavailable` (ru: "Сервис ИИ недоступен."), shown after the job starts. Expected a running AI estimate job that fills the estimate. Layer: infra (dev config), possibly backend. This is a different failure from Round 1: the start no longer returns 503 (commit `ebc34a3` enabled the feature), the job now fails inside the worker.
+  - Cause (not yet confirmed): `EstimateAiWorker.reasonOf` maps both `DISABLED` and `LLM_UNAVAILABLE` to   - Cause (not yet confirmed): `EstimateAiWorker.reasonOf` maps both `DISABLED` and `LLM_UNAVAILABLE` to   - Cause (not yet confirmed): `EPI  - Cause (not yet confirmed): `EstimateAiWorker.reasonOf` maprk  - Cause (no, mo  - Cause (not yet ) t  - Cause (not yet conend  - Cause (not yet confirmed): `EstimateAiWorker.reasonOf` maps both `DISABLED` and `LLM_UNAVAILABLE` to   - Csta  - Cause (not yet confirmed): `EstimateAiWorker.reasonOf` maps both `DISABLED` and `LLM_UNAVAILABLE` to   - Cause (not yet conf(c) key quota or restriction.
+  - Needed to confirm: the backend log on the dev VM around the job time (`GenAiPlanJsonTransport` exception and its cause). `gcloud` on this machine has expired credentials (`gcloud auth login` needed), so I could not read the VM logs. Either re-authenticate gcloud or paste the backend log lines.
+  - Fix: depends on the confirmed cause. If config, correct `infra/dev/docker-compose.dev.yml` or the secret and redeploy with `infra/dev/56-sync-stack.sh`. If the exception hides the cause, also log the underlying exception message at WARN in `GenAiPlanJsonTransport`.
+  - _Requirements: 2.8_
+  - _Depends on: none_
+- [ ] V2. Validate Round 2 on dev
+  - Open project 30 rooms, start "Create estimate", confirm the job reaches COMPLETED and the estimate is filled.
+  - _Depends on: 2_
+
+## Parallel execution plan (waves) — Round 2
+
+- **Wave 1:** 2 — diagnosis and fix.
+- **Wave 2:** V2 — validation on dev.

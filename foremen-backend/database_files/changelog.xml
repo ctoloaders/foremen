@@ -1045,4 +1045,5 @@
     <include file="database_files/changesets/276-add-estimates-ai-summary.xml"/>
     <include file="database_files/changesets/277-add-rooms-import-jobs-progress.xml"/>
     <include file="database_files/changesets/278-supersede-in-flight-estimate-jobs.xml"/>
+    <include file="database_files/changesets/279-users-email-nullable.xml"/>
 </databaseChangeLog>

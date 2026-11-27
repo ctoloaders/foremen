@@ -53,7 +53,7 @@ import java.util.Map;
  *       a non-integer Worker_Type id / tags, all offending fields reported together) —
  *       {@link #validateFields(WorkerRecordRequest)};</li>
  *   <li>step 4 (404 project existence / access) + step 5 (409 Locked_Status) —
- *       {@link ProjectMemberService#assertProjectAccessibleAndEditable(Long)};</li>
+ *       {@link ProjectMemberService#assertProjectAccessible(Long)} (no lifecycle lock: workers can be added in any status);</li>
  *   <li>step 6 (409 duplicate email, only when an email is supplied) —
  *       {@link UserService#createWorkerRecord};</li>
  *   <li>step 8 (400 {@code error.project.member.worker.type.invalid} for a nonexistent / inactive
@@ -102,7 +102,7 @@ public class WorkerRecordService {
 
         // Step 4 + 5 — project existence / access, then Locked_Status, BEFORE the user is created so a
         // non-accessible / locked project is reported before a would-be duplicate email (Req 13.9, 13.8, 13.11).
-        projectMemberService.assertProjectAccessibleAndEditable(request.projectId());
+        projectMemberService.assertProjectAccessible(request.projectId());
 
         // The role is fixed to WORKER server-side (Req 13.1); any role in the request is ignored.
         RoleEntity workerRole = roleDao.findByCode(WORKER_ROLE_CODE)

@@ -70,8 +70,10 @@ ADMIN_PASSWORD="$(sm "${SECRET_ADMIN_PASSWORD}")"
 # Optional: Google Places key (only if the secret exists)
 GOOGLE_PLACES_API_KEY=""
 GOOGLE_PLACES_ENABLED="false"
-if [ -n "${SECRET_GOOGLE_PLACES_KEY}" ] && gcloud secrets describe "${SECRET_GOOGLE_PLACES_KEY}" >/dev/null 2>&1; then
-  GOOGLE_PLACES_API_KEY="$(sm "${SECRET_GOOGLE_PLACES_KEY}")"
+# Fetch directly with `versions access`; do NOT gate on `gcloud secrets describe`
+# (needs secrets.get, which secretAccessor lacks). The metadata pointer is the guard.
+if [ -n "${SECRET_GOOGLE_PLACES_KEY}" ]; then
+  GOOGLE_PLACES_API_KEY="$(sm "${SECRET_GOOGLE_PLACES_KEY}" 2>/dev/null || true)"
   [ -n "${GOOGLE_PLACES_API_KEY}" ] && GOOGLE_PLACES_ENABLED="true"
 fi
 # Optional: backend OCR Gemini Developer-API key (FOR-06-03). When present, OCR is
@@ -111,7 +113,7 @@ fi
 # FOR-07-04 bank ledger. All optional: with nothing provisioned the backend runs with no
 # bank provider (SALTEDGE_ENABLED=false) and no STUB. Same direct-`versions access`
 # pattern as the bot secrets (the metadata-pointer non-empty check is the guard).
-# Salt Edge is turned on only when BOTH app id and secret resolve to non-empty values.
+# Salt Edge is turned on only with metadata saltedge-enabled=true AND non-empty app id + secret.
 FOREMEN_BANK_SECRETS_KEY=""
 SALTEDGE_ENABLED="false"
 SALTEDGE_MODE="CLIENT"
@@ -126,7 +128,10 @@ if [ -n "${SECRET_SALTEDGE_MODE}" ]; then
   _mode="$(sm "${SECRET_SALTEDGE_MODE}" 2>/dev/null || true)"
   case "${_mode}" in CLIENT|PARTNER) SALTEDGE_MODE="${_mode}" ;; esac
 fi
-[ -n "${SALTEDGE_APP_ID}" ] && [ -n "${SALTEDGE_SECRET}" ] && SALTEDGE_ENABLED="true"
+# FOR-07-04a R1.1: Salt Edge is OFF by default; having its secrets provisioned no longer turns it on.
+# Re-enable explicitly with the instance metadata key `saltedge-enabled=true` (secrets still required).
+SALTEDGE_OPT_IN="$(md saltedge-enabled || true)"
+[ "${SALTEDGE_OPT_IN}" = "true" ] && [ -n "${SALTEDGE_APP_ID}" ] && [ -n "${SALTEDGE_SECRET}" ] && SALTEDGE_ENABLED="true"
 # FOR-07-04a Fintable bank feed. Turned on only when the token secret resolves to a non-empty value.
 # FINTABLE_TOKEN_EXPIRES_ON (YYYY-MM-DD) drives the in-app expiry warnings; blank => no warnings.
 FINTABLE_ENABLED="false"

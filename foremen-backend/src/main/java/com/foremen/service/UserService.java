@@ -345,6 +345,11 @@ public class UserService implements AdminService<
             saved = dao.save(user);
             entityManager.flush();            // surface a unique-constraint race as a 409 here (Req 13.7)
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Only a supplied email can collide on uk_users_email; any other constraint failure is
+            // not a duplicate and must not be reported as one (FOR-05-09 bug-report Round 3 #2).
+            if (email == null) {
+                throw e;
+            }
             throw new ForemenApiException(
                     HttpStatus.CONFLICT, "error.user.email.already.exists", email);
         }

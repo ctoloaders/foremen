@@ -71,7 +71,7 @@ public class UserController implements AdminController<
      * role is never accepted in the request body and is fixed to {@code CLIENT} server-side, and a
      * {@code projectId} is required so the new client is immediately attached to that project.
      *
-     * <p>Guarded by {@code @RequiresPermission(PROJECTS, EDIT)} (Req 10.2): a caller lacking the
+     * <p>Guarded by {@code @RequiresPermission(PROJECT_MEMBERS, CREATE)} (Req 10.2): a caller lacking the
      * grant receives 403 {@code error.access.denied} from the {@code PermissionInterceptor} (ADMIN
      * bypass included). {@code @Valid} rejects a blank {@code name}/{@code email} or a missing
      * {@code projectId} with 400 before any work (Req 10.3). Returns 201 Created with the created
@@ -79,7 +79,7 @@ public class UserController implements AdminController<
      */
     @PostMapping("/client")
     @ResponseStatus(HttpStatus.CREATED)
-    @RequiresPermission(resource = "PROJECTS", operation = "EDIT")
+    @RequiresPermission(resource = "PROJECT_MEMBERS", operation = "CREATE")
     public ClientRegistrationResponse registerClient(
             @Valid @RequestBody ClientRegistrationRequest request) {
         return clientRegistrationService.register(request);
@@ -91,7 +91,7 @@ public class UserController implements AdminController<
      * target project in a single atomic unit, sending no email. The role is fixed to {@code WORKER}
      * server-side (any role in the body is ignored).
      *
-     * <p><b>Dual-permission guard (D7).</b> This handler declares the {@code PROJECTS/EDIT} half with
+     * <p><b>Dual-permission guard (D7).</b> This handler declares the {@code PROJECT_MEMBERS/CREATE} guard with
      * {@code @RequiresPermission} (the FOR-03-05 pattern, mirroring {@link #inviteWorker}); the
      * {@code PROJECT_MEMBERS/CREATE} half is asserted inside {@link WorkerRecordService#register}. A
      * caller lacking either operation receives 403 {@code error.access.denied}.
@@ -103,7 +103,7 @@ public class UserController implements AdminController<
      */
     @PostMapping("/worker")
     @ResponseStatus(HttpStatus.CREATED)
-    @RequiresPermission(resource = "PROJECTS", operation = "EDIT")
+    @RequiresPermission(resource = "PROJECT_MEMBERS", operation = "CREATE")
     public WorkerRecordResponse registerWorker(@RequestBody WorkerRecordRequest request) {
         return workerRecordService.register(request);
     }
@@ -113,7 +113,7 @@ public class UserController implements AdminController<
      * the FOR-03-02 staff password-set email to a not-yet-activated WORKER user that has a stored
      * email, so the worker sets their own password.
      *
-     * <p><b>Dual-permission guard.</b> This handler declares the {@code PROJECTS/EDIT} half with
+     * <p><b>Dual-permission guard.</b> This handler declares the {@code PROJECT_MEMBERS/CREATE} guard with
      * {@code @RequiresPermission} (the FOR-03-05 pattern); the {@code PROJECT_MEMBERS/CREATE} half is
      * asserted inside {@link WorkerInvitationService#invite(Long)}. A caller lacking either operation
      * receives 403 {@code error.access.denied}.
@@ -124,7 +124,7 @@ public class UserController implements AdminController<
      */
     @PostMapping("/worker/{id}/invite")
     @ResponseStatus(HttpStatus.OK)
-    @RequiresPermission(resource = "PROJECTS", operation = "EDIT")
+    @RequiresPermission(resource = "PROJECT_MEMBERS", operation = "CREATE")
     public WorkerInvitationResponse inviteWorker(@PathVariable("id") Long id) {
         return workerInvitationService.invite(id);
     }
