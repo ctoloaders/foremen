@@ -1,8 +1,10 @@
+import { otpSignInUi } from '../../support/client-otp.js';
 import { expect } from 'e2e';
 import type { TestUser } from '../../support/users.js';
 
 /** Signs in through the PL login form and waits until the app left /login (works for every role). */
 export async function uiLogin(app: any, screen: any, browser: any, user: Pick<TestUser, 'email' | 'password'>): Promise<void> {
+  if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, 'pl'); return; }
   await app.open('/login');
   await screen.getByRole('textbox', 'E-mail').fill(user.email);
   await screen.getByRole('textbox', 'Hasło').fill(user.password);

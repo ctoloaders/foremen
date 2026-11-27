@@ -1,3 +1,4 @@
+import { tokenOf } from '../../support/api.js';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
@@ -275,7 +276,7 @@ export async function makeWorld(opts: WorldOpts = {}): Promise<World> {
       users[tag] = { id: u.id, email, password: u.password, roleCode: ROLE_OF[tag], token: '' };
     }
     for (const tag of want) {
-      const r = await http('POST', '/api/auth/login', undefined, { email: users[tag]!.email, password: users[tag]!.password });
+      const r = { status: 200, body: { accessToken: await tokenOf(users[tag]!) } };
       if (r.status !== 200) throw new Error(`login ${tag} -> ${r.status}`);
       users[tag]!.token = r.body.accessToken as string;
     }

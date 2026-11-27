@@ -1,8 +1,10 @@
+import { otpSignInUi } from '../../support/client-otp.js';
 import { get, rowsOf, type Tag, type World } from './support.js';
 // FOR-11-06 Part B helpers (UI). The world, cleanup and API fixtures come from support.ts.
 
 /** Signs in through the login form (PL UI); waits until the login form is gone. */
 export async function uiLogin(app: any, screen: any, user: { email: string; password: string }): Promise<void> {
+  if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, 'pl'); return; }
   await app.open('/login');
   await screen.getByRole('textbox', 'E-mail').fill(user.email);
   await screen.getByRole('textbox', 'Hasło').fill(user.password);

@@ -2,8 +2,8 @@ package com.foremen.config.security;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
-import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -118,6 +118,13 @@ public class SecurityConfig {
                         // the same JWT and rejects an invalid/missing token with an ERROR frame);
                         // every SUBSCRIBE/SEND is then authorized per project (ESTIMATE READ/UPDATE).
                         .requestMatchers("/api/ws", "/api/ws/**").permitAll()
+                        // Spring Boot's error endpoint. When a request fails after MVC dispatch (for
+                        // example 415 for an unsupported Content-Type, or 404 for an unknown path),
+                        // the container forwards to /error. That forwarded dispatch does not carry the
+                        // JWT (JwtAuthenticationFilter skips error dispatches), so without this rule the
+                        // catch-all below turns the real status into 401 "authentication required".
+                        // Authentication of the original request is still enforced by the catch-all.
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated()
                 )
                 .csrf(csrf -> csrf.disable())

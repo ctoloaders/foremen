@@ -38,6 +38,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -78,6 +79,23 @@ public class ProjectService
 
     /** Message code returned when generic create is invoked (Requirement 3.1). */
     static final String CREATE_UNSUPPORTED_MESSAGE = "error.project.create.unsupported";
+    /** Message code when a project still owns rows (rooms, estimates, offers) that block its deletion. */
+    static final String HAS_DEPENDENTS_MESSAGE = "error.project.hasDependents";
+
+    /**
+     * Deletes the project. Deleting a project that still owns rows (rooms, estimates, offers) violates a
+     * foreign key; that used to surface as a 500 {@code error.internal} (lifecycle BUG-09). It now returns
+     * 409 {@code error.project.hasDependents}, and the transaction rolls back.
+     */
+    @Override
+    @Transactional
+    public void deleteById(Long id) {
+        try {
+            ProjectScopedService.super.deleteById(id);
+        } catch (DataIntegrityViolationException | org.hibernate.exception.ConstraintViolationException e) {
+            throw new ForemenApiException(HttpStatus.CONFLICT, HAS_DEPENDENTS_MESSAGE);
+        }
+    }
 
     /** Message code returned when {@code endDate} is earlier than {@code startDate} (Requirement 3.6). */
     static final String DATE_RANGE_MESSAGE = "error.project.date.range";

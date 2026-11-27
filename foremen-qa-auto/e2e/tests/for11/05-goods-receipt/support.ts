@@ -1,3 +1,4 @@
+import { otpSignInUi } from '../../support/client-otp.js';
 import { execFileSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
@@ -306,6 +307,7 @@ export async function openReceipt(app: any, screen: any, browser: any, projectId
 
 /** Signs in through the login form (PL UI). */
 export async function uiLogin(app: any, screen: any, user: { email: string; password: string }): Promise<void> {
+  if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, 'pl'); return; }
   await app.open('/login');
   await screen.getByRole('textbox', 'E-mail').fill(user.email);
   await screen.getByRole('textbox', 'Hasło').fill(user.password);

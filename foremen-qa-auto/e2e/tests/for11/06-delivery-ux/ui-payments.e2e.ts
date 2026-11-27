@@ -188,7 +188,10 @@ describe('FOR-11-06 UI: payments tab (client)', { tags: ['for-11-06', 'ui', 'pay
       const text = await pageText(browser);
       expect(text).not.toContain(`QA06-${w.id}-SELLER`);
       expect(text).not.toMatch(/clientPayments\./);
-      expect([403, 404]).toContain((await get(`/api/client-payments?projectId=${w.otherProjectId}`, w.t('CLIENT'))).status);
+      // Membership scope (ClientPaymentSpecifications.projectScope): a foreign project yields an empty page, not its rows.
+      const foreign = await get(`/api/client-payments?projectId=${w.otherProjectId}`, w.t('CLIENT'));
+      expect(foreign.status).toBe(200);
+      expect(JSON.parse(foreign.text).totalElements).toBe(0);
     } finally {
       await w.cleanup();
     }

@@ -457,7 +457,10 @@ public class OfferService
             rebuildDraftSnapshot(offer);
         }
         transitionStatus(offer, OfferAction.SEND);
-        // R3.2: drive the project READY_TO_OFFER -> OFFERED alongside the offer send.
+        // Lifecycle BUG-01. Parent design §4.3: DRAFT -> READY_TO_OFFER once rooms, works and prices are in
+        // place. A send only gets this far from a priced estimate, so the send carries the project through
+        // both steps. R3.2: READY_TO_OFFER -> OFFERED alongside the offer send.
+        advanceProjectStatus(offer.getProject(), ProjectStatus.DRAFT, ProjectStatus.READY_TO_OFFER);
         advanceProjectStatus(offer.getProject(), ProjectStatus.READY_TO_OFFER, ProjectStatus.OFFERED);
         offerDao.save(offer);
         entityManager.flush();

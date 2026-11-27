@@ -100,6 +100,21 @@ public class AmendmentController implements AdminController<
         return controllerMapper;
     }
 
+    /**
+     * {@code POST /api/amendments}: opens the project's {@code OPEN} amendment (R2.2) through
+     * {@link AmendmentService#create}, which enforces eligibility (ACTIVE project, SIGNED baseline), the
+     * single-open rule, and assigns {@code seqNo}. The inherited generic create skipped all three, so the
+     * insert failed on the NOT NULL {@code seq_no} column and returned 409 {@code error.data.integrity}
+     * (lifecycle BUG-10).
+     */
+    @Override
+    @PostMapping
+    @RequiresPermission(resource = RESOURCE, operation = "CREATE")
+    public ResponseEntity<AmendmentCreateResponse> create(@Valid @RequestBody AmendmentCreateRequest request) {
+        AmendmentServiceExtendedModel created = service.create(request.projectId(), request.note());
+        return ResponseEntity.ok(controllerMapper.toCreateResponse(created));
+    }
+
     @Override
     public AdminService<AmendmentServiceModel, AmendmentServiceExtendedModel,
             EstimateAmendmentEntity, Long> getService() {

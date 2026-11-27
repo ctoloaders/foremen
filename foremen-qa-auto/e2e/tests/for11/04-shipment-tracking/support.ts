@@ -1,3 +1,4 @@
+import { otpSignInUi } from '../../support/client-otp.js';
 import { execFileSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcryptjs';
@@ -325,6 +326,7 @@ export const msgOf = (r: { body: any }): string => String(r.body?.message ?? '')
 
 /** Signs in through the login form (PL UI); waits until the login form is gone. */
 export async function uiLogin(app: any, screen: any, user: { email: string; password: string }): Promise<void> {
+  if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, 'pl'); return; }
   await app.open('/login');
   await screen.getByRole('textbox', 'E-mail').fill(user.email);
   await screen.getByRole('textbox', 'Hasło').fill(user.password);

@@ -1,3 +1,4 @@
+import { otpSignInUi } from '../../support/client-otp.js';
 import { execFileSync } from 'node:child_process';
 import { adminToken, createProject, deleteProject, raw, roleIdByCode, tokenOf } from '../../support/api.js';
 import { createUser, deleteUser, runId, type TestUser } from '../../support/users.js';
@@ -300,6 +301,7 @@ export async function plannerRows(token: string, query = '', size = 100): Promis
 /** Signs in through the login form (PL UI) and waits until the login form is gone. */
 export async function uiLogin(app: any, screen: any, user: { email: string; password: string }): Promise<void> {
   const { expect } = await import('e2e');
+  if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, 'pl'); return; }
   await app.open('/login');
   await screen.getByRole('textbox', 'E-mail').fill(user.email);
   await screen.getByRole('textbox', 'Hasło').fill(user.password);

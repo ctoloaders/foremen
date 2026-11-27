@@ -1,3 +1,4 @@
+import { clientOtpToken } from './client-otp.js';
 // Thin backend API client for test setup/teardown (never used to assert UI behaviour).
 const API = process.env.QA_API_URL ?? 'http://localhost:8080';
 const ADMIN_EMAIL = process.env.FOREMEN_ADMIN_EMAIL ?? 'cto+1@loaders.dev';
@@ -100,7 +101,9 @@ export async function fillDashboard(user: { email: string; password: string }): 
 }
 
 /** Access token of a test user. */
-export async function tokenOf(user: { email: string; password: string }): Promise<string> {
+export async function tokenOf(user: { email: string; password: string; roleCode?: string }): Promise<string> {
+  // Clients have no password (FOR-03-05): their token comes from the one-time-code flow.
+  if (user.roleCode === 'CLIENT') return clientOtpToken(user.email);
   const r = await call('POST', '/api/auth/login', undefined, { email: user.email, password: user.password });
   return r.accessToken as string;
 }

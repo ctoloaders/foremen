@@ -1,3 +1,4 @@
+import { otpSignInUi } from '../support/client-otp.js';
 import { describe, test } from '@e2e-dev/web';
 import { expect } from 'e2e';
 import {
@@ -189,7 +190,8 @@ describe('FOR-10 additional UI', { tags: ['for-10', 'additional'] }, () => {
         if (fail && route.request.method === 'GET') await route.fulfill({ status: 500, json: { message: 'qa' } });
         else await route.continue();
       });
-      await app.open('/login');
+      if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, 'pl'); return; }
+  await app.open('/login');
       await screen.getByRole('textbox', 'E-mail').fill(user.email);
       await screen.getByRole('textbox', 'Hasło').fill(user.password);
       await screen.getByRole('button', 'Zaloguj się').tap();

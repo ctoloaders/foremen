@@ -128,6 +128,16 @@ public class AuthService {
         }
 
         UserEntity user = maybeUser.get();
+        // Admin deactivation clears the active flag (UserService.deleteById) and leaves the status ACTIVE,
+        // so the status switch below would not catch it. Check the flag here.
+        if (!user.isActive()) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.auth.account.deactivated");
+        }
+        // Clients never set a password (FOR-03-05). Refuse with the same response as a wrong password, so
+        // the reply does not reveal that the account is a client account.
+        if (isClient(user)) {
+            throw invalidCredentials();
+        }
 
         switch (user.getStatus()) {
             case INVITED -> throw new ForemenApiException(
@@ -157,6 +167,11 @@ public class AuthService {
     @Transactional
     public TokenResponse refresh(String refreshToken) {
         UserEntity owner = refreshTokenService.rotate(refreshToken).getUser();
+        // A deactivated account must not keep a session alive through refresh. The rotation above is
+        // rolled back with this exception (RuntimeException inside @Transactional).
+        if (!owner.isActive()) {
+            throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.auth.account.deactivated");
+        }
         return issueTokens(owner);
     }
 

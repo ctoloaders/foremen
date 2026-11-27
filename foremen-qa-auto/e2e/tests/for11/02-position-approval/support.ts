@@ -1,3 +1,5 @@
+import { otpSignInUi } from '../../support/client-otp.js';
+import { tokenOf } from '../../support/api.js';
 import { execFileSync } from 'node:child_process';
 import { createUser, deleteUser, runId, type TestUser } from '../../support/users.js';
 import { roleIdByCode } from '../../support/api.js';
@@ -59,7 +61,7 @@ const tokens = new Map<string, string>();
 export async function login(user: { email: string; password: string }): Promise<string> {
   const cached = tokens.get(user.email);
   if (cached) return cached;
-  const r = await http('POST', '/api/auth/login', undefined, { email: user.email, password: user.password });
+  const r = { status: 200, body: { accessToken: await tokenOf(user) } };
   if (r.status !== 200) throw new Error(`login ${user.email} -> ${r.status} ${r.text}`);
   tokens.set(user.email, r.body.accessToken);
   return r.body.accessToken as string;
@@ -157,6 +159,7 @@ export async function loginUi(
   if (opts.browser && opts.locale) {
     await opts.browser.addInitScript(`localStorage.setItem('foremen-locale', '${opts.locale}')`);
   }
+  if ((user as any).roleCode === 'CLIENT') { await otpSignInUi(app, screen, user.email, opts.locale ?? 'pl'); return; }
   await app.open('/login');
   await screen.getByRole('textbox', 'E-mail').fill(user.email);
   const ru = opts.locale === 'ru';

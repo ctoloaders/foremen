@@ -1,3 +1,4 @@
+import { tokenOf } from '../../support/api.js';
 import { execFileSync } from 'node:child_process';
 import { adminToken, roleIdByCode } from '../../support/api.js';
 import { createUser, deleteUser, runId, type TestUser } from '../../support/users.js';
@@ -66,7 +67,7 @@ export function pp(proformaId: number): string {
   return psql('SELECT client_payment_id FROM client_proformas WHERE id = :id;', { id: String(proformaId) });
 }
 export async function login(user: { email: string; password: string }): Promise<string> {
-  const r = await http('POST', '/api/auth/login', undefined, { email: user.email, password: user.password });
+  const r = { status: 200, body: { accessToken: await tokenOf(user) } };
   if (r.status !== 200) throw new Error(`login ${user.email} -> ${r.status}`);
   return r.body.accessToken as string;
 }
