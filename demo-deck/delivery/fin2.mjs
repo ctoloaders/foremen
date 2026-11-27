@@ -1,0 +1,13 @@
+import { session } from './shot.mjs';
+const s = await session('piotr@loaders.dev');
+const { page, snap, go } = s;
+await go('/deliveries/external-orders');
+await page.getByRole('button', { name: 'Oznacz jako opłacone' }).first().click();
+await page.waitForTimeout(800);
+await page.getByRole('dialog').getByRole('textbox').last().fill('Przelew mBank 16.11, potwierdzenie w załączniku').catch(()=>{});
+await page.getByRole('dialog').getByRole('button', { name: 'Oznacz jako opłacone' }).click();
+await page.waitForTimeout(1500);
+await snap('fin-07-after-paid');
+await page.getByRole('button', { name: 'Opłacone' }).click();
+await snap('fin-08-paid-tab', { wait: 1800 });
+await s.close();

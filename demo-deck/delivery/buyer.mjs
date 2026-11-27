@@ -1,0 +1,14 @@
+import { session } from './shot.mjs';
+const s = await session('buyer@loaders.dev');
+const { page, snap, go } = s;
+await go('/deliveries');
+await page.getByText('Tablica zakupowca').click();
+await page.locator('[role=combobox]').filter({ hasText: 'Moje' }).first().click();
+await page.getByRole('option', { name: 'Wszyscy' }).click();
+await page.waitForTimeout(1500);
+await snap('buy-01-kanban');
+await go('/deliveries/external-orders');
+await snap('buy-02-orders-list', { wait: 1800 });
+const btns = await page.getByRole('button').allInnerTexts();
+console.log(btns.join(' | '));
+await s.close();

@@ -1,0 +1,18 @@
+import { session } from './shot.mjs';
+const s = await session('cto@loaders.dev');
+const { page, snap, go } = s;
+await go('/deliveries/external-orders');
+await snap('mgr-09-external-orders', { wait: 1800 });
+await go('/deliveries/shipments');
+await snap('mgr-10-shipments', { wait: 1800 });
+await page.locator('[data-testid^=shipment-open-]').nth(1).click();
+await snap('mgr-11-shipment-detail', { wait: 1800 });
+await page.keyboard.press('Escape');
+await go('/deliveries');
+await page.locator('[role=combobox]').filter({ hasText: /Wg zleceń|Wg proform|Bez grupowania|Wg zamówień/ }).first().click();
+await page.getByRole('option', { name: 'Bez grupowania' }).click();
+await page.waitForTimeout(1200);
+await snap('mgr-12-planner-final');
+await page.locator('button:has(svg.lucide-bell)').first().click().catch(() => {});
+await snap('mgr-13-notifications', { wait: 1500 });
+await s.close();

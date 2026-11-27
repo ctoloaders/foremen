@@ -1,0 +1,11 @@
+import { ok, http, login, psql, day } from './lib.mjs';
+import fs from 'node:fs';
+const st = JSON.parse(fs.readFileSync(new URL('./state.json', import.meta.url)));
+const mgr = await login('cto@loaders.dev');
+const buyer = await login('buyer@loaders.dev');
+console.log(await http('POST', `/api/purchase-positions/${st.pos.own}/transition`, mgr, { target: 'IN_DELIVERY' }).then((r) => r.status + ' ' + r.text.slice(0, 150)));
+const s = await ok('POST', '/api/shipments', buyer, { projectId: 2, deliveryMethod: 'CARRIER', carrierCode: 'INPOST', trackingNumber: '620451118830442700012345', etaDate: day(4), lines: [{ positionId: st.pos.own, quantity: 4 }] });
+st.sOwn = s.id;
+fs.writeFileSync(new URL('./state.json', import.meta.url), JSON.stringify(st, null, 2));
+console.log('own shipment', s.id, s.status);
+console.log(psql(`select id,status from purchase_positions where project_id=2 order by id`));

@@ -1,0 +1,11 @@
+import { session } from './shot.mjs';
+const s = await session('cto@loaders.dev');
+const { page, snap, go } = s;
+await go('/projects/2/materials');
+await snap('mgr-20-estimate-materials', { wait: 2500 });
+await go('/projects/2/scheduleDesign');
+await snap('mgr-21-schedule', { wait: 2500 });
+await go('/projects/2/planActual');
+await snap('mgr-22-plan-actual-overlay', { wait: 3000 });
+console.log(page.url());
+await s.close();

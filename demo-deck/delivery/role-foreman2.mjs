@@ -1,0 +1,13 @@
+import { session } from './shot.mjs';
+const s = await session('tomasz@loaders.dev', { mobile: true });
+const { page, snap, go } = s;
+await go('/deliveries/receipt');
+await page.waitForTimeout(1500);
+await page.getByRole('button', { name: 'Przyjmij wszystko' }).nth(1).click();
+await snap('for-07-accept-all-confirm', { wait: 800 });
+await page.getByRole('alertdialog').getByRole('button', { name: 'Przyjmij wszystko' }).click();
+await page.waitForTimeout(3500);
+await snap('for-08-after-accept-all', { wait: 500 });
+await page.getByText('Historia').first().click();
+await snap('for-09-history', { wait: 1800, full: true });
+await s.close();

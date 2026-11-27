@@ -1,0 +1,10 @@
+import { session } from './shot.mjs';
+const s = await session('cto@loaders.dev');
+const { page, snap, go } = s;
+await page.setViewportSize({ width: 2560, height: 1100 });
+await go('/deliveries');
+await page.locator('[role=combobox]').filter({ hasText: /Wg zleceń|Wg proform|Bez grupowania|Wg zamówień/ }).first().click();
+await page.getByRole('option', { name: 'Bez grupowania' }).click();
+await page.waitForTimeout(1500);
+await snap('mgr-14-planner-wide');
+await s.close();
