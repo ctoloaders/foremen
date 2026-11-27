@@ -61,7 +61,7 @@ Screen URL: `http://localhost:3000/projects/2/rooms` (Generate rooms → AI impo
 
 Screen URL: `https://dev.foremen.eu/projects/<id>/rooms` (Generate rooms → AI import). Environment: dev VM (`infra/dev`).
 
-- [ ] 1. "Automatic room import via AI is unavailable" on dev.foremen.eu
+- [x] 1. "Automatic room import via AI is unavailable" on dev.foremen.eu
   - Triage: observed — starting an AI import on dev returns `503 error.roomsimport.unavailable` ("Автоматический импорт комнат через ИИ недоступен"). Expected (Requirements 13.1, 18.2) — import starts on dev with live Gemini.
   - Root cause (config, not code): `RoomsImportService.start` throws 503 when `!visionClient.isEnabled() || !storage.isConfigured()`.
     - `visionClient.isEnabled()` is false: `foremen.rooms-import.enabled` defaults to `false` (`application.yml`), which wires `DisabledRoomsVisionClient`. The dev stack never sets it: `infra/dev/docker-compose.dev.yml` (backend env) and `infra/dev/vm-startup.sh` (the generated `.env`) contain no `FOREMEN_ROOMS_IMPORT_*` variables at all (only `FOREMEN_OCR_*`). Local Docker works only because the root `docker-compose.yml` defaults it to `true` and `docker-compose.override.yml` turns on live Gemini; that was never mirrored to the dev VM.
@@ -77,7 +77,7 @@ Screen URL: `https://dev.foremen.eu/projects/<id>/rooms` (Generate rooms → AI 
   - Layer: infrastructure (dev deployment config).
   - _Requirements: 13.1, 18.2_
   - _Depends on: none_
-- [ ] V3. Validate Round 3 on dev
+- [x] V3. Validate Round 3 on dev
   - After redeploy, `GET`/start import on `https://dev.foremen.eu/projects/<id>/rooms`: the dialog no longer shows the unavailable message, a job is created and reaches a terminal state (success or a domain failure, not 503). If it fails with `llm_unavailable`, check the Gemini secret (item 3). Requires access to the dev VM / deploy pipeline, so it may need the user to run the redeploy.
   - _Depends on: 1_
 
@@ -90,3 +90,8 @@ Screen URL: `https://dev.foremen.eu/projects/<id>/rooms` (Generate rooms → AI 
 
 - **#1 Dev config — applied, verified on the VM only (`[~]`).** Added `FOREMEN_ROOMS_IMPORT_ENABLED` (default `true`) and `FOREMEN_ROOMS_IMPORT_LLM_STUB` (default `false`) to `infra/dev/docker-compose.dev.yml`; ran `infra/dev/56-sync-stack.sh` (drift check passed, compose + DB backed up as `*.bak.20261108-162255` / `pg-20261108-162255.sql.gz`, backend and frontend redeployed, both stably healthy). Inside `foremen-backend-1`: `FOREMEN_ROOMS_IMPORT_ENABLED=true`, `FOREMEN_ROOMS_IMPORT_LLM_STUB=false`, OCR Gemini key present, model `gemini-3.8-flash`.
 - **V3 stays open** until an import is started from `https://dev.foremen.eu/projects/<id>/rooms` in the browser (the dev login was not driven from here).
+
+
+## Dev validation (2026-11-27, after deploy of root `3f2cf7b` and frontend `7012e3f`)
+
+- The rooms import now runs through the estimate dialog (`GenerateRoomsDialog`, `mode = ESTIMATE`). On dev, test project 31: the start returned 202, no "AI service unavailable" message, the job reached `COMPLETED` and created 2 rooms from the text description (see FOR-05-04 dev validation). ✅

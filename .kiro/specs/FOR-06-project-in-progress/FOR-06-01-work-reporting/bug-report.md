@@ -168,7 +168,7 @@ Screen URL: `https://dev.foremen.eu/projects/5/workReporting` (the "new report" 
   - Triage: observed a WORKER sees the "Dictionaries" section (units, currencies, VAT rates, room types, and so on) in the root menu because the role holds READ on some of those resources; expected a WORKER does not see that section. Layer: frontend (menu only; route access and the backend grants are unchanged). Plan: new optional `hiddenForRoles` field on a nav section (set to `['WORKER']` on `nav.sections.dictionaries`), applied in `Sidebar` and `Drawer`. Same navigation files as item 4, so it runs in the same wave order after it.
   - _Requirements: 11.2 (menu), FOR-03-07 (menu visibility)_
   - _Depends on: none_
-- [ ] V3. Validate Round 3 in browser
+- [x] V3. Validate Round 3 in browser
   - Local stack, as a MANAGER and as a WORKER (the root-menu entry is WORKER-only; the Dictionaries section is hidden for the WORKER) on an execution-status project with several rooms and several categories: the popup fills the screen, no horizontal scroll with the works column narrow and wrapped, categories and works appear in code order, and the root-menu "Submit report" opens the popup with the active project preselected, the project can be switched, and a report can be saved. Repeat on dev after deploy.
   - _Depends on: 1, 2, 3, 4, 5_
 
@@ -209,7 +209,7 @@ Screen URL: `http://localhost:3000/projects/9617/workReporting` (save of the mat
   - Tests: a `WorkReportService` unit test asserting the snapshot is flat (ids instead of nested objects, rooms as plain values); run the affected `WorkReportService*` tests only.
   - _Requirements: 16.4 (bulk save), audit of the report create/update/transitions_
   - _Depends on: none_
-- [ ] V4. Validate Round 4
+- [x] V4. Validate Round 4
   - Restart the local backend (it is in a degraded state after the OOM), repeat the same batch request on project 9617: fast `200` with an id, an audit row with the flat snapshot, and the same save from the browser matrix. Repeat on dev after deploy.
   - _Depends on: 1_
 
@@ -236,3 +236,17 @@ Tests: new `WorkReportAuditSnapshotTest` 2/2 (flat snapshot, cyclic report seria
 Note: the earlier work-report audit rows (417 rows) hold at most 62 characters, which is the `serialization_failed` fallback of the old default. They are left unchanged.
 
 V4 stays open until dev is redeployed.
+
+
+## Dev validation (2026-11-27, after deploy of root `3f2cf7b` and frontend `7012e3f`)
+
+Setup: dedicated test users created through the app (ADMIN `POST /api/users` + the invite `set-password` flow): MANAGER 13, FOREMAN 14, WORKER 15 (`test+qa-*-11272111@example.com`), and a test project 31 created by the MANAGER. After the checks the users (13-18) were deactivated and project 31 was renamed and set to CANCELLED (delete is refused with `error.project.hasDependents`). Project 5 was only opened read-only; nothing was saved there.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | WORKER menu | "Złóż raport" shown; no Dictionaries links (`/measurement-units`, `/currencies`) ✅ |
+| 2 | MANAGER menu | no "Złóż raport"; Dictionaries shown ✅ |
+| 3 | "Złóż raport" → popup | full screen (0,0 1440x900); project select preselected with the working project 31 ✅ |
+| 4 | Works grid, project 31 and project 5 (both workers, read-only) | `scrollWidth` = `clientWidth` = 1085, no horizontal scroll; work column 176 px with wrapping ✅ |
+| 5 | Sort by code | project 31: FLOORS, OTHER, PAINTING_DECOR, PLASTERING, PRELIMINARY, TILING, works by code inside each; project 5: categories CARPENTRY … PLUMBING_FINISH in code order, works by code. Work item 178 has no code on dev and is placed last in FLOORS, as designed ✅ |
+| 6 | Save one cell (Round 4, the OOM path), WORKER on project 31 | `POST /api/work-reports/batch` 200 in 192 ms, toast "Raporty zapisane"; the report (id 13) was deleted after the check ✅ |

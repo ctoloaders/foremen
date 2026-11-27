@@ -157,7 +157,7 @@ Screen URL: `https://dev.foremen.eu/projects/30/team` (Team tab; owning feature 
   - Fix (proposal, needs approval): a new changeset `NNN-users-email-nullable.xml` registered last in `changelog.xml` that drops `NOT NULL` on `users.email` (the unique index stays; Postgres allows many NULLs under a unique index). Check that login and invite code paths handle a null email. Optionally narrow the 409 mapping in `UserService.createWorker` to the unique-email constraint only, so other constraint errors are not reported as duplicates.
   - _Requirements: 13.1, 13.7_
   - _Depends on: none_
-- [ ] V3. Validate Round 3 in browser and by API
+- [x] V3. Validate Round 3 in browser and by API
   - Local stack: as MANAGER and as FOREMAN open the Team tab of an accessible project in an Editable_Status: both buttons visible; add a new worker and invite a new client (201). As a user without `PROJECT_MEMBERS` CREATE, or in a Locked_Status project: buttons hidden and the API returns 403. Repeat on dev after redeploy.
   - _Depends on: 1, 2_
 
@@ -188,7 +188,7 @@ Screen URL: `https://dev.foremen.eu/projects/30/team`.
   - Changeset `279-users-email-nullable.xml` (registered last in `changelog.xml`, precondition makes re-runs a no-op) drops `NOT NULL` on `users.email`; `uk_users_email` stays. `UserService.createWorkerRecord` maps a constraint error to the duplicate-email 409 only when an email was supplied.
   - _Requirements: 13.1, 13.7_
   - _Depends on: none_
-- [ ] V4. Validate Round 4 on dev
+- [x] V4. Validate Round 4 on dev
   - Local validation passed (below). Re-check on dev after deploy: project 30 team tab as MANAGER and FOREMAN.
   - _Depends on: 1, 2_
 
@@ -214,3 +214,20 @@ Local stack rebuilt (`liquibase`, `backend`, `frontend`); `279-users-email-nulla
 Project 9604 was set to COMPLETED for the check and restored to DRAFT afterwards.
 
 Tests: frontend `src/features/project-team` 147/147. Backend `ProjectMemberServiceTest` passes except the two readiness tests that already failed before (Round 2 note), including the new parameterized `assignNonClientOnLockedProjectSkipsLifecycleLock` (WORKER, FOREMAN, MANAGER); `WorkerRecordServiceTest` 17/17.
+
+
+## Dev validation (2026-11-27, after deploy of root `3f2cf7b` and frontend `7012e3f`)
+
+Setup: dedicated test users created through the app (ADMIN `POST /api/users` + the invite `set-password` flow): MANAGER 13, FOREMAN 14, WORKER 15 (`test+qa-*-11272111@example.com`), and a test project 31 created by the MANAGER. After the checks the users (13-18) were deactivated and project 31 was renamed and set to CANCELLED (delete is refused with `error.project.hasDependents`). Project 5 was only opened read-only; nothing was saved there.
+
+| # | Check | Caller | Result |
+|---|---|---|---|
+| 1 | `POST /api/projects` with a FOREMAN member (Round 2) | MANAGER | 201, project 31 ✅ |
+| 2 | Team tab: "Add new worker" and "Invite new client" visible | MANAGER, FOREMAN | both visible ✅ |
+| 3 | "Add new worker" dialog, name only (no email) | FOREMAN | `POST /api/users/worker` 201, `email: ""` ✅ |
+| 4 | `POST /api/users/client`, DRAFT project | FOREMAN | 201 ✅ |
+| 5 | `POST /api/project-members` existing WORKER, DRAFT | FOREMAN | 201 ✅ |
+| 6 | `POST /api/users/worker`, project COMPLETED | FOREMAN | 201 ✅ |
+| 7 | `POST /api/users/client`, project COMPLETED | FOREMAN | 409 `error.project.team.locked` ✅ |
+
+Changeset `279-users-email-nullable` is EXECUTED on dev and `users.email` is nullable.
