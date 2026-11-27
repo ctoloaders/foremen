@@ -367,6 +367,62 @@ public class WorkReportService
         return null;
     }
 
+    // --- Audit snapshot (bug-report Round 4) ---
+
+    /**
+     * Flat, cycle-free audit snapshot of a work report (bug-report Round 4). The inherited default
+     * serializes the whole JPA graph reachable from the report (project, work item, author, worker,
+     * approver, rooms and everything loaded behind them), which exhausted the heap on a large project.
+     * This snapshot keeps only the report's own scalars, the ids of its associations, and its rooms as
+     * plain values. Used for CREATE-after, DELETE-before and both sides of every UPDATE / transition.
+     */
+    @Override
+    public String serializeEntity(WorkReportEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+        try {
+            return AUDIT_OBJECT_MAPPER.writeValueAsString(auditSnapshot(entity));
+        } catch (Exception e) {
+            return "{\"error\":\"serialization_failed\",\"class\":\"WorkReportEntity\"}";
+        }
+    }
+
+    /** Builds the flat audit snapshot map of {@link #serializeEntity(WorkReportEntity)}. */
+    static Map<String, Object> auditSnapshot(WorkReportEntity entity) {
+        Map<String, Object> snap = new LinkedHashMap<>();
+        snap.put("id", entity.getId());
+        snap.put("projectId", entity.getProject() == null ? null : entity.getProject().getId());
+        snap.put("workItemId", entity.getWorkItem() == null ? null : entity.getWorkItem().getId());
+        snap.put("workerId", entity.getWorker() == null ? null : entity.getWorker().getId());
+        snap.put("authorId", entity.getAuthor() == null ? null : entity.getAuthor().getId());
+        snap.put("approvedById", entity.getApprovedBy() == null ? null : entity.getApprovedBy().getId());
+        snap.put("performedFrom", entity.getPerformedFrom());
+        snap.put("performedTo", entity.getPerformedTo());
+        snap.put("status", entity.getStatus() == null ? null : entity.getStatus().name());
+        snap.put("approvedAt", entity.getApprovedAt());
+        snap.put("rejectionReason", entity.getRejectionReason());
+        snap.put("clientUnitPrice", entity.getClientUnitPrice());
+        snap.put("payrollBasePrice", entity.getPayrollBasePrice());
+        snap.put("totalQuantity", entity.getTotalQuantity());
+        snap.put("revenueValue", entity.getRevenueValue());
+        snap.put("note", entity.getNote());
+        List<Map<String, Object>> rooms = new ArrayList<>();
+        if (entity.getRooms() != null) {
+            for (WorkReportRoomEntity row : entity.getRooms()) {
+                Map<String, Object> r = new LinkedHashMap<>();
+                r.put("roomId", row.getRoom() == null ? null : row.getRoom().getId());
+                r.put("quantity", row.getQuantity());
+                r.put("planQuantity", row.getPlanQuantity());
+                r.put("inputMode", row.getInputMode() == null ? null : row.getInputMode().name());
+                r.put("paidAmount", row.getPaidAmount());
+                rooms.add(r);
+            }
+        }
+        snap.put("rooms", rooms);
+        return snap;
+    }
+
     // --- Update / edit (R2.6, R4.5, R6.4, R10.5) ---
 
     /**

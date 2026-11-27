@@ -197,3 +197,42 @@ Not exercised in a browser: saving a report from the new entry (the matrix save 
 Tests: frontend (`src/config`, `src/app`, `work-reporting`, locales) 600/600; backend `WorkReportServiceTest` all pass, including the new `groupsAndWorksSortedByCode`.
 
 Local data changes for the check: user 1249 set to ACTIVE status and users 1246 and 1249 given the local admin password hash.
+
+## Round 4 (2026-11-27)
+
+Screen URL: `http://localhost:3000/projects/9617/workReporting` (save of the matrix draft). Reproduction: `POST /api/work-reports/batch` with one report (project 9617, work item 1, worker 23907, rooms 4933 at 50% and 4934 at 25%), as ADMIN.
+
+- [x] 1. Saving a work report takes a very long time and then fails with 500
+  - Triage: observed the request runs about 13-30 s and returns `500 Internal Server Error`; the backend log shows `java.lang.OutOfMemoryError: Java heap space` in the request thread, and later OOMs in other threads (`HttpClient-3-SelectorManager`, Tomcat async timeouts), so the whole backend degrades. Expected a fast `200` with the new report id. Layer: backend.
+  - Root cause (thread dump taken during the request): the request thread is deep inside Jackson serializing nested beans and collections (`BeanSerializer` → `CollectionSerializer` repeated hundreds of times). `WorkReportService.create` calls `saveAudit(null, saved, "CREATE")`, which uses the default `AdminService.serializeEntity`: it serializes the **whole JPA graph** reachable from the report (project, work item, author, worker, approver, rooms and everything loaded behind them in the persistence context while the report was assembled) with `AUDIT_OBJECT_MAPPER.valueToTree(entity)`. On a project with a large loaded graph this snapshot grows until the heap is exhausted. `AdminService` documents this exact seam for cyclic graphs, and other services (`WorkPriceService`, `PurchasePositionService`, `StandardWorkSetItemService`, ...) already override it with a flat snapshot; `WorkReportService` does not. The same default is used by the update, approve, reject and request-changes paths (`serializeEntity(report)` before each transition), so they are affected too.
+  - Fix: override `serializeEntity(WorkReportEntity)` in `WorkReportService` with a flat, cycle-free snapshot: `id`, `projectId`, `workItemId`, `workerId`, `authorId`, `approvedById`, `performedFrom`, `performedTo`, `status`, `approvedAt`, `rejectionReason`, `clientUnitPrice`, `payrollBasePrice`, `totalQuantity`, `revenueValue`, `note`, and `rooms` as a list of `{roomId, quantity, planQuantity, inputMode, paidAmount}`. No schema change, no API change, no i18n change. Existing audit rows are not touched.
+  - Tests: a `WorkReportService` unit test asserting the snapshot is flat (ids instead of nested objects, rooms as plain values); run the affected `WorkReportService*` tests only.
+  - _Requirements: 16.4 (bulk save), audit of the report create/update/transitions_
+  - _Depends on: none_
+- [ ] V4. Validate Round 4
+  - Restart the local backend (it is in a degraded state after the OOM), repeat the same batch request on project 9617: fast `200` with an id, an audit row with the flat snapshot, and the same save from the browser matrix. Repeat on dev after deploy.
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 4
+
+- **Wave 1:** 1 — one service method and its test.
+- **Wave 2:** V4 — validation, depends on 1.
+
+## Round 4 — validation results (2026-11-27)
+
+`WorkReportService.serializeEntity` now returns a flat snapshot (`auditSnapshot`); local backend rebuilt and restarted.
+
+| # | Check | Before | After |
+|---|---|---|---|
+| 1 | Same `POST /api/work-reports/batch` request (project 9617, work item 1, worker 23907, 2 rooms), ADMIN | 500 after 13-30 s, `OutOfMemoryError: Java heap space` | 200 in 0.13 s, `{"created":[349]}`; repeated: 200 in 0.02 s ✅ |
+| 2 | Audit row of the created report | not written (request failed) | `CREATE` row with a flat 566-character snapshot: ids (`projectId`, `workItemId`, `workerId`, `authorId`), scalars, and `rooms` as `{roomId, quantity, planQuantity, inputMode, paidAmount}` ✅ |
+| 3 | Browser save from the matrix, project 9617, worker 23907, one cell 10% | — | `POST /api/work-reports/batch` 200 in 95 ms, toast "Raporty zapisane" ✅ |
+| 4 | `OutOfMemoryError` in the backend log after the fix | present | none ✅ |
+
+The test reports 349, 350 and 351 were deleted after the checks.
+
+Tests: new `WorkReportAuditSnapshotTest` 2/2 (flat snapshot, cyclic report serialized without the fallback); `WorkReportServiceTest` 39/39.
+
+Note: the earlier work-report audit rows (417 rows) hold at most 62 characters, which is the `serialization_failed` fallback of the old default. They are left unchanged.
+
+V4 stays open until dev is redeployed.
