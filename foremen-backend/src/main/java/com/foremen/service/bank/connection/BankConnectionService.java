@@ -9,10 +9,12 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
@@ -89,7 +91,7 @@ import com.foremen.service.bank.secret.BankConnectionSecretService;
  * <p>Sync runs are requested through the {@link BankSyncTrigger} seam (task 6.4), looked up lazily.
  */
 @Service
-public class BankConnectionService {
+public class BankConnectionService implements BoundConnectionIds {
 
     private static final Logger log = LoggerFactory.getLogger(BankConnectionService.class);
 
@@ -155,6 +157,20 @@ public class BankConnectionService {
         this.events = events;
         this.syncTrigger = syncTrigger;
         this.warnBefore = Duration.ofDays(warnDays > 0 ? warnDays : DEFAULT_WARN_DAYS);
+    }
+
+    /** FOR-07-04a: provider connection ids already bound to a Foremen connection of {@code provider}. */
+    @Override
+    @Transactional(readOnly = true)
+    public Set<String> externalConnectionIds(FeedProvider provider) {
+        Set<String> ids = new LinkedHashSet<>();
+        for (BankConnectionEntity c : connectionDao.findByProviderAndExternalConnectionIdIsNotNull(provider)) {
+            String id = trimToNull(c.getExternalConnectionId());
+            if (id != null) {
+                ids.add(id);
+            }
+        }
+        return ids;
     }
 
     /** Test hook. */
@@ -439,7 +455,11 @@ public class BankConnectionService {
             return connection;
         }
         Map<String, Object> before = snapshot(connection);
-        if (trimToNull(connection.getExternalConnectionId()) != null) {
+        if (trimToNull(connection.getExternalConnectionId()) != null && !registry.isAvailable(connection.getProvider())) {
+            // FOR-07-04a R1.5: provider switched off — nothing to call, disable locally.
+            log.info("Provider {} unavailable; disabling bank connection {} locally without a provider call",
+                    connection.getProvider(), connection.getId());
+        } else if (trimToNull(connection.getExternalConnectionId()) != null) {
             BankFeedConnector connector = requireConnector(connection.getProvider());
             try {
                 connector.disable(toRef(connection));

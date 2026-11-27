@@ -389,6 +389,17 @@ class BankConnectionServiceTest {
     }
 
     @Test
+    void disableWhenProviderUnavailableSkipsProviderCallAndDisablesLocally() {
+        when(connector.isAvailable()).thenReturn(false);
+        BankConnectionEntity c = existing(BankConnectionStatus.ACTIVE, EXT_ID);
+
+        assertThat(service.disable(c.getId()).getStatus()).isEqualTo(BankConnectionStatus.DISABLED);
+
+        verify(connector, never()).disable(any());
+        verify(audit).write(eq(BankConnectionEntity.class), eq(c.getId()), eq("DISABLE"), anyMap(), anyMap());
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void deleteWithLinksIsRejected() {
         BankConnectionEntity c = existing(BankConnectionStatus.DISABLED, EXT_ID);

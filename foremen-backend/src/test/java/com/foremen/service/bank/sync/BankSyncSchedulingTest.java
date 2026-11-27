@@ -17,8 +17,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.foremen.dao.BankConnectionDao;
 import com.foremen.dao.model.BankConnectionEntity;
+import com.foremen.dao.model.FeedProvider;
 import com.foremen.dao.model.SyncTrigger;
 import com.foremen.service.bank.connection.BankConnectionService;
+import com.foremen.service.bank.connector.BankFeedConnectorRegistry;
 
 /**
  * FOR-07-04 task 6.4 — {@link BankSyncScheduler} (scheduled pull + stale recovery) and
@@ -30,15 +32,18 @@ class BankSyncSchedulingTest {
     @Mock private BankSyncOrchestrator orchestrator;
     @Mock private BankConnectionDao connectionDao;
     @Mock private BankConnectionService connectionService;
+    @Mock private BankFeedConnectorRegistry registry;
 
     private static BankConnectionEntity connection(long id) {
         BankConnectionEntity c = new BankConnectionEntity();
         c.setId(id);
+        c.setProvider(FeedProvider.STUB);
         return c;
     }
 
     @Test
     void tickRecoversStaleRunsThenEnqueuesScheduleForSyncableConnections() {
+        when(registry.isAvailable(FeedProvider.STUB)).thenReturn(true);
         when(connectionDao.findByStatusInOrderByIdAsc(BankSyncScheduler.SYNCABLE))
                 .thenReturn(List.of(connection(1), connection(2)));
         when(orchestrator.enqueue(eq(1L), eq(SyncTrigger.SCHEDULE), eq(BankSyncOrchestrator.SYSTEM)))
@@ -46,7 +51,7 @@ class BankSyncSchedulingTest {
         when(orchestrator.enqueue(eq(2L), eq(SyncTrigger.SCHEDULE), eq(BankSyncOrchestrator.SYSTEM)))
                 .thenThrow(new IllegalStateException("boom"));
 
-        int requested = new BankSyncScheduler(orchestrator, connectionDao).tick();
+        int requested = new BankSyncScheduler(orchestrator, connectionDao, registry).tick();
 
         assertThat(requested).isEqualTo(1);
         verify(orchestrator).recoverStale();
@@ -55,7 +60,7 @@ class BankSyncSchedulingTest {
 
     @Test
     void startupRunsRecovery() {
-        new BankSyncScheduler(orchestrator, connectionDao).onStartup();
+        new BankSyncScheduler(orchestrator, connectionDao, registry).onStartup();
 
         verify(orchestrator).recoverOnStartup();
     }

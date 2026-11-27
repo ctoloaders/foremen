@@ -2,7 +2,9 @@ package com.foremen.controller.bank;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.dao.model.FeedProvider;
 import com.foremen.service.bank.PublicBaseUrl;
+import com.foremen.service.bank.connector.BankFeedConnectorRegistry;
 import com.foremen.service.bank.connector.saltedge.SaltEdgeCallbackHandler;
 import com.foremen.service.bank.connector.saltedge.SaltEdgeCallbackReceived;
 import com.foremen.service.bank.connector.saltedge.SaltEdgeCallbackVerifier;
@@ -67,10 +69,13 @@ public class SaltEdgeCallbackController {
     private final SaltEdgeCallbackVerifier verifier;
     private final PublicBaseUrl publicBaseUrl;
     private final ApplicationEventPublisher events;
+    private final BankFeedConnectorRegistry registry;
 
     public SaltEdgeCallbackController(SaltEdgeCallbackVerifier verifier,
                                       PublicBaseUrl publicBaseUrl,
-                                      ApplicationEventPublisher events) {
+                                      ApplicationEventPublisher events,
+                                      BankFeedConnectorRegistry registry) {
+        this.registry = registry;
         this.verifier = verifier;
         this.publicBaseUrl = publicBaseUrl;
         this.events = events;
@@ -81,6 +86,11 @@ public class SaltEdgeCallbackController {
                                                         HttpServletRequest request) {
         if (!SaltEdgeCallbackReceived.isKnownType(type)) {
             throw new ForemenApiException(HttpStatus.NOT_FOUND, NOT_FOUND);
+        }
+        if (!registry.isAvailable(FeedProvider.SALT_EDGE)) {
+            // FOR-07-04a R1.7: provider switched off — acknowledge without reading, verifying or acting.
+            log.debug("Salt Edge {} callback ignored: provider disabled", type);
+            return ResponseEntity.ok(Map.of("ignored", "provider disabled"));
         }
         byte[] body = readBody(request);
         if (!verified(type, body, request)) {

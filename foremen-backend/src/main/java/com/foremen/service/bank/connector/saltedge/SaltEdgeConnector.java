@@ -20,15 +20,18 @@ import com.foremen.service.bank.connector.CredentialField;
 import com.foremen.service.bank.connector.HolderInfo;
 import com.foremen.service.bank.connector.NormalizedAccount;
 import com.foremen.service.bank.connector.NormalizedAccountRef;
+import com.foremen.service.bank.connector.NormalizedTransaction;
 import com.foremen.service.bank.connector.ProviderBank;
 import com.foremen.service.bank.connector.RefreshMode;
 import com.foremen.service.bank.connector.RefreshResult;
 import com.foremen.service.bank.connector.TransactionPage;
+import java.math.BigInteger;
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -449,6 +452,32 @@ public class SaltEdgeConnector implements BankFeedConnector {
         String nextId = blankToNull(page.nextId());
         String nextCursor = nextId == null ? null : CONTINUATION_PREFIX + nextId;
         return SaltEdgeMapper.toTransactionPage(array(page.data()), array(pending), nextCursor, nextCursor == null);
+    }
+
+    /** The max posted id seen (never moving backwards); the previous cursor is kept when nothing numeric arrived. */
+    @Override
+    public String resumeCursor(String previous, List<TransactionPage> pages) {
+        return maxIdResumeCursor(previous, pages);
+    }
+
+    /** The Salt Edge cursor rule as a pure function (also used by test doubles that mimic Salt Edge). */
+    public static String maxIdResumeCursor(String previous, List<TransactionPage> pages) {
+        List<NormalizedTransaction> posted = new ArrayList<>();
+        pages.forEach(p -> posted.addAll(p.posted()));
+        String max = SaltEdgeMapper.maxId(posted);
+        if (max == null) {
+            return previous;
+        }
+        if (previous != null) {
+            try {
+                if (new BigInteger(previous).compareTo(new BigInteger(max)) > 0) {
+                    return previous;
+                }
+            } catch (NumberFormatException ignored) {
+                // A non-numeric stored cursor is replaced by the numeric max id.
+            }
+        }
+        return max;
     }
 
     // ------------------------------------------------------------------ disable (R9.8)

@@ -25,7 +25,8 @@ final class BankAdminDtoMapper {
     }
 
     static BankConnectionDto connection(BankConnectionEntity c, int accountsCount, boolean credentialsRequired,
-                                        CredentialsStatus credentials, List<BankAccountDto> accounts) {
+                                        CredentialsStatus credentials, boolean providerAvailable,
+                                        List<BankAccountDto> accounts) {
         CredentialsStatus cs = credentials == null ? CredentialsStatus.NOT_SET : credentials;
         return new BankConnectionDto(
                 c.getId(),
@@ -48,6 +49,7 @@ final class BankAdminDtoMapper {
                 cs.credentialsSet(),
                 cs.credentialsUpdatedAt(),
                 c.getCreatedDate(),
+                providerAvailable,
                 accounts == null ? null : List.copyOf(accounts));
     }
 

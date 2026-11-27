@@ -1,0 +1,16 @@
+{
+  "id": "tx_enablebanking_in_01",
+  "amount": "9000.00",
+  "currency": "PLN",
+  "date": "2026-11-14",
+  "description": "Platnosc za etap 2",
+  "updated_at": "2026-11-18T05:32:30Z",
+  "raw": {
+    "entry_reference": "ER-0002",
+    "credit_debit_indicator": "CRDT",
+    "creditor": {"name": "Nasza Firma Sp. z o.o."},
+    "creditor_account": {"iban": "PL00000000000000000000000002"},
+    "debtor": {"name": "Inwestor Testowy Sp. z o.o."},
+    "debtor_account": {"iban": "PL00000000000000000000000005"}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "groups": [
+    {
+      "name": "Test Bank Polska",
+      "domain": "testbank.example",
+      "connections": [
+        {"slug": "test-bank-pl-retail-enablebanking", "name": "Test Bank Retail", "provider": {"name": "ENABLEBANKING"}, "is_test_connection": false},
+        {"slug": "test-bank-pl-business-nordigen", "name": "Test Bank Biznes", "provider": {"name": "NORDIGEN"}, "is_test_connection": false},
+        {"slug": "test-bank-pl-business-and-personal-plaid", "name": "Test Bank", "provider": {"name": "PLAID"}, "is_test_connection": false},
+        {"slug": "test-bank-sandbox", "name": "Test Bank Sandbox", "provider": {"name": "PLAID"}, "is_test_connection": true},
+        {"slug": "test-bank-old", "name": "Test Bank Old", "provider": {"name": "NORDIGEN"}, "defunct": true}
+      ]
+    }
+  ]
+}

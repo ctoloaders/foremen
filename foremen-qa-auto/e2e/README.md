@@ -51,6 +51,7 @@ Support code (`tests/support/`):
 | FOR-10 | `tests/for10/additional-api.e2e.ts` | TC-DX-A01..A09 (`additional-test-cases.md`) |
 | FOR-10 | `tests/for10/additional-ui.e2e.ts` | TC-DX-B01..B12 (`additional-test-cases.md`) |
 | FOR-11-00..05 | `tests/for11/<NN-spec>/*.e2e.ts` | Parts A and B of each child spec's `test-cases.md`; per-folder `FINDINGS.md` has the coverage table (pass / partial / not automated) |
+| FOR-07-04a | `tests/for07/04a-fintable-ui.e2e.ts` | TC-B-1..B-4 (Part B). Needs `FINTABLE_ENABLED=true`, `SALTEDGE_ENABLED=false` and `FINTABLE_API_TOKEN` (from `.secrets/fintable.env`) in the backend and in the shell running e2e; TC-B-3 uses the Fintable Plaid sandbox |
 | FOR-04-11 | `tests/for04/11-standard-work-sets.e2e.ts` | TC-UI-SWM-01..08 (Part C of `test-cases.md`; matrix, groups, toolbar, save, leave dialog, read-only and /403). Not automated: RU locale names (SWM-04 step 4), empty states (SWM-09), sticky column (SWM-03) |
 
 FOR-11 notes: the whole `tests/for10 tests/for11` run takes about 30 minutes; run it in the background and

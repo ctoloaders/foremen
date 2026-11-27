@@ -3,7 +3,9 @@ package com.foremen.service.bank.account;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -78,6 +80,31 @@ class SupportedBanksServiceTest {
         service.setClock(Clock.fixed(T0.plus(Duration.ofHours(3)), ZoneOffset.UTC));
         service.list(FeedProvider.SALT_EDGE, "PL", false);
         verify(saltEdge, times(3)).listBanks("PL");
+    }
+
+    @Test
+    void searchOnlyProviderIsRoutedToSearchBanksWithoutCatalogueCache() {
+        com.foremen.service.bank.connector.BankFeedConnector searchOnly =
+                mock(com.foremen.service.bank.connector.BankFeedConnector.class);
+        lenient().when(searchOnly.provider()).thenReturn(FeedProvider.STUB);
+        lenient().when(searchOnly.isAvailable()).thenReturn(true);
+        lenient().when(searchOnly.catalogueSearchOnly()).thenReturn(true);
+        ProviderBank hit = bank("pko_bp", false, "personal");
+        when(searchOnly.searchBanks("PL", "pko")).thenReturn(List.of(hit));
+        when(searchOnly.searchBanks("PL", "zzz")).thenReturn(List.of());
+        SupportedBanksService searchService = new SupportedBanksService(
+                new BankFeedConnectorRegistry(List.of(searchOnly)), Duration.ofHours(1));
+        searchService.setClock(Clock.fixed(T0, ZoneOffset.UTC));
+
+        SupportedBanksService.SupportedBanks found = searchService.list(FeedProvider.STUB, null, " pko ", false);
+        assertThat(found.banks()).containsExactly(hit);
+        assertThat(found.emptyReason()).isNull();
+        assertThat(found.mode()).isNull();
+        assertThat(searchService.list(FeedProvider.STUB, "PL", "zzz", false).emptyReason())
+                .isEqualTo(SupportedBanksService.EmptyReason.NO_BANKS);
+        searchService.list(FeedProvider.STUB, "PL", "pko", false);
+        verify(searchOnly, times(2)).searchBanks("PL", "pko");
+        verify(searchOnly, never()).listBanks(anyString());
     }
 
     @Test

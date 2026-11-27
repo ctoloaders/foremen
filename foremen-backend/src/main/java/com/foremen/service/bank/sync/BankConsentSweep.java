@@ -1,14 +1,18 @@
 package com.foremen.service.bank.sync;
 
 import java.time.Duration;
+import java.time.LocalDate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.foremen.service.bank.connection.BankConnectionService;
+import com.foremen.service.bank.connector.fintable.FintableTokenExpiryCheck;
 
 /**
  * FOR-07-04 (Requirements 1.9, 1.10, 22.2 rows 1–2) — the daily consent sweep
@@ -31,10 +35,20 @@ public class BankConsentSweep {
     private final BankConnectionService connectionService;
     private final Duration pendingAuthMaxAge;
 
+    private final FintableTokenExpiryCheck fintableTokenExpiryCheck;
+
+    @Autowired
     public BankConsentSweep(BankConnectionService connectionService,
-                            @Value("${foremen.bank-feed.consent.pending-auth-max-age:24h}") String pendingAuthMaxAge) {
+                            @Value("${foremen.bank-feed.consent.pending-auth-max-age:24h}") String pendingAuthMaxAge,
+                            ObjectProvider<FintableTokenExpiryCheck> fintableTokenExpiryCheck) {
         this.connectionService = connectionService;
         this.pendingAuthMaxAge = BankSyncOrchestrator.parseDuration(pendingAuthMaxAge, DEFAULT_PENDING_AUTH_MAX_AGE);
+        this.fintableTokenExpiryCheck = fintableTokenExpiryCheck == null ? null
+                : fintableTokenExpiryCheck.getIfAvailable();
+    }
+
+    BankConsentSweep(BankConnectionService connectionService, String pendingAuthMaxAge) {
+        this(connectionService, pendingAuthMaxAge, (ObjectProvider<FintableTokenExpiryCheck>) null);
     }
 
     /** One sweep; each part is isolated so a failure in one does not skip the other. */
@@ -55,6 +69,13 @@ public class BankConsentSweep {
             }
         } catch (RuntimeException e) {
             log.warn("Bank PENDING_AUTH purge failed: {}", e.getMessage());
+        }
+        if (fintableTokenExpiryCheck != null) {
+            try {
+                fintableTokenExpiryCheck.run(LocalDate.now());
+            } catch (RuntimeException e) {
+                log.warn("Fintable token expiry check failed: {}", e.getMessage());
+            }
         }
     }
 

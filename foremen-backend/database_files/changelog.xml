@@ -1007,6 +1007,8 @@
     <include file="database_files/changesets/252-goods-receipt-delegations.xml"/>
     <!-- FOR-11-06: drops the deprecated common payment columns of the detail tables. Registered LAST, after 252. -->
     <include file="database_files/changesets/253-drop-legacy-payment-columns.xml"/>
+    <!-- FOR-07-04a: FINTABLE provider + bank_feed_provider_state. Registered LAST, after 253. -->
+    <include file="database_files/changesets/254-fintable-provider.xml"/>
     <!-- FOR-04-13 round 3: project-level VAT rate (+ 8% backfill). Registered LAST, after 254. -->
     <include file="database_files/changesets/255-project-vat-rate.xml"/>
     <!-- FOR-05-02 Round 11 #2: recompute CALCULATED room wall_area with the finish-gap formula. Registered LAST, after 255. -->

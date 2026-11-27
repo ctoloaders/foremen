@@ -1,0 +1,22 @@
+{
+  "id": "tx_nordigen_out_01",
+  "amount": "-1234.56",
+  "currency": "PLN",
+  "date": "2026-11-17",
+  "description": "Faktura FV/2026/11/01",
+  "merchant": null,
+  "account_owner": null,
+  "category": null,
+  "updated_at": "2026-11-18T05:31:10+00:00",
+  "raw": {
+    "transactionId": "2026111700001",
+    "bookingDate": "2026-11-17",
+    "valueDate": "2026-11-17",
+    "transactionAmount": {"amount": "-1234.56", "currency": "PLN"},
+    "creditorName": "Test Dostawca Sp. z o.o.",
+    "creditorAccount": {"iban": "PL00000000000000000000000001"},
+    "debtorName": "Nasza Firma Sp. z o.o.",
+    "debtorAccount": {"iban": "PL00000000000000000000000002"},
+    "remittanceInformationUnstructured": "Faktura FV/2026/11/01"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "id": "tx_plaid_sandbox_01",
+  "account_id": "acc_plaid_sandbox_01",
+  "amount": "-89.40",
+  "currency": "USD",
+  "date": "2026-11-12",
+  "auth_date": "2026-11-11",
+  "description": "Uber 063015 SF**POOL**",
+  "external_memo": "Uber 063015 SF**POOL**",
+  "merchant": "Uber",
+  "account_owner": null,
+  "category": {"name": "Travel"},
+  "updated_at": "2026-11-18T11:04:44Z",
+  "raw": {
+    "counterparties": [{"name": "Uber", "type": "merchant"}],
+    "payment_channel": "online",
+    "pending": false
+  }
+}

@@ -73,6 +73,30 @@ class BankFeedConnectorRegistryTest {
                 .hasMessageContaining("STUB");
     }
 
+    @Test
+    @DisplayName("SPI defaults: no resume cursor, no-op provider wait, full catalogue, empty search (FOR-07-04a R4.1, R9.1)")
+    void spiDefaults() {
+        TestConnector connector = new TestConnector(FeedProvider.STUB, true);
+
+        assertThat(connector.resumeCursor("5", List.of())).isNull();
+        connector.awaitProviderSync(null, java.time.Duration.ofMinutes(1));
+        assertThat(connector.providerSyncMaxWait()).isZero();
+        assertThat(connector.catalogueSearchOnly()).isFalse();
+        assertThat(connector.searchBanks("PL", "pko")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ProviderBank: the 14-argument constructor leaves via null")
+    void providerBankCompatConstructor() {
+        ProviderBank legacy = new ProviderBank("c", "n", null, null, "active", "web", true, null, null, true,
+                90, 1, false, false);
+        ProviderBank via = new ProviderBank("c", "n", null, null, "active", "web", true, null, null, true,
+                90, 1, false, false, "ENABLEBANKING");
+
+        assertThat(legacy.via()).isNull();
+        assertThat(via.via()).isEqualTo("ENABLEBANKING");
+    }
+
     /** Minimal connector: only provider() / isAvailable() matter to the registry. */
     private record TestConnector(FeedProvider provider, boolean isAvailable) implements BankFeedConnector {
 

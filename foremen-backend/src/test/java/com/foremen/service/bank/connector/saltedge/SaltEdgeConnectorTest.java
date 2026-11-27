@@ -852,6 +852,32 @@ class SaltEdgeConnectorTest {
     }
 
     // =====================================================================================
+    // resume cursor (moved from BankSyncOrchestrator)
+    // =====================================================================================
+
+    private static TransactionPage cursorPage(String next, String... postedIds) {
+        List<NormalizedTransaction> posted = new ArrayList<>();
+        for (String id : postedIds) {
+            posted.add(new NormalizedTransaction(id, TxnStatus.POSTED, new BigDecimal("1.00"), "PLN",
+                    LocalDate.of(2026, 1, 10), LocalDate.of(2026, 1, 10), "t " + id, null, null, null,
+                    null, null, false));
+        }
+        return new TransactionPage(posted, List.of(), next, next == null, 0);
+    }
+
+    @Test
+    void resumeCursorIsTheMaxPostedIdNeverMovingBackwards() {
+        SaltEdgeConnector connector = harness(Mode.CLIENT).connector;
+        List<TransactionPage> pages = List.of(cursorPage("page:1", "9", "12"), cursorPage(null, "10"));
+
+        assertThat(connector.resumeCursor("5", pages)).isEqualTo("12");
+        assertThat(connector.resumeCursor(null, pages)).isEqualTo("12");
+        assertThat(connector.resumeCursor("20", pages)).isEqualTo("20");
+        assertThat(connector.resumeCursor("abc", pages)).isEqualTo("12");
+        assertThat(connector.resumeCursor("5", List.of(cursorPage(null)))).isEqualTo("5");
+    }
+
+    // =====================================================================================
     // errors (R12.1)
     // =====================================================================================
 

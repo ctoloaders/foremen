@@ -76,7 +76,7 @@ class BankProviderControllerTest {
         ProviderBank personal = bank("ing", "ING", Set.of("personal"), false);
         ProviderBank fake = bank("fake_oauth", "Fake Bank", Set.of("business"), true);
         Instant fetchedAt = Instant.parse("2026-11-02T10:00:00Z");
-        when(supportedBanksService.list(FeedProvider.STUB, "PL", true)).thenReturn(new SupportedBanks(
+        when(supportedBanksService.list(FeedProvider.STUB, "PL", null, true)).thenReturn(new SupportedBanks(
                 FeedProvider.STUB, null, "PL", List.of(business, personal, fake), fetchedAt, null));
 
         mockMvc.perform(get("/api/bank/providers/STUB/banks")
@@ -93,7 +93,7 @@ class BankProviderControllerTest {
     @Test
     @DisplayName("an empty catalogue is not an error: emptyReason is returned")
     void emptyReason() throws Exception {
-        when(supportedBanksService.list(FeedProvider.STUB, null, false)).thenReturn(new SupportedBanks(
+        when(supportedBanksService.list(FeedProvider.STUB, null, null, false)).thenReturn(new SupportedBanks(
                 FeedProvider.STUB, null, "PL", List.of(), Instant.now(), EmptyReason.NO_BANKS));
 
         mockMvc.perform(get("/api/bank/providers/STUB/banks"))
@@ -105,12 +105,36 @@ class BankProviderControllerTest {
     @Test
     @DisplayName("an unavailable provider → 409 error.bank.provider.notAvailable")
     void providerNotAvailable() throws Exception {
-        when(supportedBanksService.list(FeedProvider.SALT_EDGE, null, false))
+        when(supportedBanksService.list(FeedProvider.SALT_EDGE, null, null, false))
                 .thenThrow(BankConnectorErrors.providerNotAvailable());
 
         mockMvc.perform(get("/api/bank/providers/SALT_EDGE/banks"))
                 .andExpect(status().is(HttpStatus.CONFLICT.value()))
                 .andExpect(jsonPath("$.message").value(BankConnectorErrors.PROVIDER_NOT_AVAILABLE));
+    }
+
+    @Test
+    @DisplayName("search-only provider: q of 1-2 chars → 400 searchTooShort; blank / 3+ chars pass q through; DTO searchOnly")
+    void searchOnlyProvider() throws Exception {
+        BankFeedConnector searchOnly = mock(BankFeedConnector.class);
+        when(searchOnly.provider()).thenReturn(FeedProvider.STUB);
+        when(searchOnly.isAvailable()).thenReturn(true);
+        when(searchOnly.catalogueSearchOnly()).thenReturn(true);
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(new BankProviderController(
+                        new BankFeedConnectorRegistry(List.of(searchOnly)), supportedBanksService))
+                .setControllerAdvice(new ForemenControllerAdvice(new MessageResolver(new StaticMessageSource())))
+                .build();
+        ProviderBank hit = bank("pko_bp", "PKO Bank Polski", Set.of("personal"), false);
+        when(supportedBanksService.list(FeedProvider.STUB, null, "pko", false)).thenReturn(new SupportedBanks(
+                FeedProvider.STUB, null, "PL", List.of(hit), Instant.now(), null));
+
+        mvc.perform(get("/api/bank/providers")).andExpect(jsonPath("$[0].searchOnly").value(true));
+        mvc.perform(get("/api/bank/providers/STUB/banks").param("q", "pk"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("error.bank.fintable.searchTooShort"));
+        mvc.perform(get("/api/bank/providers/STUB/banks").param("q", "pko"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.banks", hasSize(1)));
     }
 
     private static ProviderBank bank(String code, String name, Set<String> types, boolean test) {

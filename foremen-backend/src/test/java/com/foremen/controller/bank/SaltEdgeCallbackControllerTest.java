@@ -1,6 +1,7 @@
 package com.foremen.controller.bank;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -10,7 +11,9 @@ import com.foremen.config.security.JwtAuthenticationEntryPoint;
 import com.foremen.config.security.JwtTokenProvider;
 import com.foremen.config.security.PermissionResolver;
 import com.foremen.config.security.SecurityConfig;
+import com.foremen.dao.model.FeedProvider;
 import com.foremen.service.bank.PublicBaseUrl;
+import com.foremen.service.bank.connector.BankFeedConnectorRegistry;
 import com.foremen.service.bank.connector.saltedge.SaltEdgeCallbackReceived;
 import com.foremen.service.bank.connector.saltedge.SaltEdgeCallbackVerifier;
 import com.foremen.service.permission.ForemenPermissionEvaluator;
@@ -22,6 +25,7 @@ import java.security.Signature;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,8 +72,16 @@ class SaltEdgeCallbackControllerTest {
     @MockitoBean
     private ForemenPermissionEvaluator permissionEvaluator;
 
+    @MockitoBean
+    private BankFeedConnectorRegistry registry;
+
     @Autowired
     private MockMvc mockMvc;
+
+    @BeforeEach
+    void saltEdgeAvailable() {
+        when(registry.isAvailable(FeedProvider.SALT_EDGE)).thenReturn(true);
+    }
 
     @Autowired
     private ApplicationEvents events;
@@ -92,6 +104,20 @@ class SaltEdgeCallbackControllerTest {
         List<SaltEdgeCallbackReceived> published = events.stream(SaltEdgeCallbackReceived.class).toList();
         assertThat(published).containsExactly(new SaltEdgeCallbackReceived(
                 "success", "111", "222", "42", "finish", null, null));
+    }
+
+    @Test
+    @DisplayName("Salt Edge unavailable → 200 {ignored} even with a bad signature; nothing published")
+    void providerDisabledIsIgnoredBeforeSignatureCheck() throws Exception {
+        when(registry.isAvailable(FeedProvider.SALT_EDGE)).thenReturn(false);
+
+        mockMvc.perform(post("/api/bank-feed/saltedge/callbacks/success")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Signature", "AAAA")
+                        .content(SUCCESS_BODY))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"ignored\":\"provider disabled\"}"));
+        assertThat(events.stream(SaltEdgeCallbackReceived.class)).isEmpty();
     }
 
     @Test

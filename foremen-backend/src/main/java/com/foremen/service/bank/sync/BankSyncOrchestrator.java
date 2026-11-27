@@ -1,6 +1,5 @@
 package com.foremen.service.bank.sync;
 
-import java.math.BigInteger;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,7 +29,6 @@ import com.foremen.dao.model.BankAccountEntity;
 import com.foremen.dao.model.BankAccountType;
 import com.foremen.dao.model.BankConnectionEntity;
 import com.foremen.dao.model.BankConnectionStatus;
-import com.foremen.dao.model.FeedProvider;
 import com.foremen.dao.model.SyncRunStatus;
 import com.foremen.dao.model.SyncTrigger;
 import com.foremen.service.bank.account.BankAccountService;
@@ -47,9 +45,7 @@ import com.foremen.service.bank.connector.ConnectorErrorClass;
 import com.foremen.service.bank.connector.HolderInfo;
 import com.foremen.service.bank.connector.NormalizedAccount;
 import com.foremen.service.bank.connector.NormalizedAccountRef;
-import com.foremen.service.bank.connector.NormalizedTransaction;
 import com.foremen.service.bank.connector.TransactionPage;
-import com.foremen.service.bank.connector.saltedge.SaltEdgeMapper;
 import com.foremen.service.bank.detect.DetectionService;
 import com.foremen.service.bank.detect.DetectionService.DetectionSummary;
 import com.foremen.service.bank.ingest.BalanceContinuityChecker;
@@ -91,10 +87,10 @@ import com.foremen.service.bank.sync.SyncRunRecorder.RunStart;
  * (R9.6).
  *
  * <h2>Resume cursor</h2>
- * The cursor contract is opaque per connector. For {@code SALT_EDGE} the stored resume cursor is the
- * max posted id seen ({@link SaltEdgeMapper#maxId}, previous cursor kept when nothing numeric arrived).
- * Other connectors ({@code STUB}: an in-fetch page offset) get {@code null}, i.e. each sync re-reads from
- * the start and the idempotent ingest de-duplicates.
+ * The cursor contract is opaque per connector: the orchestrator stores what
+ * {@link BankFeedConnector#resumeCursor} returns. {@code SALT_EDGE} keeps the max posted id seen; the
+ * default ({@code STUB}) is {@code null}, i.e. each sync re-reads from the start and the idempotent
+ * ingest de-duplicates.
  */
 @Service
 public class BankSyncOrchestrator implements BankSyncTrigger {
@@ -329,6 +325,15 @@ public class BankSyncOrchestrator implements BankSyncTrigger {
             return failed(tally, null, CONNECTION_DISABLED, "Provider reports the connection disabled");
         }
 
+        // 1b. provider-side asynchronous sync (e.g. Fintable): wait before reading
+        try {
+            connector.awaitProviderSync(ref, connector.providerSyncMaxWait());
+        } catch (ConnectorError e) {
+            return connectorFailure(tally, connectionId, e);
+        } catch (RuntimeException e) {
+            log.warn("Waiting for the provider sync of connection {} failed; continuing", connectionId, e);
+        }
+
         // 2. holder info (best effort) + accounts upsert with holder match (R3.7)
         HolderInfo holder = fetchHolder(connector, ref, connectionId);
         UpsertResult upsert;
@@ -347,7 +352,7 @@ public class BankSyncOrchestrator implements BankSyncTrigger {
                 continue;
             }
             tally.included++;
-            syncAccount(runId, connectionId, connection.getProvider(), connector, ref, account, tally, newPostedIds);
+            syncAccount(runId, connectionId, connector, ref, account, tally, newPostedIds);
         }
 
         // 4. detection on the lines that became POSTED in this run
@@ -374,7 +379,7 @@ public class BankSyncOrchestrator implements BankSyncTrigger {
         return tally.outcome(status);
     }
 
-    private void syncAccount(Long runId, Long connectionId, FeedProvider provider, BankFeedConnector connector,
+    private void syncAccount(Long runId, Long connectionId, BankFeedConnector connector,
                              BankConnectionRef ref, AccountUpsert upsert, Tally tally, List<Long> newPostedIds) {
         Long accountId = upsert.accountId();
         try {
@@ -385,7 +390,7 @@ public class BankSyncOrchestrator implements BankSyncTrigger {
             IngestResult result = ingestService.ingestAll(account, pages, runId);
             tally.ingest = tally.ingest.plus(result);
             newPostedIds.addAll(result.newPostedIds());
-            String resume = resumeCursor(provider, previousCursor, pages);
+            String resume = connector.resumeCursor(previousCursor, pages);
             if (!Objects.equals(resume, previousCursor)) {
                 recorder.storeCursor(accountId, resume);
             }
@@ -445,29 +450,6 @@ public class BankSyncOrchestrator implements BankSyncTrigger {
             throw new IllegalStateException("Connector exceeded " + MAX_PAGES + " pages for account " + accountExternalId);
         }
         return pages;
-    }
-
-    /** See the class doc: Salt Edge → max posted id (never moving backwards); other providers → {@code null}. */
-    static String resumeCursor(FeedProvider provider, String previous, List<TransactionPage> pages) {
-        if (provider != FeedProvider.SALT_EDGE) {
-            return null;
-        }
-        List<NormalizedTransaction> posted = new ArrayList<>();
-        pages.forEach(p -> posted.addAll(p.posted()));
-        String max = SaltEdgeMapper.maxId(posted);
-        if (max == null) {
-            return previous;
-        }
-        if (previous != null) {
-            try {
-                if (new BigInteger(previous).compareTo(new BigInteger(max)) > 0) {
-                    return previous;
-                }
-            } catch (NumberFormatException ignored) {
-                // A non-numeric stored cursor is replaced by the numeric max id.
-            }
-        }
-        return max;
     }
 
     /** R7: compare the new provider balance with the previous one + POSTED amounts in between. */

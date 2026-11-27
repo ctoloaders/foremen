@@ -194,7 +194,8 @@ public class BankConnectionController {
                 .orElse(false);
         CredentialsStatus credentials = connection.getId() == null
                 ? CredentialsStatus.NOT_SET : secretService.status(connection.getId());
-        return BankAdminDtoMapper.connection(connection, accountsCount, credentialsRequired, credentials, accounts);
+        return BankAdminDtoMapper.connection(connection, accountsCount, credentialsRequired, credentials,
+                registry.isAvailable(connection.getProvider()), accounts);
     }
 
     private static String url(URI uri) {

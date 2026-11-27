@@ -416,15 +416,53 @@ class BankSyncOrchestratorTest {
     // ------------------------------------------------------------------ cursor
 
     @Test
-    void resumeCursorIsTheMaxPostedIdForSaltEdgeAndNullForOtherConnectors() {
-        List<TransactionPage> pages = List.of(page(List.of(posted("9", "1.00"), posted("12", "1.00")), "page:1"),
-                page(List.of(posted("10", "1.00")), null));
+    void resumeCursorIsDelegatedToTheConnector() {
+        BankAccountEntity a = bankAccount(1L, "5");
+        accounts(upsert(1L, "acc-1", true));
+        connector.pages.put("acc-1", List.of(page(List.of(posted("9", "1.00"), posted("12", "1.00")), null)));
+        when(ingestService.ingestAll(eq(a), anyList(), eq(RUN_ID))).thenReturn(IngestResult.EMPTY);
 
-        assertThat(BankSyncOrchestrator.resumeCursor(FeedProvider.SALT_EDGE, "5", pages)).isEqualTo("12");
-        assertThat(BankSyncOrchestrator.resumeCursor(FeedProvider.SALT_EDGE, "20", pages)).isEqualTo("20");
-        assertThat(BankSyncOrchestrator.resumeCursor(FeedProvider.SALT_EDGE, "5", List.of(page(List.of(), null))))
-                .isEqualTo("5");
-        assertThat(BankSyncOrchestrator.resumeCursor(FeedProvider.STUB, "5", pages)).isNull();
+        orchestrator.run(RUN_ID);
+
+        verify(recorder).storeCursor(1L, "12");
+    }
+
+    // ------------------------------------------------------------------ provider sync wait
+
+    @Test
+    void awaitProviderSyncRunsBetweenConnectionStateAndAccountsWithTheConnectorMaxWait() {
+        accounts();
+
+        orchestrator.run(RUN_ID);
+
+        assertThat(connector.callOrder).containsExactly("state", "await", "accounts");
+        assertThat(connector.awaitCalls).containsExactly(connector.maxWait);
+        assertThat(finishedOutcome().status()).isEqualTo(SyncRunStatus.SUCCEEDED);
+    }
+
+    @Test
+    void awaitProviderSyncConnectorErrorFailsTheRunAndMapsTheStatus() {
+        ConnectorError limit = new ConnectorError(ConnectorErrorClass.TRANSIENT, "SYNC_FAILED", null, "provider sync failed");
+        connector.awaitError = limit;
+
+        orchestrator.run(RUN_ID);
+
+        verify(connectionService).recordConnectorFailure(CONNECTION_ID, limit);
+        verify(accountService, never()).upsertAccounts(anyLong(), any(), anyList());
+        RunOutcome outcome = finishedOutcome();
+        assertThat(outcome.status()).isEqualTo(SyncRunStatus.FAILED);
+        assertThat(outcome.errorCode()).isEqualTo("SYNC_FAILED");
+    }
+
+    @Test
+    void awaitProviderSyncUnexpectedExceptionIsLoggedAndIgnored() {
+        connector.awaitError = new IllegalStateException("boom");
+        accounts();
+
+        orchestrator.run(RUN_ID);
+
+        verify(accountService).upsertAccounts(eq(CONNECTION_ID), any(), anyList());
+        assertThat(finishedOutcome().status()).isEqualTo(SyncRunStatus.SUCCEEDED);
     }
 
     @Test

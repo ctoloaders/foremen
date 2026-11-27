@@ -149,6 +149,12 @@ services:
       SALTEDGE_LEAD_EMAIL: ${SALTEDGE_LEAD_EMAIL:-}
       # Optional RSA request signing: path INSIDE the container (needs a volume mount).
       SALTEDGE_PRIVATE_KEY_PATH: ${SALTEDGE_PRIVATE_KEY_PATH:-}
+      # Fintable bank feed (FOR-07-04a). On only when vm-startup.sh resolves the token from
+      # Secret Manager (foremen-dev-fintable-api-token). The return host dev.foremen.eu must be on
+      # the token's Return hosts list in the Fintable dashboard.
+      FINTABLE_ENABLED: ${FINTABLE_ENABLED:-false}
+      FINTABLE_API_TOKEN: ${FINTABLE_API_TOKEN:-}
+      FINTABLE_TOKEN_EXPIRES_ON: ${FINTABLE_TOKEN_EXPIRES_ON:-}
     depends_on:
       postgres:
         condition: service_healthy

@@ -16,5 +16,6 @@ public record BankProviderDto(
         SaltEdgeMode mode,
         boolean available,
         boolean credentialsRequired,
-        List<CredentialField> credentialFields) {
+        List<CredentialField> credentialFields,
+        boolean searchOnly) {
 }

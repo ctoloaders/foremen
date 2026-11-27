@@ -56,6 +56,9 @@ public class BankNotificationEmitter {
     static final String TYPE_BALANCE_GAP = "notification.bank.balanceGap";
     static final String TYPE_TRANSACTIONS_TO_REVIEW = "notification.bank.transactionsToReview";
 
+    static final String TYPE_FINTABLE_TOKEN_EXPIRING = "notification.bank.fintableTokenExpiring";
+    static final String FINTABLE_TOKEN_DEEP_LINK = "/bank/connections";
+
     static final String ADMIN_ROLE = "ADMIN";
     static final String FINANCIER_ROLE = "FINANCIER";
     static final String MANAGER_ROLE = "MANAGER";
@@ -127,6 +130,15 @@ public class BankNotificationEmitter {
             return;
         }
         notifyRoles(TYPE_TRANSACTIONS_TO_REVIEW, TO_REVIEW_DEEP_LINK, ADMIN_ROLE, FINANCIER_ROLE, MANAGER_ROLE);
+    }
+
+    /** FOR-07-04a R12.3: the Fintable token is expiring (marker already claimed) ⇒ ADMIN + FINANCIER. */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    public void onFintableTokenExpiring(FintableTokenExpiringEvent event) {
+        if (event == null) {
+            return;
+        }
+        notifyRoles(TYPE_FINTABLE_TOKEN_EXPIRING, FINTABLE_TOKEN_DEEP_LINK, ADMIN_ROLE, FINANCIER_ROLE);
     }
 
     // --- throttle + recipients + emission ---

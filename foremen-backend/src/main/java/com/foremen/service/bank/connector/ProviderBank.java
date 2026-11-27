@@ -19,6 +19,8 @@ import java.util.Set;
  * @param maxFetchInterval maximum fetch interval in days; nullable
  * @param requiresOwnKeys  CLIENT mode: bank needs own provider keys
  * @param testBank         fake / sandbox bank (shown only when fake providers are included)
+ * @param via              backing aggregator / provider the bank is reached through (e.g. Fintable's
+ *                         {@code ENABLEBANKING}); nullable
  */
 public record ProviderBank(
         String code,
@@ -34,10 +36,20 @@ public record ProviderBank(
         Integer maxConsentDays,
         Integer maxFetchInterval,
         boolean requiresOwnKeys,
-        boolean testBank) {
+        boolean testBank,
+        String via) {
 
     public ProviderBank {
         accountTypes = accountTypes == null ? Set.of() : Set.copyOf(accountTypes);
         fetchScopes = fetchScopes == null ? Set.of() : Set.copyOf(fetchScopes);
+    }
+
+    /** Compatibility constructor: no aggregator ({@code via = null}). */
+    public ProviderBank(String code, String name, String logoUrl, String homeUrl, String status, String mode,
+                        boolean regulated, Set<String> accountTypes, Set<String> fetchScopes,
+                        boolean automaticFetch, Integer maxConsentDays, Integer maxFetchInterval,
+                        boolean requiresOwnKeys, boolean testBank) {
+        this(code, name, logoUrl, homeUrl, status, mode, regulated, accountTypes, fetchScopes, automaticFetch,
+                maxConsentDays, maxFetchInterval, requiresOwnKeys, testBank, null);
     }
 }

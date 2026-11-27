@@ -119,11 +119,29 @@ public class SupportedBanksService {
      * @param refresh {@code true} bypasses the cache
      */
     public SupportedBanks list(FeedProvider provider, String country, boolean refresh) {
+        return list(provider, country, null, refresh);
+    }
+
+    /**
+     * As {@link #list(FeedProvider, String, boolean)}; {@code q} is only used by search-only providers
+     * ({@link BankFeedConnector#catalogueSearchOnly()}), which are routed to
+     * {@link BankFeedConnector#searchBanks} and have no full-catalogue cache here (the connector caches).
+     */
+    public SupportedBanks list(FeedProvider provider, String country, String q, boolean refresh) {
         BankFeedConnector connector = registry.find(provider)
                 .filter(BankFeedConnector::isAvailable)
                 .orElseThrow(BankConnectorErrors::providerNotAvailable);
         String countryCode = country == null || country.isBlank()
                 ? DEFAULT_COUNTRY : country.trim().toUpperCase(Locale.ROOT);
+        if (connector.catalogueSearchOnly()) {
+            try {
+                List<ProviderBank> found = connector.searchBanks(countryCode, q == null ? "" : q.trim());
+                return new SupportedBanks(provider, null, countryCode, found, clock.instant(),
+                        found == null || found.isEmpty() ? EmptyReason.NO_BANKS : null);
+            } catch (ConnectorError e) {
+                throw BankConnectorErrors.toApiException(e);
+            }
+        }
         SaltEdgeMode mode = connector instanceof SaltEdgeConnector saltEdge ? saltEdge.mode() : null;
         CacheKey key = new CacheKey(provider, mode, countryCode);
         Instant now = clock.instant();

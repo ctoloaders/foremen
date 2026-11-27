@@ -1,0 +1,15 @@
+{
+  "id": "tx_nordigen_in_01",
+  "amount": "500.00",
+  "currency": "PLN",
+  "date": "2026-11-16",
+  "description": "Zaliczka",
+  "updated_at": "2026-11-17T05:31:10Z",
+  "raw": {
+    "transactionId": "2026111600002",
+    "creditorName": "Nasza Firma Sp. z o.o.",
+    "creditorAccount": {"iban": "PL00000000000000000000000002"},
+    "debtorName": "Test Klient S.A.",
+    "debtorAccount": {"iban": "PL00000000000000000000000003"}
+  }
+}

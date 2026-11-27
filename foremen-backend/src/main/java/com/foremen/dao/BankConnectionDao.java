@@ -25,6 +25,9 @@ public interface BankConnectionDao extends AdminDao<BankConnectionEntity, Long> 
     /** Connections of a provider customer (Client customer / Partner lead). */
     List<BankConnectionEntity> findByProviderAndExternalCustomerId(FeedProvider provider, String externalCustomerId);
 
+    /** Connections of a provider that are bound to a provider connection id (FOR-07-04a fallback binding). */
+    List<BankConnectionEntity> findByProviderAndExternalConnectionIdIsNotNull(FeedProvider provider);
+
     /** Connections in the given statuses (scheduler, consent sweep), oldest first. */
     List<BankConnectionEntity> findByStatusInOrderByIdAsc(Collection<BankConnectionStatus> statuses);
 }

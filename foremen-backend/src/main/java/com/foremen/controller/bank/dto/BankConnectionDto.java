@@ -15,6 +15,8 @@ import com.foremen.dao.model.SaltEdgeMode;
  * {@link #credentialsSet()} / {@link #credentialsUpdatedAt()} (R2.3); the provider customer / consent
  * ids and the stored holder tax ids are not exposed.
  *
+ * @param providerAvailable {@code false} when the provider's connector is switched off or not configured
+ *                          (FOR-07-04a R1.6); the row stays visible, provider actions are refused
  * @param accounts the connection's bank accounts — filled on the detail endpoint only ({@code null} in
  *                 the list)
  */
@@ -39,5 +41,6 @@ public record BankConnectionDto(
         boolean credentialsSet,
         OffsetDateTime credentialsUpdatedAt,
         LocalDateTime createdDate,
+        boolean providerAvailable,
         List<BankAccountDto> accounts) {
 }

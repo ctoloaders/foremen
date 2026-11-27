@@ -13,6 +13,7 @@ import com.foremen.dao.BankConnectionDao;
 import com.foremen.dao.model.BankConnectionEntity;
 import com.foremen.dao.model.BankConnectionStatus;
 import com.foremen.dao.model.SyncTrigger;
+import com.foremen.service.bank.connector.BankFeedConnectorRegistry;
 
 /**
  * FOR-07-04 (Requirements 5.1, 5.6, 9.6) — the scheduled fallback pull.
@@ -36,10 +37,13 @@ public class BankSyncScheduler {
 
     private final BankSyncOrchestrator orchestrator;
     private final BankConnectionDao connectionDao;
+    private final BankFeedConnectorRegistry registry;
 
-    public BankSyncScheduler(BankSyncOrchestrator orchestrator, BankConnectionDao connectionDao) {
+    public BankSyncScheduler(BankSyncOrchestrator orchestrator, BankConnectionDao connectionDao,
+                             BankFeedConnectorRegistry registry) {
         this.orchestrator = orchestrator;
         this.connectionDao = connectionDao;
+        this.registry = registry;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -71,7 +75,12 @@ public class BankSyncScheduler {
             return 0;
         }
         int requested = 0;
+        int skipped = 0;
         for (BankConnectionEntity connection : connections) {
+            if (!registry.isAvailable(connection.getProvider())) {
+                skipped++;
+                continue;
+            }
             try {
                 if (orchestrator.enqueue(connection.getId(), SyncTrigger.SCHEDULE, BankSyncOrchestrator.SYSTEM)
                         .isPresent()) {
@@ -80,6 +89,9 @@ public class BankSyncScheduler {
             } catch (RuntimeException e) {
                 log.warn("Scheduled bank sync for connection {} not requested: {}", connection.getId(), e.getMessage());
             }
+        }
+        if (skipped > 0) {
+            log.debug("Bank sync scheduler skipped {} connection(s) whose provider is unavailable", skipped);
         }
         if (requested > 0) {
             log.info("Bank sync scheduler requested {} run(s)", requested);

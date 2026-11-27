@@ -1,0 +1,13 @@
+{
+  "id": "acc_plaid_sandbox_01",
+  "connection_id": "conn_plaid_sandbox_01",
+  "name": "Plaid Checking",
+  "display_name": "Plaid Checking 0000",
+  "type": "depository / checking",
+  "currency": "USD",
+  "balance": "110.00",
+  "balance_available": "100.00",
+  "iban": null,
+  "holder_name": null,
+  "enabled": true
+}

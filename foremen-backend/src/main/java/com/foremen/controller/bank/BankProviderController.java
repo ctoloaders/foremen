@@ -2,6 +2,7 @@ package com.foremen.controller.bank;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,6 +15,7 @@ import com.foremen.config.security.PermissionResource;
 import com.foremen.controller.bank.dto.BankProviderDto;
 import com.foremen.controller.bank.dto.SupportedBanksResponse;
 import com.foremen.dao.model.FeedProvider;
+import com.foremen.exception.ForemenApiException;
 import com.foremen.service.bank.account.SupportedBanksService;
 import com.foremen.service.bank.account.SupportedBanksService.SupportedBanks;
 import com.foremen.service.bank.connector.BankFeedConnector;
@@ -43,6 +45,10 @@ import lombok.RequiredArgsConstructor;
 @PermissionResource("BANK_CONNECTIONS")
 public class BankProviderController {
 
+    /** Minimum {@code q} length for search-only providers (a blank {@code q} lists the popular banks). */
+    static final int MIN_SEARCH_LENGTH = 3;
+    static final String SEARCH_TOO_SHORT = "error.bank.fintable.searchTooShort";
+
     private final BankFeedConnectorRegistry registry;
     private final SupportedBanksService supportedBanksService;
 
@@ -70,8 +76,14 @@ public class BankProviderController {
             @RequestParam(defaultValue = "false") boolean businessOnly,
             @RequestParam(defaultValue = "true") boolean includeTest,
             @RequestParam(defaultValue = "false") boolean refresh) {
-        SupportedBanks catalogue = supportedBanksService.list(provider, country, refresh);
-        List<ProviderBank> filtered = SupportedBanksService.filter(catalogue.banks(), q, businessOnly, includeTest);
+        boolean searchOnly = registry.find(provider).map(BankFeedConnector::catalogueSearchOnly).orElse(false);
+        if (searchOnly && q != null && !q.isBlank() && q.trim().length() < MIN_SEARCH_LENGTH) {
+            throw new ForemenApiException(HttpStatus.BAD_REQUEST, SEARCH_TOO_SHORT);
+        }
+        SupportedBanks catalogue = supportedBanksService.list(provider, country, q, refresh);
+        // A search-only provider already applied q (it may match fields other than name / code).
+        List<ProviderBank> filtered = SupportedBanksService.filter(catalogue.banks(), searchOnly ? null : q,
+                businessOnly, includeTest);
         return ResponseEntity.ok(new SupportedBanksResponse(catalogue.provider(), catalogue.mode(),
                 catalogue.country(), filtered, catalogue.banks().size(), catalogue.fetchedAt(),
                 catalogue.emptyReason()));
@@ -84,6 +96,7 @@ public class BankProviderController {
                 connector instanceof SaltEdgeConnector saltEdge ? saltEdge.mode() : null,
                 connector.isAvailable(),
                 !fields.isEmpty(),
-                List.copyOf(fields));
+                List.copyOf(fields),
+                connector.catalogueSearchOnly());
     }
 }

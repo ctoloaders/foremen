@@ -55,6 +55,9 @@ SECRET_SALTEDGE_APP_ID="$(md secret-saltedge-app-id || true)"
 SECRET_SALTEDGE_SECRET="$(md secret-saltedge-secret || true)"
 SECRET_SALTEDGE_LEAD_EMAIL="$(md secret-saltedge-lead-email || true)"
 SECRET_SALTEDGE_MODE="$(md secret-saltedge-mode || true)"
+# FOR-07-04a Fintable: NAMES of the Secret Manager secrets (values never here).
+SECRET_FINTABLE_API_TOKEN="$(md secret-fintable-api-token || true)"
+SECRET_FINTABLE_EXPIRES_ON="$(md secret-fintable-expires-on || true)"
 
 # --- docker auth to Artifact Registry (via VM service account) ---
 gcloud auth configure-docker "${AR_HOST}" --quiet
@@ -124,6 +127,14 @@ if [ -n "${SECRET_SALTEDGE_MODE}" ]; then
   case "${_mode}" in CLIENT|PARTNER) SALTEDGE_MODE="${_mode}" ;; esac
 fi
 [ -n "${SALTEDGE_APP_ID}" ] && [ -n "${SALTEDGE_SECRET}" ] && SALTEDGE_ENABLED="true"
+# FOR-07-04a Fintable bank feed. Turned on only when the token secret resolves to a non-empty value.
+# FINTABLE_TOKEN_EXPIRES_ON (YYYY-MM-DD) drives the in-app expiry warnings; blank => no warnings.
+FINTABLE_ENABLED="false"
+FINTABLE_API_TOKEN=""
+FINTABLE_TOKEN_EXPIRES_ON=""
+[ -n "${SECRET_FINTABLE_API_TOKEN}" ] && FINTABLE_API_TOKEN="$(sm "${SECRET_FINTABLE_API_TOKEN}" 2>/dev/null || true)"
+[ -n "${SECRET_FINTABLE_EXPIRES_ON}" ] && FINTABLE_TOKEN_EXPIRES_ON="$(sm "${SECRET_FINTABLE_EXPIRES_ON}" 2>/dev/null || true)"
+[ -n "${FINTABLE_API_TOKEN}" ] && FINTABLE_ENABLED="true"
 
 # --- write .env for compose ---
 cat > "${APP_DIR}/.env" <<EOF
@@ -149,6 +160,9 @@ SALTEDGE_MODE=${SALTEDGE_MODE}
 SALTEDGE_APP_ID=${SALTEDGE_APP_ID}
 SALTEDGE_SECRET=${SALTEDGE_SECRET}
 SALTEDGE_LEAD_EMAIL=${SALTEDGE_LEAD_EMAIL}
+FINTABLE_ENABLED=${FINTABLE_ENABLED}
+FINTABLE_API_TOKEN=${FINTABLE_API_TOKEN}
+FINTABLE_TOKEN_EXPIRES_ON=${FINTABLE_TOKEN_EXPIRES_ON}
 EOF
 chmod 600 "${APP_DIR}/.env"
 

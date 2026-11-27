@@ -47,6 +47,11 @@ class FakeBankFeedConnector implements BankFeedConnector {
     final Map<String, ConnectorError> accountErrors = new HashMap<>();
 
     final List<String> fetchCalls = new ArrayList<>();
+    /** Order of the SPI calls around the wait step: {@code state}, {@code await}, {@code accounts}. */
+    final List<String> callOrder = new ArrayList<>();
+    final List<java.time.Duration> awaitCalls = new ArrayList<>();
+    RuntimeException awaitError;
+    java.time.Duration maxWait = java.time.Duration.ofMinutes(20);
     int stateCalls;
     int refreshCalls;
 
@@ -113,6 +118,7 @@ class FakeBankFeedConnector implements BankFeedConnector {
     @Override
     public ConnectionState fetchConnectionState(BankConnectionRef connection) {
         stateCalls++;
+        callOrder.add("state");
         if (stateError != null) {
             throw stateError;
         }
@@ -129,6 +135,7 @@ class FakeBankFeedConnector implements BankFeedConnector {
 
     @Override
     public List<NormalizedAccount> fetchAccounts(BankConnectionRef connection) {
+        callOrder.add("accounts");
         if (accountsError != null) {
             throw accountsError;
         }
@@ -145,6 +152,28 @@ class FakeBankFeedConnector implements BankFeedConnector {
         List<TransactionPage> list = pages.getOrDefault(account.externalId(), List.of(page(List.of(), null)));
         int index = cursor != null && cursor.startsWith("page:") ? Integer.parseInt(cursor.substring(5)) : 0;
         return list.get(index);
+    }
+
+    /** Mimics the real connectors: Salt Edge keeps the max posted id, every other provider stores nothing. */
+    @Override
+    public String resumeCursor(String previous, List<TransactionPage> pages) {
+        return provider == FeedProvider.SALT_EDGE
+                ? com.foremen.service.bank.connector.saltedge.SaltEdgeConnector.maxIdResumeCursor(previous, pages)
+                : null;
+    }
+
+    @Override
+    public void awaitProviderSync(BankConnectionRef connection, java.time.Duration wait) {
+        callOrder.add("await");
+        awaitCalls.add(wait);
+        if (awaitError != null) {
+            throw awaitError;
+        }
+    }
+
+    @Override
+    public java.time.Duration providerSyncMaxWait() {
+        return maxWait;
     }
 
     @Override

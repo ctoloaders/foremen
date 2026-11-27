@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-07-04a (task 1.1; Requirements 15.1, 15.2, 15.3): the FINTABLE bank-feed provider.
+          1. ck_bank_connections_provider is dropped and re-added to allow 'FINTABLE'.
+          2. bank_feed_provider_state: one row per provider (PK = provider), holds the provider-level
+             token expiry date and the last notified level (30 | 7 | 0 | NULL).
+        Each changeSet is guarded with onFail="MARK_RAN". No resources / ABAC / dataset change (15.3).
+        Registered LAST in changelog.xml, after 253.
+    -->
+    <changeSet id="254-bank-connections-provider-fintable" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="0">
+                SELECT COUNT(*) FROM pg_constraint
+                WHERE conname = 'ck_bank_connections_provider'
+                  AND pg_get_constraintdef(oid) LIKE '%FINTABLE%'
+            </sqlCheck>
+        </preConditions>
+        <sql dbms="postgresql">
+            ALTER TABLE bank_connections DROP CONSTRAINT IF EXISTS ck_bank_connections_provider;
+            ALTER TABLE bank_connections ADD CONSTRAINT ck_bank_connections_provider
+                CHECK (provider IN ('SALT_EDGE', 'STUB', 'FINTABLE'));
+        </sql>
+    </changeSet>
+
+    <changeSet id="254-bank-feed-provider-state" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <tableExists tableName="bank_feed_provider_state"/>
+            </not>
+        </preConditions>
+        <sql dbms="postgresql">
+            CREATE TABLE bank_feed_provider_state (
+                provider             VARCHAR(32) PRIMARY KEY,
+                token_expires_on     DATE,
+                token_notified_level INTEGER,
+                created_date         TIMESTAMP   NOT NULL DEFAULT NOW(),
+                created_by           VARCHAR(255),
+                updated_date         TIMESTAMP,
+                updated_by           VARCHAR(255),
+                CONSTRAINT ck_bank_feed_provider_state_provider
+                    CHECK (provider IN ('SALT_EDGE', 'STUB', 'FINTABLE'))
+            );
+        </sql>
+    </changeSet>
+</databaseChangeLog>

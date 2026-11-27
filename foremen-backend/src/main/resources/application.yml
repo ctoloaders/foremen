@@ -376,6 +376,25 @@ foremen:
       country-codes: ${SALTEDGE_COUNTRY_CODES:PL}
       banks-cache-ttl: ${SALTEDGE_BANKS_CACHE_TTL:1h}
       http-timeout: ${SALTEDGE_HTTP_TIMEOUT:60s}
+    # FOR-07-04a: Fintable connector. enabled=false => no Fintable bean. The token is passed in the
+    # environment: on the VM from Google Secret Manager (vm-startup.sh -> .env), locally from
+    # .secrets/fintable.env. Never commit it.
+    fintable:
+      enabled: ${FINTABLE_ENABLED:false}
+      base-url: ${FINTABLE_BASE_URL:https://fintable.io/api/v2}
+      allow-insecure-base-url: ${FINTABLE_ALLOW_INSECURE_BASE_URL:false}   # tests only
+      api-token: ${FINTABLE_API_TOKEN:}
+      token-expires-on: ${FINTABLE_TOKEN_EXPIRES_ON:}
+      workspace-id: ${FINTABLE_WORKSPACE_ID:}
+      http-timeout: ${FINTABLE_HTTP_TIMEOUT:30s}
+      country-codes: ${FINTABLE_COUNTRY_CODES:PL}
+      provider-preference: ${FINTABLE_PROVIDER_PREFERENCE:ENABLEBANKING,NORDIGEN}
+      popular-banks: ${FINTABLE_POPULAR_BANKS:PKO,mBank,ING,Pekao,Santander,Millennium,Alior}
+      sync-wait: ${FINTABLE_SYNC_WAIT:10m}
+      sync-poll-interval: ${FINTABLE_SYNC_POLL_INTERVAL:15s}
+      manual-sync-interval: ${FINTABLE_MANUAL_SYNC_INTERVAL:12h}
+      cursor-overlap: ${FINTABLE_CURSOR_OVERLAP:1h}
+      token-warn-days: ${FINTABLE_TOKEN_WARN_DAYS:30}
   bank-ledger:
     match:
       auto-threshold: 0.90

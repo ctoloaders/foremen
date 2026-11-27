@@ -3,6 +3,7 @@ package com.foremen.service.bank.connector;
 import com.foremen.dao.model.FeedProvider;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -58,4 +59,38 @@ public interface BankFeedConnector {
 
     /** Revokes provider-side access; already-revoked / not-found is treated as success. */
     void disable(BankConnectionRef connection);
+
+    /**
+     * The resume cursor to store for an account after one fetch ({@code pages} = all pages read, in order).
+     * The cursor is opaque per connector. Default: {@code null}, i.e. the next sync re-reads from the start
+     * and the idempotent ingest de-duplicates.
+     */
+    default String resumeCursor(String previous, List<TransactionPage> pages) {
+        return null;
+    }
+
+    /**
+     * Waits (at most {@code maxWait}) until the provider has finished its own asynchronous sync of the
+     * connection, so the following pull reads fresh data. Default: no-op. Called by the orchestrator after
+     * {@link #fetchConnectionState} and before {@link #fetchAccounts}; implementations should return normally
+     * on timeout and may throw {@link ConnectorError}.
+     */
+    default void awaitProviderSync(BankConnectionRef connection, Duration maxWait) {
+        // no-op
+    }
+
+    /** The longest the orchestrator waits in {@link #awaitProviderSync}. Default: {@link Duration#ZERO}. */
+    default Duration providerSyncMaxWait() {
+        return Duration.ZERO;
+    }
+
+    /** {@code true} when the catalogue is search-only (no "list all"): use {@link #searchBanks}. */
+    default boolean catalogueSearchOnly() {
+        return false;
+    }
+
+    /** Catalogue search for search-only providers; {@code q} blank = popular banks. Default: empty. */
+    default List<ProviderBank> searchBanks(String countryCode, String query) {
+        return List.of();
+    }
 }

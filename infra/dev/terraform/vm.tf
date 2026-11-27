@@ -83,6 +83,9 @@ resource "google_compute_instance" "vm" {
     secret-saltedge-secret     = "foremen-dev-saltedge-secret"
     secret-saltedge-lead-email = "foremen-dev-saltedge-lead-email"
     secret-saltedge-mode       = "foremen-dev-saltedge-mode"
+    # FOR-07-04a Fintable bank feed (names only; secrets are created by hand in Secret Manager)
+    secret-fintable-api-token  = "foremen-dev-fintable-api-token"
+    secret-fintable-expires-on = "foremen-dev-fintable-token-expires-on"
     # Startup script as a metadata entry (key "startup-script") — matches how the
     # VM was created, so Terraform doesn't try to null it out.
     startup-script = file("${path.module}/../vm-startup.sh")
