@@ -31,7 +31,8 @@ class SensitiveFieldGuardTest extends AbstractDatasetIntegrationTest {
             "externalConnectionId", "externalConsentId", "email", "phone", "nip", "snapshotBefore",
             "snapshotAfter", "body", "deepLink", "originalText", "documentUri", "contentHash",
             "rawObjectKey", "processedObjectKey", "storageUri", "supplierNip", "counterpartyIban",
-            "counterpartyKey", "holderName", "lastErrorMessage", "bankLogoUrl", "contactPerson");
+            "counterpartyKey", "holderName", "lastErrorMessage", "bankLogoUrl", "contactPerson",
+            "aiInstructions", "aiReport");
 
     @Autowired
     private DatasetRegistry registry;

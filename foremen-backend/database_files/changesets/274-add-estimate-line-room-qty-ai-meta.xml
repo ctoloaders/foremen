@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- FOR-05-04 (Requirement 21.3; design B11): per-cell AI marker and explanation record. -->
+    <changeSet id="274-add-estimate-line-room-qty-ai-meta" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="estimate_line_room_qty" columnName="ai_meta"/></not>
+        </preConditions>
+        <addColumn tableName="estimate_line_room_qty">
+            <column name="ai_meta" type="JSONB"/>
+        </addColumn>
+        <rollback><dropColumn tableName="estimate_line_room_qty" columnName="ai_meta"/></rollback>
+    </changeSet>
+</databaseChangeLog>

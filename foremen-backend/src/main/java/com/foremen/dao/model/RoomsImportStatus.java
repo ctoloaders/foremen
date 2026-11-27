@@ -11,6 +11,12 @@ public enum RoomsImportStatus {
     CLASSIFYING,
     MEASURING,
     VALIDATING,
+    /** FOR-05-04: ESTIMATE-mode stages after the rooms phase (non-terminal). */
+    SAVING_ROOMS,
+    PLANNING_WORKS,
+    /** FOR-05-04 rework: one assign_work call per resolved assignment, then the summary (non-terminal). */
+    ASSIGNING,
+    FINALIZING,
     COMPLETED,
     FAILED;
 

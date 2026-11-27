@@ -13,4 +13,6 @@ public class WorkCategoryServiceModel {
     private Integer orderNo;
     private String name;
     private boolean active;
+    /** FOR-05-04: optional AI calculation rules (staff-only). */
+    private String aiInstructions;
 }

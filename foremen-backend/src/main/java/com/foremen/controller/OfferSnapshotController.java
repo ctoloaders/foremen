@@ -58,12 +58,16 @@ public class OfferSnapshotController {
     /** Read-only matrix-shaped snapshot captured when the offer was prepared; 404 when none exists. */
     @GetMapping("/{offerId}/snapshot")
     @RequiresPermission(resource = OFFERS_RESOURCE, operation = READ_OPERATION)
-    public ResponseEntity<SnapshotView> snapshot(@PathVariable Long offerId) {
+    public ResponseEntity<?> snapshot(@PathVariable Long offerId) {
         offerService.assertOfferAccess(offerId);
         String role = roleCode();
-        return ResponseEntity.ok(offerSnapshotService.snapshot(
-                offerId, CLIENT_ROLE.equals(role),
-                ClientOfferReadModelAssembler.canSeeLabourComparison(role), isRu()));
+        if (CLIENT_ROLE.equals(role)) {
+            SnapshotView view = offerSnapshotService.snapshot(offerId, true, false, isRu());
+            return ResponseEntity.ok(view);
+        }
+        // FOR-05-04 (R21.9): staff get the same object plus the per-cell AI explanations (aiCells).
+        return ResponseEntity.ok(offerSnapshotService.staffSnapshot(
+                offerId, ClientOfferReadModelAssembler.canSeeLabourComparison(role), isRu()));
     }
 
     /** Diff of two offers of the same project (400 for different projects); client-visible data only. */

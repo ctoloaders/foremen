@@ -28,10 +28,13 @@ public class RoomsImportJobTerminator {
     private final RoomsImportJobMapper mapper;
     private final RoomsImportProperties properties;
     private final RoomsImportNotificationEmitter emitter;
+    private final EstimateAiNotificationEmitter estimateEmitter;
 
     public RoomsImportJobTerminator(RoomsImportJobDao jobDao, RoomsImportJobMapper mapper,
-                                    RoomsImportProperties properties, RoomsImportNotificationEmitter emitter) {
+                                    RoomsImportProperties properties, RoomsImportNotificationEmitter emitter,
+                                    EstimateAiNotificationEmitter estimateEmitter) {
         this.emitter = emitter;
+        this.estimateEmitter = estimateEmitter;
         this.jobDao = jobDao;
         this.mapper = mapper;
         this.properties = properties;
@@ -44,6 +47,17 @@ public class RoomsImportJobTerminator {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public int complete(Long jobId, ImportResult result) {
+        return complete(jobId, result, null);
+    }
+
+    /**
+     * FOR-05-04 (Requirement 2.3): completes the job and, when {@code estimate} is given, merges it into the
+     * stored result as {@code result.estimate} (summary of the job).
+     *
+     * @return affected rows (0 or 1)
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int complete(Long jobId, ImportResult result, java.util.Map<String, Object> estimate) {
         LocalDateTime now = LocalDateTime.now();
         int rooms = result.rooms() == null ? 0 : result.rooms().size();
         int warnings = countWarnings(result);
@@ -53,11 +67,19 @@ public class RoomsImportJobTerminator {
                 RoomsImportJobDao.TERMINAL);
         if (updated == 1) {
             jobDao.findById(jobId).ifPresent(job -> {
-                job.setResult(mapper.resultToMap(result));
+                java.util.Map<String, Object> stored = new java.util.LinkedHashMap<>(mapper.resultToMap(result));
+                if (estimate != null) {
+                    stored.put("estimate", estimate);
+                }
+                job.setResult(stored);
                 jobDao.save(job);
                 Long projectId = job.getProject() == null ? null : job.getProject().getId();
                 Long creatorId = job.getCreator() == null ? null : job.getCreator().getId();
-                afterCommit(() -> emitter.emitCompleted(projectId, creatorId));
+                if (isEstimate(job)) {
+                    afterCommit(() -> estimateEmitter.emitCompleted(projectId, creatorId));
+                } else {
+                    afterCommit(() -> emitter.emitCompleted(projectId, creatorId));
+                }
             });
         }
         return updated;
@@ -78,10 +100,18 @@ public class RoomsImportJobTerminator {
             jobDao.findById(jobId).ifPresent(job -> {
                 Long projectId = job.getProject() == null ? null : job.getProject().getId();
                 Long creatorId = job.getCreator() == null ? null : job.getCreator().getId();
-                afterCommit(() -> emitter.emitFailed(projectId, creatorId, code));
+                if (isEstimate(job)) {
+                    afterCommit(() -> estimateEmitter.emitFailed(projectId, creatorId, code));
+                } else {
+                    afterCommit(() -> emitter.emitFailed(projectId, creatorId, code));
+                }
             });
         }
         return updated;
+    }
+
+    private static boolean isEstimate(com.foremen.dao.model.RoomsImportJobEntity job) {
+        return "ESTIMATE".equals(job.getMode());
     }
 
     /** Runs the emission after the terminal update commits (R17.5); immediately if no transaction. */

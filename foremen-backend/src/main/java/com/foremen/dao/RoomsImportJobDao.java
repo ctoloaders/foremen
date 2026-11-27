@@ -33,6 +33,21 @@ public interface RoomsImportJobDao extends AdminDao<RoomsImportJobEntity, Long> 
     Optional<RoomsImportJobEntity> findByProjectId(@Param("projectId") Long projectId);
 
     /**
+     * FOR-05-04 (Requirement 4.1): the project's job when it is in {@code mode} and still active
+     * (non-terminal). Drives {@code AiProjectLockGuard}; the lock is derived from this row only.
+     */
+    @Query("SELECT j FROM RoomsImportJobEntity j WHERE j.project.id = :projectId AND j.mode = :mode "
+            + "AND j.status NOT IN :terminal")
+    Optional<RoomsImportJobEntity> findActiveByProjectIdAndMode(@Param("projectId") Long projectId,
+                                                                @Param("mode") String mode,
+                                                                @Param("terminal") List<RoomsImportStatus> terminal);
+
+    /** The project's active {@code ESTIMATE}-mode job, if any (the AI project lock). */
+    default Optional<RoomsImportJobEntity> findActiveEstimateJob(Long projectId) {
+        return findActiveByProjectIdAndMode(projectId, "ESTIMATE", TERMINAL);
+    }
+
+    /**
      * Same as {@link #findByProjectId} but takes a pessimistic write lock ({@code SELECT … FOR
      * UPDATE}) so concurrent starts for one project are serialized.
      *
@@ -64,6 +79,18 @@ public interface RoomsImportJobDao extends AdminDao<RoomsImportJobEntity, Long> 
                       @Param("terminal") List<RoomsImportStatus> terminal);
 
     /**
+     * FOR-05-04 (Requirement 3.3): records the end of the {@code SAVING_ROOMS} stage on an active job.
+     *
+     * @return the number of updated rows ({@code 0} when the job is gone or terminal)
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE RoomsImportJobEntity j SET j.roomsSavedAt = :now, j.roomsCreated = :created, "
+            + "j.updatedDate = :now WHERE j.id = :id AND j.status NOT IN :terminal")
+    int markRoomsSavedIfActive(@Param("id") Long id, @Param("now") LocalDateTime now,
+                               @Param("created") Integer created,
+                               @Param("terminal") List<RoomsImportStatus> terminal);
+
+    /**
      * Status-conditional terminal transition ({@code COMPLETED} / {@code FAILED}): applies only while the
      * job is still active, so exactly one of two racing callers (worker vs sweep) wins.
      *
@@ -90,10 +117,20 @@ public interface RoomsImportJobDao extends AdminDao<RoomsImportJobEntity, Long> 
     @Query("DELETE FROM RoomsImportJobEntity j WHERE j.id = :id")
     int deleteByJobId(@Param("id") Long id);
 
-    /** Ids of active jobs whose last update is older than {@code cutoff} (stuck jobs). */
-    @Query("SELECT j.id FROM RoomsImportJobEntity j WHERE j.status NOT IN :terminal AND j.updatedDate < :cutoff")
+    /**
+     * Ids of active {@code ROOMS_ONLY} jobs whose last update is older than {@code cutoff} (stuck jobs).
+     * FOR-05-04: {@code ESTIMATE} jobs have their own, longer timeout ({@link #findStuckEstimateIds}).
+     */
+    @Query("SELECT j.id FROM RoomsImportJobEntity j WHERE j.status NOT IN :terminal AND j.updatedDate < :cutoff "
+            + "AND j.mode <> 'ESTIMATE'")
     List<Long> findStuckIds(@Param("cutoff") LocalDateTime cutoff,
                             @Param("terminal") List<RoomsImportStatus> terminal);
+
+    /** FOR-05-04 (Requirement 18.3): ids of active {@code ESTIMATE} jobs idle for longer than the job timeout. */
+    @Query("SELECT j.id FROM RoomsImportJobEntity j WHERE j.status NOT IN :terminal AND j.updatedDate < :cutoff "
+            + "AND j.mode = 'ESTIMATE'")
+    List<Long> findStuckEstimateIds(@Param("cutoff") LocalDateTime cutoff,
+                                    @Param("terminal") List<RoomsImportStatus> terminal);
 
     /** Ids of terminal jobs whose retention has elapsed. */
     @Query("SELECT j.id FROM RoomsImportJobEntity j WHERE j.status IN :terminal AND j.expiresAt < :now")

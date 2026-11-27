@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- FOR-05-04 (Requirement 21.3; design B8): server-side chat history of an AI offer. -->
+    <changeSet id="273-create-offer-ai-chat-messages" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><tableExists tableName="offer_ai_chat_messages"/></not>
+        </preConditions>
+        <createTable tableName="offer_ai_chat_messages">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="offer_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT"/>
+            <column name="role" type="VARCHAR(16)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT"/>
+            <column name="tool_calls" type="JSONB"/>
+            <column name="pending_action" type="JSONB"/>
+            <column name="snapshot_before" type="JSONB"/>
+            <column name="version_before" type="INT"/>
+            <column name="version_after" type="INT"/>
+            <column name="undone_at" type="TIMESTAMP"/>
+            <column name="created_date" type="TIMESTAMP" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_by" type="VARCHAR(255)"/>
+            <column name="updated_date" type="TIMESTAMP"/>
+            <column name="updated_by" type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint
+            constraintName="fk_offer_ai_chat_messages_offer"
+            baseTableName="offer_ai_chat_messages"
+            baseColumnNames="offer_id"
+            referencedTableName="offers"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+        <createIndex tableName="offer_ai_chat_messages" indexName="ix_offer_ai_chat_messages_offer">
+            <column name="offer_id"/>
+        </createIndex>
+        <rollback><dropTable tableName="offer_ai_chat_messages"/></rollback>
+    </changeSet>
+</databaseChangeLog>

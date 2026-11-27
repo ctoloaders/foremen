@@ -230,6 +230,20 @@ public class OfferService
         assertProjectAccess(offerId);
     }
 
+    /** FOR-05-04 (R4.1): AI project lock; optional (setter-injected) so unit tests may omit it. */
+    private com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAiLockGuard(com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard) {
+        this.aiLockGuard = aiLockGuard;
+    }
+
+    private void assertAiUnlocked(OfferEntity offer) {
+        if (offer.getProject() != null) {
+            com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, offer.getProject().getId());
+        }
+    }
+
     // --- Lifecycle: prepare (R1.1, R1.2, R1.3, R1.6, R1.7) ---
 
     /**
@@ -268,6 +282,7 @@ public class OfferService
      */
     @Transactional
     public OfferEntity prepareOffer(Long projectId, String name) {
+        com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, projectId);
         EstimateEntity estimate = estimateDao.findByProjectId(projectId)
                 .orElseThrow(() -> new ForemenApiException(
                         HttpStatus.NOT_FOUND, ENTITY_NOT_FOUND_MESSAGE, "projectId", projectId));
@@ -287,6 +302,7 @@ public class OfferService
         // FOR-05-07 Batch 2: custom name + immutable estimate snapshot, captured in this transaction.
         offer.setName(resolveOfferName(name, projectId));
         offer.setSnapshot(buildSnapshot(offer, estimate));
+        copyAiFromEstimate(offer, estimate);
 
         OfferEntity saved = offerDao.save(offer);
         entityManager.flush();
@@ -328,6 +344,7 @@ public class OfferService
     @Transactional
     public OfferEntity selectPackage(Long offerId, String packageCode) {
         OfferEntity offer = resolveOffer(offerId);
+        assertAiUnlocked(offer);
         assertNonTerminal(offer);
 
         EstimateEntity estimate = offer.getEstimate();
@@ -509,6 +526,7 @@ public class OfferService
         if (offer.getProject() == null || !Objects.equals(offer.getProject().getId(), projectId)) {
             throw new ForemenApiException(HttpStatus.BAD_REQUEST, REPREPARE_PROJECT_MISMATCH_MESSAGE);
         }
+        assertAiUnlocked(offer);
         if (offer.getStatus() != null && offer.getStatus().isTerminal()) {
             throw new ForemenApiException(HttpStatus.CONFLICT, REPREPARE_TERMINAL_MESSAGE);
         }
@@ -518,6 +536,7 @@ public class OfferService
 
         recomputeLiveTotals(offer);
         offer.setSnapshot(buildSnapshot(offer, offer.getEstimate()));
+        refreshAiReport(offer, offer.getEstimate());
         recomputeTotals(offer);
         offer.setRevision(previousRevision + 1);
         offerDao.save(offer);
@@ -544,10 +563,77 @@ public class OfferService
 
     /** The only snapshot writer besides {@link #prepareOffer}: recompute totals, rebuild, set. */
     private void rebuildDraftSnapshot(OfferEntity offer) {
+        assertAiUnlocked(offer);
         assertSnapshotWritable(offer);
         // D7: the snapshot is about to be replaced, so the totals come from the live estimate here.
         recomputeLiveTotals(offer);
         offer.setSnapshot(buildSnapshot(offer, offer.getEstimate()));
+        refreshAiReport(offer, offer.getEstimate());
+    }
+
+    /**
+     * FOR-05-04 rework (Requirement 25.3): a new offer takes the estimate's AI summary as {@code ai_report}
+     * and is flagged {@code ai_generated} when the snapshot holds at least one cell with AI marks or the
+     * estimate holds a summary. Otherwise the offer keeps {@code ai_generated = false} and no report.
+     */
+    private void copyAiFromEstimate(OfferEntity offer, EstimateEntity estimate) {
+        Map<String, Object> summary = estimate.getAiSummary();
+        if (summary == null && !snapshotHasAiMarks(offer.getSnapshot())) {
+            return;
+        }
+        offer.setAiGenerated(true);
+        if (summary != null) {
+            offer.setAiReport(new java.util.LinkedHashMap<>(summary));
+        }
+    }
+
+    /**
+     * FOR-05-04 rework (Requirement 25.3): update from the estimate / snapshot refresh of an
+     * {@code aiGenerated} offer. A newer estimate summary (different {@code generatedAt}) replaces the
+     * report and keeps the chat's {@code changes[]}; a non-AI offer whose estimate now carries AI marks or
+     * a summary becomes AI like a fresh one.
+     */
+    private void refreshAiReport(OfferEntity offer, EstimateEntity estimate) {
+        if (!offer.isAiGenerated()) {
+            copyAiFromEstimate(offer, estimate);
+            return;
+        }
+        Map<String, Object> summary = estimate.getAiSummary();
+        if (summary == null) {
+            return;
+        }
+        Map<String, Object> current = offer.getAiReport();
+        Object newer = summary.get("generatedAt");
+        if (current != null && newer != null && newer.equals(current.get("generatedAt"))) {
+            return;
+        }
+        Map<String, Object> copy = new java.util.LinkedHashMap<>(summary);
+        if (current != null && current.get("changes") != null) {
+            copy.put("changes", current.get("changes"));
+        }
+        offer.setAiReport(copy);
+    }
+
+    private static boolean snapshotHasAiMarks(com.foremen.service.offer.OfferSnapshot snapshot) {
+        if (snapshot == null || snapshot.groups() == null) {
+            return false;
+        }
+        for (com.foremen.service.offer.OfferSnapshot.Group group : snapshot.groups()) {
+            if (group == null || group.rows() == null) {
+                continue;
+            }
+            for (com.foremen.service.offer.OfferSnapshot.Row row : group.rows()) {
+                if (row == null || row.cells() == null) {
+                    continue;
+                }
+                for (com.foremen.service.offer.OfferSnapshot.Cell cell : row.cells()) {
+                    if (cell != null && cell.ai() != null) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** A snapshot is writable only while the offer is DRAFT; afterwards it is frozen. */
@@ -565,6 +651,87 @@ public class OfferService
                 estimate, vatRateOf(estimate), offer.getTotalNet(), offer.getTotalVat(), offer.getTotalGross(),
                 code, pkg != null ? pkg.getNameRU() : null, pkg != null ? pkg.getNamePL() : null,
                 clientPrices);
+    }
+
+    /**
+     * FOR-05-04 (design B6): the value snapshot of an in-transaction (scratch) estimate, with no offer
+     * involved: the totals come from the estimate's client prices without discounts and the snapshot is
+     * built exactly as {@link #buildSnapshot} does. Writes nothing.
+     */
+    public com.foremen.service.offer.OfferSnapshot buildScratchSnapshot(EstimateEntity estimate) {
+        BigDecimal vat = vatRateOf(estimate);
+        OfferTotals totals = offerTotalsCalculator.compute(estimateClientPrices(estimate), Map.of(), vat);
+        String code = estimate.getAppliedPackageCode();
+        OfferPackageEntity pkg = resolvePackageOrNull(code);
+        return OfferSnapshotBuilder.build(
+                estimate, vat, totals.totalNet(), totals.totalVat(), totals.totalGross(),
+                code, pkg != null ? pkg.getNameRU() : null, pkg != null ? pkg.getNamePL() : null,
+                estimateClientPrices(estimate));
+    }
+
+    // --- FOR-05-04: AI offers (design B7, B8) ---
+    static final String AUDIT_AI_CHAT_EDIT = "AI_CHAT_EDIT";
+    static final String AUDIT_AI_CHAT_UNDO = "AI_CHAT_UNDO";
+
+    /** Chat edit of an AI offer: {@link #replaceAiEditedSnapshot(Long, com.foremen.service.offer.OfferSnapshot, Long, boolean)} with undo = false. */
+    @Transactional
+    public OfferEntity replaceAiEditedSnapshot(Long offerId, com.foremen.service.offer.OfferSnapshot snapshot,
+                                               Long turnId) {
+        return replaceAiEditedSnapshot(offerId, snapshot, turnId, false);
+    }
+
+    /**
+     * Replaces the snapshot of a DRAFT offer (AI generated or not, Requirement 10.2) with the result of a chat turn (or its undo): revision + 1,
+     * totals recomputed from the new snapshot (discounts kept), audit {@code AI_CHAT_EDIT} /
+     * {@code AI_CHAT_UNDO} with the previous and new revision and totals.
+     *
+     * @throws ForemenApiException 404 when missing; 409 when the offer is not DRAFT; 404 when it has no snapshot
+     */
+    @Transactional
+    public OfferEntity replaceAiEditedSnapshot(Long offerId, com.foremen.service.offer.OfferSnapshot snapshot,
+                                               Long turnId, boolean undo) {
+        OfferEntity offer = resolveOffer(offerId);
+        assertSnapshotWritable(offer);
+        if (offer.getSnapshot() == null) {
+            throw new ForemenApiException(HttpStatus.NOT_FOUND, "error.offer.snapshot.missing");
+        }
+        int previousRevision = offer.getRevision() == null ? 1 : offer.getRevision();
+        BigDecimal previousNet = offer.getTotalNet();
+        BigDecimal previousGross = offer.getTotalGross();
+        offer.setSnapshot(snapshot);
+        applySnapshotTotals(offer, snapshot);
+        offer.setRevision(previousRevision + 1);
+        offerDao.save(offer);
+        writeAiAudit(offer, undo ? AUDIT_AI_CHAT_UNDO : AUDIT_AI_CHAT_EDIT,
+                "{\"revision\":" + previousRevision + ",\"totalNet\":" + previousNet
+                        + ",\"totalGross\":" + previousGross + "}",
+                "{\"revision\":" + offer.getRevision() + ",\"turnId\":" + turnId
+                        + ",\"totalNet\":" + offer.getTotalNet() + ",\"totalGross\":" + offer.getTotalGross() + "}");
+        entityManager.flush();
+        return offer;
+    }
+
+    /** Totals from the snapshot (offer discounts applied); an unusable snapshot falls back to its own totals. */
+    private void applySnapshotTotals(OfferEntity offer, com.foremen.service.offer.OfferSnapshot snapshot) {
+        if (OfferSnapshotTotals.usable(snapshot)) {
+            recomputeTotals(offer);
+        } else {
+            offer.setTotalNet(snapshot.totalNet() != null ? snapshot.totalNet() : BigDecimal.ZERO);
+            offer.setTotalVat(snapshot.totalVat() != null ? snapshot.totalVat() : BigDecimal.ZERO);
+            offer.setTotalGross(snapshot.totalGross() != null ? snapshot.totalGross() : BigDecimal.ZERO);
+        }
+    }
+
+    private void writeAiAudit(OfferEntity offer, String operation, String before, String after) {
+        com.foremen.service.audit.AuditLogEntity row = new com.foremen.service.audit.AuditLogEntity();
+        row.setEntityClass(OfferEntity.class.getSimpleName());
+        row.setEntityId(offer.getId());
+        row.setOperation(operation);
+        row.setPerformedBy(resolveActingUserLabel());
+        row.setPerformedAt(java.time.LocalDateTime.now());
+        row.setSnapshotBefore(before);
+        row.setSnapshotAfter(after);
+        auditLogDao.save(row);
     }
 
     // --- Lifecycle: withdraw (R3.7) ---

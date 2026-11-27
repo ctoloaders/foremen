@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- FOR-05-04 (Requirement 10.3; design B7): AI-generated offer flag, source job id and report. -->
+    <changeSet id="272-add-offers-ai-columns" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="offers" columnName="ai_generated"/></not>
+        </preConditions>
+        <addColumn tableName="offers">
+            <column name="ai_generated" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ai_job_id" type="BIGINT"/>
+            <column name="ai_report" type="JSONB"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="offers" columnName="ai_report"/>
+            <dropColumn tableName="offers" columnName="ai_job_id"/>
+            <dropColumn tableName="offers" columnName="ai_generated"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

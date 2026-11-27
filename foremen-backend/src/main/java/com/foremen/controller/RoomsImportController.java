@@ -22,6 +22,7 @@ import com.foremen.config.security.RequiresPermission;
 import com.foremen.controller.model.RoomsImportJobDto;
 import com.foremen.controller.model.RoomsImportStartResponse;
 import com.foremen.exception.ForemenApiException;
+import com.foremen.service.estimateai.EstimateAiStartGuard;
 import com.foremen.service.roomsimport.RoomsImportAccessGuard;
 import com.foremen.service.roomsimport.RoomsImportJobReader;
 import com.foremen.service.roomsimport.RoomsImportService;
@@ -55,6 +56,7 @@ public class RoomsImportController {
     private final RoomsImportJobReader reader;
     private final RoomsImportUploadValidator validator;
     private final RoomsImportAccessGuard accessGuard;
+    private final EstimateAiStartGuard estimateStartGuard;
 
     /**
      * Starts an import: multipart {@code prompt} and {@code files}. {@code 202 {jobId,status}};
@@ -66,16 +68,44 @@ public class RoomsImportController {
     public ResponseEntity<RoomsImportStartResponse> start(
             @PathVariable Long projectId,
             @RequestParam(value = "prompt", required = false) String prompt,
+            @RequestParam(value = "mode", required = false) String mode,
+            @RequestParam(value = "useExistingRooms", required = false) Boolean useExistingRooms,
+            @RequestParam(value = "packageCode", required = false) String packageCode,
             @RequestPart(value = "files", required = false) List<MultipartFile> files) {
         accessGuard.assertProjectAccess(projectId);
-        List<MultipartFile> valid = validator.validate(prompt, files);
+        boolean estimate = parseEstimateMode(mode);
+        boolean existing = estimate && Boolean.TRUE.equals(useExistingRooms);
+        if (estimate) {
+            // FOR-05-04: permissions, feature switch, estimate lock, no-rooms: before anything is stored.
+            estimateStartGuard.assertCanStart(projectId, existing, packageCode);
+        }
+        boolean noInput = (prompt == null || prompt.isBlank())
+                && (files == null || files.stream().allMatch(f -> f == null || f.isEmpty()));
+        List<MultipartFile> valid = existing && noInput ? List.of() : validator.validate(prompt, files);
         Long userId = RoomsImportAccessGuard.currentUserId();
         if (userId == null) {
             throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.access.denied");
         }
-        RoomsImportService.StartResult started = service.start(projectId, userId, prompt, valid);
+        RoomsImportService.StartOptions options = estimate
+                ? new RoomsImportService.StartOptions("ESTIMATE", existing, packageCode)
+                : RoomsImportService.StartOptions.ROOMS_ONLY;
+        RoomsImportService.StartResult started = estimate
+                ? service.start(projectId, userId, prompt, valid, options)
+                : service.start(projectId, userId, prompt, valid); // ROOMS_ONLY: the FOR-05-02 call, unchanged
         return ResponseEntity.status(HttpStatus.ACCEPTED)
                 .body(new RoomsImportStartResponse(started.jobId(), started.status()));
+    }
+
+    /** {@code mode}: absent or {@code ROOMS_ONLY} is the FOR-05-02 behaviour, {@code ESTIMATE} the FOR-05-04 one. */
+    private static boolean parseEstimateMode(String mode) {
+        if (mode == null || mode.isBlank() || "ROOMS_ONLY".equalsIgnoreCase(mode.strip())) {
+            return false;
+        }
+        if ("ESTIMATE".equalsIgnoreCase(mode.strip())) {
+            return true;
+        }
+        throw new ForemenApiException(HttpStatus.BAD_REQUEST, "error.validation")
+                .withParams(java.util.Map.of("field", "mode"));
     }
 
     /** The project's single job (any status) or {@code 204}. */

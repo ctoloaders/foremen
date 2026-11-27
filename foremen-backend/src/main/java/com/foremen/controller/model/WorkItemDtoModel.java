@@ -26,4 +26,4 @@ public record WorkItemDtoModel(Long id, Long workCategoryId, String workCategory
                                String name, String code, boolean active,
                                WorkCostCellDto costCell, List<RefDto> packages,
                                long constructionConsumptionCount, long finishingConsumptionCount,
-                               BigDecimal internalPrice) {}
+                               BigDecimal internalPrice, String aiInstructions) {}

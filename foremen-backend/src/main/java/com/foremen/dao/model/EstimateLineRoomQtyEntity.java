@@ -63,6 +63,14 @@ public class EstimateLineRoomQtyEntity extends BaseEntity {
     private boolean volumeOverridden = false;
 
     /**
+     * FOR-05-04 (design B11): AI marker and explanation of this cell; {@code null} for manual cells.
+     * Backed by {@code estimate_line_room_qty.ai_meta} (changeset 274).
+     */
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "ai_meta", columnDefinition = "jsonb")
+    private com.foremen.service.estimate.CellAiMeta aiMeta;
+
+    /**
      * The cell's frozen copied-price material lines (FOR-05-05 §B1) — one per
      * {@code (branch, material type)}. Owned by this room-qty: cascade + orphan removal make them
      * cascade-delete when this room-qty (and, transitively, its owning line) is removed (R19.3).

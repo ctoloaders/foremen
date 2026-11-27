@@ -79,6 +79,19 @@ public class OfferEntity extends BaseEntity {
     @Column(name = "inactive", nullable = false)
     private boolean inactive = false;
 
+    /** FOR-05-04 (design B7): {@code true} for an offer produced by the estimate AI job. Staff-only. */
+    @Column(name = "ai_generated", nullable = false)
+    private boolean aiGenerated = false;
+
+    /** FOR-05-04: id of the {@code rooms_import_jobs} row that produced this offer; plain id, no FK. */
+    @Column(name = "ai_job_id")
+    private Long aiJobId;
+
+    /** FOR-05-04: AI report (assumptions, questions, unpriced, warnings, changes, summary). Staff-only. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_report", columnDefinition = "jsonb")
+    private java.util.Map<String, Object> aiReport;
+
     /** Monotonically increasing revision; defaults to 1 on creation (R1.5). */
     @Column(name = "revision", nullable = false)
     private Integer revision = 1;

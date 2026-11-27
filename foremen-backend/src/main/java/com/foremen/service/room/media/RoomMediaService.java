@@ -91,6 +91,20 @@ public class RoomMediaService {
         this.maxFiles = maxFiles;
     }
 
+    /** FOR-05-04 (R4.1): AI project lock; optional so unit tests may omit it. */
+    private com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAiLockGuard(com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard) {
+        this.aiLockGuard = aiLockGuard;
+    }
+
+    private void assertUnlocked(RoomEntity room) {
+        if (room.getProject() != null) {
+            com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, room.getProject().getId());
+        }
+    }
+
     /** Media of a room, oldest first. */
     @Transactional(readOnly = true)
     public List<RoomMediaDto> list(Long roomId) {
@@ -105,6 +119,7 @@ public class RoomMediaService {
     @Transactional
     public List<RoomMediaDto> upload(Long roomId, List<MultipartFile> files) {
         RoomEntity room = requireRoom(roomId);
+        assertUnlocked(room);
         List<MultipartFile> uploads = files == null ? List.of()
                 : files.stream().filter(f -> f != null && !f.isEmpty()).toList();
         if (uploads.isEmpty()) {
@@ -150,7 +165,7 @@ public class RoomMediaService {
     /** Delete a media row and (best-effort, after commit) its stored object. */
     @Transactional
     public void delete(Long roomId, Long mediaId) {
-        requireRoom(roomId);
+        assertUnlocked(requireRoom(roomId));
         RoomMediaEntity media = requireMedia(roomId, mediaId);
         String storageUri = media.getStorageUri();
         audit(media, "DELETE");

@@ -126,4 +126,22 @@ class RoomsImportSweepServiceTest {
         verify(storage).listAll();
         verify(terminator, never()).fail(anyLong(), any());
     }
+
+    /** FOR-05-04 (Requirement 18.3): ESTIMATE jobs use the job timeout and their own failure reason. */
+    @Test
+    void stuckEstimateJobs_areFailedWithTheEstimateTimeoutReason() {
+        when(dao.findStuckIds(any(), any())).thenReturn(List.of());
+        when(dao.findStuckEstimateIds(any(), eq(RoomsImportJobDao.TERMINAL))).thenReturn(List.of(5L, 6L));
+        when(terminator.fail(5L, EstimateAiErrors.FAILED_TIMEOUT)).thenReturn(1);
+        when(terminator.fail(6L, EstimateAiErrors.FAILED_TIMEOUT)).thenReturn(0);
+        LocalDateTime before = LocalDateTime.now();
+
+        assertThat(sweep.failStuckJobs()).isEqualTo(1);
+
+        var cutoff = org.mockito.ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(dao).findStuckEstimateIds(cutoff.capture(), any());
+        // default job timeout is 20 minutes (longer than the 15-minute rooms-import timeout)
+        assertThat(cutoff.getValue()).isBefore(before.minusMinutes(19)).isAfter(before.minusMinutes(21));
+        verify(terminator, never()).fail(anyLong(), eq(RoomsImportErrors.FAILED_TIMEOUT));
+    }
 }

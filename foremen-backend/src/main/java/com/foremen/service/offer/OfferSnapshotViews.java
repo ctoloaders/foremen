@@ -47,7 +47,49 @@ public final class OfferSnapshotViews {
             BigDecimal quantity, BigDecimal unitPrice, BigDecimal valueNet,
             @JsonInclude(JsonInclude.Include.NON_NULL) BigDecimal baseUnitPrice,
             @JsonInclude(JsonInclude.Include.NON_NULL) BigDecimal baseValueNet,
-            List<OfferSnapshot.Cell> cells) {
+            List<CellView> cells) {
+    }
+
+    /**
+     * FOR-05-04 (Requirement 21.8): the client-safe cell of the snapshot read model. It copies only the
+     * room and the quantity; the staff-only AI explanation of {@link OfferSnapshot.Cell#ai()} is served
+     * through {@link StaffSnapshotView} and is never reachable from {@link SnapshotView}.
+     */
+    public record CellView(Long roomId, BigDecimal quantity) {
+    }
+
+    /**
+     * FOR-05-04 (Requirement 21.9): the staff read of an offer snapshot. The JSON is the
+     * {@link SnapshotView} object plus {@code aiCells}: the AI explanation of every cell that has one,
+     * keyed by {@code (workItemId, roomId)}. Never returned to CLIENT.
+     */
+    public record StaffSnapshotView(
+            @com.fasterxml.jackson.annotation.JsonUnwrapped SnapshotView snapshot,
+            List<CellAiView> aiCells) {
+    }
+
+    /** One staff-only cell explanation of {@link StaffSnapshotView}. */
+    public record CellAiView(Long workItemId, Long roomId, Boolean volumeOverridden, String formulaKey,
+                             Boolean fallbackUsed, com.foremen.service.estimate.CellAiMeta ai) {
+    }
+
+    /** The AI explanations of the cells of {@code s} (rows of a version 2 snapshot contribute nothing). */
+    public static List<CellAiView> aiCells(OfferSnapshot s) {
+        List<CellAiView> out = new ArrayList<>();
+        if (s == null) {
+            return out;
+        }
+        for (OfferSnapshot.Group g : nz(s.groups())) {
+            for (OfferSnapshot.Row r : nz(g.rows())) {
+                for (OfferSnapshot.Cell c : nz(r.cells())) {
+                    if (c != null && c.ai() != null) {
+                        out.add(new CellAiView(r.workItemId(), c.roomId(), c.volumeOverridden(),
+                                c.formulaKey(), c.fallbackUsed(), c.ai()));
+                    }
+                }
+            }
+        }
+        return out;
     }
 
     public record CompareSide(
@@ -122,7 +164,7 @@ public final class OfferSnapshotViews {
                         r.quantity(), r.unitPrice(), r.valueNet(),
                         includeBase ? r.baseUnitPrice() : null,
                         includeBase ? r.baseValueNet() : null,
-                        nz(r.cells())));
+                        cellViews(r.cells())));
             }
             if (!rows.isEmpty()) {
                 groups.add(new GroupView(g.categoryId(), pick(ru, g.nameRu(), g.namePl()), rows));
@@ -131,6 +173,17 @@ public final class OfferSnapshotViews {
         return new SnapshotView(offerId, name, status, s.capturedAt(), s.vatRatePct(),
                 s.totalNet(), s.totalVat(), s.totalGross(), nz(s.rooms()), groups,
                 s.appliedPackageCode(), packageName(s, ru), inactive);
+    }
+
+    /** Allow-list copy of the snapshot cells: room and quantity only. */
+    private static List<CellView> cellViews(List<OfferSnapshot.Cell> cells) {
+        List<CellView> out = new ArrayList<>();
+        for (OfferSnapshot.Cell c : nz(cells)) {
+            if (c != null) {
+                out.add(new CellView(c.roomId(), c.quantity()));
+            }
+        }
+        return out;
     }
 
     /** True when the row has at least one room cell with a positive quantity. */

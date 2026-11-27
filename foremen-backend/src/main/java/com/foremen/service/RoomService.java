@@ -118,6 +118,21 @@ public class RoomService
     /** FOR-05-02 (R10.4, R10.5): media count / cleanup collaborator; optional so unit tests may omit it. */
     private com.foremen.service.room.media.RoomMediaSupport roomMediaSupport;
 
+    /** FOR-05-04 (R4.1): AI project lock; optional so unit tests may omit it. */
+    private com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAiLockGuard(com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard) {
+        this.aiLockGuard = aiLockGuard;
+    }
+
+    private void assertUnlockedForRoom(Long roomId) {
+        if (aiLockGuard != null && roomId != null) {
+            roomDao.findById(roomId).ifPresent(r -> aiLockGuard.assertUnlocked(
+                    r.getProject() == null ? null : r.getProject().getId()));
+        }
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     public void setRoomMediaSupport(com.foremen.service.room.media.RoomMediaSupport roomMediaSupport) {
         this.roomMediaSupport = roomMediaSupport;
@@ -208,6 +223,7 @@ public class RoomService
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void deleteById(Long id) {
+        assertUnlockedForRoom(id);
         List<String> uris = roomMediaSupport == null ? List.of() : roomMediaSupport.collectStorageUris(List.of(id));
         ProjectScopedService.super.deleteById(id);
         if (roomMediaSupport != null) {
@@ -215,9 +231,20 @@ public class RoomService
         }
     }
 
+    /** FOR-05-04 (R4.1): nulling a room property is a room write, so the AI project lock applies. */
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void setPropertiesToNull(Long id, Set<String> propertyNames) {
+        assertUnlockedForRoom(id);
+        ProjectScopedService.super.setPropertiesToNull(id, propertyNames);
+    }
+
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void deleteAll(List<Long> ids) {
+        if (ids != null) {
+            ids.forEach(this::assertUnlockedForRoom);
+        }
         List<String> uris = roomMediaSupport == null ? List.of() : roomMediaSupport.collectStorageUris(ids);
         ProjectScopedService.super.deleteAll(ids);
         if (roomMediaSupport != null) {
@@ -235,6 +262,7 @@ public class RoomService
      */
     @Override
     public void validateCreate(RoomServiceExtendedModel model) {
+        com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, model.getProjectId());
         normalize(model);
     }
 
@@ -246,6 +274,10 @@ public class RoomService
      */
     @Override
     public void validateUpdate(RoomEntity existing, RoomServiceExtendedModel model) {
+        if (aiLockGuard != null) {
+            aiLockGuard.assertUnlocked(existing.getProject() == null ? null : existing.getProject().getId());
+            aiLockGuard.assertUnlocked(model.getProjectId());
+        }
         normalize(model);
     }
 
@@ -286,6 +318,7 @@ public class RoomService
      */
     @org.springframework.transaction.annotation.Transactional
     public void reorder(Long projectId, java.util.List<Long> roomIds) {
+        com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, projectId);
         java.util.List<RoomEntity> rooms = roomDao.findByProjectId(projectId);
         java.util.Set<Long> expected = new java.util.HashSet<>();
         rooms.forEach(r -> expected.add(r.getId()));

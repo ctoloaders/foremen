@@ -146,6 +146,7 @@ public class EstimateAssignmentService
     private final FinishingPriceRangeResolver finishingPriceRangeResolver;
     private final EstimateMatrixAssembler estimateMatrixAssembler;
     private final EstimateService estimateService;
+    private final EstimateMaterialSeeder estimateMaterialSeeder;
     /**
      * Related-works / standard-set lookups (FOR-04-11). Setter-injected so the constructor above stays
      * untouched.
@@ -212,6 +213,9 @@ public class EstimateAssignmentService
         this.finishingPriceRangeResolver = finishingPriceRangeResolver;
         this.estimateMatrixAssembler = estimateMatrixAssembler;
         this.estimateService = estimateService;
+        // Same collaborators the extracted seeder needs; built here so the constructor signature is unchanged.
+        this.estimateMaterialSeeder = new EstimateMaterialSeeder(
+                estimateLineRoomMaterialDao, priceRangeResolver, finishingPriceRangeResolver);
     }
 
     // --- CRUD plumbing (inherited from AdminService via ProjectScopedService) ---
@@ -353,6 +357,7 @@ public class EstimateAssignmentService
     @Transactional
     public void applyLabourPriceAdjustment(
             Long projectId, LabourPriceAdjustmentScope scope, Long targetId, BigDecimal pct) {
+        com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, projectId);
         validateAdjustment(scope, targetId, pct);
         EstimateEntity estimate = resolveDraftEstimate(projectId);
         adjustLinesInScope(estimate, scope, targetId, pct);
@@ -393,6 +398,7 @@ public class EstimateAssignmentService
             // column without surprise truncation; HALF_UP matches the money-rounding used elsewhere.
             BigDecimal override = original.multiply(factor).setScale(2, java.math.RoundingMode.HALF_UP);
             line.setUnitPriceOverride(override);
+            clearAiPrice(line);
         }
     }
 
@@ -450,17 +456,59 @@ public class EstimateAssignmentService
         project.setOfferPackage(offerPackage);
     }
 
+    /**
+     * FOR-05-04 rework (Requirements 24.2, 24.4; design R3): the live-estimate write of one AI job
+     * assignment. Replays {@code stagedEdits} with {@link ReplayOrigin#AI} (AI markers are kept, finishing
+     * ranges are scoped by the job's package) in the caller's transaction, makes sure every
+     * {@code ASSIGN}ed cell carries its consumable-material lines, and recomputes the totals. It does not
+     * check the AI project lock; {@code AssignWorkService} does that with the job's {@code AiJobContext}.
+     *
+     * @param packageCode the job's package; becomes the estimate's applied package code when non-blank
+     */
+    @Transactional
+    public EstimateEntity applyAiAssignments(Long projectId, List<StagedEdit> stagedEdits, String packageCode) {
+        EstimateEntity estimate = resolveDraftEstimate(projectId);
+        if (packageCode != null && !packageCode.isBlank()
+                && !packageCode.equals(estimate.getAppliedPackageCode())) {
+            estimate.setAppliedPackageCode(packageCode);
+        }
+        List<StagedEdit> edits = stagedEdits == null ? List.of() : stagedEdits;
+        boolean ownsCache = beginReplayCache();
+        try {
+            replayStagedEdits(estimate, projectId, edits, ReplayOrigin.AI);
+            OfferPackageEntity materialPackage = packageCode == null || packageCode.isBlank() ? null
+                    : resolvePackageOrNull(estimate.getAppliedPackageCode());
+            for (StagedEdit edit : edits) {
+                if (edit != null && edit.kind() == EditKind.ASSIGN) {
+                    ensureMaterialLines(estimate, edit.workItemId(), edit.roomId(), materialPackage);
+                }
+            }
+        } finally {
+            endReplayCache(ownsCache);
+        }
+        estimateRecomputeService.recomputeEstimate(estimate);
+        entityManager.flush();
+        return estimate;
+    }
+
+    /** A cell that ended up without material lines gets them seeded from the work's norms (R24.4). */
+    private void ensureMaterialLines(
+            EstimateEntity estimate, Long workItemId, Long roomId, OfferPackageEntity materialPackage) {
+        EstimateLineRoomQtyEntity roomQty = resolveStagedCell(estimate, workItemId, roomId);
+        if (roomQty == null || !roomQty.getMaterials().isEmpty()) {
+            return;
+        }
+        WorkItemEntity workItem = resolveWorkItem(workItemId);
+        seedMaterialLines(workItem, roomQty, materialPackage, consumptionsByWorkId(List.of(workItem)));
+    }
+
     private EstimateEntity doApplyAssignments(Long projectId, List<StagedEdit> stagedEdits) {
         EstimateEntity estimate = resolveDraftEstimate(projectId);
 
         if (stagedEdits != null) {
             // Batch-load every referenced work's consumptions ONCE for the whole replay so the
             // per-cell doAssign -> seedMaterialLines does not re-query per (work, room) (perf N+1).
-            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
-                    consumptionsForStagedEdits(stagedEdits);
-            for (StagedEdit edit : stagedEdits) {
-                applyStagedEdit(estimate, projectId, edit, consumptionsByWork);
-            }
+            replayStagedEdits(estimate, projectId, stagedEdits);
             // Remember the applied offer package (FOR-05-05 Wave 1b, #1): the MOST-RECENT non-null
             // packageCode carried by a package-scoped staged edit (APPLY_PACKAGE / RECOMPUTE_FINISHING
             // / MERGE_PACKAGE_MATERIALS). If no staged edit carries a package code, leave the existing
@@ -568,8 +616,17 @@ public class EstimateAssignmentService
      */
     @Transactional
     public EstimateMatrixDto saveAndAssemble(Long projectId, List<StagedEdit> stagedEdits) {
+        com.foremen.service.estimateai.AiProjectLockGuard.assertUnlocked(aiLockGuard, projectId);
         EstimateEntity estimate = applyAssignments(projectId, stagedEdits);
         return estimateMatrixAssembler.assemble(estimate, projectId, true);
+    }
+
+    /** FOR-05-04 (R4.1): AI project lock; optional (setter-injected) so unit tests may omit it. */
+    private com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAiLockGuard(com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard) {
+        this.aiLockGuard = aiLockGuard;
     }
 
     /**
@@ -716,17 +773,76 @@ public class EstimateAssignmentService
         if (stagedEdits != null) {
             // Batch-load every referenced work's consumptions ONCE for the whole replay so the
             // per-cell doAssign -> seedMaterialLines does not re-query per (work, room) (perf N+1).
-            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
-                    consumptionsForStagedEdits(stagedEdits);
-            for (StagedEdit edit : stagedEdits) {
-                applyStagedEdit(estimate, projectId, edit, consumptionsByWork);
-            }
+            replayStagedEdits(estimate, projectId, stagedEdits);
         }
         entityManager.flush(); // materialize ids/collections for a faithful assembly
         EstimateMatrixDto preview = estimateMatrixAssembler.assemble(estimate, projectId, editable);
         // Discard every preview mutation — the calculate/preview endpoints persist nothing (R15.6).
         TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         return preview;
+    }
+
+    /**
+     * The shared staged-edit replay core (FOR-05-04-estimate-AI task 3.2): batch-loads the referenced
+     * works' consumptions once and replays every edit in order via {@link #applyStagedEdit}. Used by
+     * the preview, Save and (through {@link StagedEditReplayer}) the AI scratch service. Opens the
+     * per-request replay cache when the caller has not.
+     */
+    void replayStagedEdits(EstimateEntity estimate, Long projectId, List<StagedEdit> stagedEdits) {
+        replayStagedEdits(estimate, projectId, stagedEdits, ReplayOrigin.MANUAL);
+    }
+
+    /**
+     * FOR-05-04 (design B11, Requirement 21.7): as above with the origin of the edits. A
+     * {@link ReplayOrigin#MANUAL} replay (preview, Save) clears the AI marker of the cells it changes;
+     * only the AI scratch service replays with {@link ReplayOrigin#AI}, which keeps the markers.
+     */
+    void replayStagedEdits(EstimateEntity estimate, Long projectId, List<StagedEdit> stagedEdits,
+                           ReplayOrigin origin) {
+        if (stagedEdits == null || stagedEdits.isEmpty()) {
+            return;
+        }
+        boolean ownsCache = beginReplayCache();
+        ReplayCache cache = REPLAY_CACHE.get();
+        ReplayOrigin previousOrigin = cache.origin;
+        cache.origin = origin != null ? origin : ReplayOrigin.MANUAL;
+        try {
+            Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork =
+                    consumptionsForStagedEdits(stagedEdits);
+            for (StagedEdit edit : stagedEdits) {
+                applyStagedEdit(estimate, projectId, edit, consumptionsByWork);
+            }
+        } finally {
+            cache.origin = previousOrigin;
+            endReplayCache(ownsCache);
+        }
+    }
+
+    /** Whether the current replay runs for the AI scratch service (markers are kept). */
+    private static boolean aiReplay() {
+        ReplayCache cache = REPLAY_CACHE.get();
+        return cache != null && cache.origin == ReplayOrigin.AI;
+    }
+
+    /** FOR-05-04 (R21.7): drops the AI marker of a cell changed by a non-AI path. */
+    private void clearAiMeta(EstimateLineRoomQtyEntity roomQty) {
+        if (roomQty != null && roomQty.getAiMeta() != null && !aiReplay()) {
+            roomQty.setAiMeta(null);
+        }
+    }
+
+    /** FOR-05-04 (R21.7): a non-AI labour price adjustment drops the {@code price} block of the line's cells. */
+    private static void clearAiPrice(EstimateLineEntity line) {
+        if (aiReplay() || line.getRoomQtys() == null) {
+            return;
+        }
+        for (EstimateLineRoomQtyEntity roomQty : line.getRoomQtys()) {
+            CellAiMeta ai = roomQty.getAiMeta();
+            if (ai != null && ai.price() != null) {
+                roomQty.setAiMeta(new CellAiMeta(ai.origin(), ai.turnId(), ai.status(), ai.confidence(),
+                        ai.source(), ai.rationale(), ai.volume(), ai.materials(), null));
+            }
+        }
     }
 
     /**
@@ -756,7 +872,7 @@ public class EstimateAssignmentService
                 RoomEntity room = resolveRoom(edit.roomId());
                 assertRoomInProject(room, projectId);
                 OfferPackageEntity assignPackage = resolvePackageOrNull(edit.packageCode());
-                doAssign(estimate, workItem, room, assignPackage, consumptionsByWork);
+                clearAiMeta(doAssign(estimate, workItem, room, assignPackage, consumptionsByWork));
                 assignRelatedWorks(estimate, workItem, room, assignPackage, consumptionsByWork);
             }
             case UNASSIGN -> {
@@ -782,8 +898,8 @@ public class EstimateAssignmentService
                     WorkItemEntity workItem = resolveWorkItem(edit.workItemId());
                     RoomEntity room = resolveRoom(edit.roomId());
                     assertRoomInProject(room, projectId);
-                    doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()),
-                            consumptionsByWork);
+                    clearAiMeta(doAssign(estimate, workItem, room, resolvePackageOrNull(edit.packageCode()),
+                            consumptionsByWork));
                 } else if (edit.workItemId() != null) {
                     CalculatedApply plan =
                             calculateApplyWorkToRooms(projectId, edit.workItemId(), edit.packageCode());
@@ -827,6 +943,7 @@ public class EstimateAssignmentService
         }
         roomQty.setQuantity(edit.quantity());
         roomQty.setVolumeOverridden(true);
+        clearAiMeta(roomQty);
         estimateLineRoomQtyDao.save(roomQty);
     }
 
@@ -850,6 +967,7 @@ public class EstimateAssignmentService
         if (workItem != null && room != null) {
             roomQty.setQuantity(resolveVolume(workItem, null, room));
         }
+        clearAiMeta(roomQty);
         estimateLineRoomQtyDao.save(roomQty);
     }
 
@@ -1375,6 +1493,8 @@ public class EstimateAssignmentService
             BigDecimal volume = resolveVolume(line.getWorkItem(), offerPackage, room);
             if (roomQty.getQuantity() == null || roomQty.getQuantity().compareTo(volume) != 0) {
                 roomQty.setQuantity(volume);
+                // FOR-05-04 (R21.7): the recomputed number is no longer the AI's; overridden cells keep theirs.
+                clearAiMeta(roomQty);
                 estimateLineRoomQtyDao.save(roomQty);
             }
         }
@@ -1540,7 +1660,7 @@ public class EstimateAssignmentService
             roomQty.setQuantity(volume);
             estimateLineRoomQtyDao.save(roomQty);
             line.getRoomQtys().add(roomQty);
-            seedMaterialLines(workItem, roomQty, offerPackage, consumptionsByWork);
+            seedMaterialLines(workItem, roomQty, aiMaterialPackage(estimate), consumptionsByWork);
         } else if (!roomQty.isVolumeOverridden()) {
             // Re-assigning an already-assigned cell refreshes its Volume without duplicating rows —
             // BUT never overwrites a manual Volume override (FOR-05-05 #7). An overridden cell keeps
@@ -1601,58 +1721,30 @@ public class EstimateAssignmentService
      * {@link FinishingPriceRangeResolver} (R3.4 — the widest honest band when no package context).
      */
     private void seedMaterialLines(
-            WorkItemEntity workItem, EstimateLineRoomQtyEntity roomQty, OfferPackageEntity offerPackage,
+            WorkItemEntity workItem, EstimateLineRoomQtyEntity roomQty, OfferPackageEntity materialPackage,
             Map<Long, List<WorkMaterialConsumptionEntity>> consumptionsByWork) {
         // Consumptions are batch-loaded ONCE by the replay caller (consumptionsForStagedEdits) so this
         // per-cell seed does not re-query per (work, room) — was a severe N+1 on the apply-package /
         // apply-work preview replay for large projects.
         List<WorkMaterialConsumptionEntity> consumptions =
                 consumptionsByWork.getOrDefault(workItem.getId(), List.of());
-        if (consumptions.isEmpty()) {
-            return;
+        estimateMaterialSeeder.seed(
+                roomQty, consumptions, this::activeConstructionMaterials, this::activeFinishingMaterials,
+                materialPackage != null ? materialPackage.getId() : null);
+    }
+
+    /**
+     * FOR-05-04 (R23.8): the package that scopes the finishing price ranges of materials seeded by the AI
+     * scratch replay, i.e. the estimate's applied package (set from the start option or the seed
+     * snapshot). A manual assign keeps the package-less widest band, so this is {@code null} outside an
+     * AI replay.
+     */
+    private OfferPackageEntity aiMaterialPackage(EstimateEntity estimate) {
+        if (!aiReplay()) {
+            return null;
         }
-
-        Collection<ConstructionMaterialEntity> constructionMaterials = null;
-        Collection<FinishingMaterialEntity> finishingMaterials = null;
-
-        for (WorkMaterialConsumptionEntity consumption : consumptions) {
-            EstimateLineRoomMaterialEntity material = new EstimateLineRoomMaterialEntity();
-            material.setRoomQty(roomQty);
-            material.setBranch(consumption.getBranch());
-            material.setNormQty(consumption.getNormQty());
-            // Copy the consumption basis onto the frozen line so the estimate is self-contained (#4).
-            material.setConsumptionBasis(consumption.getConsumptionBasis() != null
-                    ? consumption.getConsumptionBasis() : ConsumptionBasis.PER_UNIT);
-
-            if (consumption.getBranch() == ConsumptionBranch.construction
-                    && consumption.getConstructionMaterialType() != null) {
-                Long typeId = consumption.getConstructionMaterialType().getId();
-                material.setConstructionType(consumption.getConstructionMaterialType());
-                if (constructionMaterials == null) {
-                    constructionMaterials = activeConstructionMaterials();
-                }
-                PriceRangeResolver.PriceRange range = priceRangeResolver.rangeFor(constructionMaterials, typeId);
-                material.setRangeMin(range.min());
-                material.setRangeMax(range.max());
-            } else if (consumption.getBranch() == ConsumptionBranch.finishing
-                    && consumption.getFinishingMaterialType() != null) {
-                Long typeId = consumption.getFinishingMaterialType().getId();
-                material.setFinishingType(consumption.getFinishingMaterialType());
-                if (finishingMaterials == null) {
-                    finishingMaterials = activeFinishingMaterials();
-                }
-                // Assignment default is the package-less fold across all packages (R3.4).
-                FinishingPriceRangeResolver.PriceRange range =
-                        finishingPriceRangeResolver.rangeFor(finishingMaterials, typeId, null);
-                material.setRangeMin(range.min());
-                material.setRangeMax(range.max());
-            } else {
-                continue; // malformed consumption (branch/type mismatch) -> skip, do not seed a row
-            }
-
-            estimateLineRoomMaterialDao.save(material);
-            roomQty.getMaterials().add(material);
-        }
+        String code = estimate.getAppliedPackageCode();
+        return code == null || code.isBlank() ? null : resolvePackageOrNull(code);
     }
 
     /** Resolves the cell's single Volume (R4.1): applicable formula → unit fallback, vs the room's dims. */
@@ -2451,6 +2543,8 @@ public class EstimateAssignmentService
         private final Map<Long, java.util.Optional<WorkPriceEntity>> pricesByWork = new HashMap<>();
         /** FOR-04-11: when {@code true} an ASSIGN replay does not add the work's related works. */
         private boolean skipRelatedExpansion;
+        /** FOR-05-04: who replays the edits; {@code AI} keeps the cell markers (design B11). */
+        private ReplayOrigin origin = ReplayOrigin.MANUAL;
     }
 
     private static final ThreadLocal<ReplayCache> REPLAY_CACHE = new ThreadLocal<>();

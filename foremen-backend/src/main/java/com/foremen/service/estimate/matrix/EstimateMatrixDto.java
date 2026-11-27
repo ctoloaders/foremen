@@ -35,6 +35,8 @@ import java.util.List;
  *                         (a later wave) to pre-select the header package; exposed read-only here.
  * @param packageSummary   the project's package state and split totals (FOR-05-04 additional tasks):
  *                         flag, package, package subtotal, extras subtotal; never {@code null}
+ * @param aiSummary        FOR-05-04 rework (Req 25.4): the AI summary of the estimate, {@code null} when no
+ *                         AI run; staff only, the CLIENT never receives this model
  */
 public record EstimateMatrixDto(
         Long projectId,
@@ -46,7 +48,25 @@ public record EstimateMatrixDto(
         BigDecimal packageMaterialsTotal,
         MoneyRange packageMaterialsMoney,
         String appliedPackageCode,
-        EstimatePackageSummaryDto packageSummary) {
+        EstimatePackageSummaryDto packageSummary,
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        java.util.Map<String, Object> aiSummary) {
+
+    /** Compatibility constructor without an AI summary (FOR-05-04 rework, Requirement 25.4). */
+    public EstimateMatrixDto(
+            Long projectId,
+            boolean editable,
+            List<EstimateMatrixRoomDto> rooms,
+            List<WorkTypeGroupDto> groups,
+            BranchSubtotals totals,
+            BigDecimal fillIndicatorPct,
+            BigDecimal packageMaterialsTotal,
+            MoneyRange packageMaterialsMoney,
+            String appliedPackageCode,
+            EstimatePackageSummaryDto packageSummary) {
+        this(projectId, editable, rooms, groups, totals, fillIndicatorPct, packageMaterialsTotal,
+                packageMaterialsMoney, appliedPackageCode, packageSummary, null);
+    }
 
     /** Compatibility constructor without a package summary (treated as "no package applied"). */
     public EstimateMatrixDto(
@@ -60,6 +80,6 @@ public record EstimateMatrixDto(
             MoneyRange packageMaterialsMoney,
             String appliedPackageCode) {
         this(projectId, editable, rooms, groups, totals, fillIndicatorPct, packageMaterialsTotal,
-                packageMaterialsMoney, appliedPackageCode, EstimatePackageSummaryDto.NONE);
+                packageMaterialsMoney, appliedPackageCode, EstimatePackageSummaryDto.NONE, null);
     }
 }

@@ -21,4 +21,13 @@ public interface EstimateDao extends AdminDao<EstimateEntity, Long> {
      * ultimate backstop.
      */
     Optional<EstimateEntity> findByProjectId(Long projectId);
+
+    /**
+     * FOR-05-04 (design B6): the project's estimate under a {@code PESSIMISTIC_WRITE} row lock, the
+     * lock the AI scratch transaction holds for its duration.
+     */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @org.springframework.data.jpa.repository.Query("select e from EstimateEntity e where e.project.id = :projectId")
+    Optional<EstimateEntity> findByProjectIdForUpdate(
+            @org.springframework.data.repository.query.Param("projectId") Long projectId);
 }

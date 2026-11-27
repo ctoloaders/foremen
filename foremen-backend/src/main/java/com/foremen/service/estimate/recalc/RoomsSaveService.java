@@ -113,6 +113,35 @@ public class RoomsSaveService {
     @Transactional
     public Result save(Long projectId, List<RoomServiceExtendedModel> creates, List<RoomUpdate> updates,
                        List<Long> deleteIds, boolean force) {
+        return save(projectId, creates, updates, deleteIds, force, null);
+    }
+
+    /** FOR-05-04 (R4.1): AI project lock; optional so unit tests may omit it. */
+    private com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setAiLockGuard(com.foremen.service.estimateai.AiProjectLockGuard aiLockGuard) {
+        this.aiLockGuard = aiLockGuard;
+    }
+
+    /**
+     * Same as the five-argument save, performed on behalf of an {@code ESTIMATE} job (design B4): a non-null
+     * {@code jobContext} lets the job's own room save through the AI project lock; {@code null} applies the lock.
+     */
+    @Transactional
+    public Result save(Long projectId, List<RoomServiceExtendedModel> creates, List<RoomUpdate> updates,
+                       List<Long> deleteIds, boolean force, com.foremen.service.estimateai.AiJobContext jobContext) {
+        if (aiLockGuard == null) {
+            return doSave(projectId, creates, updates, deleteIds, force);
+        }
+        try (var scope = aiLockGuard.bypass(jobContext)) {
+            aiLockGuard.assertUnlocked(projectId);
+            return doSave(projectId, creates, updates, deleteIds, force);
+        }
+    }
+
+    private Result doSave(Long projectId, List<RoomServiceExtendedModel> creates, List<RoomUpdate> updates,
+                          List<Long> deleteIds, boolean force) {
         assertProjectAccess(projectId);
         List<RoomServiceExtendedModel> createList = creates == null ? List.of() : creates;
         List<RoomUpdate> updateList = updates == null ? List.of() : updates;

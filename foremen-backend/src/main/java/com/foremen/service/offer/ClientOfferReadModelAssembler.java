@@ -127,7 +127,9 @@ public class ClientOfferReadModelAssembler {
                 null,
                 null,
                 openRoundCount(offer));
-        return new ExecutorOfferReadModel(clientView, control);
+        // FOR-05-04: staff-only AI fields; the client projection above never carries them.
+        return new ExecutorOfferReadModel(clientView, control)
+                .withAi(offer.isAiGenerated(), offer.getAiJobId(), offer.getAiReport());
     }
 
     /**
@@ -142,7 +144,8 @@ public class ClientOfferReadModelAssembler {
         if (!includeLabourComparison) {
             return base;
         }
-        return new ExecutorOfferReadModel(base.offer(), base.control(), labourComparison(offer));
+        return new ExecutorOfferReadModel(base.offer(), base.control(), labourComparison(offer),
+                base.aiGenerated(), base.aiJobId(), base.aiReport());
     }
 
     /**

@@ -29,3 +29,8 @@ foremen:
   bank-feed:
     stub:
       enabled: ${FOREMEN_BANK_STUB_ENABLED:true}
+  # FOR-05-04: stub flag and credentials are inherited from rooms-import (same AI keys as the other
+  # AI components); FOREMEN_ESTIMATE_AI_LLM_STUB overrides only the stub flag.
+  estimate-ai:
+    llm:
+      stub: ${FOREMEN_ESTIMATE_AI_LLM_STUB:${foremen.rooms-import.llm.stub:true}}

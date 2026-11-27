@@ -51,6 +51,19 @@ public class RoomsImportService {
     public record StartResult(Long jobId, RoomsImportStatus status) {
     }
 
+    /**
+     * FOR-05-04 (Requirements 2.1, 4.7) - the optional start parts. {@code mode} is {@code ROOMS_ONLY}
+     * (default) or {@code ESTIMATE}.
+     */
+    public record StartOptions(String mode, boolean useExistingRooms, String packageCode) {
+        /** The FOR-05-02 behaviour. */
+        public static final StartOptions ROOMS_ONLY = new StartOptions("ROOMS_ONLY", false, null);
+
+        public boolean isEstimate() {
+            return RoomsImportRequested.MODE_ESTIMATE.equals(mode);
+        }
+    }
+
     private final RoomsImportJobDao jobDao;
     private final RoomsImportJobMapper mapper;
     private final RoomsImportStorage storage;
@@ -83,12 +96,20 @@ public class RoomsImportService {
      * @throws ForemenApiException 503 when the feature / storage is unavailable, 429 when a job is active
      */
     public StartResult start(Long projectId, Long createdById, String prompt, List<MultipartFile> files) {
-        if (!visionClient.isEnabled() || !storage.isConfigured()) {
+        return start(projectId, createdById, prompt, files, StartOptions.ROOMS_ONLY);
+    }
+
+    /** Same as {@link #start(Long, Long, String, List)} with the FOR-05-04 options. */
+    public StartResult start(Long projectId, Long createdById, String prompt, List<MultipartFile> files,
+                             StartOptions options) {
+        StartOptions opts = options == null ? StartOptions.ROOMS_ONLY : options;
+        boolean needsVision = !(opts.isEstimate() && opts.useExistingRooms());
+        if ((needsVision && !visionClient.isEnabled()) || !storage.isConfigured()) {
             throw new ForemenApiException(HttpStatus.SERVICE_UNAVAILABLE, RoomsImportErrors.UNAVAILABLE);
         }
         List<MultipartFile> uploads = files == null ? List.of() : files;
         try {
-            return transactionTemplate.execute(status -> doStart(projectId, createdById, prompt, uploads));
+            return transactionTemplate.execute(status -> doStart(projectId, createdById, prompt, uploads, opts));
         } catch (DataIntegrityViolationException race) {
             // Two concurrent first starts: FOR UPDATE found no row to lock, the unique index decided.
             Optional<RoomsImportJobEntity> winner = findCurrent(projectId);
@@ -100,7 +121,8 @@ public class RoomsImportService {
         }
     }
 
-    private StartResult doStart(Long projectId, Long createdById, String prompt, List<MultipartFile> files) {
+    private StartResult doStart(Long projectId, Long createdById, String prompt, List<MultipartFile> files,
+                                StartOptions opts) {
         Optional<RoomsImportJobEntity> existing = jobDao.findByProjectIdForUpdate(projectId);
         if (existing.isPresent()) {
             RoomsImportJobEntity current = existing.get();
@@ -120,6 +142,9 @@ public class RoomsImportService {
         job.setProject(entityManager.getReference(ProjectEntity.class, projectId));
         job.setCreator(entityManager.getReference(UserEntity.class, createdById));
         job.setStatus(RoomsImportStatus.QUEUED);
+        job.setMode(opts.isEstimate() ? RoomsImportRequested.MODE_ESTIMATE : "ROOMS_ONLY");
+        job.setUseExistingRooms(opts.isEstimate() && opts.useExistingRooms());
+        job.setPackageCode(opts.isEstimate() ? blankToNull(opts.packageCode()) : null);
         job.setPromptText(prompt == null || prompt.isBlank() ? null : prompt);
         job.setInputs(new ArrayList<>());
         job.setStartedAt(LocalDateTime.now());
@@ -142,7 +167,9 @@ public class RoomsImportService {
         if (!stored.isEmpty()) {
             registerRollbackCleanup(stored);
         }
-        eventPublisher.publishEvent(new RoomsImportRequested(job.getId()));
+        eventPublisher.publishEvent(opts.isEstimate()
+                ? new RoomsImportRequested(job.getId(), RoomsImportRequested.MODE_ESTIMATE)
+                : new RoomsImportRequested(job.getId())); // ROOMS_ONLY: the FOR-05-02 event, unchanged
         return new StartResult(job.getId(), job.getStatus());
     }
 
@@ -204,6 +231,10 @@ public class RoomsImportService {
     @Transactional(readOnly = true)
     public Optional<RoomsImportJobEntity> findById(Long jobId) {
         return jobDao.findById(jobId);
+    }
+
+    private static String blankToNull(String s) {
+        return s == null || s.isBlank() ? null : s.strip();
     }
 
     /** Client file names are metadata only: strip any path and control characters, bound the length. */

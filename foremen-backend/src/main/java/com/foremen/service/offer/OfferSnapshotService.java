@@ -78,6 +78,16 @@ public class OfferSnapshotService {
                 offer.getId(), displayName(offer, null), offer.getStatus(), snapshot, ru, includeBase && !client, offer.isInactive());
     }
 
+    /** FOR-05-04 (R21.9): the staff read, the snapshot view plus the per-cell AI explanations. Never for CLIENT. */
+    @Transactional(readOnly = true)
+    public OfferSnapshotViews.StaffSnapshotView staffSnapshot(Long offerId, boolean includeBase, boolean ru) {
+        OfferEntity offer = load(offerId, false);
+        OfferSnapshot snapshot = requireSnapshot(offer);
+        SnapshotView view = OfferSnapshotViews.toView(
+                offer.getId(), displayName(offer, null), offer.getStatus(), snapshot, ru, includeBase, offer.isInactive());
+        return new OfferSnapshotViews.StaffSnapshotView(view, OfferSnapshotViews.aiCells(snapshot));
+    }
+
     @Transactional(readOnly = true)
     public Comparison compare(Long leftId, Long rightId, boolean client, boolean ru) {
         OfferEntity left = load(leftId, client);

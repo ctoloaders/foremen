@@ -27,5 +27,7 @@ public interface WorkCategoryServiceMapper
     @Override
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "code", ignore = true)
+    @Mapping(target = "aiInstructions", source = "aiInstructions",
+            nullValuePropertyMappingStrategy = org.mapstruct.NullValuePropertyMappingStrategy.SET_TO_NULL)
     void updateFields(WorkCategoryServiceExtendedModel source, @MappingTarget WorkCategoryEntity target);
 }

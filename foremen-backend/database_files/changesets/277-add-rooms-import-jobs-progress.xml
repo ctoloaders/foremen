@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-04 rework (Requirements 24.9, 26.1): action log and progress counters on the job.
+        status is VARCHAR(24) with no CHECK constraint (changeset 213), so the new ASSIGNING /
+        FINALIZING statuses need no constraint change.
+    -->
+    <changeSet id="277-add-rooms-import-jobs-progress" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="rooms_import_jobs"/>
+            <not><columnExists tableName="rooms_import_jobs" columnName="action_log"/></not>
+        </preConditions>
+        <addColumn tableName="rooms_import_jobs">
+            <column name="action_log" type="jsonb"/>
+            <column name="rooms_total" type="INT"/>
+            <column name="rooms_done" type="INT"/>
+            <column name="works_total" type="INT"/>
+            <column name="works_done" type="INT"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="rooms_import_jobs" columnName="works_done"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="works_total"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="rooms_done"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="rooms_total"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="action_log"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

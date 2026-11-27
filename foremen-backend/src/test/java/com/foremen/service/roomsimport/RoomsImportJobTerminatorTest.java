@@ -34,8 +34,9 @@ class RoomsImportJobTerminatorTest {
     private final RoomsImportJobDao dao = mock(RoomsImportJobDao.class);
     private final RoomsImportProperties props = new RoomsImportProperties(true, null, null, null, 0, null);
     private final RoomsImportNotificationEmitter emitter = mock(RoomsImportNotificationEmitter.class);
+    private final EstimateAiNotificationEmitter estimateEmitter = mock(EstimateAiNotificationEmitter.class);
     private final RoomsImportJobTerminator terminator = new RoomsImportJobTerminator(dao,
-            new RoomsImportJobMapper(new ObjectMapper().findAndRegisterModules()), props, emitter);
+            new RoomsImportJobMapper(new ObjectMapper().findAndRegisterModules()), props, emitter, estimateEmitter);
 
     private static final ImportResult RESULT = new ImportResult(List.of(),
             List.of(new Warning("NO_ROOMS_DETECTED", Severity.WARNING, null, null, java.util.Map.of(), null)),
@@ -91,11 +92,48 @@ class RoomsImportJobTerminatorTest {
     }
 
     @Test
+    void estimateJob_complete_usesEstimateEmitter_andSkipsRoomsEmitter() {
+        RoomsImportJobEntity job = jobOf(7L, 9L);
+        job.setMode("ESTIMATE");
+        when(dao.terminateIfActive(anyLong(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1);
+        when(dao.findById(4L)).thenReturn(Optional.of(job));
+
+        assertThat(terminator.complete(4L, RESULT)).isEqualTo(1);
+
+        verify(estimateEmitter).emitCompleted(7L, 9L);
+        verifyNoInteractions(emitter);
+    }
+
+    @Test
+    void estimateJob_fail_usesEstimateEmitter_andSkipsRoomsEmitter() {
+        RoomsImportJobEntity job = jobOf(7L, 9L);
+        job.setMode("ESTIMATE");
+        when(dao.terminateIfActive(anyLong(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1);
+        when(dao.findById(4L)).thenReturn(Optional.of(job));
+
+        assertThat(terminator.fail(4L, RoomsImportErrors.FAILED_TIMEOUT)).isEqualTo(1);
+
+        verify(estimateEmitter).emitFailed(7L, 9L, RoomsImportErrors.FAILED_TIMEOUT);
+        verifyNoInteractions(emitter);
+    }
+
+    @Test
+    void roomsOnlyJob_neverUsesEstimateEmitter() {
+        when(dao.terminateIfActive(anyLong(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(1);
+        when(dao.findById(4L)).thenReturn(Optional.of(jobOf(7L, 9L)));
+
+        terminator.fail(4L, "x");
+        terminator.complete(4L, RESULT);
+
+        verifyNoInteractions(estimateEmitter);
+    }
+
+    @Test
     void fail_zeroRows_noEmission() {
         when(dao.terminateIfActive(anyLong(), any(), any(), any(), any(), any(), any(), any(), any())).thenReturn(0);
 
         assertThat(terminator.fail(4L, "x")).isZero();
 
-        verifyNoInteractions(emitter);
+        verifyNoInteractions(emitter, estimateEmitter);
     }
 }

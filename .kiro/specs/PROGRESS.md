@@ -135,6 +135,7 @@
 | 11 | FOR-05-11-project-readiness | ✅ Завершено |
 | 12 | FOR-05-12-project-activation | ✅ Завершено (проверено по коду: backend, frontend, i18n, тесты; открыта только финальная живая верификация, задача 9) |
 | 13 | FOR-05-13-collaborative-estimate | ✅ Завершено (11/11, только additional-tasks + test-cases) |
+| 04-AI | FOR-05-04-estimate-AI | ✅ Завершено (8/8, реализация backend + frontend, test-cases.md). Не закоммичено. Follow-ups: `EstimateRecomputeService` игнорирует `unitPriceOverride` (pre-existing); миграция `160-seed-template-amendment-pl` с null `uploaded_by_id` ломает ряд seed IT (pre-existing, другая спека); в `docker-compose.yml` нет `FOREMEN_ESTIMATE_AI_*`; реальные Gemini-клиенты не прогонялись; нет счётчиков токенов в `stage_log`; в ссылках изменённых ячеек чата нет «old -> new» |
 
 ### FOR-06 — Детализация (стадия исполнения)
 

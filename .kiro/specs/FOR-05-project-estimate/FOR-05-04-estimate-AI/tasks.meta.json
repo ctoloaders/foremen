@@ -1,0 +1,785 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Liquibase changesets and entities": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185057
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712190942
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713527584
+      }
+    ],
+    "1.2 Catalog DTOs, mappers and validation for `aiInstructions`": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185122
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713532905
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716035246
+      }
+    ],
+    "1.3 Job and offer DTO fields, client redaction contract test, no-new-resource test": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185162
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713532982
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716035423
+      }
+    ],
+    "1.4 Configuration, prompts and stub client": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185194
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712191639
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713403302
+      }
+    ],
+    "2.1 Seed `aiInstructions` of the 13 categories": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185235
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716747926
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718707184
+      }
+    ],
+    "2.2 Frontend: AI calculation rules field in work categories and work catalog": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185261
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716043972
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716741316
+      }
+    ],
+    "3.1 `AiProjectLockGuard` and wiring": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185294
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713533162
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716036456
+      }
+    ],
+    "3.2 Behaviour-preserving extraction of replay, replace and material seeding logic": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185328
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712192209
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713403429
+      }
+    ],
+    "3.3 `EstimateScratchService`": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185358
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713533664
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716036731
+      }
+    ],
+    "3.4 Plan model and pure logic": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185389
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795713534347
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795714881608
+      }
+    ],
+    "3.5 Catalog/room context builders and the planner client": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185418
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716043170
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716738447
+      }
+    ],
+    "3.6 `PlanToEditsConverter`": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185449
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716043226
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716739344
+      }
+    ],
+    "3.7 `EstimateAiRoomsSaver` (stage `SAVING_ROOMS`)": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185475
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716043276
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716738379
+      }
+    ],
+    "3.8 `AiOfferWriter` and the two `OfferService` methods": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185503
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716747265
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718709095
+      }
+    ],
+    "3.9 `EstimateAiWorker`, controller changes, sweep": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185525
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718713874
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720115820
+      }
+    ],
+    "3.10 `EstimateAiNotificationEmitter`": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185554
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716043329
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716740066
+      }
+    ],
+    "3.11 Cell AI meta: facts, overlay, snapshot v3, restore, marker clearing": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185587
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716747408
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718706606
+      }
+    ],
+    "3.12 Materials in the snapshot: store, restore, scratch seed, report summary, parity tests": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185619
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718713935
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720116143
+      }
+    ],
+    "4.1 `SnapshotTextRenderer` and `OfferChatToolRegistry` with the seven tools (materials are not touched by tools)": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185653
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716747469
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718707993
+      }
+    ],
+    "4.2 `OfferAiChatService`, controller, undo": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185687
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718714282
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720672121
+      }
+    ],
+    "5.1 \"Create estimate\" dialog, job state and lock hook": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185720
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720120911
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720671595
+      }
+    ],
+    "5.2 Rooms tab: progress, early rooms render, locked state": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185753
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720677099
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795722171738
+      }
+    ],
+    "5.3 Estimate/Offer tabs: lock banner, AI badge, report panel, send warning": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185778
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795722176197
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795722895460
+      }
+    ],
+    "5.4 Offer chat panel and i18n parity test": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185810
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795723605364
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795724716378
+      }
+    ],
+    "5.5 Cell AI marker, \"Why\" card and filters": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185871
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795722898297
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795723602725
+      }
+    ],
+    "6.1 Backend end-to-end integration test (stub LLM)": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185917
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720676294
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795722172415
+      }
+    ],
+    "6.2 Update the loaders agent API document": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185942
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720120972
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720671882
+      }
+    ],
+    "6.3 Chat backend end-to-end integration test (stub LLM)": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712185969
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720676466
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795722173208
+      }
+    ],
+    "6.4 Regression run of touched existing tests": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712186004
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795724719807
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795725787315
+      }
+    ],
+    "7. Author test-cases.md": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712186037
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795725790397
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795725996665
+      }
+    ],
+    "8. Final checkpoint": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795712186181
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795725997064
+      },
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795726030648
+      }
+    ],
+    "1. Foundations": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795716035511
+      }
+    ],
+    "2. Catalog UI and seed": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795718707232
+      }
+    ],
+    "3. Backend pipeline": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720116186
+      }
+    ],
+    "4. Offer chat backend": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795720672184
+      }
+    ],
+    "5. Frontend (nested repo)": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795724716422
+      }
+    ],
+    "6. Integration, docs and verification": [
+      {
+        "executionId": "736d28b4-33fd-4ea4-8f69-40cb5ecacd88",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795725787366
+      }
+    ],
+    "9.1 DB changesets and entities for the rework": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331567
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777335057
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777815924
+      }
+    ],
+    "9.2 `AssignWorkService`, `AiJobContext` and the `assign_work` tool": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331623
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795778141951
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779279212
+      }
+    ],
+    "9.3 Planner/worker rewrite: stages `ASSIGNING` and `FINALIZING`": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331687
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779282603
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779882896
+      }
+    ],
+    "9.4 Dead-code cleanup of the offer path in the job": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331713
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779886145
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795780487726
+      }
+    ],
+    "9.5 `JobActionLog` and the poll DTO with counters": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331747
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777820891
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795778138335
+      }
+    ],
+    "9.6 Summary persistence, estimate read model and copy to the offer": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331789
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777820940
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795778138813
+      }
+    ],
+    "9.7 Frontend: shared `EstimateJobBanner` with progress and action log": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331905
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795778142770
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779279300
+      }
+    ],
+    "9.8 Frontend: live Estimate tab, go-to-estimate prompt, summary panel": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331944
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779283190
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795779883161
+      }
+    ],
+    "9.10 Integration test updates: `EstimateAiWorkerIT` and `EstimateAiEndToEndIT`": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777331973
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795780488265
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795781362027
+      }
+    ],
+    "9.11 Author test-cases.md (rework update)": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777332002
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795782471919
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795782656777
+      }
+    ],
+    "9.12 Regression run of touched tests": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777332037
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795781362613
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795782471181
+      }
+    ],
+    "9.13 Final checkpoint": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795777332063
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795782657449
+      },
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795782728444
+      }
+    ],
+    "9. Rework: direct-to-estimate AI job": [
+      {
+        "executionId": "15a76ab2-8c59-4535-b753-962b41ee78d5",
+        "chatSessionId": "sess_136a2cad-bfcc-4334-9b50-e699002b1a92",
+        "timestamp": 1795782728704
+      }
+    ]
+  }
+}

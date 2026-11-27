@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-04 rework (design R1): jobs still in the removed QUANTIFYING / BUILDING_OFFER stages
+        are moved to FAILED. Re-running is a no-op because no such rows remain.
+    -->
+    <changeSet id="278-supersede-in-flight-estimate-jobs" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="rooms_import_jobs"/>
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM rooms_import_jobs WHERE status IN ('QUANTIFYING', 'BUILDING_OFFER')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <sql>
+            UPDATE rooms_import_jobs
+               SET status = 'FAILED',
+                   failure_reason = 'error.estimateai.failed.superseded',
+                   completed_at = COALESCE(completed_at, NOW())
+             WHERE status IN ('QUANTIFYING', 'BUILDING_OFFER')
+        </sql>
+    </changeSet>
+</databaseChangeLog>

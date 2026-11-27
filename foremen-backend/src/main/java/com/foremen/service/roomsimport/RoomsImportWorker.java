@@ -33,8 +33,8 @@ public class RoomsImportWorker {
     @Async("roomsImportTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onRequested(RoomsImportRequested event) {
-        if (event == null || event.jobId() == null) {
-            return;
+        if (event == null || event.jobId() == null || event.isEstimate()) {
+            return; // ESTIMATE jobs belong to EstimateAiWorker (FOR-05-04)
         }
         process(event.jobId());
     }

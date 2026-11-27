@@ -37,6 +37,8 @@ import java.util.List;
  *                    the labour BEFORE any labour-price override. {@code labour} is the effective
  *                    (override) value; the two are equal when no override exists. Lets the frontend
  *                    total the original labour to show the override's discount/surcharge.
+ * @param ai          FOR-05-04: the staff-only AI marker and explanation of the cell
+ *                    ({@code estimate_line_room_qty.ai_meta}); {@code null} (omitted) for manual cells
  */
 public record CellDto(
         Long workItemId,
@@ -51,7 +53,31 @@ public record CellDto(
         List<MaterialLineDto> materials,
         MoneyRange costRange,
         FillState fillState,
-        BigDecimal baseLabour) {
+        BigDecimal baseLabour,
+        @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+        com.foremen.service.estimate.CellAiMeta ai) {
+
+    /**
+     * FOR-05-04 (Requirement 21.9): shape without the staff-only AI explanation {@code ai} (manual cells,
+     * unassigned cells, existing callers).
+     */
+    public CellDto(
+            Long workItemId,
+            Long roomId,
+            boolean assigned,
+            BigDecimal volume,
+            String formulaUsed,
+            String formulaKey,
+            boolean fallbackUsed,
+            boolean volumeOverridden,
+            BigDecimal labour,
+            List<MaterialLineDto> materials,
+            MoneyRange costRange,
+            FillState fillState,
+            BigDecimal baseLabour) {
+        this(workItemId, roomId, assigned, volume, formulaUsed, formulaKey, fallbackUsed,
+                volumeOverridden, labour, materials, costRange, fillState, baseLabour, null);
+    }
 
     /**
      * Back-compat constructor: no override information supplied, so the original labour equals the

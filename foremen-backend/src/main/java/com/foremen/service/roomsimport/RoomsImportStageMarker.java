@@ -51,6 +51,35 @@ public class RoomsImportStageMarker {
     }
 
     /**
+     * FOR-05-04 (Requirement 18.2): merges {@code details} (counts, retries; never document text) into the
+     * latest {@code stage_log} entry of {@code stage}. Best effort: a missing job or entry is ignored.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void annotate(Long jobId, RoomsImportStatus stage, Map<String, Object> details) {
+        if (details == null || details.isEmpty()) {
+            return;
+        }
+        jobDao.findById(jobId).ifPresent(job -> {
+            if (job.getStageLog() == null || job.getStatus() == null || job.getStatus().isTerminal()) {
+                return;
+            }
+            List<Map<String, Object>> stageLog = new ArrayList<>();
+            for (Map<String, Object> entry : job.getStageLog()) {
+                stageLog.add(new LinkedHashMap<>(entry));
+            }
+            for (int i = stageLog.size() - 1; i >= 0; i--) {
+                if (stage.name().equals(stageLog.get(i).get("stage"))) {
+                    stageLog.get(i).putAll(details);
+                    stageLog.get(i).put("endedAt", LocalDateTime.now().toString());
+                    break;
+                }
+            }
+            job.setStageLog(stageLog);
+            jobDao.save(job);
+        });
+    }
+
+    /**
      * Bumps the job's last-update time so a long measuring stage is not mistaken for a stuck job.
      *
      * @return {@code false} when the job is gone or terminal

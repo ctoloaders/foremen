@@ -26,4 +26,8 @@ public class WorkCategoryEntity extends BaseEntity {
 
     @Column(nullable = false)
     private boolean active = true;
+
+    /** FOR-05-04 (design B1): optional AI calculation rules; trimmed, blank stored as null. */
+    @Column(name = "ai_instructions", columnDefinition = "text")
+    private String aiInstructions;
 }

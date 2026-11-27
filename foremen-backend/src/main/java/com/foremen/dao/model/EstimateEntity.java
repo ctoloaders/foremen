@@ -92,6 +92,11 @@ public class EstimateEntity extends BaseEntity {
     @Column(name = "materials_reserve_map", columnDefinition = "jsonb")
     private MaterialsReserveMap materialsReserveMap;
 
+    /** FOR-05-04 rework: AI summary document (assumptions, questions, unpriced, warnings, totals). NULL = no AI run. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "ai_summary", columnDefinition = "jsonb")
+    private java.util.Map<String, Object> aiSummary;
+
     /**
      * Read-side view of the estimate's lines, used by {@code EstimateRecomputeService} to
      * traverse {@code estimate.lines} per design §6.1. Not cascaded from this side — lines are

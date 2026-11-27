@@ -44,6 +44,10 @@ public class WorkItemEntity extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
+    /** FOR-05-04 (design B1): optional AI calculation rules for this work; never shown to the client. */
+    @Column(name = "ai_instructions", columnDefinition = "text")
+    private String aiInstructions;
+
     /**
      * Optional internal price (FOR-04-11 additional tasks): the payroll base of the work. When set it
      * replaces the client unit price as the rate worker pay is derived from; {@code null} means

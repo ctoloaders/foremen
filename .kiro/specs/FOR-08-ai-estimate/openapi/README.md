@@ -143,3 +143,41 @@ Req 6.5). Per the documented stance, consent defaults to **`true`**: the fronten
 `FOREMEN_LOADERS_BOT_DEFAULT_CONSENT`), immediately after `init`. If Foremen later adds its own
 consent banner, that constant/call should be driven from the banner's decision instead of the
 default.
+
+---
+
+# Toolset notes: rooms auto-import `ESTIMATE` mode and AI chat (FOR-05-04, Req 2.1)
+
+> Added by FOR-05-04 task 6.2. When `foremen-bot-toolset.yaml` is re-captured and curated, apply
+> these notes to the rooms auto-import operation and to the offer AI chat endpoints.
+
+## Rooms auto-import start: new optional multipart parts
+
+`POST /api/rooms/project/{projectId}/autoimport` (multipart, `202 {jobId,status}`) keeps its FOR-05-02
+parts (`prompt`, `files`) and gains four **optional** parts. Omitting all of them keeps the previous
+behaviour (rooms only).
+
+| Part | Type | Meaning |
+|------|------|---------|
+| `mode` | string | `ROOMS_ONLY` (default) or `ESTIMATE`. `ESTIMATE` runs the full "Create estimate" pipeline: save rooms, plan works from the catalog, compute with the estimate engine in a rollback-only scratch replay, and write an AI-generated DRAFT offer. Any other value is rejected with 400. |
+| `useExistingRooms` | boolean | Only read in `ESTIMATE` mode. When `true`, the project's already saved rooms are used instead of recognizing rooms from the input; no files or prompt are required in that case. |
+| `offerName` | string | Only read in `ESTIMATE` mode. Optional name of the created offer. |
+| `packageCode` | string | Only read in `ESTIMATE` mode. Optional material package code applied to the scratch replay and stored in the offer snapshot. |
+
+Behaviour that matters for agent tool descriptions:
+
+- `ESTIMATE` mode needs the permissions of both rooms creation and offer creation. A start is
+  refused up front (before anything is stored) when the feature is disabled, when the project is
+  already locked by another `ESTIMATE` job, or when there are no rooms to work with.
+- While an `ESTIMATE` job is active the project is write-locked: room, estimate and offer write
+  endpoints answer `409 error.project.ai.locked`. Reads keep working. A `ROOMS_ONLY` job locks nothing.
+- Progress is read through the existing job polling endpoints; the job DTO exposes `mode`, `phase`,
+  `offerId`, `roomsSavedAt` and `roomsCreated`. The generated offer is DRAFT, staff-only (a CLIENT
+  gets 404) and carries an `aiReport`.
+
+## Chat endpoints are not part of the agent toolset
+
+The offer AI chat endpoints (`GET /api/offers/{id}/ai-chat`, `POST /api/offers/{id}/ai-chat`,
+`POST /api/offers/{id}/ai-chat/undo`) are an in-app staff feature backed by their own LLM and tool
+registry. They are **not** part of the loaders-bot agent toolset: exclude every `ai-chat` operation
+when curating `foremen-bot-toolset.yaml`, so the agent cannot drive one model through another.

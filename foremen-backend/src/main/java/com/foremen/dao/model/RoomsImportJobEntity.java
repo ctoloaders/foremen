@@ -88,4 +88,39 @@ public class RoomsImportJobEntity extends BaseEntity {
     /** Set when a room is created with this job's id. */
     @Column(name = "applied_at")
     private LocalDateTime appliedAt;
+
+    /** FOR-05-04: {@code ROOMS_ONLY} (default) or {@code ESTIMATE}. */
+    @Column(name = "mode", nullable = false, length = 16)
+    private String mode = "ROOMS_ONLY";
+
+    /** FOR-05-04: skip the ROOMS phase and plan over the project's existing rooms. */
+    @Column(name = "use_existing_rooms", nullable = false)
+    private boolean useExistingRooms = false;
+
+    @Column(name = "package_code", length = 64)
+    private String packageCode;
+
+    /** End of the SAVING_ROOMS stage. */
+    @Column(name = "rooms_saved_at")
+    private LocalDateTime roomsSavedAt;
+
+    @Column(name = "rooms_created")
+    private Integer roomsCreated;
+
+    /** FOR-05-04 rework: bounded action log (newest first, at most 200 entries). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "action_log", columnDefinition = "jsonb")
+    private List<Map<String, Object>> actionLog;
+
+    @Column(name = "rooms_total")
+    private Integer roomsTotal;
+
+    @Column(name = "rooms_done")
+    private Integer roomsDone;
+
+    @Column(name = "works_total")
+    private Integer worksTotal;
+
+    @Column(name = "works_done")
+    private Integer worksDone;
 }

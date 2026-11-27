@@ -92,7 +92,7 @@ public class OfferHtmlBuilder {
     private static void row(StringBuilder h, RowView r, List<OfferSnapshot.Room> rooms) {
         Map<Long, BigDecimal> byRoom = new HashMap<>();
         if (r.cells() != null) {
-            for (OfferSnapshot.Cell c : r.cells()) {
+            for (OfferSnapshotViews.CellView c : r.cells()) {
                 byRoom.merge(c.roomId(), c.quantity() != null ? c.quantity() : BigDecimal.ZERO, BigDecimal::add);
             }
         }

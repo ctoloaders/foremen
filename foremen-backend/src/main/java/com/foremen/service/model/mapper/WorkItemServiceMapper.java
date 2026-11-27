@@ -67,6 +67,8 @@ public abstract class WorkItemServiceMapper
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "workCategory", expression = "java(workCategoryRef(source.workCategoryId()))")
     @Mapping(target = "unit", expression = "java(unitRef(source.unitId()))")
+    @Mapping(target = "aiInstructions", source = "aiInstructions",
+            nullValuePropertyMappingStrategy = org.mapstruct.NullValuePropertyMappingStrategy.SET_TO_NULL)
     public abstract void updateFields(WorkItemServiceExtendedModel source, @MappingTarget WorkItemEntity target);
 
     @Override

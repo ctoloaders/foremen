@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- FOR-05-04 (Requirement 1.1; design B1): optional AI calculation rules on categories and works. -->
+    <changeSet id="270-add-ai-instructions-work-categories" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="work_categories" columnName="ai_instructions"/></not>
+        </preConditions>
+        <addColumn tableName="work_categories">
+            <column name="ai_instructions" type="TEXT"/>
+        </addColumn>
+        <rollback><dropColumn tableName="work_categories" columnName="ai_instructions"/></rollback>
+    </changeSet>
+    <changeSet id="270-add-ai-instructions-work-items" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <not><columnExists tableName="work_items" columnName="ai_instructions"/></not>
+        </preConditions>
+        <addColumn tableName="work_items">
+            <column name="ai_instructions" type="TEXT"/>
+        </addColumn>
+        <rollback><dropColumn tableName="work_items" columnName="ai_instructions"/></rollback>
+    </changeSet>
+</databaseChangeLog>

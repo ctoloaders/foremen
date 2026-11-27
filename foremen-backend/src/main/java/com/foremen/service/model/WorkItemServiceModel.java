@@ -54,4 +54,6 @@ public class WorkItemServiceModel {
     private long finishingConsumptionCount;
     /** Optional internal price (payroll base); {@code null} when the work uses its base price. */
     private BigDecimal internalPrice;
+    /** FOR-05-04: optional AI calculation rules (staff-only). */
+    private String aiInstructions;
 }

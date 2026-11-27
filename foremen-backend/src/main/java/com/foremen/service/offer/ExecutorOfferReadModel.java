@@ -27,11 +27,25 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 public record ExecutorOfferReadModel(
         ClientOfferReadModel offer,
         ManagerControlState control,
-        @JsonInclude(JsonInclude.Include.NON_NULL) LabourPriceComparison labourComparison) {
+        @JsonInclude(JsonInclude.Include.NON_NULL) LabourPriceComparison labourComparison,
+        boolean aiGenerated,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Long aiJobId,
+        @JsonInclude(JsonInclude.Include.NON_NULL) java.util.Map<String, Object> aiReport) {
 
-    /** Executor model without the staff-only comparison block. */
+    /** Executor model without the staff-only comparison block and without AI fields. */
     public ExecutorOfferReadModel(ClientOfferReadModel offer, ManagerControlState control) {
         this(offer, control, null);
+    }
+
+    /** Executor model without AI fields (FOR-05-04: {@code aiGenerated=false}). */
+    public ExecutorOfferReadModel(ClientOfferReadModel offer, ManagerControlState control,
+                                  LabourPriceComparison labourComparison) {
+        this(offer, control, labourComparison, false, null, null);
+    }
+
+    /** FOR-05-04 (Req 8.5, 14.4, 17.1): copy of this model carrying the staff-only AI fields. */
+    public ExecutorOfferReadModel withAi(boolean aiGenerated, Long aiJobId, java.util.Map<String, Object> aiReport) {
+        return new ExecutorOfferReadModel(offer, control, labourComparison, aiGenerated, aiJobId, aiReport);
     }
 
     /**

@@ -16,6 +16,7 @@ import com.foremen.dao.model.RoomEntity;
 import com.foremen.dao.model.WorkCategoryEntity;
 import com.foremen.dao.model.WorkItemEntity;
 import com.foremen.dao.model.WorkPriceEntity;
+import com.foremen.service.estimate.CellAiMeta;
 
 /** FOR-05-07b task 3.2: snapshot v2 content (restore data, package marker, rows applied to a room only). */
 class OfferSnapshotBuilderTest {
@@ -37,7 +38,7 @@ class OfferSnapshotBuilderTest {
         OfferSnapshot s = OfferSnapshotBuilder.build(estimate, VAT, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE);
 
         OfferSnapshot.Row row = s.groups().get(0).rows().get(0);
-        assertThat(s.version()).isEqualTo(2);
+        assertThat(s.version()).isEqualTo(3);
         assertThat(row.unitPriceOverride()).isEqualByComparingTo("8.00");
         assertThat(row.unitPrice()).isEqualByComparingTo("8.00");
         assertThat(row.baseUnitPrice()).isEqualByComparingTo("10.00");
@@ -75,6 +76,55 @@ class OfferSnapshotBuilderTest {
         assertThat(with.appliedPackageNamePl()).isEqualTo("Premium PL");
         assertThat(none.appliedPackageCode()).isNull();
         assertThat(none.appliedPackageNameRu()).isNull();
+    }
+
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON = new com.fasterxml.jackson.databind.ObjectMapper();
+
+    private static CellAiMeta sampleAi() {
+        return new CellAiMeta("JOB", null, "ASSUMED", new BigDecimal("0.72"), new CellAiMeta.Source("plan.pdf", 3),
+                "Walls are tiled.", new CellAiMeta.Volume("MODEL_OVERRIDE", "fallback", new BigDecimal("12.40"),
+                        new BigDecimal("14.00"), new CellAiMeta.Correction(new BigDecimal("1.6"), new BigDecimal("12.9")),
+                        "Niche.", null),
+                null, null);
+    }
+
+    @Test
+    @DisplayName("task 3.11: v3 cell copies aiMeta and the override flag; manual cells stay v2-shaped")
+    void cellCopiesAiMetaAndOverride() {
+        EstimateEntity estimate = new EstimateEntity();
+        EstimateLineEntity ai = line(estimate, 10L, 1, "14.00", room(1L, "A"));
+        ai.getRoomQtys().get(0).setVolumeOverridden(true);
+        ai.getRoomQtys().get(0).setAiMeta(sampleAi());
+        estimate.getLines().add(ai);
+        estimate.getLines().add(line(estimate, 11L, 2, "2.00", room(1L, "A")));
+
+        OfferSnapshot s = OfferSnapshotBuilder.build(estimate, VAT, BigDecimal.ONE, BigDecimal.ONE, BigDecimal.ONE);
+        List<OfferSnapshot.Row> rows = s.groups().get(0).rows();
+
+        OfferSnapshot.Cell aiCell = rows.get(0).cells().get(0);
+        assertThat(aiCell.ai()).isEqualTo(sampleAi());
+        assertThat(aiCell.volumeOverridden()).isTrue();
+        assertThat(aiCell.formulaKey()).isEqualTo("fallback");
+        assertThat(aiCell.fallbackUsed()).isTrue();
+        // task 3.12: a manual cell has no override or AI fields; "no norms" is an explicit empty material list
+        assertThat(rows.get(1).cells().get(0)).isEqualTo(
+                new OfferSnapshot.Cell(1L, new BigDecimal("2.00"), null, null, null, null, List.of()));
+    }
+
+    @Test
+    @DisplayName("task 3.11: JSON round-trip keeps ai; a version 2 cell JSON still reads with null new fields")
+    void jsonRoundTripAndVersion2Read() throws Exception {
+        OfferSnapshot.Cell cell = new OfferSnapshot.Cell(1L, new BigDecimal("14.00"), true, "fallback", true, sampleAi());
+        String json = JSON.writeValueAsString(cell);
+        assertThat(JSON.readValue(json, OfferSnapshot.Cell.class)).isEqualTo(cell);
+
+        String v2 = "{\"roomId\":5,\"quantity\":2.5}";
+        OfferSnapshot.Cell old = JSON.readValue(v2, OfferSnapshot.Cell.class);
+        assertThat(old).isEqualTo(new OfferSnapshot.Cell(5L, new BigDecimal("2.5")));
+        assertThat(old.ai()).isNull();
+        assertThat(old.volumeOverridden()).isNull();
+        // A manual cell serializes exactly as a version 2 cell (no null noise).
+        assertThat(JSON.writeValueAsString(old)).isEqualTo(v2);
     }
 
     private static RoomEntity room(Long id, String label) {

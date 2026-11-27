@@ -51,10 +51,21 @@ public class RoomsImportSweepService {
     private final RoomsImportJobTerminator terminator;
     private final RoomsImportStorage storage;
     private final RoomsImportProperties properties;
+    private final com.foremen.config.estimateai.EstimateAiProperties estimateProperties;
 
     public RoomsImportSweepService(RoomsImportJobDao jobDao, RoomsImportJobMapper mapper,
                                    RoomsImportJobTerminator terminator, RoomsImportStorage storage,
                                    RoomsImportProperties properties) {
+        this(jobDao, mapper, terminator, storage, properties,
+                new com.foremen.config.estimateai.EstimateAiProperties(false, null, 0, 0, null, null, null));
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public RoomsImportSweepService(RoomsImportJobDao jobDao, RoomsImportJobMapper mapper,
+                                   RoomsImportJobTerminator terminator, RoomsImportStorage storage,
+                                   RoomsImportProperties properties,
+                                   com.foremen.config.estimateai.EstimateAiProperties estimateProperties) {
+        this.estimateProperties = estimateProperties;
         this.jobDao = jobDao;
         this.mapper = mapper;
         this.terminator = terminator;
@@ -95,6 +106,18 @@ public class RoomsImportSweepService {
                 }
             } catch (RuntimeException e) {
                 log.warn("Failed to time out rooms import job {} (continuing): {}", id, e.getMessage());
+            }
+        }
+        // FOR-05-04 (Requirement 18.3): ESTIMATE jobs use the job timeout and their own failure reason.
+        Duration estimateTimeout = estimateProperties.timeout();
+        for (Long id : jobDao.findStuckEstimateIds(LocalDateTime.now().minus(estimateTimeout),
+                RoomsImportJobDao.TERMINAL)) {
+            try {
+                if (terminator.fail(id, EstimateAiErrors.FAILED_TIMEOUT) == 1) {
+                    failed++;
+                }
+            } catch (RuntimeException e) {
+                log.warn("Failed to time out estimate job {} (continuing): {}", id, e.getMessage());
             }
         }
         if (failed > 0) {

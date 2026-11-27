@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!-- FOR-05-04 rework (Requirement 25.1): AI summary stored on the estimate. NULL = no AI run. -->
+    <changeSet id="276-add-estimates-ai-summary" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="estimates"/>
+            <not><columnExists tableName="estimates" columnName="ai_summary"/></not>
+        </preConditions>
+        <addColumn tableName="estimates">
+            <column name="ai_summary" type="jsonb"/>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="estimates" columnName="ai_summary"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

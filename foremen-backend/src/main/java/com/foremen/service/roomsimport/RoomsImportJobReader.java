@@ -89,6 +89,30 @@ public class RoomsImportJobReader {
                 job.getCreatedDate() != null ? job.getCreatedDate() : job.getStartedAt(),
                 job.getCompletedAt(),
                 job.getAppliedAt(),
-                completed ? job.getResult() : null);
+                completed ? job.getResult() : null,
+                job.getMode(),
+                phaseOf(job),
+                job.getRoomsSavedAt(),
+                job.getRoomsCreated(),
+                job.getActionLog() != null ? job.getActionLog() : java.util.List.of(),
+                job.getRoomsTotal(),
+                job.getRoomsDone(),
+                job.getWorksTotal(),
+                job.getWorksDone());
+    }
+
+    /**
+     * FOR-05-04: {@code ESTIMATE} once an {@code ESTIMATE}-mode job is past the ROOMS phase (an
+     * estimate-stage status, completed, rooms saved, or reusing existing rooms); otherwise {@code ROOMS}.
+     */
+    static String phaseOf(RoomsImportJobEntity job) {
+        if (!"ESTIMATE".equals(job.getMode())) {
+            return "ROOMS";
+        }
+        RoomsImportStatus s = job.getStatus();
+        boolean estimateStage = s == RoomsImportStatus.SAVING_ROOMS || s == RoomsImportStatus.PLANNING_WORKS
+                || s == RoomsImportStatus.ASSIGNING || s == RoomsImportStatus.FINALIZING
+                || s == RoomsImportStatus.COMPLETED;
+        return estimateStage || job.getRoomsSavedAt() != null || job.isUseExistingRooms() ? "ESTIMATE" : "ROOMS";
     }
 }

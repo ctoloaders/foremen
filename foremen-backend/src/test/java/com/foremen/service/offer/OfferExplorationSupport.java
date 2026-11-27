@@ -177,6 +177,8 @@ abstract class OfferExplorationSupport {
             String p = "%" + runId + "%";
             entityManager.createQuery("delete from UserEntity u where u.email like :e")
                     .setParameter("e", "client+" + runId + "-%").executeUpdate();
+            entityManager.createQuery("delete from OfferAiChatMessageEntity m where m.offer.project.id in "
+                    + "(select pr.id from ProjectEntity pr where pr.name like :p)").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from OfferEntity o where o.project.id in "
                     + "(select pr.id from ProjectEntity pr where pr.name like :p)").setParameter("p", p).executeUpdate();
             entityManager.createQuery("delete from EstimateLineRoomQtyEntity q where q.line.estimate.id in "

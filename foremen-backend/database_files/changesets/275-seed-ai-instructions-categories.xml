@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+      FOR-05-04 task 2.1 (Requirement 1.5; design B1): one-time seed of work_categories.ai_instructions
+      for the 13 categories, condensed from sections 5.1-5.13 of the FOREMEN AI Estimator standard (no prices).
+      A category is matched by the position prefix of its works (work_items.code LIKE 'N.%'); an unmatched
+      category stays empty. Every update carries "ai_instructions IS NULL" so edited text is never overwritten,
+      and the MARK_RAN precondition skips a changeset when no matching category is still empty.
+    -->
+    <changeSet id="275-seed-ai-instructions-categories-1" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '1.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.1 Preparation and demolition -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Protection of windows, doors and transport routes is counted by the area of the rooms being renovated.&#10;Demolition covers partitions, old finishes and equipment; patching of floor, walls and ceilings after demolition is separate.&#10;Include relocation of ventilation openings and patching of chases left by other contractors (for example air-conditioning installers).&#10;When the layout changes, always compare the existing plan with the new one."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '1.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-2" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '2.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.2 Structures and plasterboard -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="New partitions: add the floor chase under new walls and plaster the new walls on the needed number of sides.&#10;Door openings: narrowing, widening and lintels.&#10;Plasterboard partitions, acoustic fill, pre-walls and wall lining; WC installation casing, bath casing, inspection hatches; niches, shelves, aluminium and paper corners; suspended ceilings, edges and level changes, curtain and LED niches.&#10;Check the number of plasterboard layers: single and double layer have different rates.&#10;Complex curves, staircase structures and non-standard items go to individual pricing when the catalog has no suitable work.&#10;Check the WC casing against the standard item size (up to 120 x 100 cm); larger needs clarification."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '2.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-3" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '3.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.3 Rough plumbing -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Compare existing and designed plumbing. Count new and relocated cold water, hot water and sewer points, removal of unneeded points, chasing and patching, concealed mixers, WC installations, linear drain with slope, washing machine and dishwasher connections, radiator relocation, extra plumbing systems, and a tightness test for major changes.&#10;Chases are counted by actual length when known. Without routes use a preliminary estimate and flag it. No confirmed universal chase norm exists."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '3.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-4" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '4.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.4 Finish plumbing -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Count toilets and installation buttons, baths, shower trays and screens, washbasins and kitchen sinks, siphons, angle valves, mixers of the right type, finish assembly of concealed plumbing, shower rails, linear drain finish assembly, radiators and towel dryers, bidet showers.&#10;Distinguish countertop, built-in and tile-made washbasins. For a concealed mixer check the number of elements: the standard set and extra elements may be priced separately.&#10;Do not duplicate re-installation of an old radiator and installation of a new one without technological reason."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '4.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-5" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '5.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.5 Rough electrical -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Compare existing and new electrical plans. Distinguish unchanged points, removal of fittings, relocations, new points, extra sockets from existing ones, sockets in block/plasterboard walls versus reinforced concrete, single/two-way/cross switches, master switches, lighting outlets, power sockets, internet and TV, electrical and low-current boards, breakers, air-conditioner and LED power, electric underfloor heating and thermostats.&#10;For preliminary chasing use the coefficient of the current catalog; studied estimates use 1.5 chase units per new point. This is a working rule, not a confirmed universal norm. Long routes are counted separately. Patching of chases must match the chasing volume.&#10;Record the number of mechanisms and frames. Do not equate a multi-gang frame with one mechanism automatically.&#10;If the wall material is unknown, external walls may be assumed reinforced concrete, with the assumption stated. A specialist confirms chasing of load-bearing structures.&#10;Without an existing electrical plan, do not present all new points as confirmed relocations; state that the estimate assumes new points."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '5.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-6" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '6.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.6 Finish electrical -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Count sockets, switches, frames, controllers, re-installation of existing fittings after finishing, luminaires and wall lamps, complex multi-point luminaires, LED transformers, strips and aluminium profile (cut-in separately if needed), electric radiators.&#10;For LED check the number of power outlets: the catalog guideline is up to 5 m of strip per outlet; the final decision depends on the system.&#10;Do not duplicate lighting of built-in furniture with the furniture department estimate. Power for furniture is counted in the construction electrical."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '6.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-7" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '7.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.7 Tiling -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="For each room and each wall elevation determine material, tile format, laying pattern, cladding area, niches, shelves, protrusions, narrow strips, grout type, holes and cut lengths.&#10;Bathroom waterproofing: the whole floor and walls to full height (FOREMEN method). Preliminary wall area = perimeter x height; check additional surfaces separately. Kitchen waterproofing is separate; agree the zone size if the project does not define it. Include primer under tile.&#10;Distinguish mosaic, small, medium, 60 x 120, 120 x 120, large slabs, natural stone/travertine and non-standard layouts. Do not apply the ordinary rate to natural stone without confirmation.&#10;Count separately: narrow strips under 1 m wide, niche and shelf cladding, 45 degree miter cuts, factory cut, edge grinding, holes over 15 mm, siliconing, accessories, linear drain finishing.&#10;Do not double-count narrow strips and the main area without an approved method; keep the area for primer and grout separately.&#10;Epoxy grout of outer corners is counted by the actual length of the 45 degree miters, not by tile area. With no such corners the volume is zero.&#10;Bathroom siliconing: preliminary guide = perimeter + four heights + joints of WC, bath and extra casings. With elevations use real lengths."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '7.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-8" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '8.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.8 Plastering and surface preparation -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Separate walls, ceilings and reveals. Operations: grinding of existing plaster if needed, priming, skim coating, preparing the surface for painting.&#10;Priming x2 is counted once by area for both priming stages.&#10;For a standard preliminary estimate assume Q3 (skim coat x2) unless stated otherwise; state this assumption until the object standard is confirmed.&#10;Do not add the alternatives skim x1, x2 and x3 automatically. An extra layer needs technological justification.&#10;Do not include finish skim under tile without need. Skim coating does not replace levelling of significant base unevenness.&#10;Count reveals, wall ends, niches and complex surfaces separately. Surfaces with sliding LED light may need a higher preparation standard."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '8.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-9" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '9.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.9 Painting and decor -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Separate white and colour painting, walls, ceilings, reveals, extra colours on one surface, wallpaper by material type, decorative plasters, wall mouldings, ceiling cornices, ceiling roses, work at height and scaffolding.&#10;Where different paints meet, even two different whites, check whether extra demarcation is needed.&#10;Acrylic sealing is counted by the actual length of the relevant joints. Guide: perimeter + number of inner corners x height. Exclude places with silicone or another technology."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '9.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-10" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '10.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.10 Floors and skirting -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Determine the covering type and installation method: laminate, vinyl, engineered board, parquet; glued or floating; herringbone and other patterns.&#10;Include base preparation: grinding, priming, levelling. Do not include self-levelling screed automatically without information on the base condition.&#10;Under electric underfloor heating check whether the screed level must be lowered.&#10;Protection of the finished floor is counted by the protected floor area, not walls. For expensive parquet and complex renovations check two-layer protection (mat and HDF). Do not charge the same protection twice if a combined item includes it.&#10;Skirting is counted by real perimeter minus openings and places where it is absent. Do not subtract all built-in furniture automatically. Include covering joints and thresholds.&#10;Check the total covering area against the flat area and laying specifics."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '10.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-11" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '11.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.11 Doors and joinery -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Count installation of standard and concealed doors, frames, opening finishing, painting of leaves when needed, handles, and bathroom furniture assembly if part of the construction contract.&#10;Check door sizes: non-standard height can change the price. Do not duplicate installation if the supplier or the furniture department performs it."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '11.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-12" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '12.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.12 Additional and non-standard works -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Check mirrors, curtain rods, ventilation grilles, accessories, non-standard plumbing systems, water filters and softeners, complex decor, works after other contractors, extra work at height.&#10;If a rate is not in the catalog, put the work in the unpriced list with the estimated volume. A zero price is never final."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '12.%')</where>
+        </update>
+    </changeSet>
+    <changeSet id="275-seed-ai-instructions-categories-13" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <sqlCheck expectedResult="1">SELECT CASE WHEN EXISTS (SELECT 1 FROM work_categories WHERE ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '13.%')) THEN 1 ELSE 0 END</sqlCheck>
+        </preConditions>
+        <!-- 5.13 Coordination and cleaning -->
+        <update tableName="work_categories">
+            <column name="ai_instructions" value="Coordination of purchases and deliveries of building materials is 2% of the related works cost (check the base in the current catalog).&#10;Keeping the site clean during renovation is counted by the area of the renovated rooms. Professional final cleaning is not included automatically. Receiving third-party deliveries as needed.&#10;Do not include the cost of purchased materials in the cost of works."/>
+            <where>ai_instructions IS NULL AND id IN (SELECT work_category_id FROM work_items WHERE code LIKE '13.%')</where>
+        </update>
+    </changeSet>
+</databaseChangeLog>

@@ -7,7 +7,7 @@ spring:
   # foremen.image-storage.max-upload-size) keep enforcing them in code.
   servlet:
     multipart:
-      max-file-size: 20MB
+      max-file-size: 50MB
       max-request-size: 220MB
   # FOR-05-13 collaborative estimate: Redis holds only ephemeral collaboration state (presence +
   # shared staged-edit drafts). No Spring Data Redis repositories are used.
@@ -113,6 +113,36 @@ foremen:
       credentials:
         path: ${FOREMEN_OCR_LLM_CREDENTIALS_PATH:}
         location: ${FOREMEN_OCR_LLM_CREDENTIALS_LOCATION:}
+  estimate-ai:
+    # FOR-05-04 "Create estimate" with AI. Own master switch (default off) independent of
+    # foremen.rooms-import.enabled. llm.* credentials default to the rooms-import values (which
+    # themselves default to foremen.ocr.llm.*); override with FOREMEN_ESTIMATE_AI_LLM_*.
+    enabled: ${FOREMEN_ESTIMATE_AI_ENABLED:false}
+    llm:
+      # true => deterministic Stub* planner/chat clients (tests / Docker).
+      stub: ${FOREMEN_ESTIMATE_AI_LLM_STUB:${foremen.rooms-import.llm.stub:false}}
+      model: ${FOREMEN_ESTIMATE_AI_LLM_MODEL:${foremen.rooms-import.llm.model:gemini-3.8-flash}}
+      temperature: ${FOREMEN_ESTIMATE_AI_LLM_TEMPERATURE:0}
+      timeout: ${FOREMEN_ESTIMATE_AI_LLM_TIMEOUT:5m}
+      project: ${FOREMEN_ESTIMATE_AI_LLM_PROJECT:${foremen.rooms-import.llm.project:}}
+      location: ${FOREMEN_ESTIMATE_AI_LLM_LOCATION:${foremen.rooms-import.llm.location:}}
+      api-key: ${FOREMEN_ESTIMATE_AI_LLM_API_KEY:${foremen.rooms-import.llm.api-key:}}
+      credentials:
+        path: ${FOREMEN_ESTIMATE_AI_LLM_CREDENTIALS_PATH:${foremen.rooms-import.llm.credentials.path:}}
+        location: ${FOREMEN_ESTIMATE_AI_LLM_CREDENTIALS_LOCATION:${foremen.rooms-import.llm.credentials.location:}}
+    # Catalog context size bound before it is split into batches.
+    max-catalog-chars: 120000
+    # A model volume differing from the engine volume by more than this % becomes a manual override.
+    volume-tolerance-pct: 5
+    # Time box of the rollback-only scratch transaction that holds the estimate row lock.
+    scratch-timeout: 15s
+    # Whole-job timeout (covered by the rooms-import stuck-job sweep).
+    timeout: 20m
+    chat:
+      max-tool-rounds: 8
+      history-turns: 12
+      confirm-threshold: 20
+      rate-limit: 60
   rooms-import:
     # FOR-05-02 rooms auto-import. Only `enabled` has its own switch (default off); every llm.*
     # value defaults to what OCR already resolves (foremen.ocr.llm.*) and can be overridden with
@@ -130,7 +160,7 @@ foremen:
         location: ${FOREMEN_ROOMS_IMPORT_LLM_CREDENTIALS_LOCATION:${foremen.ocr.llm.credentials.location:}}
     limits:
       max-files: 10
-      max-file-size: 20MB
+      max-file-size: 50MB
       max-pdf-pages: 50
       min-pdf-text-chars: 40
     ttl:

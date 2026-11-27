@@ -96,7 +96,7 @@ class RoomsImportControllerTest {
         RoomsImportProperties props = new RoomsImportProperties(true, null,
                 new RoomsImportProperties.Limits(2, DataSize.ofKilobytes(1), 3, 40), null, 0, null);
         RoomsImportController controller = new RoomsImportController(service, reader,
-                new RoomsImportUploadValidator(props), new RoomsImportAccessGuard(accessCache));
+                new RoomsImportUploadValidator(props), new RoomsImportAccessGuard(accessCache), null);
         RoomController roomController = new RoomController(roomService, mock(RoomControllerMapper.class),
                 mock(AuditServiceMapper.class), mock(RoomsSaveService.class), mock(ForemenPermissionEvaluator.class));
 
@@ -122,7 +122,8 @@ class RoomsImportControllerTest {
 
     private static RoomsImportJobDto dto(Long id, Long projectId, RoomsImportStatus status) {
         return new RoomsImportJobDto(id, projectId, status, status, null, LocalDateTime.of(2026, 1, 1, 10, 0),
-                null, null, null);
+                null, null, null, "ROOMS_ONLY", "ROOMS", null, null,
+                java.util.List.of(), null, null, null, null);
     }
 
     // --- ABAC -----------------------------------------------------------------------------------
@@ -138,7 +139,7 @@ class RoomsImportControllerTest {
         assertPair("discard", "CREATE");
         assertPair("draftMedia", "READ");
 
-        RoomsImportController bare = new RoomsImportController(null, null, null, null);
+        RoomsImportController bare = new RoomsImportController(null, null, null, null, null);
         List<Method> handlers = Arrays.stream(RoomsImportController.class.getDeclaredMethods())
                 .filter(m -> org.springframework.core.annotation.AnnotatedElementUtils
                         .hasAnnotation(m, RequestMapping.class))
@@ -154,7 +155,7 @@ class RoomsImportControllerTest {
     private void assertPair(String methodName, String operation) {
         Method method = Arrays.stream(RoomsImportController.class.getDeclaredMethods())
                 .filter(m -> m.getName().equals(methodName)).findFirst().orElseThrow();
-        assertThat(resolver.resolve(new HandlerMethod(new RoomsImportController(null, null, null, null), method)))
+        assertThat(resolver.resolve(new HandlerMethod(new RoomsImportController(null, null, null, null, null), method)))
                 .as(methodName)
                 .isEqualTo(new PermissionResolver.ResolvedPair("ROOMS", operation));
     }
@@ -248,7 +249,7 @@ class RoomsImportControllerTest {
         RoomsImportProperties props = new RoomsImportProperties(true, null,
                 new RoomsImportProperties.Limits(5, DataSize.ofMegabytes(1), 3, 40), null, 0, null);
         MockMvc mvc = MockMvcBuilders.standaloneSetup(new RoomsImportController(service, reader,
-                        new RoomsImportUploadValidator(props), new RoomsImportAccessGuard(accessCache)))
+                        new RoomsImportUploadValidator(props), new RoomsImportAccessGuard(accessCache), null))
                 .setControllerAdvice(new ForemenControllerAdvice(new MessageResolver(new StaticMessageSource())))
                 .build();
 

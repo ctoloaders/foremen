@@ -1031,4 +1031,16 @@
     <include file="database_files/changesets/268-offers-inactive-flag.xml"/>
     <!-- Lifecycle run-11 BUG-03: MANAGER/FOREMAN READ on SIGNABLE_DOCUMENT_TYPES (contract creation needs the type list). -->
     <include file="database_files/changesets/269-grant-document-types-read.xml"/>
+    <!-- FOR-05-04: estimate AI (catalog instructions, job columns, offer AI columns, chat, cell meta). -->
+    <include file="database_files/changesets/270-add-ai-instructions-to-work-catalog.xml"/>
+    <include file="database_files/changesets/271-extend-rooms-import-jobs-for-estimate.xml"/>
+    <include file="database_files/changesets/272-add-offers-ai-columns.xml"/>
+    <include file="database_files/changesets/273-create-offer-ai-chat-messages.xml"/>
+    <include file="database_files/changesets/274-add-estimate-line-room-qty-ai-meta.xml"/>
+    <!-- FOR-05-04 task 2.1: one-time seed of ai_instructions for the 13 work categories. -->
+    <include file="database_files/changesets/275-seed-ai-instructions-categories.xml"/>
+    <!-- FOR-05-04 rework (tasks 9.1): direct-to-estimate AI job. -->
+    <include file="database_files/changesets/276-add-estimates-ai-summary.xml"/>
+    <include file="database_files/changesets/277-add-rooms-import-jobs-progress.xml"/>
+    <include file="database_files/changesets/278-supersede-in-flight-estimate-jobs.xml"/>
 </databaseChangeLog>

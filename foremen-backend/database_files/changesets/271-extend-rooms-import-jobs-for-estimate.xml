@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <!--
+        FOR-05-04 (Requirements 2.3, 8.2; design B2): the rooms import job becomes a two-phase job.
+        status is VARCHAR(24) with no CHECK constraint (changeset 213), so the new RoomsImportStatus
+        values SAVING_ROOMS / PLANNING_WORKS / QUANTIFYING / BUILDING_OFFER need no constraint change.
+    -->
+    <changeSet id="271-extend-rooms-import-jobs-for-estimate" author="foremen">
+        <preConditions onFail="MARK_RAN">
+            <tableExists tableName="rooms_import_jobs"/>
+            <not><columnExists tableName="rooms_import_jobs" columnName="mode"/></not>
+        </preConditions>
+        <addColumn tableName="rooms_import_jobs">
+            <column name="mode" type="VARCHAR(16)" defaultValue="ROOMS_ONLY">
+                <constraints nullable="false"/>
+            </column>
+            <column name="use_existing_rooms" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="offer_name" type="VARCHAR(255)"/>
+            <column name="package_code" type="VARCHAR(64)"/>
+            <column name="offer_id" type="BIGINT"/>
+            <column name="rooms_saved_at" type="TIMESTAMP"/>
+            <column name="rooms_created" type="INT"/>
+        </addColumn>
+        <addForeignKeyConstraint
+            constraintName="fk_rooms_import_jobs_offer"
+            baseTableName="rooms_import_jobs"
+            baseColumnNames="offer_id"
+            referencedTableName="offers"
+            referencedColumnNames="id"
+            onDelete="SET NULL"/>
+        <rollback>
+            <dropForeignKeyConstraint baseTableName="rooms_import_jobs" constraintName="fk_rooms_import_jobs_offer"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="rooms_created"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="rooms_saved_at"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="offer_id"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="package_code"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="offer_name"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="use_existing_rooms"/>
+            <dropColumn tableName="rooms_import_jobs" columnName="mode"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

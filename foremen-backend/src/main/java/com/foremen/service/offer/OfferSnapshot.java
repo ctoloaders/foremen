@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.foremen.service.estimate.CellAiMeta;
 
 /**
  * FOR-05-07 Batch 2: the immutable, matrix-shaped snapshot of an estimate stored as JSONB on the offer
@@ -89,7 +91,73 @@ public record OfferSnapshot(
         }
     }
 
+    /**
+     * One room cell. Version 3 (FOR-05-04, Requirement 21.3) adds the override flag, the engine facts and
+     * the staff-only AI explanation {@code ai}; version 2 cells carry only {@code roomId} and
+     * {@code quantity} and still read (the new components are {@code null}, meaning "not overridden").
+     * Requirement 23.2 adds the staff-only consumable-material lines {@code materials}; a cell without
+     * them ({@code null}) restores without materials.
+     */
     @JsonIgnoreProperties(ignoreUnknown = true)
-    public record Cell(Long roomId, BigDecimal quantity) {
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Cell(
+            Long roomId,
+            BigDecimal quantity,
+            Boolean volumeOverridden,
+            String formulaKey,
+            Boolean fallbackUsed,
+            CellAiMeta ai,
+            List<MaterialLine> materials) {
+
+        /** Shape of task 3.11 (no material lines). */
+        public Cell(Long roomId, BigDecimal quantity, Boolean volumeOverridden, String formulaKey,
+                    Boolean fallbackUsed, CellAiMeta ai) {
+            this(roomId, quantity, volumeOverridden, formulaKey, fallbackUsed, ai, null);
+        }
+
+        /** Version 2 shape (no override flag, no engine facts, no AI explanation, no materials). */
+        public Cell(Long roomId, BigDecimal quantity) {
+            this(roomId, quantity, null, null, null, null, null);
+        }
+    }
+
+    /**
+     * FOR-05-04 (Requirement 23.2): the snapshot copy of one {@code EstimateLineRoomMaterial}, with
+     * everything needed to rebuild the line exactly. {@code branch} is {@code construction} or
+     * {@code finishing} and selects which of the two type ids (and product ids) is set. {@code quantity}
+     * is the effective physical quantity at snapshot time (display only; a restore recomputes it from
+     * {@code normQty}, {@code consumptionBasis}, the cell volume and the override). {@code qtyOverridden}
+     * and {@code appliedFromPackage} are written only when {@code true}. Staff-only: never mapped into
+     * client read models.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record MaterialLine(
+            String branch,
+            Long constructionTypeId,
+            Long finishingTypeId,
+            BigDecimal normQty,
+            String consumptionBasis,
+            BigDecimal rangeMin,
+            BigDecimal rangeMax,
+            Boolean qtyOverridden,
+            BigDecimal manualQty,
+            BigDecimal quantity,
+            Long concreteConstructionMaterialId,
+            Long concreteFinishingMaterialId,
+            BigDecimal concreteNet,
+            Boolean appliedFromPackage,
+            Long sourceConstructionMaterialId,
+            Long sourceFinishingMaterialId) {
+
+        /** The type id of the line's branch. */
+        public Long typeId() {
+            return "finishing".equals(branch) ? finishingTypeId : constructionTypeId;
+        }
+
+        /** Whether the quantity is a manual override. */
+        public boolean overridden() {
+            return Boolean.TRUE.equals(qtyOverridden);
+        }
     }
 }

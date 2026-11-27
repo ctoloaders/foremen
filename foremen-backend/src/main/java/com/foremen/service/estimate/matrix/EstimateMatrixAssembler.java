@@ -229,7 +229,8 @@ public class EstimateMatrixAssembler {
                 headerPackageFold.volume(),
                 headerPackageFold.toMoney(),
                 estimate.getAppliedPackageCode(),
-                packageSummary(estimate));
+                packageSummary(estimate),
+                estimate.getAiSummary());
     }
 
     /** The package state + split totals for the header (FOR-05-04); "none" when no package is applied. */
@@ -319,7 +320,8 @@ public class EstimateMatrixAssembler {
                 materialDtos,
                 costRange,
                 fillState,
-                baseLabour);
+                baseLabour,
+                roomQty.getAiMeta());
     }
 
     /**
