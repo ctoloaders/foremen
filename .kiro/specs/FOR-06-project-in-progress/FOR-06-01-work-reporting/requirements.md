@@ -547,8 +547,9 @@ matrix, so I can record work for the crew.
 1. WHERE the caller is a WORKER THE matrix SHALL load for the caller themselves with no worker picker
    (own-records, R10.5); WHERE the caller is a FOREMAN/MANAGER/ADMIN THE surface SHALL present a
    worker picker (the project's ACTIVE WORKER members) and load the matrix for the picked worker.
-2. THE matrix SHALL render rows as work items **grouped by work category** (category group headers in
-   declaration order) and columns as the project's rooms, each cell showing the plan quantity and the
+2. THE matrix SHALL render rows as work items **grouped by work category** (category group headers
+   sorted by category code, work items inside a group sorted by work-item code; bug-report Round 3)
+   and columns as the project's rooms, each cell showing the plan quantity and the
    reported percent (R14.3); a 100%-reported cell SHALL be visually disabled (no further entry).
 3. THE accumulated draft SHALL be shown as a side panel listing each staged line as
    `work · room · volume`, with a running count; a line SHALL be editable (re-open its cell) and
@@ -556,6 +557,13 @@ matrix, so I can record work for the crew.
 4. THE surface SHALL replace the former single-report `WorkReportBuilder` entry point (R11.2): the
    panel's "new report" action SHALL open the matrix authoring surface, not the old per-report dialog.
 
+5. THE matrix authoring surface SHALL be a full-screen dialog with a narrow, text-wrapping work
+   column, so the room columns are visible without horizontal scrolling (bug-report Round 3).
+6. WHERE the caller is a WORKER holding `WORK_REPORTS` CREATE THE root menu SHALL show a "Submit
+   report" entry that opens the same matrix surface with a project selector listing the caller's
+   accessible ACTIVE projects, preselecting the working (active) project; the entry SHALL NOT be shown
+   to other roles, and the "Dictionaries" menu section SHALL be hidden for the WORKER role
+   (bug-report Round 3).
 ### Requirement 18 — Mobile layout
 
 **User Story:** As an author on a phone, I want the matrix usable on a small screen with the running

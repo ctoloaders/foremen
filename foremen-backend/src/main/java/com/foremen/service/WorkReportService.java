@@ -666,12 +666,13 @@ public class WorkReportService
                     unitCode(line.getUnit()),
                     cells);
             groups.computeIfAbsent(category.getId(), k -> new CategoryAccumulator(category, ru))
-                    .rows.add(row);
+                    .rows.add(new CodedRow(workItem.getCode(), workItem.getId(), row));
         }
 
-        // Emit the category groups in declaration order (WorkCategory.orderNo, R17.2).
+        // Emit the category groups sorted by category code (bug-report Round 3, R17.2); the work
+        // items inside each group are sorted by work-item code in CategoryAccumulator#toGroup.
         List<WorkReportProgressDto.CategoryGroup> categories = groups.values().stream()
-                .sorted(Comparator.comparing(CategoryAccumulator::orderNo)
+                .sorted(Comparator.comparing(CategoryAccumulator::code, CODE_ORDER)
                         .thenComparing(CategoryAccumulator::categoryId))
                 .map(CategoryAccumulator::toGroup)
                 .toList();
@@ -811,7 +812,7 @@ public class WorkReportService
     private static final class CategoryAccumulator {
         private final WorkCategoryEntity category;
         private final String name;
-        private final List<WorkReportProgressDto.WorkItemRow> rows = new ArrayList<>();
+        private final List<CodedRow> rows = new ArrayList<>();
 
         CategoryAccumulator(WorkCategoryEntity category, boolean ru) {
             this.category = category;
@@ -824,15 +825,28 @@ public class WorkReportService
             return category.getId();
         }
 
-        /** The category's declaration order; a null {@code orderNo} sorts last (R17.2). */
-        int orderNo() {
-            return category.getOrderNo() == null ? Integer.MAX_VALUE : category.getOrderNo();
+        /** The category code the groups are sorted by; a null code sorts last. */
+        String code() {
+            return category.getCode();
         }
 
         WorkReportProgressDto.CategoryGroup toGroup() {
-            return new WorkReportProgressDto.CategoryGroup(category.getId(), name, rows);
+            List<WorkReportProgressDto.WorkItemRow> sorted = rows.stream()
+                    .sorted(Comparator.comparing(CodedRow::code, CODE_ORDER)
+                            .thenComparing(CodedRow::workItemId))
+                    .map(CodedRow::row)
+                    .toList();
+            return new WorkReportProgressDto.CategoryGroup(category.getId(), name, sorted);
         }
     }
+
+    /** A matrix row with the work-item code and id it is sorted by. */
+    private record CodedRow(String code, Long workItemId, WorkReportProgressDto.WorkItemRow row) {
+    }
+
+    /** Case-insensitive code order, null codes last. */
+    private static final Comparator<String> CODE_ORDER =
+            Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER);
 
     // --- Review transitions (R4.2/R4.3/R4.4/R4.6/R4.7) ---
 

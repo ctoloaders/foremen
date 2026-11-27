@@ -142,3 +142,58 @@ cache-invalidation change proven by the type-check and the work-reporting test s
 win (no all-workers progress recompute per write) follows directly from the narrowed invalidation.
 
 Result: #1 fixed (code+tests); #2 deferred; live timing to confirm on a non-DRAFT project.
+
+## Round 3 (2026-11-27)
+
+Screen URL: `https://dev.foremen.eu/projects/5/workReporting` (the "new report" matrix dialog, `WorkReportMatrix.tsx`; the source of the matrix is `GET /api/work-reports/progress`, `WorkReportService`).
+
+- [x] 1. Make the add-report popup full screen so the works are visible without horizontal scroll
+  - Triage: observed the dialog is `max-w-5xl` / `max-h-[90vh]`, so with several room columns the grid scrolls horizontally inside it; expected the popup to cover the whole viewport and use the full width for the room columns. Layer: frontend. Suspect: `WorkReportMatrix.tsx` `DialogContent` class (line ~219); the inner grid already scrolls (`overflow-auto`), so only the dialog size changes (`h-dvh w-screen max-h-none max-w-none rounded-none`), keeping the header and the draft panel visible. The cell popup `WorkReportCellPopup` stays a normal dialog on top.
+  - _Requirements: 17.2, 18_
+  - _Depends on: none_
+- [x] 2. Make the work column narrow with text wrapping onto new lines
+  - Triage: observed the first column (work name + unit) is `whitespace-nowrap`, so long names stretch it and push the room columns out of view; expected a narrow column (about 12-14rem) where the name wraps onto several lines. Layer: frontend. Suspect: `WorkReportMatrix.tsx` work-item `<td>` / `<th>` (remove `whitespace-nowrap`, add a fixed narrow width and `break-words`). Same file as item 1, so they are done together.
+  - _Requirements: 17.2_
+  - _Depends on: 1_
+- [x] 3. Sort work groups by code and works by code
+  - Triage: observed groups are ordered by `WorkCategory.orderNo` and the works inside a group follow the estimate-line order; expected both sorted by their `code` (categories by category code, works by work-item code, for example `1.01`, `1.02`, ...). Layer: backend. Suspect: `WorkReportService` (progress build, ~lines 618-680): sort `CategoryAccumulator` by `category.getCode()` (case-insensitive, null last, then id) instead of `orderNo`, and sort each group's rows by `workItem.getCode()` (same rule). The response shape does not change, so the frontend needs no change. This replaces the "declaration order" wording of Requirement 17.2, which is updated with the change. Regression test: a `WorkReportService` progress test with categories and works created in a non-code order.
+  - _Requirements: 14.1, 17.2_
+  - _Depends on: none_
+- [x] 4. Add a "Submit report" button to the root menu that opens the same popup with a project picker (default: the active project)
+  - Triage: observed the report can only be started from a project's Work reporting tab; expected a root-menu item (sidebar and drawer, like "Add expense"), **visible only to the WORKER role**, that opens the same full-screen matrix popup with a project selector above the worker selector, preselected with the active (working) project. Layer: frontend only, no new entity or endpoint. Plan: a nav item in the first `NAV_CONFIG` section (`nav.addWorkReport` already exists in `pl.json` / `ru.json`; add a shorter "submit report" label if wanted), gated by `WORK_REPORTS` CREATE and by the WORKER role (new optional `onlyForRoles` field on a nav item, checked in `Sidebar` and `Drawer`); a route `/work-reports/new` (route-permission `WORK_REPORTS` CREATE) that renders `WorkReportMatrix` open with a project picker; closing returns to the previous page. `WorkReportMatrix` is made project-agnostic through a `projectId` prop that the new page switches, and the draft is stored per project as today. The picker lists the caller's accessible ACTIVE projects (the `GET /api/dashboard/projects` list the dashboard picker already uses; reporting is not offered on COMPLETED projects). The WORKER bottom bar keeps its existing "Add report" slot, which goes to the active project's tab. i18n: new keys in `pl.json` and `ru.json` for the nav label, the project picker label and its placeholder.
+  - Size: small-to-medium, kept in this round (no split into a new spec needed).
+  - _Requirements: 11.2, 17.1, 17.4 (surface reuse); new acceptance criteria for the root-menu entry added to Requirement 17_
+  - _Depends on: 1, 2_
+- [x] 5. Hide the reference-data ("Dictionaries") menu section for the WORKER role
+  - Triage: observed a WORKER sees the "Dictionaries" section (units, currencies, VAT rates, room types, and so on) in the root menu because the role holds READ on some of those resources; expected a WORKER does not see that section. Layer: frontend (menu only; route access and the backend grants are unchanged). Plan: new optional `hiddenForRoles` field on a nav section (set to `['WORKER']` on `nav.sections.dictionaries`), applied in `Sidebar` and `Drawer`. Same navigation files as item 4, so it runs in the same wave order after it.
+  - _Requirements: 11.2 (menu), FOR-03-07 (menu visibility)_
+  - _Depends on: none_
+- [ ] V3. Validate Round 3 in browser
+  - Local stack, as a MANAGER and as a WORKER (the root-menu entry is WORKER-only; the Dictionaries section is hidden for the WORKER) on an execution-status project with several rooms and several categories: the popup fills the screen, no horizontal scroll with the works column narrow and wrapped, categories and works appear in code order, and the root-menu "Submit report" opens the popup with the active project preselected, the project can be switched, and a report can be saved. Repeat on dev after deploy.
+  - _Depends on: 1, 2, 3, 4, 5_
+
+## Parallel execution plan (waves) — Round 3
+
+- **Wave 1 (parallel):** 1, 3 — different files (`WorkReportMatrix.tsx` vs `WorkReportService.java`).
+- **Wave 2:** 2 — same file as item 1, so it follows it.
+- **Wave 3:** 4 — builds on the matrix changes of items 1 and 2 (touches `WorkReportMatrix.tsx`, navigation, router, locales).
+- **Wave 4:** 5 — touches the same navigation files as item 4, so it follows it.
+- **Wave 5:** V3 — validation, depends on all fixes.
+
+## Round 3 — validation results (2026-11-27)
+
+Local stack rebuilt (`backend`, `frontend`). WORKER session: `info+valera@foremen.eu`; MANAGER session: `katarzyna@loaders.dev`; viewport 1440x900; working project 2 (ACTIVE, 76 estimate lines).
+
+| # | Check | Result |
+|---|---|---|
+| 1 | Popup size | The matrix dialog box is x=0, y=0, 1440x900, the whole viewport. The works grid has `scrollWidth` 1085 = `clientWidth` 1085, so there is no horizontal scroll (8 columns, project 2) ✅ |
+| 2 | Work column | First column is 176 px wide; the 80-character name "Drzwi ukryte - montaż ościeżnicy i skrzydła (do 2 m, powyżej 2 m +10% za 10 cm)" wraps over several lines (row height 97 px) ✅ |
+| 3 | Sort by code | Groups come in category-code order (CARPENTRY, CONSTRUCTIONS_GK, ELECTRICAL_FINISH, ELECTRICAL_ROUGH, EXTRAS, FLOORS, PAINTING_DECOR, PLASTERING, ...). The first group's works come in work-item-code order 11.02, 11.03, 11.04, 11.05, 11.06 ✅ |
+| 4 | Root menu "Submit report" | WORKER sees "Złóż raport" in the sidebar; it opens `/work-reports/new` with the full-screen matrix, the project select shows "project 2" (the working project) and lists the 2 accessible ACTIVE projects; switching to project 1 reloads the matrix (1 group, 1 work) ✅. MANAGER does not see the entry ✅ |
+| 5 | Dictionaries hidden for WORKER | WORKER sees no `/measurement-units` or `/currencies` links; MANAGER still sees the Dictionaries section ✅ |
+
+Not exercised in a browser: saving a report from the new entry (the matrix save path is unchanged and covered by the existing suite), the mobile drawer, and dev. V3 stays open until dev is redeployed.
+
+Tests: frontend (`src/config`, `src/app`, `work-reporting`, locales) 600/600; backend `WorkReportServiceTest` all pass, including the new `groupsAndWorksSortedByCode`.
+
+Local data changes for the check: user 1249 set to ACTIVE status and users 1246 and 1249 given the local admin password hash.

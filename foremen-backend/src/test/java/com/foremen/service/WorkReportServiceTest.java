@@ -690,6 +690,33 @@ class WorkReportServiceTest {
         }
 
         @Test
+        @DisplayName("categories are sorted by category code and works by work-item code, not by orderNo or estimate order (bug-report Round 3)")
+        void groupsAndWorksSortedByCode() {
+            authenticate(1L, "ROLE_ADMIN");
+            Long catB = 31L;
+            Long catA = 32L;
+            stubCoveringCategories(catB, catA);
+            // Estimate order and orderNo both say "B first"; codes say "A first".
+            EstimateLineEntity b1 = progressLine(41L, catB, 1, "ORD", planFor(ROOM_A, "40"));
+            b1.getWorkItem().setCode("2.01");
+            b1.getWorkItem().getWorkCategory().setCode("B_CAT");
+            EstimateLineEntity a2 = progressLine(42L, catA, 2, "ORD", planFor(ROOM_A, "40"));
+            a2.getWorkItem().setCode("1.02");
+            a2.getWorkItem().getWorkCategory().setCode("A_CAT");
+            EstimateLineEntity a1 = progressLine(43L, catA, 2, "ORD", planFor(ROOM_A, "40"));
+            a1.getWorkItem().setCode("1.01");
+            a1.getWorkItem().getWorkCategory().setCode("A_CAT");
+            stubProgressEstimate(b1, a2, a1);
+            stubReportedSums();
+
+            WorkReportProgressDto dto = service.progress(PROJECT_ID, WORKER_ID);
+
+            assertThat(dto.categories()).extracting(WorkReportProgressDto.CategoryGroup::workCategoryId)
+                    .containsExactly(catA, catB);
+            assertThat(workItemIds(dto)).containsExactly(43L, 42L, 41L);
+        }
+
+        @Test
         @DisplayName("a work item whose every planned room is ≥100% is omitted from the matrix (R14.4)")
         void fullyReportedWorkItemOmitted() {
             authenticate(1L, "ROLE_ADMIN");
