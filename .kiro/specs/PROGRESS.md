@@ -29,7 +29,7 @@
 
 | Спека | Где описана | Содержание | Статус |
 |-------|-------------|------------|--------|
-| FOR-06-13-workspace-integration | FOR-06 OVERVIEW | Встраивание всех исполнительных табов в пространство проекта FOR-05 | 📋 Папки нет |
+| FOR-06-14-workspace-integration | FOR-06 OVERVIEW | Встраивание всех исполнительных табов в пространство проекта FOR-05 | 📋 Папки нет |
 | FOR-07-07-company-deliveries | FOR-07 OVERVIEW | Экран «Dostawy» вместо заглушки `/deliveries`; **требование ToR 3.2 (доставки + SMS)** | 📋 Папки нет, к уточнению |
 | FOR-09-client-portal | PROJECT / FOR-06 OVERVIEW | Клиентский портал: график, оплаты, закупки, коммуникация (сторона клиента) | 📋 Папка пуста |
 | FOR-12-infrastructure | PROJECT | Прод-деплой, окружения, мониторинг | 📋 Папка пуста |
@@ -154,7 +154,8 @@
 | 10 | FOR-06-10-worker-cost-rates | ✅ Завершено |
 | 11 | FOR-06-11-payroll | ✅ Завершено |
 | 12 | FOR-06-12-client-communication | ✅ Завершено |
-| 13 | FOR-06-13-workspace-integration | 📋 Запланировано (папки нет) |
+| 13 | FOR-06-13-project-acceptance | 🟡 Requirements готовы (design/tasks на согласовании) |
+| 14 | FOR-06-14-workspace-integration | 📋 Запланировано (папки нет) |
 
 ### FOR-07 — Детализация (кросс-проектные / общефирменные)
 
