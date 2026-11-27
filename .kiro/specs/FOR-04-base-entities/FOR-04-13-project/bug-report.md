@@ -175,3 +175,22 @@ Screen URL: `https://dev.foremen.eu/projects` (project edit form, `ProjectFormSh
 ## Round 3 — validation results (2026-11-19)
 
 Changesets 255 applied; all 459 projects have VAT 8% (id 2). The edit form of project 1531 shows the VAT select prefilled with 8% and the client block. Not verified in the browser: adding a new client in edit mode, VAT in a prepared offer. `ProjectVatRateAndClientTest` passes. Three older tests (`ProjectServiceProjectionTest`, `ProjectClientRolePropertyTest`) fail with NPEs in `autoAddCreator`/`toSummary`, code this change did not touch.
+
+## Round 4 (2026-11-23)
+Screen URL: `https://dev.foremen.eu/projects` (project form, `GoogleAddressAutocomplete` in `ProjectFormSheet.tsx`). Reproduction API call: `https://dev.foremen.eu/api/addresses/autocomplete?query=Jana+Kazi`. Unauthenticated, that call returns HTTP 401 (expected), so the empty result was observed with a logged-in session.
+
+- [ ] 1. Address autocomplete always returns an empty result (query "Jana Kazi")
+  - Triage: observed `[]` for every query; expected a list of predictions, each with `description` and `placeId`. Layer: backend (config and service). Suspect: `GooglePlacesService.autocomplete` returns `List.of()` when `foremen.google-places.enabled` is false, with no error or log.
+  - Confirmed with gcloud (2026-11-23, no secret values printed): secret `foremen-dev-google-places-key` has one enabled version (created 2026-10-05, 39 characters). The VM `foremen-dev` (SA `foremen-dev-vm@`) points at this secret in its metadata. The live `/opt/foremen/.env` on the VM has `GOOGLE_PLACES_API_KEY` empty and `GOOGLE_PLACES_ENABLED=false`, so the backend returns `[]`.
+  - Cause: the startup script gates the key on `gcloud secrets describe` (`infra/dev/vm-startup.sh` line 70, also in the live metadata). The VM SA holds only `roles/secretmanager.secretAccessor`, which has no `secrets.get`, so `describe` fails and the key is skipped. Commit `28ce51f` (2026-11-04) applied this same fix to the OCR key but not to Places. Every startup-script run rewrites `.env`, so a key added by hand is lost on the next run.
+  - Ruled out: the `query` parameter is bound correctly; the key is not deleted; a Google-side failure would surface as an HTTP error rather than `[]`.
+  - Note: FOR-04-13 Requirement 5.1 names the path `/api/projects/address/autocomplete`, but the code serves `/api/addresses/autocomplete`. Spec text is stale; fix t  - Note: FOR-04-13 Requirement 5.1 names the path `/api/projects/addrquirement 5.1, 5.3, 5.5_
+  - _Depends on: none_
+- [ ] V4. Validate Round 4 in browser
+  - Log in on dev, type "Jana Kazi" in the project address field, confirm predictions appear, select one and confirm details load.
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 4
+
+- **Wave 1:** 1 — the fix path depends on the chosen option (config or code), so it is one leaf.
+- **Wave 2:** V4 — validation after the fix is deployed.
