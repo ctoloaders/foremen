@@ -270,7 +270,7 @@ Screen: mobile (< 768 px), the work-report matrix ("Złóż raport" root-menu en
     backend change; no new i18n keys.
   - _Requirements: 17.5, 17.6, 18_
   - _Depends on: none_
-- [ ] V5. Validate Round 5 on a mobile viewport (390x844)
+- [x] V5. Validate Round 5 on a mobile viewport (390x844)
   - As a WORKER: open "Złóż raport" and the tab's "new report"; the TopBar and hamburger are visible, the drawer
     opens, the matrix scrolls, a cell can be entered and saved. Desktop still shows the full-screen dialog.
   - _Depends on: 1_
@@ -290,3 +290,10 @@ Local stack (rebuilt backend and frontend), WORKER `info+valera@foremen.eu`, MAN
 - A cell can be entered (popup, confirm) and the draft shows the staged line and Save; the close button returns to `/`. ✅
 - Desktop keeps the full-screen dialog (unit test). Tests: `work-reporting` 116/116 (new mobile navigation test).
 - V5 stays open until dev is redeployed.
+
+## Dev validation (2026-11-28)
+
+Dev (after deploy of root `d29ccff`, frontend `ba22b13`): test users created through the app (MANAGER 20, WORKER 21, `test+qa2-*@example.com`) on test project 31 (set to ACTIVE for the checks, back to CANCELLED after; both users deactivated). On dev the WORKER role holds `PAYROLL` READ and `WORK_CATALOG` READ, but not `WORK_PRICES` or `ESTIMATE`.
+
+- Mobile 390x844, WORKER: "Złóż raport" renders inline (no dialog), the hamburger is visible and opens the
+  drawer, project 31 preselected, 19 rows; the project tab's "new report" goes to `/work-reports/new?projectId=31`. ✅

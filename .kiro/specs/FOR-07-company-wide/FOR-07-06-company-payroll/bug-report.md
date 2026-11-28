@@ -185,7 +185,7 @@ Screen: not yet identified ("salary section" as seen by a WORKER, mobile).
     worker-id guard.
   - _Requirements: FOR-07-06 payroll access (R14)_
   - _Depends on: none_
-- [ ] V2. Validate Round 2
+- [x] V2. Validate Round 2
   - As a WORKER on the reported screen: only the caller's own rows; the API refuses other workers' data.
   - _Depends on: 1_
 
@@ -208,3 +208,17 @@ afterwards.
 
 Tests: `WorkerPriceAndPayrollScopeTest` (addRequiredQuery override, worker-id guard), `PayrollReadModelServiceTest`,
 `PayrollControllerTest`, `WorkerPayoutControllerTest` pass. V2 stays open: on dev confirm on the reported screen.
+
+## Dev validation (2026-11-28)
+
+Dev (after deploy of root `d29ccff`, frontend `ba22b13`): test users created through the app (MANAGER 20, WORKER 21, `test+qa2-*@example.com`) on test project 31 (set to ACTIVE for the checks, back to CANCELLED after; both users deactivated). On dev the WORKER role holds `PAYROLL` READ and `WORK_CATALOG` READ, but not `WORK_PRICES` or `ESTIMATE`.
+
+| Check | WORKER 21 | MANAGER 20 |
+|---|---|---|
+| `GET /api/payroll/company` (2026) | only worker 21 ✅ | 6 workers |
+| `GET /api/worker-payouts` | 0 (none of their own) ✅ | 1 payout (worker 9) |
+| card of worker 6 | 404 ✅ | 200 |
+| card of worker 21 | 200 (own) ✅ | 200 |
+| Page `/company/payroll` (browser) | only the row "QA2 WORKER" ✅ | — |
+
+Cause confirmed: on dev the WORKER role holds `PAYROLL` READ, so before the fix the page listed every worker.

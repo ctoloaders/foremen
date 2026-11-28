@@ -14,7 +14,7 @@ Screen: mobile side menu (`Drawer`, opened from the TopBar hamburger).
     i18n.
   - _Requirements: FOR-07-05 menu (mobile drawer), FOR-02-02 app shell 2.x_
   - _Depends on: none_
-- [ ] V1. Validate Round 1 on a mobile viewport
+- [x] V1. Validate Round 1 on a mobile viewport
   - Open the drawer, tap a menu item: the page changes and the drawer is closed; tap the active item: the drawer
     closes; the backdrop and the close button still close it.
   - _Depends on: 1_
@@ -32,3 +32,9 @@ Local stack (rebuilt backend and frontend), WORKER `info+valera@foremen.eu`, MAN
   drawer is closed. ✅
 - Unit tests: a link click closes the drawer, the Dictionaries toggle does not, a closed drawer ignores clicks.
   V1 stays open until dev is redeployed.
+
+## Dev validation (2026-11-28)
+
+Dev (after deploy of root `d29ccff`, frontend `ba22b13`): test users created through the app (MANAGER 20, WORKER 21, `test+qa2-*@example.com`) on test project 31 (set to ACTIVE for the checks, back to CANCELLED after; both users deactivated). On dev the WORKER role holds `PAYROLL` READ and `WORK_CATALOG` READ, but not `WORK_PRICES` or `ESTIMATE`.
+
+- Mobile, WORKER: tap "Dodaj wydatek" in the drawer → `/expenses/new`, drawer closed. The Dictionaries section is not in the WORKER menu. ✅

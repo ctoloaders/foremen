@@ -22,7 +22,7 @@ Screen: work catalog (`/catalog/works`, `WorkCatalogList.tsx`) as WORKER.
     and the estimate hides the work price labels (per-unit price, works subtotals/totals, package summary).
   - _Requirements: FOR-04-19 catalog cost cell; FOR-05-03 estimate; FOR-03-08 API protection_
   - _Depends on: none_
-- [ ] V1. Validate Round 1
+- [x] V1. Validate Round 1
   - WORKER: no labour price column and no price labels in the catalog and the estimate; the APIs return the
     work-price fields as `null` and margins as 403. MANAGER/ADMIN/SALESMAN: unchanged.
   - _Depends on: 1_
@@ -61,3 +61,17 @@ filters, groups, sorts or aggregates by one of them is refused with 403 `error.d
 `unitPriceOverride`, `valueNet`). `WORK_REPORTS` has no price field; `OFFERS` / `AMENDMENT_LINES` need resources
 the WORKER role does not hold. Test: `DashboardQueryEngineIntegrationTest.workerHiddenFieldRefused` (WORKER 403,
 MANAGER rows) — 11/11. V1 stays open until dev is redeployed.
+
+## Dev validation (2026-11-28)
+
+Dev (after deploy of root `d29ccff`, frontend `ba22b13`): test users created through the app (MANAGER 20, WORKER 21, `test+qa2-*@example.com`) on test project 31 (set to ACTIVE for the checks, back to CANCELLED after; both users deactivated). On dev the WORKER role holds `PAYROLL` READ and `WORK_CATALOG` READ, but not `WORK_PRICES` or `ESTIMATE`.
+
+| Check | WORKER 21 | MANAGER 20 |
+|---|---|---|
+| `GET /api/work-items` `costCell.labourPrice` | 0/50 non-null ✅ | 50/50 |
+| Catalog table (browser) | no "Robocizna" column ✅ | — |
+| `GET /api/work-prices` | 403 (no grant on dev) | 50/50 non-null |
+| Estimate matrix / margins, project 31 | 403 (no `ESTIMATE` grant on dev) | 200, prices present |
+
+The estimate masking and the dashboard dataset rule are covered by the local checks and tests (the WORKER role
+cannot reach these resources on dev).

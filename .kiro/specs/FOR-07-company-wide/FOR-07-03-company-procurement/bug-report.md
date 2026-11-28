@@ -14,7 +14,7 @@ Screen: mobile, "Dodaj wydatek" (`/expenses/new`, `ExpenseUploadPage`, R8.4).
     default once the options are loaded and the user has not picked a value yet). No backend change, no i18n.
   - _Requirements: 8.4_
   - _Depends on: none_
-- [ ] V1. Validate Round 1 on a mobile viewport
+- [x] V1. Validate Round 1 on a mobile viewport
   - With a working project set, open "Dodaj wydatek" from the drawer and from the bottom bar: the project select
     shows the working project; with no working project (or one not in the list) it shows "no project".
   - _Depends on: 1_
@@ -31,3 +31,9 @@ Local stack (rebuilt backend and frontend), WORKER `info+valera@foremen.eu`, MAN
 - Mobile, working project 2, drawer → "Dodaj wydatek": the project select shows project 2. ✅
 - Unit tests: preselected when selectable; "no project" when the working project is not in the list or not set.
   `expense-upload` tests pass. V1 stays open until dev is redeployed.
+
+## Dev validation (2026-11-28)
+
+Dev (after deploy of root `d29ccff`, frontend `ba22b13`): test users created through the app (MANAGER 20, WORKER 21, `test+qa2-*@example.com`) on test project 31 (set to ACTIVE for the checks, back to CANCELLED after; both users deactivated). On dev the WORKER role holds `PAYROLL` READ and `WORK_CATALOG` READ, but not `WORK_PRICES` or `ESTIMATE`.
+
+- Mobile, WORKER, working project 31: drawer → "Dodaj wydatek" shows project 31 in the project select. ✅
