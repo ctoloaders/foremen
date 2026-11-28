@@ -32,4 +32,10 @@ public class EstimatesDataset extends AbstractEstimateDataset {
         f.add(FieldDescriptor.of("createdDate", FieldType.DATETIME));
         return f;
     }
+
+    /** Work prices are not shown to the WORKER role (FOR-04-19 bug-report Round 1). */
+    @Override
+    public java.util.Set<String> workerHiddenFields() {
+        return java.util.Set.of("totalNet", "totalVat", "totalGross");
+    }
 }

@@ -108,6 +108,7 @@ public class PayoutSuggestionService {
      */
     @Transactional(readOnly = true)
     public PayoutSuggestionDto suggest(Long workerId, LocalDate from, LocalDate to, boolean advance) {
+        PayrollWorkerScope.assertMayRead(workerId);
         CostContext ctx = loadCostContext(workerId);
         BigDecimal remainingCredit = advanceCreditCalculator.remaining(
                 workerPayoutDao.findByWorker(workerId));

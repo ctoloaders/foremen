@@ -48,6 +48,15 @@ public interface Dataset {
         return false;
     }
 
+    /**
+     * Fields that must never reach the WORKER role (work prices, FOR-04-19 bug-report Round 1): the
+     * query engine treats them as unknown for a WORKER caller, so a widget that selects, filters,
+     * groups, sorts or aggregates by one of them is refused. Empty by default.
+     */
+    default Set<String> workerHiddenFields() {
+        return Set.of();
+    }
+
     /** Field name the global date filter applies to by default. */
     default Optional<String> defaultDateField() {
         return Optional.empty();

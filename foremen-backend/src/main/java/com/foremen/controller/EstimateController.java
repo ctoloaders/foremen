@@ -95,7 +95,8 @@ public class EstimateController implements AdminController<
     @GetMapping("/project/{projectId}")
     @RequiresPermission(resource = "ESTIMATE", operation = "READ")
     public ResponseEntity<EstimateDtoExtendedModel> getOrCreateForProject(@PathVariable Long projectId) {
-        EstimateServiceExtendedModel model = service.getOrCreateForProject(projectId);
+        // The work-price totals are cleared for the WORKER role (FOR-04-19 bug-report Round 1).
+        EstimateServiceExtendedModel model = service.applyAdminOnlyMask(service.getOrCreateForProject(projectId));
         return ResponseEntity.ok(getMapper().toExtendedDto(model));
     }
 }

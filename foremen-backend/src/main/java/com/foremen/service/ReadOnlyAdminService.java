@@ -51,13 +51,13 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
     default ServiceExtendedModel findById(ID id) {
         DaoModel entity = getReadDao().findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
-        return getMapper().toServiceExtendedModel(entity);
+        return applyAdminOnlyMask(getMapper().toServiceExtendedModel(entity));
     }
 
     default ServiceModel findByIdLocalized(ID id) {
         DaoModel entity = getReadDao().findById(id)
                 .orElseThrow(() -> new ForemenApiException(HttpStatus.NOT_FOUND, "error.entity.not.found", id));
-        return getMapper().toServiceModel(entity);
+        return applyAdminOnlyMask(getMapper().toServiceModel(entity));
     }
 
     // --- Paginated Find ---
@@ -84,9 +84,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
 
         return page.map(entity -> {
             if (isDeleted(entity)) return null;
-            ServiceModel model = getMapper().toServiceModel(entity);
-            maskAdminOnlyFields(model);
-            return model;
+            return applyAdminOnlyMask(getMapper().toServiceModel(entity));
         });
     }
 
@@ -112,7 +110,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
 
         return page.map(entity -> {
             if (isDeleted(entity)) return null;
-            return getMapper().toServiceExtendedModel(entity);
+            return applyAdminOnlyMask(getMapper().toServiceExtendedModel(entity));
         });
     }
 
@@ -122,6 +120,7 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         return getReadDao().findAllByIdIn(ids).stream()
                 .filter(entity -> !isDeleted(entity))
                 .map(getMapper()::toServiceExtendedModel)
+                .map(this::applyAdminOnlyMask)
                 .toList();
     }
 
@@ -283,6 +282,49 @@ public interface ReadOnlyAdminService<ServiceModel, ServiceExtendedModel, DaoMod
         // Null out admin-only fields for non-admin-staff callers
         for (String fieldName : adminFields) {
             nullOutField(model, fieldName);
+        }
+    }
+
+    /**
+     * Applies the admin-only-field masking to any read model and returns the model to use: a mutable
+     * model is masked in place ({@link #maskAdminOnlyFields}); an immutable record is rebuilt through
+     * its canonical constructor with the admin-only components set to {@code null}. Returns the model
+     * unchanged when there is nothing to mask or the caller may see the fields. Used by every generic
+     * read (list, by-id, extended, batch), so a field hidden from a role is hidden on every read path
+     * (FOR-04-19 bug-report Round 1).
+     */
+    default <T> T applyAdminOnlyMask(T model) {
+        if (model == null) return null;
+        Set<String> adminFields = getAdminOnlyFields();
+        if (adminFields.isEmpty() || isCallerAdminStaff()) return model;
+        Class<?> type = model.getClass();
+        if (!type.isRecord()) {
+            maskAdminOnlyFields(model);
+            return model;
+        }
+        try {
+            java.lang.reflect.RecordComponent[] components = type.getRecordComponents();
+            Object[] values = new Object[components.length];
+            Class<?>[] types = new Class<?>[components.length];
+            boolean changed = false;
+            for (int i = 0; i < components.length; i++) {
+                types[i] = components[i].getType();
+                Object value = components[i].getAccessor().invoke(model);
+                if (adminFields.contains(components[i].getName()) && !types[i].isPrimitive() && value != null) {
+                    value = null;
+                    changed = true;
+                }
+                values[i] = value;
+            }
+            if (!changed) return model;
+            java.lang.reflect.Constructor<?> ctor = type.getDeclaredConstructor(types);
+            ctor.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            T masked = (T) ctor.newInstance(values);
+            return masked;
+        } catch (ReflectiveOperationException e) {
+            // Fail closed: never return the unmasked record to a caller that must not see the fields.
+            throw new IllegalStateException("Cannot mask admin-only fields of " + type.getSimpleName(), e);
         }
     }
 

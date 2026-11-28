@@ -85,6 +85,11 @@ public class MarginsListService {
      */
     @Transactional
     public MarginsListDto getMargins(Long projectId) {
+        // FOR-04-19 bug-report Round 1: margins are derived from work prices; never for a WORKER.
+        if (com.foremen.config.security.CallerContext.isWorker()) {
+            throw new com.foremen.exception.ForemenApiException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "error.access.denied");
+        }
         EstimateEntity estimate = estimateService.getOrCreateEntityForProject(projectId);
         // The Margins tab is read-only; the matrix editable flag is irrelevant to the cost projection.
         EstimateMatrixDto matrix = estimateMatrixAssembler.assemble(estimate, projectId, false);

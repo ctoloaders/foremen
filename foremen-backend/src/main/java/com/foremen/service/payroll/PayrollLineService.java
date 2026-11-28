@@ -107,6 +107,7 @@ public class PayrollLineService {
      */
     @Transactional(readOnly = true)
     public List<PayrollLineDto> hints(Long workerId, LocalDate month) {
+        PayrollWorkerScope.assertMayRead(workerId);
         PayrollWriteSupport.assertWorker(userDao, workerId);
         LocalDate current = normalizeMonth(month == null ? LocalDate.now() : month);
         List<WorkerPayrollLineEntity> previous = lineDao.findByWorkerAndMonth(workerId, current.minusMonths(1));

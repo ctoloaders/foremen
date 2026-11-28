@@ -166,3 +166,45 @@ Backend: affected tests green (`PayrollReadModelServiceTest` 8/8, `CompanyPaymen
 Frontend: 151 company-payroll tests green; `tsc -b` clean. No new migrations; no new notifications.
 
 Result: E, F, G, H all fixed / 0 failed.
+
+## Round 2 (2026-11-27)
+
+Screen: not yet identified ("salary section" as seen by a WORKER, mobile).
+
+- [x] 1. A worker must see only their own work in the salary section; other workers must not be visible
+  - Triage: a WORKER that can read payroll (the role holds `PAYROLL` READ on the affected environment) sees every
+    worker. Expected: a WORKER sees only the rows where `worker = current user`, enforced in the backend.
+    Layer: backend. Screen not pinned down; the fix covers every payroll read.
+  - Fix (as decided by the user): `WorkerPayoutService` overrides `addRequiredQuery()`: for the WORKER role it
+    adds the mandatory condition `worker.id = current user` (no extra condition for other roles), and the payout
+    list (`GET /api/payroll/payouts`) combines its filter with `addRequiredQuery()`. The other payroll reads are
+    narrowed the same way for a WORKER: the company table (`GET /api/payroll/company`) is limited to the
+    caller's own row, and the worker card / hints / payout hints / payout suggest return 404 for any other
+    worker id. A shared `CallerContext` helper resolves the caller id and role. No schema change, no i18n.
+  - Tests: unit tests for the `addRequiredQuery()` override (WORKER: own-only predicate; MANAGER: none) and the
+    worker-id guard.
+  - _Requirements: FOR-07-06 payroll access (R14)_
+  - _Depends on: none_
+- [ ] V2. Validate Round 2
+  - As a WORKER on the reported screen: only the caller's own rows; the API refuses other workers' data.
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 2
+
+- **Wave 1:** 1 (after the screen is confirmed).
+- **Wave 2:** V2.
+
+## Round 2 — validation results (2026-11-28)
+
+Local stack (rebuilt backend and frontend), WORKER `info+valera@foremen.eu`, MANAGER `katarzyna@loaders.dev`, SALESMAN `probe.salesman@example.com`. Locally the WORKER role has no `PAYROLL` grant, so READ was granted temporarily for the check and revoked
+afterwards.
+
+| Check | WORKER (1249) | MANAGER |
+|---|---|---|
+| `GET /api/payroll/company` (2026) | only worker 1249 ✅ | 70 workers |
+| `GET /api/worker-payouts` | 0 payouts (none of their own) ✅ | 18 payouts, 17 workers |
+| `GET /api/payroll/workers/1249/card` | 200 (own) ✅ | 200 |
+| `GET /api/payroll/workers/1248/card` | 404 ✅ | 200 |
+
+Tests: `WorkerPriceAndPayrollScopeTest` (addRequiredQuery override, worker-id guard), `PayrollReadModelServiceTest`,
+`PayrollControllerTest`, `WorkerPayoutControllerTest` pass. V2 stays open: on dev confirm on the reported screen.

@@ -1,5 +1,6 @@
 package com.foremen.controller;
 
+import com.foremen.service.estimate.matrix.EstimateMatrixWorkerMask;
 import java.math.BigDecimal;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -92,7 +93,8 @@ public class EstimateMatrixController {
     @GetMapping("/project/{projectId}/matrix")
     @RequiresPermission(resource = ESTIMATE_RESOURCE, operation = "READ")
     public ResponseEntity<EstimateMatrixDto> getMatrix(@PathVariable Long projectId) {
-        return ResponseEntity.ok(estimateAssignmentService.getMatrix(projectId, resolveEditable(projectId)));
+        return ResponseEntity.ok(EstimateMatrixWorkerMask.apply(
+                estimateAssignmentService.getMatrix(projectId, resolveEditable(projectId))));
     }
 
     /**
@@ -105,7 +107,7 @@ public class EstimateMatrixController {
             @PathVariable Long projectId, @Valid @RequestBody ApplyPackageRequest request) {
         EstimateMatrixDto preview = estimateAssignmentService.previewApplyPackage(
                 projectId, request.packageCode(), resolveEditable(projectId));
-        return ResponseEntity.ok(preview);
+        return ResponseEntity.ok(EstimateMatrixWorkerMask.apply(preview));
     }
 
     /**
@@ -119,7 +121,7 @@ public class EstimateMatrixController {
             @PathVariable Long projectId, @Valid @RequestBody ApplyWorkRequest request) {
         EstimateMatrixDto preview = estimateAssignmentService.previewApplyWork(
                 projectId, request.workItemId(), request.packageCode(), resolveEditable(projectId));
-        return ResponseEntity.ok(preview);
+        return ResponseEntity.ok(EstimateMatrixWorkerMask.apply(preview));
     }
 
     /**
@@ -133,7 +135,7 @@ public class EstimateMatrixController {
             @PathVariable Long projectId, @Valid @RequestBody RecomputeFinishingRequest request) {
         EstimateMatrixDto preview = estimateAssignmentService.previewRecomputeFinishing(
                 projectId, request.packageCode(), resolveEditable(projectId));
-        return ResponseEntity.ok(preview);
+        return ResponseEntity.ok(EstimateMatrixWorkerMask.apply(preview));
     }
 
     /**
@@ -148,7 +150,7 @@ public class EstimateMatrixController {
             @PathVariable Long projectId, @Valid @RequestBody ApplyAssignmentsRequest request) {
         EstimateMatrixDto preview = estimateAssignmentService.previewStagedEdits(
                 projectId, request.toStagedEdits(), resolveEditable(projectId));
-        return ResponseEntity.ok(preview);
+        return ResponseEntity.ok(EstimateMatrixWorkerMask.apply(preview));
     }
 
     /**

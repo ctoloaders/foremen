@@ -236,4 +236,17 @@ public class EstimateService
                         HttpStatus.INTERNAL_SERVER_ERROR, DEFAULT_CURRENCY_MISSING_MESSAGE));
         return pln.getId();
     }
+
+    /**
+     * Work prices are hidden from the WORKER role (FOR-04-19 bug-report Round 1): the inherited masking
+     * clears these fields from every read for a WORKER caller. Returned only for the WORKER role, so the
+     * other roles that read this resource keep the values.
+     */
+    @Override
+    public java.util.Set<String> getAdminOnlyFields() {
+        return com.foremen.config.security.CallerContext.isWorker() ? WORKER_HIDDEN_FIELDS : java.util.Set.of();
+    }
+
+    /** The work-price fields cleared for the WORKER role. */
+    static final java.util.Set<String> WORKER_HIDDEN_FIELDS = java.util.Set.of("totalNet", "totalVat", "totalGross");
 }

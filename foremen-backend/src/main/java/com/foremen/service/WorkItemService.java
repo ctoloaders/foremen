@@ -1,5 +1,6 @@
 package com.foremen.service;
 
+import com.foremen.controller.model.WorkCostCellDto;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -105,7 +106,12 @@ public class WorkItemService implements AdminService<
             if (d == null) {
                 continue;
             }
-            row.setCostCell(WorkItemServiceMapper.toCostCellDto(d.costCell()));
+            WorkCostCellDto cell = WorkItemServiceMapper.toCostCellDto(d.costCell());
+            // FOR-04-19 bug-report Round 1: the work (labour) price is not shown to the WORKER role.
+            if (cell != null && com.foremen.config.security.CallerContext.isWorker()) {
+                cell = new WorkCostCellDto(null, cell.construction(), cell.finishing());
+            }
+            row.setCostCell(cell);
             row.setConstructionConsumptionCount(d.constructionCount());
             row.setFinishingConsumptionCount(d.finishingCount());
         }
@@ -228,4 +234,17 @@ public class WorkItemService implements AdminService<
 
         return requestedIds;
     }
+
+    /**
+     * Work prices are hidden from the WORKER role (FOR-04-19 bug-report Round 1): the inherited masking
+     * clears these fields from every read for a WORKER caller. Returned only for the WORKER role, so the
+     * other roles that read this resource keep the values.
+     */
+    @Override
+    public java.util.Set<String> getAdminOnlyFields() {
+        return com.foremen.config.security.CallerContext.isWorker() ? WORKER_HIDDEN_FIELDS : java.util.Set.of();
+    }
+
+    /** The work-price fields cleared for the WORKER role. */
+    static final java.util.Set<String> WORKER_HIDDEN_FIELDS = java.util.Set.of("internalPrice");
 }

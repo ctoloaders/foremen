@@ -1,5 +1,6 @@
 package com.foremen.service.payroll;
 
+import com.foremen.config.security.CallerContext;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -182,6 +183,7 @@ public class WorkerPayoutService
      */
     @Transactional(readOnly = true)
     public PayoutSuggestionDto suggest(Long workerId, LocalDate from, LocalDate to) {
+        PayrollWorkerScope.assertMayRead(workerId);
         assertPeriod(from, to);
         assertWorker(workerId);
         boolean advance = advanceDeriver.isAdvance(to, LocalDate.now());
@@ -372,6 +374,21 @@ public class WorkerPayoutService
      * status; newest first. Not project-filtered (R14.2).
      */
     @Transactional(readOnly = true)
+    /**
+     * Mandatory access condition for every payout read (FOR-07-06 bug-report Round 2): for the WORKER
+     * role only rows where {@code worker = current user}; no extra condition for any other role.
+     */
+    @Override
+    public Specification<WorkerPayoutEntity> addRequiredQuery() {
+        if (!CallerContext.isWorker()) {
+            return null;
+        }
+        Long callerId = CallerContext.currentUserId();
+        return (root, query, cb) -> callerId == null
+                ? cb.disjunction()
+                : cb.equal(root.get("worker").get("id"), callerId);
+    }
+
     public List<WorkerPayoutDto> list(PayoutFilter filter) {
         Specification<WorkerPayoutEntity> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
@@ -391,6 +408,11 @@ public class WorkerPayoutService
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+        // Mandatory access condition (WORKER: own payouts only, bug-report Round 2).
+        Specification<WorkerPayoutEntity> required = addRequiredQuery();
+        if (required != null) {
+            spec = spec.and(required);
+        }
         List<WorkerPayoutEntity> payouts = workerPayoutDao.findAll(spec,
                 Sort.by(Sort.Order.desc("payoutDate"), Sort.Order.desc("id")));
         return payouts == null ? List.of() : dtoMapper.toDtos(payouts);
@@ -402,6 +424,11 @@ public class WorkerPayoutService
      */
     @Transactional(readOnly = true)
     public List<PayoutAllocationDto> allocations(Long id) {
+        // WORKER: only allocations of the caller's own payouts (bug-report Round 2).
+        if (CallerContext.isWorker()) {
+            WorkerPayoutEntity own = workerPayoutDao.findById(id).orElse(null);
+            PayrollWorkerScope.assertMayRead(own == null || own.getWorker() == null ? null : own.getWorker().getId());
+        }
         findPayout(id);
         boolean ru = isRussianLocale();
         List<PayoutAllocationDto> result = new ArrayList<>();

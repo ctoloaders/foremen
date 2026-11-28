@@ -60,6 +60,7 @@ public class PayoutLineHintService {
      */
     @Transactional(readOnly = true)
     public List<PayoutLineDto> previousMonthHints(Long workerId, LocalDate month) {
+        PayrollWorkerScope.assertMayRead(workerId);
         PayrollWriteSupport.assertWorker(userDao, workerId);
         YearMonth reference = YearMonth.from(month == null ? LocalDate.now(clock) : month);
         YearMonth previous = reference.minusMonths(1);

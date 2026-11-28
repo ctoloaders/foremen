@@ -187,6 +187,24 @@ class DashboardQueryEngineIntegrationTest {
     }
 
     @Test
+    @DisplayName("WORKER: a field the dataset hides from the WORKER role refuses the widget; other roles read it (FOR-04-19 Round 1)")
+    void workerHiddenFieldRefused() {
+        Dataset hiding = new FixtureDataset("FIXTURE_ROWS", false) {
+            @Override
+            public Set<String> workerHiddenFields() {
+                return Set.of("project.title");
+            }
+        };
+        assertThatThrownBy(() -> engine.execute(hiding, table(List.of(onlyThisRun()), null),
+                ctx(false, Set.of(projectA.getId()), "WORKER")))
+                .isInstanceOf(com.foremen.exception.ForemenApiException.class)
+                .satisfies(e -> assertThat(((com.foremen.exception.ForemenApiException) e).getStatus())
+                        .isEqualTo(org.springframework.http.HttpStatus.FORBIDDEN));
+        assertThat(engine.execute(hiding, table(List.of(onlyThisRun()), null),
+                ctx(false, Set.of(projectA.getId()), "MANAGER")).rows()).hasSize(2);
+    }
+
+    @Test
     @DisplayName("non-admin sees only rows of allowed projects")
     void nonAdminScoped() {
         WidgetResult r = engine.execute(dataset, table(List.of(onlyThisRun()), null),

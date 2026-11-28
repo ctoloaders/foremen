@@ -250,3 +250,43 @@ Setup: dedicated test users created through the app (ADMIN `POST /api/users` + t
 | 4 | Works grid, project 31 and project 5 (both workers, read-only) | `scrollWidth` = `clientWidth` = 1085, no horizontal scroll; work column 176 px with wrapping ✅ |
 | 5 | Sort by code | project 31: FLOORS, OTHER, PAINTING_DECOR, PLASTERING, PRELIMINARY, TILING, works by code inside each; project 5: categories CARPENTRY … PLUMBING_FINISH in code order, works by code. Work item 178 has no code on dev and is placed last in FLOORS, as designed ✅ |
 | 6 | Save one cell (Round 4, the OOM path), WORKER on project 31 | `POST /api/work-reports/batch` 200 in 192 ms, toast "Raporty zapisane"; the report (id 13) was deleted after the check ✅ |
+
+## Round 5 (2026-11-27)
+
+Screen: mobile (< 768 px), the work-report matrix ("Złóż raport" root-menu entry `/work-reports/new` and the
+"new report" action of the project's Work reporting tab).
+
+- [x] 1. On mobile the add-report surface must not cover the whole screen; the side-menu button must stay available
+  - Triage: observed the full-screen matrix dialog (Round 3) covers the mobile TopBar, so the hamburger that opens
+    the side menu is hidden; and because it is a modal Radix dialog, the rest of the shell is inert. Expected on
+    mobile: the TopBar (with the menu button) stays visible and usable while the report is being entered. Layer:
+    frontend. Suspect: `WorkReportMatrix.tsx` (`DialogContent` full-screen classes), `WorkReportSubmitPage.tsx`,
+    `WorkReportingPanel.tsx`.
+  - Fix plan: give `WorkReportMatrix` an `inline` mode that renders the same body without a `Dialog`, sized to the
+    shell content area. `/work-reports/new` uses the inline mode on mobile, so it renders inside the AppShell
+    under the TopBar (hamburger works, drawer opens over it). On mobile the project tab's "new report" action
+    navigates to `/work-reports/new?projectId=<id>` (the page preselects that project) instead of opening the
+    dialog. Desktop keeps the full-screen dialog from Round 3. The cell-entry popup stays a small dialog. No
+    backend change; no new i18n keys.
+  - _Requirements: 17.5, 17.6, 18_
+  - _Depends on: none_
+- [ ] V5. Validate Round 5 on a mobile viewport (390x844)
+  - As a WORKER: open "Złóż raport" and the tab's "new report"; the TopBar and hamburger are visible, the drawer
+    opens, the matrix scrolls, a cell can be entered and saved. Desktop still shows the full-screen dialog.
+  - _Depends on: 1_
+
+## Parallel execution plan (waves) — Round 5
+
+- **Wave 1:** 1 — matrix inline mode, submit page, panel action.
+- **Wave 2:** V5 — validation, depends on 1.
+
+## Round 5 — validation results (2026-11-28)
+
+Local stack (rebuilt backend and frontend), WORKER `info+valera@foremen.eu`, MANAGER `katarzyna@loaders.dev`, SALESMAN `probe.salesman@example.com`. Viewport 390x844.
+
+- "Złóż raport" (`/work-reports/new`): the matrix renders inline (`data-inline="true"`, no dialog), the TopBar and
+  the hamburger are visible, the drawer opens from the report page; working project 2 preselected; 45 rows. ✅
+- Project tab "new report" on mobile navigates to `/work-reports/new?projectId=2` with project 2 selected. ✅
+- A cell can be entered (popup, confirm) and the draft shows the staged line and Save; the close button returns to `/`. ✅
+- Desktop keeps the full-screen dialog (unit test). Tests: `work-reporting` 116/116 (new mobile navigation test).
+- V5 stays open until dev is redeployed.

@@ -40,4 +40,10 @@ public class WorkPricesDataset implements Dataset {
         return concat(id(), createdDate(), str("workItem.code"), str("workItem.nameRU"),
                 str("workItem.namePL"), str("currency.code"), money("netPrice", "currency.code"));
     }
+
+    /** Work prices are not shown to the WORKER role (FOR-04-19 bug-report Round 1). */
+    @Override
+    public java.util.Set<String> workerHiddenFields() {
+        return java.util.Set.of("netPrice");
+    }
 }

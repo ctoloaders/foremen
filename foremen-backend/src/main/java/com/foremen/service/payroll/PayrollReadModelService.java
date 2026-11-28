@@ -160,6 +160,8 @@ public class PayrollReadModelService {
      */
     public CompanyPayrollDto companyTable(LocalDate from, LocalDate to, Collection<Long> workerIds) {
         assertPeriod(from, to);
+        // WORKER: the table holds only the caller's own row (bug-report Round 2).
+        workerIds = PayrollWorkerScope.narrow(workerIds);
         boolean filtered = workerIds != null && workerIds.stream().anyMatch(Objects::nonNull);
         List<UserEntity> workers = filtered ? listedWorkers(workerIds) : userDao.findByRoleCode(WORKER_ROLE_CODE);
         Map<Long, UserEntity> workersById = new LinkedHashMap<>();
@@ -298,6 +300,7 @@ public class PayrollReadModelService {
      */
     public WorkerPayrollCardDto workerCard(Long workerId, LocalDate from, LocalDate to) {
         assertPeriod(from, to);
+        PayrollWorkerScope.assertMayRead(workerId);
         UserEntity worker = PayrollWriteSupport.assertWorker(userDao, workerId);
 
         Batch batch = load(List.of(workerId), to);

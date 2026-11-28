@@ -1,5 +1,7 @@
 package com.foremen.service.dashboard.query;
 
+import org.springframework.http.HttpStatus;
+import com.foremen.exception.ForemenApiException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.foremen.service.dashboard.config.DatasetSchema.FieldType;
 import com.foremen.service.dashboard.config.WidgetConfig;
@@ -110,7 +112,7 @@ public class DashboardQueryEngine {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<Tuple> cq = cb.createTupleQuery();
         Root<?> root = cq.from(ds.rootEntity());
-        Resolver r = new Resolver(ds, cb, cq, root);
+        Resolver r = new Resolver(ds, cb, cq, root, ctx);
 
         List<Selection<?>> selections = new ArrayList<>();
         List<Out> outs = new ArrayList<>();
@@ -400,20 +402,29 @@ public class DashboardQueryEngine {
     /** Resolves field names and JPA paths to criteria expressions, reusing joins and computed values. */
     private static final class Resolver {
         private final Map<String, FieldDescriptor> fields = new HashMap<>();
+        private final java.util.Set<String> hidden = new java.util.HashSet<>();
         private final Map<String, From<?, ?>> joins = new HashMap<>();
         private final Map<String, Expression<?>> computed = new HashMap<>();
         private final CriteriaBuilder cb;
         private final CriteriaQuery<?> cq;
         private final Root<?> root;
 
-        Resolver(Dataset ds, CriteriaBuilder cb, CriteriaQuery<?> cq, Root<?> root) {
+        Resolver(Dataset ds, CriteriaBuilder cb, CriteriaQuery<?> cq, Root<?> root, QueryContext ctx) {
             this.cb = cb;
             this.cq = cq;
             this.root = root;
             ds.allFields().forEach(f -> fields.put(f.name(), f));
+            // FOR-04-19 bug-report Round 1: work prices never reach the WORKER role.
+            if (ctx != null && "WORKER".equals(ctx.roleCode())) {
+                hidden.addAll(ds.workerHiddenFields());
+            }
         }
 
         FieldDescriptor field(String name) {
+            if (hidden.contains(name)) {
+                throw new ForemenApiException(HttpStatus.FORBIDDEN, "error.dashboard.widget.disabled")
+                        .withParams(Map.of("reason", "NO_ACCESS"));
+            }
             FieldDescriptor f = fields.get(name);
             if (f == null) {
                 throw new IllegalArgumentException("Unknown field: " + name);
